@@ -43,7 +43,7 @@ const fmtCountdown = (ms: number): string => {
 
 const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) => {
   const isMobile = useIsMobile();
-  const count = countProp ?? (isMobile ? 6 : 12);
+  const count = countProp ?? (isMobile ? 15 : 12);
 
   const [asks, setAsks] = useState<OrderRow[]>([]);
   const [bids, setBids] = useState<OrderRow[]>([]);
@@ -170,8 +170,8 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
         </button>
       </div>
 
-      {/* Asks */}
-      <div className="flex flex-col flex-shrink-0">
+      {/* Asks — anchored to bottom so closest-to-mid rows are always visible */}
+      <div className="flex-1 flex flex-col justify-end overflow-hidden">
         {asks.map((order, i) => (
           <div key={`ask-${i}`} className="relative flex items-center justify-between px-2 py-[3px]">
             <div
@@ -200,8 +200,8 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
         )}
       </div>
 
-      {/* Bids */}
-      <div className="flex flex-col flex-shrink-0">
+      {/* Bids — anchored to top so closest-to-mid rows are always visible */}
+      <div className="flex-1 flex flex-col overflow-hidden">
         {bids.map((order, i) => (
           <div key={`bid-${i}`} className="relative flex items-center justify-between px-2 py-[3px]">
             <div
@@ -219,7 +219,7 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
       </div>
 
       {/* Tick size selector */}
-      <div className="flex items-center justify-between px-2 py-1 border-t border-border/40 flex-shrink-0 relative mt-auto" ref={tickRef}>
+      <div className="flex items-center justify-between px-2 py-1 border-t border-border/40 flex-shrink-0 relative" ref={tickRef}>
         <div className="grid grid-cols-2 gap-0.5 opacity-60">
           {[...Array(4)].map((_, i) => (
             <div key={i} className={`w-1.5 h-1 rounded-[1px] ${i < 2 ? "bg-trading-red" : "bg-trading-green"}`} />
