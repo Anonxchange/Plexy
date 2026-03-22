@@ -1,517 +1,508 @@
-import { useState } from "react";
-import { LayoutList, SlidersVertical, ClipboardList, Loader2, XCircle } from "lucide-react";
-import CandlestickChart from "./CandlestickChart";
-import OrderBook from "./OrderBook";
-import FuturesTradePanel from "./FuturesTradePanel";
+import { useState, useRef, useEffect } from "react";
+import { ChevronDown, ChevronUp, PlusCircle, Info, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { asterTrading, asterMarket } from "@/lib/asterdex-service";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { asterTrading } from "@/lib/asterdex-service";
 import { useToast } from "@/hooks/use-toast";
 
-const orderTabs = ["Open orders", "Positions", "Assets", "TWAP"];
-const chartTabs = ["Chart", "Order book", "Trades", "Depth", "Info"];
+const orderTypes = ["Market", "Limit", "Stop Limit", "Stop Market", "Maker Only"];
 
-const OrderBookTwoCol = ({ symbol }: { symbol: string }) => {
-  const apiSymbol = symbol.replace("/", "");
-  const { data, isLoading } = useQuery({
-    queryKey: ["ob-2col-futures", apiSymbol],
-    queryFn: () => asterMarket.futuresOrderBook(apiSymbol, "20"),
-    staleTime: 2_000,
-    refetchInterval: 3_000,
-  });
-  if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
-  const rawAsks: [string, string][] = data?.asks ?? [];
-  const rawBids: [string, string][] = data?.bids ?? [];
-  const asks = rawAsks.slice(0, 15).map(([p, q]) => ({ price: parseFloat(p), qty: parseFloat(q) }));
-  const bids = rawBids.slice(0, 15).map(([p, q]) => ({ price: parseFloat(p), qty: parseFloat(q) }));
-  const maxQty = Math.max(...asks.map(r => r.qty), ...bids.map(r => r.qty)) || 1;
-  const fmt = (n: number) => n >= 1000 ? (n / 1000).toFixed(2) + "K" : n.toFixed(2);
-  const fmtP = (n: number) => n.toLocaleString("en-US", { maximumSignificantDigits: 6 });
-  return (
-    <div className="overflow-y-auto max-h-[300px]">
-      <div className="grid grid-cols-2 divide-x divide-border">
-        <div>
-          <div className="grid grid-cols-2 px-1.5 py-0.5 border-b border-border text-[10px] text-muted-foreground">
-            <span>Price</span><span className="text-right">Size</span>
-          </div>
-          {asks.map((r, i) => (
-            <div key={i} className="relative grid grid-cols-2 px-1.5 py-[2px]">
-              <div className="absolute left-0 top-0 bottom-0 bg-trading-red/10" style={{ width: `${(r.qty / maxQty) * 100}%` }} />
-              <span className="relative font-mono-num text-[11px] text-trading-red leading-tight">{fmtP(r.price)}</span>
-              <span className="relative font-mono-num text-[11px] text-muted-foreground text-right leading-tight">{fmt(r.qty)}</span>
-            </div>
-          ))}
-        </div>
-        <div>
-          <div className="grid grid-cols-2 px-1.5 py-0.5 border-b border-border text-[10px] text-muted-foreground">
-            <span>Price</span><span className="text-right">Size</span>
-          </div>
-          {bids.map((r, i) => (
-            <div key={i} className="relative grid grid-cols-2 px-1.5 py-[2px]">
-              <div className="absolute right-0 top-0 bottom-0 bg-trading-green/10" style={{ width: `${(r.qty / maxQty) * 100}%` }} />
-              <span className="relative font-mono-num text-[11px] text-trading-green leading-tight">{fmtP(r.price)}</span>
-              <span className="relative font-mono-num text-[11px] text-muted-foreground text-right leading-tight">{fmt(r.qty)}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+const UI_TO_FUTURES_TYPE: Record<string, string> = {
+  "Market":      "MARKET",
+  "Limit":       "LIMIT",
+  "Stop Limit":  "STOP",
+  "Stop Market": "STOP_MARKET",
+  "Maker Only":  "LIMIT_MAKER",
 };
 
-const DepthPanel = ({ symbol }: { symbol: string }) => {
-  const apiSymbol = symbol.replace("/", "");
-  const { data, isLoading } = useQuery({
-    queryKey: ["futures-depth", apiSymbol],
-    queryFn: () => asterMarket.futuresOrderBook(apiSymbol, "50"),
-    staleTime: 3_000,
-    refetchInterval: 5_000,
-  });
-  if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
-  const rawBids: [string, string][] = data?.bids ?? [];
-  const rawAsks: [string, string][] = data?.asks ?? [];
-  const bids = rawBids.slice(0, 20).map(([p, q]) => ({ price: parseFloat(p), qty: parseFloat(q) }));
-  const asks = rawAsks.slice(0, 20).map(([p, q]) => ({ price: parseFloat(p), qty: parseFloat(q) }));
-  let bidCum = 0;
-  const bidRows = bids.map(r => { bidCum += r.qty; return { ...r, cum: bidCum }; });
-  let askCum = 0;
-  const askRows = [...asks].reverse().map(r => { askCum += r.qty; return { ...r, cum: askCum }; }).reverse();
-  const maxCum = Math.max(bidCum, askCum) || 1;
-  const fmt = (n: number) => n >= 1000 ? (n / 1000).toFixed(2) + "K" : n.toFixed(2);
-  const fmtP = (n: number) => n.toLocaleString("en-US", { maximumSignificantDigits: 6 });
-  return (
-    <div className="overflow-y-auto max-h-[300px]">
-      <div className="grid grid-cols-2 divide-x divide-border">
-        <div>
-          <div className="grid grid-cols-2 px-1.5 py-0.5 border-b border-border text-[10px] text-muted-foreground">
-            <span>Price</span><span className="text-right">Cumulative</span>
-          </div>
-          {askRows.map((r, i) => (
-            <div key={i} className="relative grid grid-cols-2 px-1.5 py-[2px]">
-              <div className="absolute left-0 top-0 bottom-0 bg-trading-red/10" style={{ width: `${(r.cum / maxCum) * 100}%` }} />
-              <span className="relative font-mono-num text-[11px] text-trading-red leading-tight">{fmtP(r.price)}</span>
-              <span className="relative font-mono-num text-[11px] text-muted-foreground text-right leading-tight">{fmt(r.cum)}</span>
-            </div>
-          ))}
-        </div>
-        <div>
-          <div className="grid grid-cols-2 px-1.5 py-0.5 border-b border-border text-[10px] text-muted-foreground">
-            <span>Price</span><span className="text-right">Cumulative</span>
-          </div>
-          {bidRows.map((r, i) => (
-            <div key={i} className="relative grid grid-cols-2 px-1.5 py-[2px]">
-              <div className="absolute right-0 top-0 bottom-0 bg-trading-green/10" style={{ width: `${(r.cum / maxCum) * 100}%` }} />
-              <span className="relative font-mono-num text-[11px] text-trading-green leading-tight">{fmtP(r.price)}</span>
-              <span className="relative font-mono-num text-[11px] text-muted-foreground text-right leading-tight">{fmt(r.cum)}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const InfoPanel = ({ symbol }: { symbol: string }) => {
-  const apiSymbol = symbol.replace("/", "");
-  const base = symbol.split("/")[0];
-  const quote = symbol.split("/")[1] || "USDT";
-  const { data: ticker } = useQuery({
-    queryKey: ["futures-ticker-info", apiSymbol],
-    queryFn: () => asterMarket.futuresTicker(apiSymbol),
-    staleTime: 10_000,
-    refetchInterval: 15_000,
-  });
-  const { data: exInfo } = useQuery({
-    queryKey: ["futures-exchange-info"],
-    queryFn: () => asterMarket.futuresExchangeInfo(),
-    staleTime: 300_000,
-  });
-  const { data: markData } = useQuery({
-    queryKey: ["futures-mark-price", apiSymbol],
-    queryFn: () => asterMarket.futuresMarkPrice(apiSymbol),
-    staleTime: 10_000,
-    refetchInterval: 15_000,
-  });
-  const { data: fundingData } = useQuery({
-    queryKey: ["futures-funding-info", apiSymbol],
-    queryFn: () => asterMarket.futuresFundingRate(apiSymbol),
-    staleTime: 30_000,
-    refetchInterval: 60_000,
-  });
-  const t = Array.isArray(ticker) ? ticker[0] : ticker;
-  const sym = (exInfo?.symbols ?? []).find((s: any) => s.symbol === apiSymbol);
-  const mark = Array.isArray(markData) ? markData[0] : markData;
-  const funding = Array.isArray(fundingData) ? fundingData[0] : fundingData;
-  const priceFilter = sym?.filters?.find((f: any) => f.filterType === "PRICE_FILTER");
-  const lotSize = sym?.filters?.find((f: any) => f.filterType === "LOT_SIZE");
-  const pct = t?.priceChangePercent ? parseFloat(t.priceChangePercent) : null;
-  const isPos = pct !== null && pct >= 0;
-  const fmtVol = (v: string | undefined) => {
-    if (!v) return "—";
-    const n = parseFloat(v);
-    return n >= 1e9 ? (n / 1e9).toFixed(2) + "B" : n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e3 ? (n / 1e3).toFixed(2) + "K" : n.toFixed(2);
-  };
-  const rows = [
-    { label: "Last Price", value: t?.lastPrice ? parseFloat(t.lastPrice).toLocaleString("en-US", { maximumSignificantDigits: 6 }) + ` ${quote}` : "—" },
-    { label: "Mark Price", value: mark?.markPrice ? parseFloat(mark.markPrice).toLocaleString("en-US", { maximumSignificantDigits: 6 }) : "—" },
-    { label: "Index Price", value: mark?.indexPrice ? parseFloat(mark.indexPrice).toLocaleString("en-US", { maximumSignificantDigits: 6 }) : "—" },
-    { label: "24h Change", value: pct !== null ? `${isPos ? "+" : ""}${pct.toFixed(2)}%` : "—", color: pct === null ? "" : isPos ? "text-trading-green" : "text-trading-red" },
-    { label: "24h High", value: t?.highPrice ? parseFloat(t.highPrice).toLocaleString("en-US", { maximumSignificantDigits: 6 }) : "—" },
-    { label: "24h Low", value: t?.lowPrice ? parseFloat(t.lowPrice).toLocaleString("en-US", { maximumSignificantDigits: 6 }) : "—" },
-    { label: `24h Vol (${quote})`, value: fmtVol(t?.quoteVolume) },
-    { label: "Open Interest", value: fmtVol(t?.openInterest) },
-    { label: "Funding Rate (8h)", value: funding?.fundingRate ? (parseFloat(funding.fundingRate) * 100).toFixed(4) + "%" : "—" },
-    { label: "Tick Size", value: priceFilter?.tickSize ?? "—" },
-    { label: "Min Qty", value: lotSize?.minQty ?? "—" },
-    { label: "Contract Type", value: sym?.contractType ?? "PERPETUAL" },
-  ];
-  return (
-    <div className="px-2 py-1 space-y-0">
-      {rows.map(({ label, value, color }) => (
-        <div key={label} className="flex items-center justify-between py-1 border-b border-border/40 last:border-0">
-          <span className="text-[11px] text-muted-foreground">{label}</span>
-          <span className={`text-[11px] font-mono-num font-medium text-foreground ${color ?? ""}`}>{value}</span>
-        </div>
-      ))}
-    </div>
-  );
-};
-
-const RecentTradesPanel = ({ symbol }: { symbol: string }) => {
-  const apiSymbol = symbol.replace("/", "");
-  const { data: trades, isLoading } = useQuery({
-    queryKey: ["futures-recent-trades", apiSymbol],
-    queryFn: () => asterMarket.futuresTrades(apiSymbol),
-    staleTime: 5_000,
-    refetchInterval: 5_000,
-  });
-  if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
-  const list = Array.isArray(trades) ? trades.slice(0, 30) : [];
-  if (!list.length) return <div className="flex justify-center py-8 text-sm text-muted-foreground">No trades</div>;
-  return (
-    <div className="overflow-y-auto max-h-[300px]">
-      <table className="w-full">
-        <thead className="sticky top-0 bg-background">
-          <tr className="text-muted-foreground border-b border-border">
-            <th className="text-left px-2 py-0.5 font-normal text-[10px]">Price (USDT)</th>
-            <th className="text-right px-2 py-0.5 font-normal text-[10px]">Amount</th>
-            <th className="text-right px-2 py-0.5 font-normal text-[10px]">Time</th>
-          </tr>
-        </thead>
-        <tbody>
-          {list.map((t: any, i: number) => {
-            const isBuy = t.isBuyerMaker === false;
-            const price = parseFloat(t.price);
-            const qty = parseFloat(t.qty);
-            const time = new Date(t.time).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
-            return (
-              <tr key={t.id ?? i} className="border-b border-border/30">
-                <td className={`px-2 py-[2px] font-mono-num text-[11px] font-medium leading-tight ${isBuy ? "text-trading-green" : "text-trading-red"}`}>
-                  {price.toLocaleString("en-US", { maximumSignificantDigits: 6 })}
-                </td>
-                <td className="px-2 py-[2px] text-right font-mono-num text-[11px] text-foreground leading-tight">{qty.toFixed(4)}</td>
-                <td className="px-2 py-[2px] text-right font-mono-num text-[11px] text-muted-foreground leading-tight">{time}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-};
-
-interface MobilePerpetualTabsProps {
-  chartVisible: boolean;
-  pair: string;
-  viewMode: "list" | "chart";
-  onViewModeChange: (mode: "list" | "chart") => void;
+interface FuturesTradePanelProps {
+  symbol?: string;
 }
 
-const MobilePerpetualTabs = ({ chartVisible, pair, viewMode, onViewModeChange: setViewMode }: MobilePerpetualTabsProps) => {
-  const [activeOrderTab, setActiveOrderTab] = useState("Open orders");
-  const [activeChartTab, setActiveChartTab] = useState("Chart");
+const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) => {
+  const [side, setSide] = useState<"buy" | "sell">("buy");
+  const [marginMode, setMarginMode] = useState<"cross" | "isolated">("cross");
+  const [leverage, setLeverage] = useState("20");
+  const [leverageOpen, setLeverageOpen] = useState(false);
+  const [orderType, setOrderType] = useState("Limit");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [size, setSize] = useState("");
+  const [price, setPrice] = useState("");
+  const [stopPrice, setStopPrice] = useState("");
+  const [totalValue, setTotalValue] = useState("");
+  const [sliderValue, setSliderValue] = useState(0);
+  const [tpsl, setTpsl] = useState(false);
+  const [hiddenOrder, setHiddenOrder] = useState(false);
+  const [reduceOnly, setReduceOnly] = useState(false);
+  const [sizeUnit, setSizeUnit] = useState<"USDT" | string>("USDT");
+  const [stopPriceUnit, setStopPriceUnit] = useState<"USDT" | string>("USDT");
+  const [priceUnit, setPriceUnit] = useState<"USDT" | string>("USDT");
+  const [unitDropdownOpen, setUnitDropdownOpen] = useState(false);
+  const [stopUnitDropdownOpen, setStopUnitDropdownOpen] = useState(false);
+  const [priceUnitDropdownOpen, setPriceUnitDropdownOpen] = useState(false);
+  const [timeInForce, setTimeInForce] = useState("GTC");
+  const [tifDropdownOpen, setTifDropdownOpen] = useState(false);
 
-  const tabs = viewMode === "list" ? orderTabs : chartTabs;
-  const activeTab = viewMode === "list" ? activeOrderTab : activeChartTab;
-  const setActiveTab = viewMode === "list" ? setActiveOrderTab : setActiveChartTab;
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const unitDropdownRef = useRef<HTMLDivElement>(null);
+  const stopUnitRef = useRef<HTMLDivElement>(null);
+  const priceUnitRef = useRef<HTMLDivElement>(null);
+  const tifRef = useRef<HTMLDivElement>(null);
+  const leverageRef = useRef<HTMLDivElement>(null);
+  const sliderRef = useRef<HTMLDivElement>(null);
 
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  const apiSymbol = pair.replace("/", "");
+  const apiSymbol = symbol.replace("/", "");
+  const baseCoin = symbol.split("/")[0];
+  const quoteCoin = symbol.split("/")[1] || "USDT";
 
-  const { data: openOrders, isLoading: ordersLoading } = useQuery({
-    queryKey: ["futures-open-orders", apiSymbol],
-    queryFn: () => asterTrading.futuresOpenOrders(apiSymbol),
-    enabled: !!user && activeOrderTab === "Open orders",
-    staleTime: 10_000,
-    refetchInterval: 15_000,
-  });
+  const percentages = [0, 25, 50, 75, 100];
+  const leverageOptions = ["1", "2", "3", "5", "10", "20", "50", "75", "100"];
 
-  const { data: positions, isLoading: positionsLoading } = useQuery({
-    queryKey: ["futures-positions"],
-    queryFn: () => asterTrading.futuresPositions(),
-    enabled: !!user && activeOrderTab === "Positions",
-    staleTime: 10_000,
-    refetchInterval: 15_000,
-  });
-
-  const { data: futuresBalance, isLoading: balanceLoading } = useQuery({
+  const { data: futuresBalance } = useQuery({
     queryKey: ["futures-balance"],
     queryFn: () => asterTrading.futuresBalance(),
-    enabled: !!user && activeOrderTab === "Assets",
+    enabled: !!user,
     staleTime: 15_000,
     refetchInterval: 30_000,
   });
 
-  const cancelMutation = useMutation({
-    mutationFn: ({ symbol, orderId }: { symbol: string; orderId: string }) =>
-      asterTrading.futuresCancelOrder(symbol, orderId),
-    onSuccess: () => {
-      toast({ title: "Order cancelled" });
-      queryClient.invalidateQueries({ queryKey: ["futures-open-orders"] });
+  const futuresUsdt = Array.isArray(futuresBalance)
+    ? futuresBalance.find((b: any) => b.asset === quoteCoin)
+    : null;
+  const availableBalance = parseFloat(futuresUsdt?.availableBalance ?? "0");
+
+  const priceNum = parseFloat(price) || 0;
+  const sizeNum = parseFloat(size) || 0;
+  const leverageNum = parseInt(leverage) || 1;
+
+  const notional = sizeUnit === quoteCoin
+    ? sizeNum
+    : priceNum > 0 ? sizeNum * priceNum : 0;
+  const estMargin = leverageNum > 0 ? notional / leverageNum : 0;
+  const maxOrderSize = priceNum > 0
+    ? ((availableBalance * leverageNum) / priceNum).toFixed(4)
+    : "--";
+
+  const applySlider = (pct: number) => {
+    setSliderValue(pct);
+    if (pct === 0) { setSize(""); return; }
+    const avbl = availableBalance * (pct / 100) * leverageNum;
+    if (sizeUnit === quoteCoin) {
+      setSize(avbl.toFixed(2));
+    } else {
+      setSize(priceNum > 0 ? (avbl / priceNum).toFixed(6) : "");
+    }
+  };
+
+  const handleSliderClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!sliderRef.current) return;
+    const rect = sliderRef.current.getBoundingClientRect();
+    const pct = Math.round(((e.clientX - rect.left) / rect.width) * 100);
+    const snapped = percentages.reduce((a, b) => Math.abs(b - pct) < Math.abs(a - pct) ? b : a);
+    applySlider(snapped);
+  };
+
+  const asterType = UI_TO_FUTURES_TYPE[orderType] as any;
+  const isMarket = orderType === "Market";
+  const isLimit = orderType === "Limit";
+  const isStopLimit = orderType === "Stop Limit";
+  const isStopMarket = orderType === "Stop Market";
+  const isMakerOnly = orderType === "Maker Only";
+  const showPriceField = isLimit || isMakerOnly || isStopLimit;
+  const showStopPrice = isStopLimit || isStopMarket;
+  const showTotalValue = isLimit || isStopLimit || isMakerOnly;
+
+  const orderMutation = useMutation({
+    mutationFn: async () => {
+      await asterTrading.futuresSetLeverage(apiSymbol, leverage);
+      await asterTrading.futuresSetMarginType(apiSymbol, marginMode === "isolated" ? "ISOLATED" : "CROSSED");
+      return asterTrading.futuresPlaceOrder({
+        symbol: apiSymbol,
+        side: side === "buy" ? "BUY" : "SELL",
+        type: asterType,
+        quantity: size || "0",
+        ...(showPriceField && price ? { price } : {}),
+        ...(showStopPrice && stopPrice ? { stopPrice } : {}),
+        ...((isLimit || isMakerOnly) ? { timeInForce } : {}),
+        ...(reduceOnly ? { reduceOnly: "true" } : {}),
+      });
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Order placed",
+        description: `${side === "buy" ? "Long" : "Short"} ${size} ${baseCoin} submitted (ID: ${data?.orderId ?? "—"})`,
+      });
+      setSize(""); setTotalValue(""); setSliderValue(0);
     },
     onError: (err: Error) => {
-      toast({ title: "Cancel failed", description: err.message, variant: "destructive" });
+      toast({ title: "Order failed", description: err.message, variant: "destructive" });
     },
   });
 
-  const renderTabContent = () => {
-    if (!user) {
-      return (
-        <div className="flex flex-col items-center py-10 gap-3">
-          <span className="text-sm text-muted-foreground">Sign in to view your orders</span>
-          <button
-            onClick={() => navigate("/signin")}
-            className="px-6 py-2.5 rounded-lg text-sm font-bold bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-          >
-            Sign In
-          </button>
-        </div>
-      );
-    }
-
-    if (activeOrderTab === "Open orders") {
-      if (ordersLoading) return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
-      const orders = Array.isArray(openOrders) ? openOrders : [];
-      if (!orders.length) return <div className="flex justify-center py-8 text-sm text-muted-foreground">No open orders</div>;
-      return (
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-muted-foreground border-b border-border">
-                <th className="text-left px-2 py-0.5 font-normal text-[10px]">Symbol</th>
-                <th className="text-left px-2 py-0.5 font-normal text-[10px]">Side</th>
-                <th className="text-right px-2 py-0.5 font-normal text-[10px]">Price</th>
-                <th className="text-right px-2 py-0.5 font-normal text-[10px]">Size</th>
-                <th className="text-right px-2 py-0.5 font-normal text-[10px]">Filled</th>
-                <th className="text-right px-2 py-0.5 font-normal text-[10px]">Cancel</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((o: any) => (
-                <tr key={o.orderId} className="border-b border-border/50">
-                  <td className="px-2 py-[2px] text-[11px] text-foreground leading-tight">{o.symbol}</td>
-                  <td className={`px-2 py-[2px] text-[11px] font-medium leading-tight ${o.side === "BUY" ? "text-trading-green" : "text-trading-red"}`}>{o.side}</td>
-                  <td className="px-2 py-[2px] text-right font-mono-num text-[11px] text-foreground leading-tight">{parseFloat(o.price).toFixed(4)}</td>
-                  <td className="px-2 py-[2px] text-right font-mono-num text-[11px] text-foreground leading-tight">{parseFloat(o.origQty).toFixed(4)}</td>
-                  <td className="px-2 py-[2px] text-right font-mono-num text-[11px] text-muted-foreground leading-tight">{parseFloat(o.executedQty).toFixed(4)}</td>
-                  <td className="px-2 py-[2px] text-right">
-                    <button
-                      onClick={() => cancelMutation.mutate({ symbol: o.symbol, orderId: String(o.orderId) })}
-                      disabled={cancelMutation.isPending}
-                      className="text-trading-red hover:opacity-70"
-                    >
-                      <XCircle className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      );
-    }
-
-    if (activeOrderTab === "Positions") {
-      if (positionsLoading) return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
-      const pos = Array.isArray(positions)
-        ? positions.filter((p: any) => parseFloat(p.positionAmt) !== 0)
-        : [];
-      if (!pos.length) return <div className="flex justify-center py-8 text-sm text-muted-foreground">No open positions</div>;
-      return (
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-muted-foreground border-b border-border">
-                <th className="text-left px-2 py-0.5 font-normal text-[10px]">Symbol</th>
-                <th className="text-left px-2 py-0.5 font-normal text-[10px]">Side</th>
-                <th className="text-right px-2 py-0.5 font-normal text-[10px]">Size</th>
-                <th className="text-right px-2 py-0.5 font-normal text-[10px]">Entry</th>
-                <th className="text-right px-2 py-0.5 font-normal text-[10px]">Mark</th>
-                <th className="text-right px-2 py-0.5 font-normal text-[10px]">PnL</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pos.map((p: any) => {
-                const pnl = parseFloat(p.unRealizedProfit);
-                return (
-                  <tr key={p.symbol + p.positionSide} className="border-b border-border/50">
-                    <td className="px-2 py-[2px] text-[11px] text-foreground leading-tight">{p.symbol}</td>
-                    <td className={`px-2 py-[2px] text-[11px] font-medium leading-tight ${parseFloat(p.positionAmt) > 0 ? "text-trading-green" : "text-trading-red"}`}>
-                      {parseFloat(p.positionAmt) > 0 ? "Long" : "Short"}
-                    </td>
-                    <td className="px-2 py-[2px] text-right font-mono-num text-[11px] text-foreground leading-tight">{Math.abs(parseFloat(p.positionAmt)).toFixed(4)}</td>
-                    <td className="px-2 py-[2px] text-right font-mono-num text-[11px] text-foreground leading-tight">{parseFloat(p.entryPrice).toFixed(4)}</td>
-                    <td className="px-2 py-[2px] text-right font-mono-num text-[11px] text-foreground leading-tight">{parseFloat(p.markPrice).toFixed(4)}</td>
-                    <td className={`px-2 py-[2px] text-right font-mono-num text-[11px] leading-tight ${pnl >= 0 ? "text-trading-green" : "text-trading-red"}`}>
-                      {pnl >= 0 ? "+" : ""}{pnl.toFixed(4)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      );
-    }
-
-    if (activeOrderTab === "Assets") {
-      if (balanceLoading) return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
-      const balances = Array.isArray(futuresBalance)
-        ? futuresBalance.filter((b: any) => parseFloat(b.balance) > 0)
-        : [];
-      if (!balances.length) return <div className="flex justify-center py-8 text-sm text-muted-foreground">No assets</div>;
-      return (
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-muted-foreground border-b border-border">
-                <th className="text-left px-2 py-0.5 font-normal text-[10px]">Asset</th>
-                <th className="text-right px-2 py-0.5 font-normal text-[10px]">Balance</th>
-                <th className="text-right px-2 py-0.5 font-normal text-[10px]">Available</th>
-                <th className="text-right px-2 py-0.5 font-normal text-[10px]">Unrealized PnL</th>
-              </tr>
-            </thead>
-            <tbody>
-              {balances.map((b: any) => (
-                <tr key={b.asset} className="border-b border-border/50">
-                  <td className="px-2 py-[2px] font-medium text-[11px] text-foreground leading-tight">{b.asset}</td>
-                  <td className="px-2 py-[2px] text-right font-mono-num text-[11px] text-foreground leading-tight">{parseFloat(b.balance).toFixed(4)}</td>
-                  <td className="px-2 py-[2px] text-right font-mono-num text-[11px] text-foreground leading-tight">{parseFloat(b.availableBalance).toFixed(4)}</td>
-                  <td className={`px-2 py-[2px] text-right font-mono-num text-[11px] leading-tight ${parseFloat(b.crossUnPnl) >= 0 ? "text-trading-green" : "text-trading-red"}`}>
-                    {parseFloat(b.crossUnPnl) >= 0 ? "+" : ""}{parseFloat(b.crossUnPnl).toFixed(4)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      );
-    }
-
-    return <div className="flex justify-center py-8 text-sm text-muted-foreground">Coming soon</div>;
-  };
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setDropdownOpen(false);
+      if (unitDropdownRef.current && !unitDropdownRef.current.contains(e.target as Node)) setUnitDropdownOpen(false);
+      if (stopUnitRef.current && !stopUnitRef.current.contains(e.target as Node)) setStopUnitDropdownOpen(false);
+      if (priceUnitRef.current && !priceUnitRef.current.contains(e.target as Node)) setPriceUnitDropdownOpen(false);
+      if (tifRef.current && !tifRef.current.contains(e.target as Node)) setTifDropdownOpen(false);
+      if (leverageRef.current && !leverageRef.current.contains(e.target as Node)) setLeverageOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
-    <div className="flex flex-col border-t border-border bg-background flex-1">
-      {viewMode === "list" && (
-        <>
-          {chartVisible && (
-            <div className="h-[350px] flex-shrink-0">
-              <CandlestickChart pair={pair} />
+    <div className="flex flex-col w-full bg-background">
+
+      {/* ── Cross / Isolated + Leverage ── */}
+      <div className="grid grid-cols-2 gap-1 px-2 pt-1.5 pb-0.5">
+        <div className="flex items-center bg-secondary rounded overflow-hidden">
+          <button
+            onClick={() => setMarginMode("cross")}
+            className={`flex-1 py-1 text-[11px] font-medium transition-colors ${marginMode === "cross" ? "bg-accent text-foreground" : "text-muted-foreground"}`}
+          >
+            Cross
+          </button>
+          <button
+            onClick={() => setMarginMode("isolated")}
+            className={`flex-1 py-1 text-[11px] font-medium transition-colors ${marginMode === "isolated" ? "bg-accent text-foreground" : "text-muted-foreground"}`}
+          >
+            Isolated
+          </button>
+        </div>
+
+        <div className="relative" ref={leverageRef}>
+          <button
+            onClick={() => setLeverageOpen(!leverageOpen)}
+            className="w-full py-1 text-[11px] font-semibold bg-secondary rounded text-foreground flex items-center justify-center gap-0.5"
+          >
+            {leverage}x
+            {leverageOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
+          {leverageOpen && (
+            <div className="absolute z-50 mt-0.5 w-full rounded border border-border bg-secondary shadow-lg">
+              {leverageOptions.map((lev) => (
+                <button
+                  key={lev}
+                  onClick={() => { setLeverage(lev); setLeverageOpen(false); }}
+                  className={`w-full text-left px-2 py-1 text-[11px] transition-colors ${leverage === lev ? "text-trading-green" : "text-foreground hover:bg-accent"}`}
+                >
+                  {lev}x
+                </button>
+              ))}
             </div>
           )}
-          <div className="flex border-t border-border w-full min-w-0">
-            <div className="w-[40%] min-w-0 border-r border-border overflow-hidden">
-              <OrderBook symbol={pair} mode="futures" count={9} />
-            </div>
-            <div className="w-[60%] min-w-0">
-              <FuturesTradePanel symbol={pair} />
-            </div>
-          </div>
-        </>
-      )}
-
-      {viewMode === "chart" && (() => {
-        switch (activeChartTab) {
-          case "Chart":
-            return <div className="h-[400px] flex-shrink-0"><CandlestickChart pair={pair} /></div>;
-          case "Order book":
-            return <OrderBookTwoCol symbol={pair} />;
-          case "Trades":
-            return <RecentTradesPanel symbol={pair} />;
-          case "Depth":
-            return <DepthPanel symbol={pair} />;
-          case "Info":
-            return <InfoPanel symbol={pair} />;
-          default:
-            return <div className="flex justify-center py-10 text-sm text-muted-foreground">Coming soon</div>;
-        }
-      })()}
-
-      {/* Chart tabs row — only visible in chart viewMode */}
-      {viewMode === "chart" && (
-        <div className="flex items-center px-3 py-1 gap-0.5 border-t-2 border-border overflow-x-auto scrollbar-none flex-shrink-0">
-          {chartTabs.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveChartTab(tab)}
-              className={`py-1 px-2 text-[11px] transition-colors whitespace-nowrap flex-shrink-0 rounded ${
-                activeChartTab === tab
-                  ? "text-foreground font-semibold border border-border bg-accent"
-                  : "text-muted-foreground"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
         </div>
-      )}
+      </div>
 
-      {/* Order tabs row — always visible, with separator */}
-      <div className="flex items-center px-3 py-1 border-t-2 border-border flex-shrink-0">
-        <div className="flex items-center gap-3 flex-1">
-          {orderTabs.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveOrderTab(tab)}
-              className={`py-1 text-[11px] transition-colors ${
-                activeOrderTab === tab ? "text-foreground font-semibold" : "text-muted-foreground"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-        <button className="p-1 text-muted-foreground flex-shrink-0">
-          <ClipboardList className="w-5 h-5" />
+      {/* ── Buy / Sell toggle ── */}
+      <div className="flex gap-1 px-2 pb-0.5">
+        <button
+          onClick={() => setSide("buy")}
+          className={`flex-1 py-[7px] text-[11px] font-semibold rounded-md transition-colors ${side === "buy" ? "bg-trading-green text-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
+        >
+          Buy / Long
+        </button>
+        <button
+          onClick={() => setSide("sell")}
+          className={`flex-1 py-[7px] text-[11px] font-semibold rounded-md transition-colors ${side === "sell" ? "bg-trading-red text-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
+        >
+          Sell / Short
         </button>
       </div>
 
-      {renderTabContent()}
+      {/* ── Form body ── */}
+      <div className="flex flex-col gap-1.5 px-2 pb-2">
 
-      <div className="flex justify-center py-4">
-        <div className="flex items-center bg-secondary rounded-full p-1">
+        {/* Order type */}
+        <div className="relative" ref={dropdownRef}>
           <button
-            onClick={() => setViewMode("list")}
-            className={`p-2 rounded-full transition-colors ${viewMode === "list" ? "bg-accent text-foreground" : "text-muted-foreground"}`}
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className="flex items-center justify-between w-full px-2 py-1.5 rounded border border-border bg-transparent text-[11px] text-foreground hover:border-muted-foreground transition-colors"
           >
-            <LayoutList className="w-4 h-4" />
+            <span>{orderType}</span>
+            <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
           </button>
-          <button
-            onClick={() => setViewMode("chart")}
-            className={`p-2 rounded-full transition-colors ${viewMode === "chart" ? "bg-accent text-foreground" : "text-muted-foreground"}`}
-          >
-            <SlidersVertical className="w-4 h-4" />
-          </button>
+          {dropdownOpen && (
+            <div className="absolute z-50 w-full mt-0.5 rounded border border-border bg-popover shadow-lg overflow-hidden">
+              {orderTypes.map((type) => (
+                <button
+                  key={type}
+                  onClick={() => { setOrderType(type); setDropdownOpen(false); }}
+                  className={`w-full text-left px-2 py-1.5 text-[11px] transition-colors ${orderType === type ? "text-trading-green bg-trading-green/5" : "text-foreground hover:bg-accent"}`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
+
+        {/* Available balance */}
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] text-muted-foreground">Available</span>
+          <div className="flex items-center gap-1">
+            <span className="text-[11px] font-mono-num text-foreground">
+              {user ? `${availableBalance.toFixed(2)} ${quoteCoin}` : `0.00 ${quoteCoin}`}
+            </span>
+            {user && <PlusCircle className="w-3 h-3 text-trading-amber" />}
+          </div>
+        </div>
+
+        {/* Stop Price */}
+        {showStopPrice && (
+          <div ref={stopUnitRef}>
+            <label className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Stop Price</label>
+            <div className="relative">
+              <div className="flex items-center rounded border border-border bg-transparent px-2 py-[5px] focus-within:border-muted-foreground transition-colors overflow-hidden">
+                <input
+                  type="number"
+                  value={stopPrice}
+                  onChange={(e) => setStopPrice(e.target.value)}
+                  placeholder="0.00"
+                  className="flex-1 bg-transparent text-[11px] text-foreground outline-none placeholder:text-muted-foreground min-w-0 font-mono-num"
+                />
+                <button
+                  onClick={() => setStopUnitDropdownOpen(!stopUnitDropdownOpen)}
+                  className="flex items-center gap-0.5 text-[11px] text-muted-foreground ml-1.5 shrink-0"
+                >
+                  {stopPriceUnit}
+                  <ChevronDown className="w-3 h-3" />
+                </button>
+              </div>
+              {stopUnitDropdownOpen && (
+                <div className="absolute right-0 z-50 mt-0.5 rounded border border-border bg-popover shadow-lg min-w-[80px]">
+                  {[quoteCoin, baseCoin].map((unit) => (
+                    <button key={unit} onClick={() => { setStopPriceUnit(unit); setStopUnitDropdownOpen(false); }}
+                      className={`w-full text-left px-2 py-1 text-[11px] transition-colors ${stopPriceUnit === unit ? "text-trading-green" : "text-foreground hover:bg-accent"}`}>
+                      {unit}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Price field */}
+        {showPriceField && (
+          <div ref={priceUnitRef}>
+            <label className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5 block">
+              {isMakerOnly ? "Maker Price" : "Price"}
+            </label>
+            <div className="relative">
+              <div className="flex items-center rounded border border-border bg-transparent overflow-hidden divide-x divide-border focus-within:border-muted-foreground transition-colors">
+                <input
+                  type="number"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="0.00"
+                  className="flex-1 px-2 py-[5px] bg-transparent text-[11px] text-foreground outline-none placeholder:text-muted-foreground min-w-0 font-mono-num"
+                />
+                <button onClick={() => setPriceUnitDropdownOpen(!priceUnitDropdownOpen)}
+                  className="flex items-center gap-0.5 px-1.5 py-[5px] text-[11px] text-muted-foreground shrink-0">
+                  {priceUnit} <ChevronDown className="w-3 h-3" />
+                </button>
+                <button className="px-1.5 py-[5px] text-[11px] text-trading-amber font-semibold shrink-0">BBO</button>
+              </div>
+              {priceUnitDropdownOpen && (
+                <div className="absolute right-0 z-50 mt-0.5 rounded border border-border bg-popover shadow-lg min-w-[80px]">
+                  {[quoteCoin, baseCoin].map((unit) => (
+                    <button key={unit} onClick={() => { setPriceUnit(unit); setPriceUnitDropdownOpen(false); }}
+                      className={`w-full text-left px-2 py-1 text-[11px] transition-colors ${priceUnit === unit ? "text-trading-green" : "text-foreground hover:bg-accent"}`}>
+                      {unit}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Market Price placeholder */}
+        {isMarket && (
+          <div>
+            <label className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Price</label>
+            <div className="flex items-center rounded border border-border bg-accent/30 px-2 py-[5px]">
+              <span className="flex-1 text-[11px] text-muted-foreground">Market Price</span>
+            </div>
+          </div>
+        )}
+
+        {/* Size input */}
+        <div>
+          <label className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Size</label>
+          <div className="relative" ref={unitDropdownRef}>
+            <div className="flex items-center rounded border border-border bg-transparent overflow-hidden divide-x divide-border focus-within:border-muted-foreground transition-colors">
+              <input
+                type="number"
+                value={size}
+                onChange={(e) => { setSize(e.target.value); setSliderValue(0); }}
+                placeholder="0.00"
+                className="flex-1 px-2 py-[5px] bg-transparent text-[11px] text-foreground outline-none placeholder:text-muted-foreground min-w-0 font-mono-num"
+              />
+              <button onClick={() => setUnitDropdownOpen(!unitDropdownOpen)}
+                className="flex items-center gap-0.5 px-1.5 py-[5px] text-[11px] text-muted-foreground shrink-0">
+                {sizeUnit} <ChevronDown className="w-3 h-3" />
+              </button>
+            </div>
+            {unitDropdownOpen && (
+              <div className="absolute right-0 z-50 mt-0.5 rounded border border-border bg-popover shadow-lg min-w-[80px]">
+                {[quoteCoin, baseCoin].map((unit) => (
+                  <button key={unit} onClick={() => { setSizeUnit(unit); setUnitDropdownOpen(false); }}
+                    className={`w-full text-left px-2 py-1 text-[11px] transition-colors ${sizeUnit === unit ? "text-trading-green" : "text-foreground hover:bg-accent"}`}>
+                    {unit}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Percentage slider */}
+        <div className="px-0.5">
+          <div
+            ref={sliderRef}
+            onClick={handleSliderClick}
+            className="relative h-[3px] rounded-full bg-border cursor-pointer"
+          >
+            <div
+              className={`absolute left-0 top-0 h-full rounded-full transition-all duration-150 ${side === "buy" ? "bg-trading-green" : "bg-trading-red"}`}
+              style={{ width: `${sliderValue}%` }}
+            />
+            {percentages.map((pct) => (
+              <button
+                key={pct}
+                onClick={(e) => { e.stopPropagation(); applySlider(pct); }}
+                className={`absolute w-2.5 h-2.5 rounded-full border-2 -translate-y-1/2 top-1/2 -translate-x-1/2 transition-all duration-150 ${
+                  sliderValue >= pct
+                    ? side === "buy" ? "bg-trading-green border-trading-green" : "bg-trading-red border-trading-red"
+                    : "bg-background border-border hover:border-muted-foreground"
+                }`}
+                style={{ left: `${pct}%` }}
+              />
+            ))}
+          </div>
+          <div className="flex justify-between mt-1">
+            {percentages.map((pct) => (
+              <button key={pct} onClick={() => applySlider(pct)}
+                className={`text-[10px] transition-colors ${sliderValue === pct
+                  ? side === "buy" ? "text-trading-green font-semibold" : "text-trading-red font-semibold"
+                  : "text-muted-foreground hover:text-foreground"}`}>
+                {pct}%
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Total Value */}
+        {showTotalValue && (
+          <div>
+            <label className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Total</label>
+            <div className="flex items-center rounded border border-border bg-transparent px-2 py-[5px] focus-within:border-muted-foreground transition-colors">
+              <input
+                type="number"
+                value={totalValue}
+                onChange={(e) => setTotalValue(e.target.value)}
+                placeholder="0.00"
+                className="flex-1 bg-transparent text-[11px] text-foreground outline-none placeholder:text-muted-foreground min-w-0 font-mono-num"
+              />
+              <span className="text-[11px] text-muted-foreground ml-1.5 shrink-0">{quoteCoin}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Checkboxes + TIF */}
+        <div className="flex flex-col gap-1">
+          <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none">
+            <input type="checkbox" checked={tpsl} onChange={(e) => setTpsl(e.target.checked)}
+              className="w-3 h-3 rounded accent-primary" />
+            <span className="border-b border-dashed border-muted-foreground/50 whitespace-nowrap">TP/SL</span>
+          </label>
+          {isLimit && (
+            <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none">
+              <input type="checkbox" checked={hiddenOrder} onChange={(e) => setHiddenOrder(e.target.checked)}
+                className="w-3 h-3 rounded accent-primary" />
+              <span className="whitespace-nowrap">Hidden Order</span>
+            </label>
+          )}
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none">
+              <input type="checkbox" checked={reduceOnly} onChange={(e) => setReduceOnly(e.target.checked)}
+                className="w-3 h-3 rounded accent-primary" />
+              <span className="border-b border-dashed border-muted-foreground/50 whitespace-nowrap">Reduce-Only</span>
+            </label>
+            {isLimit && (
+              <div className="relative" ref={tifRef}>
+                <button onClick={() => setTifDropdownOpen(!tifDropdownOpen)}
+                  className="flex items-center gap-0.5 text-[11px] text-foreground">
+                  {timeInForce}
+                  <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform ${tifDropdownOpen ? "rotate-180" : ""}`} />
+                </button>
+                {tifDropdownOpen && (
+                  <div className="absolute right-0 bottom-full mb-1 z-50 rounded border border-border bg-popover shadow-lg min-w-[210px] overflow-hidden">
+                    {[
+                      { value: "GTC", label: "GTC — Good Till Canceled" },
+                      { value: "FOK", label: "FOK — Fill or Kill" },
+                      { value: "IOC", label: "IOC — Immediate or Cancel" },
+                    ].map(opt => (
+                      <button key={opt.value} onClick={() => { setTimeInForce(opt.value); setTifDropdownOpen(false); }}
+                        className={`w-full text-left px-2 py-1.5 text-[11px] transition-colors ${timeInForce === opt.value ? "text-trading-green bg-trading-green/5" : "text-foreground hover:bg-accent"}`}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Info rows */}
+        <div className="flex flex-col gap-0.5 text-[11px]">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Est. liq. price</span>
+            <span className="text-foreground font-mono-num">-- {quoteCoin}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Margin ({leverage}x)</span>
+            <span className="text-foreground font-mono-num">{estMargin > 0 ? estMargin.toFixed(2) : "0.00"} {quoteCoin}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Max</span>
+            <span className="text-foreground font-mono-num">{maxOrderSize} {baseCoin}</span>
+          </div>
+        </div>
+
+        {/* CTA */}
+        {user ? (
+          <button
+            onClick={() => orderMutation.mutate()}
+            disabled={!size || orderMutation.isPending}
+            className={`w-full py-[7px] rounded text-[11px] font-bold flex items-center justify-center gap-1.5 transition-opacity disabled:opacity-50 ${
+              side === "buy" ? "bg-trading-green text-black hover:opacity-90" : "bg-trading-red text-white hover:opacity-90"
+            }`}
+          >
+            {orderMutation.isPending && <Loader2 className="h-3 w-3 animate-spin" />}
+            {side === "buy" ? `Long ${baseCoin}` : `Short ${baseCoin}`}
+          </button>
+        ) : (
+          <button
+            onClick={() => navigate("/signin")}
+            className="w-full py-2.5 rounded text-sm font-bold bg-primary text-primary-foreground transition-opacity hover:opacity-90"
+          >
+            Connect
+          </button>
+        )}
       </div>
     </div>
   );
 };
 
-export default MobilePerpetualTabs;
+export default FuturesTradePanel;
