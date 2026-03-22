@@ -206,10 +206,11 @@ const RecentTradesPanel = ({ symbol }: { symbol: string }) => {
 interface BottomTabsProps {
   chartVisible: boolean;
   pair: string;
+  viewMode: "list" | "chart";
+  onViewModeChange: (mode: "list" | "chart") => void;
 }
 
-const BottomTabs = ({ chartVisible, pair }: BottomTabsProps) => {
-  const [viewMode, setViewMode] = useState<"list" | "chart">("list");
+const BottomTabs = ({ chartVisible, pair, viewMode, onViewModeChange: setViewMode }: BottomTabsProps) => {
   const [activeOrderTab, setActiveOrderTab] = useState("Open orders");
   const [activeChartTab, setActiveChartTab] = useState("Chart");
 
