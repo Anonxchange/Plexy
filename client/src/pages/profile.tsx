@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useLocation, useRoute, Link } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { BlockchainCanvas } from "@/components/blockchain-canvas";
 import { uploadToR2 } from "@/lib/r2-storage";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -336,18 +337,6 @@ interface UserProfile {
   last_seen: string | null;
 }
 
-interface ProfileStats {
-  trustedByCount: number;
-  blockedByCount: number;
-  hasBlockedCount: number;
-  thirtyDayStats: {
-    tradesSuccess: number | null;
-    avgTimeToPayment: number | null;
-    avgTimeToRelease: number | null;
-    tradesVolume: number;
-  };
-}
-
 interface Feedback {
   id: string;
   from_user_id: string;
@@ -358,18 +347,9 @@ interface Feedback {
   trade?: any;
 }
 
-interface TradeHistory {
-  id: string;
-  buyer_id: string;
-  seller_id: string;
-  crypto_symbol: string;
-  fiat_amount: string;
-  fiat_currency: string;
-  status: string;
-  created_at: string;
-}
-
-interface ShopProduct { id: string; title: string; images: string[]; price: number; currency: string; }
+interface ShopProduct { id: string; title: string; images: string[]; price: number; currency: string; productType: string; inStock: boolean; }
+interface SpotTrade { id: string; symbol: string; side: string; price: string; qty: string; status: string; time: number; }
+interface PerpTrade { id: string; symbol: string; side: string; positionAmt: string; entryPrice: string; unrealizedProfit: string; leverage?: string; }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -411,32 +391,22 @@ export function Profile() {
   // ── Tab / UI state ──
   const [tab, setTab] = useState<Tab>("Overview");
   const [copied, setCopied] = useState(false);
+  const [tradeTypeFilter, setTradeTypeFilter] = useState<"spot" | "perp">("spot");
 
   // ── Data state ──
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
-  const [tradeHistory, setTradeHistory] = useState<TradeHistory[]>([]);
+  const [spotTrades, setSpotTrades] = useState<SpotTrade[]>([]);
+  const [perpTrades, setPerpTrades] = useState<PerpTrade[]>([]);
   const [shopProducts, setShopProducts] = useState<ShopProduct[]>([]);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [feedbackFilter, setFeedbackFilter] = useState("buyers");
-  const [historyFilter, setHistoryFilter] = useState("all");
+  const [loadingTrades, setLoadingTrades] = useState(false);
 
   // ── Edit profile state ──
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState({ username: "", bio: "", languages: [] as string[], avatar_type: "default" as string, avatar_url: null as string | null });
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-
-  // ── Trust/Block state ──
-  const [isTrusted, setIsTrusted] = useState(false);
-  const [isBlocked, setIsBlocked] = useState(false);
-  const [trustLoading, setTrustLoading] = useState(false);
-  const [blockLoading, setBlockLoading] = useState(false);
-
-  // ── Profile stats ──
-  const [profileStats, setProfileStats] = useState<ProfileStats>({
-    trustedByCount: 0, blockedByCount: 0, hasBlockedCount: 0,
-    thirtyDayStats: { tradesSuccess: null, avgTimeToPayment: null, avgTimeToRelease: null, tradesVolume: 0 },
-  });
 
   // ── Live data ──
   const { data: predictionMarkets } = useMarkets({ limit: 10 });
@@ -462,7 +432,15 @@ export function Profile() {
     shopifyService.getProducts(4).then(result => {
       setShopProducts(result.products.map((edge: any) => {
         const p = edge.node;
-        return { id: p.id, title: p.title, images: p.images.edges.map((e: any) => e.node.url), price: parseFloat(p.priceRange.minVariantPrice.amount), currency: p.priceRange.minVariantPrice.currencyCode };
+        const firstVariant = p.variants?.edges?.[0]?.node;
+        return {
+          id: p.id, title: p.title,
+          images: p.images.edges.map((e: any) => e.node.url),
+          price: parseFloat(p.priceRange.minVariantPrice.amount),
+          currency: p.priceRange.minVariantPrice.currencyCode,
+          productType: p.productType || "Product",
+          inStock: firstVariant?.availableForSale !== false,
+        };
       }));
     }).catch(() => {});
   }, []);
@@ -473,47 +451,13 @@ export function Profile() {
     if (viewingUserId) {
       fetchProfileData();
       fetchFeedbacks();
-      fetchProfileStats();
-      if (!isOwnProfile && user?.id) checkTrustAndBlockStatus();
     }
   }, [user, loading, viewingUserId]);
 
   useEffect(() => { if (viewingUserId) fetchFeedbacks(); }, [feedbackFilter, viewingUserId]);
-  useEffect(() => { if (viewingUserId && !isOwnProfile && user?.id) fetchTradeHistory(); }, [historyFilter, viewingUserId]);
+  useEffect(() => { if (tab === "Activity" && user?.id) fetchSpotAndPerpTrades(); }, [tab, user?.id]);
 
   // ── Data fetchers ──
-  const checkTrustAndBlockStatus = async () => {
-    if (!user?.id || !viewingUserId || isOwnProfile) return;
-    try {
-      const { data: t } = await supabase.from("trusted_users").select("id").eq("user_id", user.id).eq("trusted_user_id", viewingUserId).single();
-      setIsTrusted(!!t);
-      const { data: b } = await supabase.from("blocked_users").select("id").eq("user_id", user.id).eq("blocked_user_id", viewingUserId).single();
-      setIsBlocked(!!b);
-    } catch {}
-  };
-
-  const fetchProfileStats = async () => {
-    if (!viewingUserId) return;
-    try {
-      const { count: trustedByCount } = await supabase.from("trusted_users").select("*", { count: "exact", head: true }).eq("trusted_user_id", viewingUserId);
-      const { count: blockedByCount } = await supabase.from("blocked_users").select("*", { count: "exact", head: true }).eq("blocked_user_id", viewingUserId);
-      const { count: hasBlockedCount } = await supabase.from("blocked_users").select("*", { count: "exact", head: true }).eq("user_id", viewingUserId);
-      const ago30 = new Date(); ago30.setDate(ago30.getDate() - 30);
-      const { data: rt } = await supabase.from("p2p_trades").select("*").or(`buyer_id.eq.${viewingUserId},seller_id.eq.${viewingUserId}`).gte("created_at", ago30.toISOString());
-      let tradesSuccess: number | null = null, avgTimeToPayment: number | null = null, avgTimeToRelease: number | null = null, tradesVolume = 0;
-      if (rt?.length) {
-        const done = rt.filter((t: any) => t.status === "completed" || t.status === "released");
-        tradesSuccess = Math.round((done.length / rt.length) * 100);
-        const buyerT = rt.filter((t: any) => t.buyer_id === viewingUserId && t.paid_at && t.created_at);
-        if (buyerT.length) avgTimeToPayment = Math.round(buyerT.reduce((a: number, t: any) => a + (new Date(t.paid_at).getTime() - new Date(t.created_at).getTime()), 0) / buyerT.length / 60000);
-        const sellerT = rt.filter((t: any) => t.seller_id === viewingUserId && t.released_at && t.paid_at);
-        if (sellerT.length) avgTimeToRelease = Math.round(sellerT.reduce((a: number, t: any) => a + (new Date(t.released_at).getTime() - new Date(t.paid_at).getTime()), 0) / sellerT.length / 60000);
-        tradesVolume = done.reduce((a: number, t: any) => a + parseFloat(t.fiat_amount || "0"), 0);
-      }
-      setProfileStats({ trustedByCount: trustedByCount || 0, blockedByCount: blockedByCount || 0, hasBlockedCount: hasBlockedCount || 0, thirtyDayStats: { tradesSuccess, avgTimeToPayment, avgTimeToRelease, tradesVolume } });
-    } catch {}
-  };
-
   const fetchProfileData = async () => {
     try {
       setLoadingProfile(true);
@@ -524,11 +468,7 @@ export function Profile() {
         const emailVerified = isOwnProfile ? !!user?.email_confirmed_at : (data.email_verified || false);
         const { count: pos } = await supabase.from("trade_feedback").select("*", { count: "exact", head: true }).eq("to_user_id", viewingUserId).eq("rating", "positive");
         const { count: neg } = await supabase.from("trade_feedback").select("*", { count: "exact", head: true }).eq("to_user_id", viewingUserId).eq("rating", "negative");
-        const { count: tradesCount } = await supabase.from("p2p_trades").select("*", { count: "exact", head: true }).eq("seller_id", viewingUserId).or("status.eq.completed,status.eq.released");
-        const { data: bt } = await supabase.from("p2p_trades").select("seller_id").eq("buyer_id", viewingUserId).or("status.eq.completed,status.eq.released");
-        const { data: st } = await supabase.from("p2p_trades").select("buyer_id").eq("seller_id", viewingUserId).or("status.eq.completed,status.eq.released");
-        const partners = new Set([...(bt?.map((t: any) => t.seller_id) || []), ...(st?.map((t: any) => t.buyer_id) || [])]);
-        setProfileData({ ...data, email_verified: emailVerified, positive_feedback: pos || 0, negative_feedback: neg || 0, total_trades: tradesCount || 0, trade_partners: partners.size });
+        setProfileData({ ...data, email_verified: emailVerified, positive_feedback: pos || 0, negative_feedback: neg || 0 });
       } else {
         const country = user?.user_metadata?.country || user?.user_metadata?.Country || "";
         const def: any = { id: user?.id, username: `user_${user?.id?.substring(0, 8)}`, country, bio: null, languages: ["English"], positive_feedback: 0, negative_feedback: 0, total_trades: 0, trade_partners: 0, is_verified: false, phone_verified: false, email_verified: false, last_seen: new Date().toISOString() };
@@ -560,17 +500,18 @@ export function Profile() {
     } catch { setFeedbacks([]); }
   };
 
-  const fetchTradeHistory = async () => {
-    if (!user?.id || !viewingUserId || isOwnProfile) { setTradeHistory([]); return; }
+  const fetchSpotAndPerpTrades = async () => {
+    if (!user?.id) return;
+    setLoadingTrades(true);
     try {
-      const timeout = new Promise((_, r) => setTimeout(() => r(new Error("timeout")), 5000));
-      let q = supabase.from("p2p_trades").select("*").or(`and(buyer_id.eq.${user.id},seller_id.eq.${viewingUserId}),and(buyer_id.eq.${viewingUserId},seller_id.eq.${user.id})`).order("created_at", { ascending: false }).limit(20);
-      if (historyFilter === "bought") q = supabase.from("p2p_trades").select("*").eq("buyer_id", user.id).eq("seller_id", viewingUserId).order("created_at", { ascending: false }).limit(20);
-      else if (historyFilter === "sold") q = supabase.from("p2p_trades").select("*").eq("seller_id", user.id).eq("buyer_id", viewingUserId).order("created_at", { ascending: false }).limit(20);
-      const { data, error } = await Promise.race([q, timeout]) as any;
-      if (error) { setTradeHistory([]); return; }
-      setTradeHistory(data || []);
-    } catch { setTradeHistory([]); }
+      const { data: spot } = await supabase.from("spot_orders").select("*").eq("user_id", user.id).order("time", { ascending: false }).limit(20);
+      setSpotTrades(spot || []);
+    } catch { setSpotTrades([]); }
+    try {
+      const { data: perp } = await supabase.from("perp_positions").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20);
+      setPerpTrades(perp || []);
+    } catch { setPerpTrades([]); }
+    setLoadingTrades(false);
   };
 
   // ── Handlers ──
@@ -630,47 +571,9 @@ export function Profile() {
     } catch { toast({ title: "Error", description: "Failed to update profile. Please check your database schema.", variant: "destructive" }); }
   };
 
-  const handleTrustToggle = async () => {
-    if (!user?.id || !viewingUserId || isOwnProfile) return;
-    try {
-      setTrustLoading(true);
-      if (isTrusted) {
-        const { error } = await supabase.from("trusted_users").delete().eq("user_id", user.id).eq("trusted_user_id", viewingUserId);
-        if (error) throw error;
-        setIsTrusted(false); fetchProfileStats();
-        toast({ title: "User Untrusted", description: `Removed @${profileData?.username} from your trusted list` });
-      } else {
-        const { error } = await supabase.from("trusted_users").insert({ user_id: user.id, trusted_user_id: viewingUserId });
-        if (error) { if (error.message.includes("Cannot trust a blocked user")) toast({ title: "Cannot Trust User", description: "Unblock this user first", variant: "destructive" }); else throw error; return; }
-        setIsTrusted(true); fetchProfileStats();
-        toast({ title: "User Trusted", description: `Added @${profileData?.username} to your trusted list` });
-      }
-    } catch { toast({ title: "Error", description: "Failed to update trust status", variant: "destructive" }); }
-    finally { setTrustLoading(false); }
-  };
-
-  const handleBlockToggle = async () => {
-    if (!user?.id || !viewingUserId || isOwnProfile) return;
-    try {
-      setBlockLoading(true);
-      if (isBlocked) {
-        const { error } = await supabase.from("blocked_users").delete().eq("user_id", user.id).eq("blocked_user_id", viewingUserId);
-        if (error) throw error;
-        setIsBlocked(false); fetchProfileStats();
-        toast({ title: "User Unblocked", description: `Unblocked @${profileData?.username}` });
-      } else {
-        const { error } = await supabase.from("blocked_users").insert({ user_id: user.id, blocked_user_id: viewingUserId });
-        if (error) { if (error.message.includes("Cannot block a trusted user")) toast({ title: "Cannot Block User", description: "Remove from trusted list first", variant: "destructive" }); else throw error; return; }
-        setIsBlocked(true); fetchProfileStats();
-        toast({ title: "User Blocked", description: `Blocked @${profileData?.username}` });
-      }
-    } catch { toast({ title: "Error", description: "Failed to update block status", variant: "destructive" }); }
-    finally { setBlockLoading(false); }
-  };
-
   // ── Guards ──
   if (loading || loadingProfile) return <div className="min-h-screen flex items-center justify-center"><LoadingSpinner size="lg" /></div>;
-  if (!user) return null;
+  if (!user && isOwnProfile) return null;
 
   // ── Derived values ──
   const username = profileData?.username || "User";
@@ -681,7 +584,6 @@ export function Profile() {
   const pexlyId = profileData?.pexly_pay_id || `PEXLY-${(user?.id || "").substring(0, 8).toUpperCase()}`;
   const memberSince = profileData?.created_at ? new Date(profileData.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" }) : "recently";
   const kycLevel = profileData?.is_verified ? "Advanced" : profileData?.email_verified ? "Basic" : "None";
-  const volumeDisplay = profileStats.thirtyDayStats.tradesVolume >= 1000 ? `$${(profileStats.thirtyDayStats.tradesVolume / 1000).toFixed(1)}K` : `$${profileStats.thirtyDayStats.tradesVolume.toFixed(0)}`;
 
   const badges: string[] = [];
   if ((profileData?.total_trades || 0) >= 1) badges.push("Early Adopter");
@@ -693,7 +595,7 @@ export function Profile() {
   return (
     <div className="min-h-screen bg-slate-50 relative overflow-x-hidden">
 
-      {/* ── Canvas header (no cover photo) ── */}
+      {/* ── Canvas header ── */}
       <div className="relative h-56 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-[#e8f5d0] via-[#f0fce8] to-[#dff0f8]" />
         <BlockchainCanvas dark={false} />
@@ -702,11 +604,9 @@ export function Profile() {
           <Link href="/" className="text-xs text-slate-600 hover:text-slate-900 font-medium bg-white/85 border border-slate-200 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm transition-colors">
             ← Pexly
           </Link>
-          {isOwnProfile && (
-            <button onClick={handleShareProfile} className="text-xs text-slate-700 font-medium bg-white/85 border border-slate-200 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm hover:bg-white transition-all">
-              Share profile
-            </button>
-          )}
+          <button onClick={handleShareProfile} className="text-xs text-slate-700 font-medium bg-white/85 border border-slate-200 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm hover:bg-white transition-all">
+            Share profile
+          </button>
         </div>
       </div>
 
@@ -754,13 +654,13 @@ export function Profile() {
                   )}
                   <span className="text-lg">{getCountryFlag(profileData?.country)}</span>
                 </div>
-                {profileData?.bio && (
-                  <p className="text-sm text-slate-500 leading-relaxed max-w-lg mb-2.5">{profileData.bio}</p>
-                )}
+                <p className="text-sm text-slate-500 leading-relaxed max-w-lg mb-2.5">
+                  {profileData?.bio || (isOwnProfile ? "No bio yet — click Edit Profile to add one." : "No bio set.")}
+                </p>
                 <div className="flex flex-wrap items-center gap-3 text-[12px] text-slate-400">
                   {profileData?.country && <span className="flex items-center gap-1"><IconMapPin size={12} />{profileData.country}</span>}
                   <span className="flex items-center gap-1"><IconCalendar size={12} />Joined {memberSince}</span>
-                  <span className="flex items-center gap-1"><IconUsers size={12} />{profileStats.trustedByCount} trusted by · {profileData?.trade_partners || 0} partners</span>
+                  <span className="flex items-center gap-1"><IconUsers size={12} />{profileData?.trade_partners || 0} trading partners</span>
                 </div>
               </div>
 
@@ -774,7 +674,7 @@ export function Profile() {
                   {copied ? "Copied!" : pexlyId}
                 </button>
 
-                {isOwnProfile ? (
+                {isOwnProfile && (
                   <button
                     onClick={handleEditProfile}
                     className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-all"
@@ -782,25 +682,6 @@ export function Profile() {
                   >
                     <IconPencil size={14} />
                   </button>
-                ) : (
-                  <>
-                    <button
-                      onClick={blockLoading ? undefined : handleBlockToggle}
-                      className={cn("text-[11px] font-semibold px-3 py-1.5 rounded-lg border transition-colors",
-                        isBlocked ? "text-red-600 bg-red-50 border-red-200 hover:bg-red-100" : "text-red-500 border-slate-200 hover:bg-red-50",
-                        blockLoading && "opacity-50 cursor-not-allowed")}
-                    >
-                      {blockLoading ? "..." : isBlocked ? "Unblock" : "Block"}
-                    </button>
-                    <button
-                      onClick={trustLoading ? undefined : handleTrustToggle}
-                      className={cn("text-[11px] font-semibold px-3 py-1.5 rounded-lg border transition-colors",
-                        isTrusted ? "text-emerald-600 bg-emerald-50 border-emerald-200 hover:bg-emerald-100" : "text-emerald-600 border-slate-200 hover:bg-emerald-50",
-                        trustLoading && "opacity-50 cursor-not-allowed")}
-                    >
-                      {trustLoading ? "..." : isTrusted ? "Untrust" : "Trust"}
-                    </button>
-                  </>
                 )}
 
                 <Button size="sm" className="bg-primary text-black hover:bg-primary/90 font-semibold px-5 text-sm" onClick={isOwnProfile ? handleEditProfile : () => toast({ title: "Send Coin", description: "Send coin feature coming soon" })}>
@@ -825,7 +706,7 @@ export function Profile() {
         {/* ── Stats Grid ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
           {[
-            { label: "Portfolio", value: volumeDisplay, sub: profileStats.thirtyDayStats.tradesSuccess !== null ? `+${profileStats.thirtyDayStats.tradesSuccess}% this month` : "No recent trades", subColor: "text-emerald-600", icon: <IconPortfolio size={20} />, bg: "bg-lime-50" },
+            { label: "Portfolio", value: "Multi-Asset", sub: "BTC · ETH · SOL", subColor: "text-emerald-600", icon: <IconPortfolio size={20} />, bg: "bg-lime-50" },
             { label: "Win Rate", value: `${winRate}%`, sub: `${profileData?.positive_feedback || 0}W · ${profileData?.negative_feedback || 0}L`, subColor: "text-slate-400", icon: <IconWinRate size={20} />, bg: "bg-emerald-50" },
             { label: "Rank", value: rank, sub: `${profileData?.total_trades || 0} trades`, subColor: "text-slate-400", icon: <IconRank size={20} />, bg: "bg-amber-50" },
             { label: "Network", value: "Multi-Chain", sub: "BTC · ETH · SOL", subColor: "text-slate-400", icon: <IconNetwork size={20} />, bg: "bg-indigo-50" },
@@ -1010,7 +891,11 @@ export function Profile() {
                     <div className="mt-4 pt-3 border-t border-slate-100 flex gap-2">
                       <Button size="sm" className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium border-0"
                         onClick={() => setLocation(`/prediction/${m.conditionId}`)}>
-                        View Market
+                        Buy YES
+                      </Button>
+                      <Button size="sm" className="h-7 text-xs bg-red-500 hover:bg-red-600 text-white font-medium border-0"
+                        onClick={() => setLocation(`/prediction/${m.conditionId}`)}>
+                        Buy NO
                       </Button>
                       <Button size="sm" variant="ghost" className="h-7 text-xs text-slate-400 hover:text-slate-700 ml-auto"
                         onClick={() => setLocation(`/prediction/${m.conditionId}`)}>
@@ -1039,24 +924,29 @@ export function Profile() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {shopProducts.map(p => (
                   <Card key={p.id} className="overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-150 group cursor-pointer"
-                    onClick={() => setLocation(`/shop/product/${encodeURIComponent(p.id)}`)}>
+                    onClick={() => p.inStock && setLocation(`/shop/product/${encodeURIComponent(p.id)}`)}>
                     <div className="h-40 flex items-center justify-center relative bg-slate-100 overflow-hidden">
                       {p.images[0]
                         ? <img src={p.images[0]} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                         : <IconShoppingBag size={42} gradient />}
+                      {!p.inStock && (
+                        <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+                          <span className="text-xs font-semibold text-slate-500 bg-white border border-slate-200 px-3 py-1 rounded-full shadow-sm">Out of Stock</span>
+                        </div>
+                      )}
                     </div>
                     <div className="p-4">
+                      {p.productType && <div className="text-[10px] text-slate-400 uppercase tracking-widest font-medium mb-1">{p.productType}</div>}
                       <h3 className="text-sm font-semibold text-slate-900 mb-2 leading-snug group-hover:text-primary transition-colors">{p.title}</h3>
                       <div className="flex items-center gap-0.5 mb-3">
                         {Array.from({ length: 5 }).map((_, i) => <IconStar key={i} size={12} filled={i < 4} />)}
                         <span className="text-[11px] text-slate-400 ml-1">{p.currency}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-base font-bold text-slate-900">${p.price.toFixed(2)}</div>
-                        </div>
-                        <Button size="sm" className="h-8 text-xs font-semibold bg-primary text-black hover:bg-primary/90">
-                          View
+                        <div className="text-base font-bold text-slate-900">${p.price.toFixed(2)}</div>
+                        <Button size="sm" disabled={!p.inStock}
+                          className={cn("h-8 text-xs font-semibold", p.inStock ? "bg-primary text-black hover:bg-primary/90" : "opacity-40 bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed")}>
+                          {p.inStock ? "Add to Cart" : "Sold Out"}
                         </Button>
                       </div>
                     </div>
@@ -1113,51 +1003,75 @@ export function Profile() {
               )}
             </Card>
 
-            {/* Trade history when viewing another user */}
-            {!isOwnProfile && user?.id && (
-              <>
-                <div className="flex items-center justify-between mt-2">
-                  <h2 className="text-base font-bold text-slate-900">Trade History with {profileData?.username || "User"}</h2>
-                  <Select value={historyFilter} onValueChange={setHistoryFilter}>
-                    <SelectTrigger className="w-[160px] h-8 text-xs border-slate-200">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Trades</SelectItem>
-                      <SelectItem value="bought">You Bought</SelectItem>
-                      <SelectItem value="sold">You Sold</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Card className="divide-y divide-slate-100">
-                  {tradeHistory.length === 0 ? (
-                    <div className="px-5 py-6 text-sm text-slate-400">No trade history with this user</div>
-                  ) : (
-                    tradeHistory.map(trade => {
-                      const isBuyer = trade.buyer_id === user?.id;
-                      return (
-                        <div key={trade.id} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors">
-                          <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center text-[10px] font-bold flex-shrink-0",
-                            isBuyer ? "bg-emerald-50 border border-emerald-200 text-emerald-700" : "bg-amber-50 border border-amber-200 text-amber-700")}>
-                            {isBuyer ? "BUY" : "SELL"}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-slate-700 font-medium">{trade.crypto_symbol} · {trade.fiat_currency}</p>
-                            <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5"><IconClock size={10} />{formatRelativeTime(trade.created_at)}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm font-semibold text-slate-800">{parseFloat(trade.fiat_amount || "0").toFixed(2)} {trade.fiat_currency}</p>
-                            <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium", trade.status === "completed" || trade.status === "released" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500")}>
-                              {trade.status}
-                            </span>
-                          </div>
+            {/* Spot / Perp Trade History */}
+            <div className="flex items-center justify-between mt-2">
+              <h2 className="text-base font-bold text-slate-900">Trade History</h2>
+              <div className="flex gap-1 p-0.5 bg-slate-100 rounded-lg">
+                {(["spot", "perp"] as const).map(t => (
+                  <button key={t} onClick={() => setTradeTypeFilter(t)}
+                    className={cn("px-3 py-1 text-xs font-medium rounded-md transition-all",
+                      tradeTypeFilter === t ? "bg-white text-slate-800 shadow-sm" : "text-slate-400 hover:text-slate-600")}>
+                    {t === "spot" ? "Spot" : "Perpetual"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Card className="divide-y divide-slate-100">
+              {loadingTrades ? (
+                <div className="px-5 py-6 text-sm text-slate-400 flex items-center gap-2"><LoadingSpinner size="sm" /> Loading trades…</div>
+              ) : tradeTypeFilter === "spot" ? (
+                spotTrades.length === 0 ? (
+                  <div className="px-5 py-6 text-sm text-slate-400">No spot trade history</div>
+                ) : (
+                  spotTrades.map((trade, i) => (
+                    <div key={trade.id || i} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors">
+                      <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center text-[10px] font-bold flex-shrink-0",
+                        trade.side === "BUY" ? "bg-emerald-50 border border-emerald-200 text-emerald-700" : "bg-red-50 border border-red-200 text-red-600")}>
+                        {trade.side === "BUY" ? "BUY" : "SELL"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-slate-700 font-medium">{trade.symbol}</p>
+                        <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5"><IconClock size={10} />{trade.time ? new Date(trade.time).toLocaleDateString() : "—"}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-slate-800">{parseFloat(trade.qty || "0").toFixed(6)}</p>
+                        <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium", trade.status === "FILLED" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500")}>
+                          {trade.status || "—"}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )
+              ) : (
+                perpTrades.length === 0 ? (
+                  <div className="px-5 py-6 text-sm text-slate-400">No perpetual positions</div>
+                ) : (
+                  perpTrades.map((pos, i) => {
+                    const pnl = parseFloat(pos.unrealizedProfit || "0");
+                    return (
+                      <div key={pos.id || i} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors">
+                        <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center text-[10px] font-bold flex-shrink-0",
+                          pos.side === "LONG" ? "bg-emerald-50 border border-emerald-200 text-emerald-700" : "bg-red-50 border border-red-200 text-red-600")}>
+                          {pos.side === "LONG" ? "LONG" : "SHORT"}
                         </div>
-                      );
-                    })
-                  )}
-                </Card>
-              </>
-            )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-slate-700 font-medium">{pos.symbol}{pos.leverage ? ` ${pos.leverage}×` : ""}</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">Entry: {parseFloat(pos.entryPrice || "0").toFixed(2)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-slate-800">{parseFloat(pos.positionAmt || "0").toFixed(4)}</p>
+                          <span className={cn("text-[10px] font-semibold", pnl >= 0 ? "text-emerald-600" : "text-red-500")}>
+                            {pnl >= 0 ? "+" : ""}{pnl.toFixed(2)} USD
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )
+              )}
+            </Card>
+
           </div>
         )}
 
