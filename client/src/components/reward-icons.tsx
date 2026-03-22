@@ -596,3 +596,135 @@ export function TierIconDiamond({ size = 22 }: { size?: number }) {
     </svg>
   );
 }
+
+// ─── Tier Crystal Card Illustrations ─────────────────────────────────────────
+// Large low-poly 3D crystal SVGs used in the tier benefit carousel cards.
+
+export function TierCrystalNewcomer({ size = 110 }: { size?: number }) {
+  const h = Math.round(size * 1.27);
+  return (
+    <svg width={size} height={h} viewBox="0 0 110 140" fill="none">
+      <ellipse cx="55" cy="132" rx="20" ry="5" fill="rgba(0,0,0,0.32)" />
+      {/* chips */}
+      <polygon points="76,42 81,35 87,42 81,49" fill="#34D399" stroke="#022C22" strokeWidth="0.8" opacity="0.85" />
+      <polygon points="27,54 32,47 37,54 32,61" fill="#6EE7B7" stroke="#022C22" strokeWidth="0.7" opacity="0.75" />
+      {/* top tip */}
+      <polygon points="55,18 64,42 55,46 46,42" fill="#A7F3D0" stroke="#022C22" strokeWidth="0.9" />
+      {/* left face */}
+      <polygon points="46,42 55,46 55,108 30,92" fill="#065F46" stroke="#022C22" strokeWidth="0.9" />
+      {/* right face */}
+      <polygon points="64,42 55,46 55,108 80,92" fill="#059669" stroke="#022C22" strokeWidth="0.9" />
+      {/* bottom taper */}
+      <polygon points="30,92 55,108 80,92 55,122" fill="#047857" stroke="#022C22" strokeWidth="0.9" />
+      {/* glint */}
+      <polygon points="55,18 62,36 55,33" fill="rgba(255,255,255,0.28)" />
+    </svg>
+  );
+}
+
+export function TierCrystalBronze({ size = 110 }: { size?: number }) {
+  const h = Math.round(size * 1.27);
+  return (
+    <svg width={size} height={h} viewBox="0 0 110 140" fill="none">
+      <ellipse cx="54" cy="130" rx="24" ry="5.5" fill="rgba(0,0,0,0.36)" />
+      {/* chips */}
+      <polygon points="74,28 80,21 86,28 80,35" fill="#D97706" stroke="#1C0A00" strokeWidth="0.8" opacity="0.9" />
+      <polygon points="28,46 33,39 39,46 33,53" fill="#FDBA74" stroke="#1C0A00" strokeWidth="0.7" opacity="0.8" />
+      <polygon points="82,52 86,46 91,52 86,58" fill="#92400E" stroke="#1C0A00" strokeWidth="0.7" opacity="0.7" />
+      {/* top face */}
+      <polygon points="54,44 78,57 54,65 30,57" fill="#FDBA74" stroke="#1C0A00" strokeWidth="1" />
+      {/* left face */}
+      <polygon points="30,57 54,65 54,108 30,94" fill="#78350F" stroke="#1C0A00" strokeWidth="1" />
+      {/* right face */}
+      <polygon points="78,57 54,65 54,108 78,94" fill="#B45309" stroke="#1C0A00" strokeWidth="1" />
+      {/* bottom */}
+      <polygon points="30,94 54,108 78,94 54,120" fill="#92400E" stroke="#1C0A00" strokeWidth="1" />
+      {/* glint */}
+      <polygon points="54,44 64,52 54,49" fill="rgba(255,255,255,0.24)" />
+    </svg>
+  );
+}
+
+export function TierCrystalSilver({ size = 110 }: { size?: number }) {
+  const h = Math.round(size * 1.27);
+  return (
+    <svg width={size} height={h} viewBox="0 0 110 140" fill="none">
+      <ellipse cx="52" cy="132" rx="28" ry="6" fill="rgba(0,0,0,0.36)" />
+      {/* chips */}
+      <polygon points="80,17 86,10 92,17 86,24" fill="#94A3B8" stroke="#0F172A" strokeWidth="0.8" opacity="0.9" />
+      <polygon points="20,32 26,24 32,32 26,40" fill="#CBD5E1" stroke="#0F172A" strokeWidth="0.7" opacity="0.8" />
+      <polygon points="86,42 91,35 96,42 91,49" fill="#475569" stroke="#0F172A" strokeWidth="0.7" opacity="0.7" />
+      <polygon points="16,58 21,51 26,58 21,65" fill="#94A3B8" stroke="#0F172A" strokeWidth="0.6" opacity="0.65" />
+      {/* main tall shard — front-left face (bright) */}
+      <polygon points="40,16 27,96 50,118 62,28" fill="#CBD5E1" stroke="#0F172A" strokeWidth="1" />
+      {/* front-right face */}
+      <polygon points="62,28 50,118 76,112 74,54" fill="#94A3B8" stroke="#0F172A" strokeWidth="1" />
+      {/* back right face */}
+      <polygon points="74,54 76,112 84,88 80,48" fill="#334155" stroke="#0F172A" strokeWidth="1" />
+      {/* top cap */}
+      <polygon points="40,16 62,28 50,20" fill="#E2E8F0" stroke="#0F172A" strokeWidth="1" />
+      {/* glint */}
+      <polygon points="40,16 47,28 43,50 38,34" fill="rgba(255,255,255,0.2)" />
+      {/* secondary mini-shard */}
+      <polygon points="80,48 84,88 92,78 88,44" fill="#475569" stroke="#0F172A" strokeWidth="0.8" />
+      <polygon points="88,44 92,78 97,66 93,38" fill="#64748B" stroke="#0F172A" strokeWidth="0.8" />
+    </svg>
+  );
+}
+
+export function TierCrystalGold({ size = 110 }: { size?: number }) {
+  const h = Math.round(size * 1.27);
+  return (
+    <svg width={size} height={h} viewBox="0 0 110 140" fill="none">
+      <ellipse cx="55" cy="133" rx="36" ry="7" fill="rgba(0,0,0,0.42)" />
+      {/* chips — many */}
+      <polygon points="83,12 89,5 95,12 89,19" fill="#F59E0B" stroke="#1C0800" strokeWidth="0.8" opacity="0.95" />
+      <polygon points="68,4 74,0 79,4 74,9"  fill="#FDE68A" stroke="#1C0800" strokeWidth="0.7" opacity="0.85" />
+      <polygon points="23,20 29,13 35,20 29,27" fill="#D97706" stroke="#1C0800" strokeWidth="0.7" opacity="0.8" />
+      <polygon points="90,33 95,27 100,33 95,39" fill="#92400E" stroke="#1C0800" strokeWidth="0.7" opacity="0.75" />
+      <polygon points="14,44 19,37 24,44 19,51" fill="#F59E0B" stroke="#1C0800" strokeWidth="0.7" opacity="0.7" />
+      <polygon points="94,56 99,50 104,56 99,62" fill="#FDE68A" stroke="#1C0800" strokeWidth="0.6" opacity="0.6" />
+      {/* main left crystal */}
+      <polygon points="36,16 18,100 46,122 60,26" fill="#FDE68A" stroke="#1C0800" strokeWidth="1.1" />
+      <polygon points="36,16 18,100 12,82 28,16" fill="#78350F"  stroke="#1C0800" strokeWidth="1.1" />
+      <polygon points="60,26 46,122 56,114 64,40" fill="#B45309" stroke="#1C0800" strokeWidth="1.1" />
+      <polygon points="36,16 46,24 40,20" fill="rgba(255,255,255,0.32)" />
+      {/* secondary right crystal */}
+      <polygon points="64,34 56,110 76,120 84,50" fill="#F59E0B" stroke="#1C0800" strokeWidth="1" />
+      <polygon points="84,50 76,120 90,112 92,65" fill="#92400E" stroke="#1C0800" strokeWidth="1" />
+      <polygon points="64,34 75,44 68,38" fill="rgba(255,255,255,0.26)" />
+      {/* base cluster */}
+      <polygon points="12,100 18,122 46,122 64,114 76,120 92,112 92,100 64,90 40,90" fill="#78350F" stroke="#1C0800" strokeWidth="1" />
+      <polygon points="12,100 40,90 64,90 92,100 68,86 36,86" fill="#B45309" stroke="#1C0800" strokeWidth="1" />
+    </svg>
+  );
+}
+
+export function TierCrystalDiamond({ size = 110 }: { size?: number }) {
+  const h = Math.round(size * 1.27);
+  return (
+    <svg width={size} height={h} viewBox="0 0 110 140" fill="none">
+      <ellipse cx="55" cy="132" rx="30" ry="6.5" fill="rgba(0,0,0,0.36)" />
+      {/* chips */}
+      <polygon points="82,20 88,13 94,20 88,27" fill="#38BDF8" stroke="#082F49" strokeWidth="0.8" opacity="0.9" />
+      <polygon points="18,27 24,20 30,27 24,34" fill="#BAE6FD" stroke="#082F49" strokeWidth="0.7" opacity="0.8" />
+      <polygon points="89,46 94,39 99,46 94,53" fill="#0EA5E9" stroke="#082F49" strokeWidth="0.7" opacity="0.7" />
+      <polygon points="14,52 19,45 24,52 19,59" fill="#38BDF8" stroke="#082F49" strokeWidth="0.6" opacity="0.65" />
+      <polygon points="78,8 83,2 88,8 83,14"  fill="#7DD3FC" stroke="#082F49" strokeWidth="0.6" opacity="0.75" />
+      {/* crown */}
+      <polygon points="36,38 74,38 82,56 28,56" fill="#BAE6FD" stroke="#082F49" strokeWidth="1" />
+      <polygon points="36,38 28,56 16,48 28,32" fill="#38BDF8"  stroke="#082F49" strokeWidth="1" />
+      <polygon points="74,38 82,56 94,48 82,32" fill="#0EA5E9"  stroke="#082F49" strokeWidth="1" />
+      <polygon points="28,32 36,38 55,30 42,20" fill="#7DD3FC"  stroke="#082F49" strokeWidth="1" />
+      <polygon points="82,32 74,38 55,30 68,20" fill="#38BDF8"  stroke="#082F49" strokeWidth="1" />
+      <polygon points="42,20 55,30 68,20 55,13" fill="#BAE6FD"  stroke="#082F49" strokeWidth="1" />
+      {/* pavilion */}
+      <polygon points="28,56 16,48 36,96 55,118" fill="#0369A1" stroke="#082F49" strokeWidth="1" />
+      <polygon points="28,56 55,118 55,66"       fill="#0EA5E9" stroke="#082F49" strokeWidth="1" />
+      <polygon points="82,56 55,118 55,66"       fill="#0284C7" stroke="#082F49" strokeWidth="1" />
+      <polygon points="82,56 94,48 74,96 55,118" fill="#075985" stroke="#082F49" strokeWidth="1" />
+      {/* glint */}
+      <polygon points="42,20 50,28 44,22" fill="rgba(255,255,255,0.38)" />
+    </svg>
+  );
+}
