@@ -101,21 +101,21 @@ const AccountBar = ({ variant = "bar", pair }: AccountBarProps) => {
           )}
         </div>
       ) : (
-        <div className="flex items-center justify-between h-12 px-4 border-y border-border bg-card">
-          <div className="flex items-center gap-2 text-sm">
+        <div className="flex items-center justify-between h-9 px-3 border-y border-border bg-card">
+          <div className="flex items-center gap-1.5 text-[11px]">
             <span className="text-muted-foreground">Spot Acct.</span>
             <span className="text-foreground font-mono-num">{displayBalance}</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => openModal("deposit")}
-              className="px-4 py-1.5 rounded text-sm text-trading-amber border border-trading-amber/40 bg-trading-amber/10 hover:bg-trading-amber/15 transition-colors"
+              className="px-3 py-[3px] rounded text-[11px] text-trading-amber border border-trading-amber/40 bg-trading-amber/10 hover:bg-trading-amber/15 transition-colors"
             >
               Deposit
             </button>
             <button
               onClick={() => openModal("transfer")}
-              className="px-4 py-1.5 rounded text-sm text-trading-amber border border-trading-amber/40 bg-trading-amber/10 hover:bg-trading-amber/15 transition-colors"
+              className="px-3 py-[3px] rounded text-[11px] text-trading-amber border border-trading-amber/40 bg-trading-amber/10 hover:bg-trading-amber/15 transition-colors"
             >
               Transfer
             </button>
