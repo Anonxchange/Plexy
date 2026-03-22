@@ -9,10 +9,7 @@ import { useMarkets, type PolymarketMarket } from "@/hooks/use-polymarket";
 import { shopifyService } from "@/lib/shopify-service";
 import { cn } from "@/lib/utils";
 import DOMPurify from "dompurify";
-import { Upload, User, TrendingUp, ArrowRight, CheckCircle2, ThumbsUp, ThumbsDown } from "lucide-react";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+import { Upload, User, TrendingUp, ArrowRight, CheckCircle2 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -337,16 +334,6 @@ interface UserProfile {
   last_seen: string | null;
 }
 
-interface Feedback {
-  id: string;
-  from_user_id: string;
-  rating: "positive" | "negative";
-  comment: string;
-  created_at: string;
-  from_user_profile?: { username: string; country: string };
-  trade?: any;
-}
-
 interface ShopProduct { id: string; title: string; images: string[]; price: number; currency: string; productType: string; inStock: boolean; }
 interface SpotTrade { id: string; symbol: string; side: string; price: string; qty: string; status: string; time: number; }
 interface PerpTrade { id: string; symbol: string; side: string; positionAmt: string; entryPrice: string; unrealizedProfit: string; leverage?: string; }
@@ -395,12 +382,10 @@ export function Profile() {
 
   // ── Data state ──
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
-  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [spotTrades, setSpotTrades] = useState<SpotTrade[]>([]);
   const [perpTrades, setPerpTrades] = useState<PerpTrade[]>([]);
   const [shopProducts, setShopProducts] = useState<ShopProduct[]>([]);
   const [loadingProfile, setLoadingProfile] = useState(true);
-  const [feedbackFilter, setFeedbackFilter] = useState("buyers");
   const [loadingTrades, setLoadingTrades] = useState(false);
 
   // ── Edit profile state ──
@@ -450,11 +435,9 @@ export function Profile() {
     if (!loading && !user && isOwnProfile) { setLocation("/signin"); return; }
     if (viewingUserId) {
       fetchProfileData();
-      fetchFeedbacks();
     }
   }, [user, loading, viewingUserId]);
 
-  useEffect(() => { if (viewingUserId) fetchFeedbacks(); }, [feedbackFilter, viewingUserId]);
   useEffect(() => { if (tab === "Activity" && user?.id) fetchSpotAndPerpTrades(); }, [tab, user?.id]);
 
   // ── Data fetchers ──
@@ -479,25 +462,6 @@ export function Profile() {
       const country = user?.user_metadata?.country || user?.user_metadata?.Country || "";
       setProfileData({ id: user?.id || "", username: `user_${user?.id?.substring(0, 8)}`, country, bio: null, languages: ["English"], positive_feedback: 0, negative_feedback: 0, total_trades: 0, trade_partners: 0, is_verified: false, phone_verified: false, email_verified: false, last_seen: new Date().toISOString(), created_at: new Date().toISOString(), avatar_type: "default", avatar_url: null, pexly_pay_id: null });
     } finally { setLoadingProfile(false); }
-  };
-
-  const fetchFeedbacks = async () => {
-    if (!viewingUserId) return;
-    try {
-      const timeout = new Promise((_, r) => setTimeout(() => r(new Error("timeout")), 5000));
-      const { data: fd, error } = await Promise.race([supabase.from("trade_feedback").select("*").eq("to_user_id", viewingUserId).order("created_at", { ascending: false }).limit(50), timeout]) as any;
-      if (error || !fd?.length) { setFeedbacks([]); return; }
-      const userIds = Array.from(new Set(fd.map((f: any) => f.from_user_id).filter(Boolean))) as string[];
-      const tradeIds = Array.from(new Set(fd.map((f: any) => f.trade_id).filter(Boolean))) as string[];
-      let profiles: Record<string, any> = {}, trades: Record<string, any> = {};
-      if (userIds.length) { const { data: p } = await supabase.from("user_profiles").select("id, username, country").in("id", userIds); if (p) profiles = p.reduce((a: any, x: any) => { a[x.id] = x; return a; }, {}); }
-      if (tradeIds.length) { const { data: t } = await supabase.from("p2p_trades").select("id, offer_id, seller_id, buyer_id").in("id", tradeIds); if (t) trades = t.reduce((a: any, x: any) => { a[x.id] = x; return a; }, {}); }
-      const mapped = fd.map((f: any) => ({ ...f, from_user_profile: profiles[f.from_user_id] || null, trade: trades[f.trade_id] || null }));
-      let filtered = mapped;
-      if (feedbackFilter === "buyers") filtered = mapped.filter((f: any) => !f.trade || (f.trade.buyer_id === viewingUserId && f.trade.seller_id === f.from_user_id));
-      else if (feedbackFilter === "sellers") filtered = mapped.filter((f: any) => !f.trade || (f.trade.seller_id === viewingUserId && f.trade.buyer_id === f.from_user_id));
-      setFeedbacks(filtered);
-    } catch { setFeedbacks([]); }
   };
 
   const fetchSpotAndPerpTrades = async () => {
@@ -734,7 +698,10 @@ export function Profile() {
             </div>
             <div className="flex items-center gap-1.5">
               {["BTC", "ETH", "SOL"].map(t => (
-                <span key={t} className="text-[10px] px-2 py-0.5 bg-slate-100 rounded-full border border-slate-200 text-slate-500 font-medium">{t}</span>
+                <span key={t} className="flex items-center gap-1 text-[10px] px-2 py-0.5 bg-slate-100 rounded-full border border-slate-200 text-slate-500 font-medium">
+                  <img src={cryptoIconUrls[t]} alt={t} className="w-3 h-3 rounded-full object-cover" />
+                  {t}
+                </span>
               ))}
             </div>
           </Card>
@@ -960,48 +927,6 @@ export function Profile() {
         {/* ── ACTIVITY TAB ── */}
         {tab === "Activity" && (
           <div className="animate-in fade-in-0 duration-200 space-y-4">
-
-            {/* Feedback */}
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-slate-900">Feedback</h2>
-              <Select value={feedbackFilter} onValueChange={setFeedbackFilter}>
-                <SelectTrigger className="w-[150px] h-8 text-xs border-slate-200">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="buyers">From Sellers</SelectItem>
-                  <SelectItem value="sellers">From Buyers</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Card className="divide-y divide-slate-100">
-              {feedbacks.length === 0 ? (
-                <div className="flex items-center gap-4 px-5 py-6 text-slate-400 text-sm">No feedback yet</div>
-              ) : (
-                feedbacks.map(fb => (
-                  <div key={fb.id} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors">
-                    <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0",
-                      fb.rating === "positive" ? "bg-emerald-50 border border-emerald-200" : "bg-red-50 border border-red-200")}>
-                      {fb.rating === "positive"
-                        ? <ThumbsUp className="h-4 w-4 text-emerald-600" />
-                        : <ThumbsDown className="h-4 w-4 text-red-500" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-slate-700 font-medium truncate">
-                        @{fb.from_user_profile?.username || "User"}
-                        {fb.from_user_profile?.country && ` ${getCountryFlag(fb.from_user_profile.country)}`}
-                      </p>
-                      {fb.comment && <p className="text-xs text-slate-400 truncate">{fb.comment}</p>}
-                      <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5"><IconClock size={10} />{formatRelativeTime(fb.created_at)}</p>
-                    </div>
-                    <span className={cn("text-sm font-semibold", fb.rating === "positive" ? "text-emerald-600" : "text-red-500")}>
-                      {fb.rating === "positive" ? "+1" : "-1"}
-                    </span>
-                  </div>
-                ))
-              )}
-            </Card>
 
             {/* Spot / Perp Trade History */}
             <div className="flex items-center justify-between mt-2">
