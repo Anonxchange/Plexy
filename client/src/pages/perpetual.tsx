@@ -8,6 +8,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 export default function PerpetualPage() {
   const [chartVisible, setChartVisible] = useState(true);
   const [pair, setPair] = useState("ASTER/USDT");
+  const [viewMode, setViewMode] = useState<"list" | "chart">("list");
   const isMobile = useIsMobile();
 
   return (
@@ -19,10 +20,11 @@ export default function PerpetualPage() {
           onPairChange={setPair}
           chartVisible={chartVisible}
           onToggleChart={() => setChartVisible(!chartVisible)}
+          viewMode={viewMode}
         />
       )}
       {isMobile ? (
-        <MobilePerpetualTabs chartVisible={chartVisible} pair={pair} />
+        <MobilePerpetualTabs chartVisible={chartVisible} pair={pair} viewMode={viewMode} onViewModeChange={setViewMode} />
       ) : (
         <DesktopPerpetualLayout
           chartVisible={chartVisible}
