@@ -231,6 +231,8 @@ interface MobilePerpetualTabsProps {
 const MobilePerpetualTabs = ({ chartVisible, pair, viewMode, onViewModeChange: setViewMode }: MobilePerpetualTabsProps) => {
   const [activeOrderTab, setActiveOrderTab] = useState("Open orders");
   const [activeChartTab, setActiveChartTab] = useState("Chart");
+  const [perpOrderType, setPerpOrderType] = useState("Limit");
+  const orderBookCount = perpOrderType === "Limit" ? 9 : 7;
 
   const tabs = viewMode === "list" ? orderTabs : chartTabs;
   const activeTab = viewMode === "list" ? activeOrderTab : activeChartTab;
@@ -427,10 +429,10 @@ const MobilePerpetualTabs = ({ chartVisible, pair, viewMode, onViewModeChange: s
           )}
           <div className="flex border-t border-border w-full min-w-0">
             <div className="w-[40%] min-w-0 border-r border-border overflow-hidden">
-              <OrderBook symbol={pair} mode="futures" count={9} />
+              <OrderBook symbol={pair} mode="futures" count={orderBookCount} />
             </div>
             <div className="w-[60%] min-w-0">
-              <FuturesTradePanel symbol={pair} />
+              <FuturesTradePanel symbol={pair} onOrderTypeChange={setPerpOrderType} />
             </div>
           </div>
         </>
