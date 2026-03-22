@@ -10,6 +10,7 @@ export const Spot = () => {
   useHead({ title: "Spot Trading | Pexly", meta: [{ name: "description", content: "Trade cryptocurrencies on the Pexly spot market with real-time order books." }] });
   const [chartVisible, setChartVisible] = useState(true);
   const [pair, setPair] = useState("ASTER/USDT");
+  const [viewMode, setViewMode] = useState<"list" | "chart">("list");
   const isMobile = useIsMobile();
 
   return (
@@ -20,11 +21,12 @@ export const Spot = () => {
           pair={pair}
           onPairChange={setPair}
           chartVisible={chartVisible} 
-          onToggleChart={() => setChartVisible(!chartVisible)} 
+          onToggleChart={() => setChartVisible(!chartVisible)}
+          viewMode={viewMode}
         />
       )}
       {isMobile ? (
-        <BottomTabs chartVisible={chartVisible} pair={pair} />
+        <BottomTabs chartVisible={chartVisible} pair={pair} viewMode={viewMode} onViewModeChange={setViewMode} />
       ) : (
         <DesktopTradingLayout 
           chartVisible={chartVisible} 
