@@ -233,7 +233,7 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
           <ChevronDown className={`w-2.5 h-2.5 text-muted-foreground transition-transform ${tickOpen ? "rotate-180" : ""}`} />
         </button>
         {tickOpen && (
-          <div className="absolute right-0 top-full mt-1 z-50 rounded-md border border-border bg-popover shadow-lg overflow-hidden min-w-[70px]">
+          <div className="absolute right-0 bottom-full mb-1 z-50 rounded-md border border-border bg-popover shadow-lg overflow-hidden min-w-[70px]">
             {TICK_OPTIONS.map((opt) => (
               <button
                 key={opt}
