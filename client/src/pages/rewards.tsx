@@ -5,8 +5,8 @@ import { cn } from "@/lib/utils";
 import { PexlyFooter } from "@/components/pexly-footer";
 import {
   Flame, Shield, Star, Gift, ChevronRight, CheckCircle2,
-  Lock, Trophy, Users, ArrowUpRight, Sparkles, Medal, Copy,
-  TrendingUp, Wallet, BadgeCheck, BarChart2, Repeat2, Activity,
+  Lock, Trophy, Users, Sparkles, Medal, Copy,
+  TrendingUp, BadgeCheck, BarChart2, Repeat2, Activity,
   Clock, Ticket, Coins, Percent, HeadphonesIcon, TicketCheck,
   Bolt, Crown, Gem, PartyPopper, Smartphone, Wifi, Tag,
 } from "lucide-react";
@@ -91,7 +91,6 @@ const TIERS: Tier[] = [
     benefits: [
       { icon: <TrendingUp className="w-4 h-4" />, label: "Trading fee", value: "1.0% (standard rate)" },
       { icon: <Tag className="w-4 h-4" />, label: "Active offers", value: "Up to 5 offers at once" },
-      { icon: <ArrowUpRight className="w-4 h-4" />, label: "Daily withdrawal", value: "$500 limit" },
       { icon: <HeadphonesIcon className="w-4 h-4" />, label: "Support", value: "Email only" },
       { icon: <Coins className="w-4 h-4" />, label: "Point earn rate", value: "1× base rate" },
     ],
@@ -111,7 +110,6 @@ const TIERS: Tier[] = [
     benefits: [
       { icon: <Percent className="w-4 h-4" />, label: "Trading fee", value: "3% discount → 0.97%", highlight: true },
       { icon: <Tag className="w-4 h-4" />, label: "Active offers", value: "Up to 15 offers at once" },
-      { icon: <ArrowUpRight className="w-4 h-4" />, label: "Daily withdrawal", value: "$1,500 limit", highlight: true },
       { icon: <HeadphonesIcon className="w-4 h-4" />, label: "Support", value: "Priority email" },
       { icon: <Coins className="w-4 h-4" />, label: "Point earn rate", value: "1.2× boost", highlight: true },
       { icon: <TicketCheck className="w-4 h-4" />, label: "Lucky Draw", value: "Not included" },
@@ -133,7 +131,6 @@ const TIERS: Tier[] = [
     benefits: [
       { icon: <Percent className="w-4 h-4" />, label: "Trading fee", value: "8% discount → 0.92%", highlight: true },
       { icon: <Tag className="w-4 h-4" />, label: "Active offers", value: "Up to 50 offers at once" },
-      { icon: <ArrowUpRight className="w-4 h-4" />, label: "Daily withdrawal", value: "$5,000 limit", highlight: true },
       { icon: <HeadphonesIcon className="w-4 h-4" />, label: "Support", value: "Priority live chat", highlight: true },
       { icon: <Coins className="w-4 h-4" />, label: "Point earn rate", value: "1.5× boost", highlight: true },
       { icon: <TicketCheck className="w-4 h-4" />, label: "Lucky Draw", value: "1 free entry / month" },
@@ -155,7 +152,6 @@ const TIERS: Tier[] = [
     benefits: [
       { icon: <Percent className="w-4 h-4" />, label: "Trading fee", value: "18% discount → 0.82%", highlight: true },
       { icon: <Tag className="w-4 h-4" />, label: "Active offers", value: "Unlimited offers" },
-      { icon: <ArrowUpRight className="w-4 h-4" />, label: "Daily withdrawal", value: "$15,000 limit", highlight: true },
       { icon: <HeadphonesIcon className="w-4 h-4" />, label: "Support", value: "Dedicated account agent", highlight: true },
       { icon: <Bolt className="w-4 h-4" />, label: "Point earn rate", value: "2× boost", highlight: true },
       { icon: <TicketCheck className="w-4 h-4" />, label: "Lucky Draw", value: "3 free entries / month" },
@@ -178,7 +174,6 @@ const TIERS: Tier[] = [
     benefits: [
       { icon: <Percent className="w-4 h-4" />, label: "Trading fee", value: "28% discount → 0.72%", highlight: true },
       { icon: <Tag className="w-4 h-4" />, label: "Active offers", value: "Unlimited + Featured placement" },
-      { icon: <ArrowUpRight className="w-4 h-4" />, label: "Daily withdrawal", value: "$100,000 limit", highlight: true },
       { icon: <Crown className="w-4 h-4" />, label: "Support", value: "Personal account manager", highlight: true },
       { icon: <Bolt className="w-4 h-4" />, label: "Point earn rate", value: "5× boost", highlight: true },
       { icon: <TicketCheck className="w-4 h-4" />, label: "Lucky Draw", value: "10 free entries / month" },
@@ -234,7 +229,6 @@ const ONE_TIME_TASKS: Task[] = [
   { id: "enable-2fa", icon: <Shield className="w-5 h-5 text-blue-500" />, title: "Enable two-factor auth", description: "Secure your account with 2FA", pts: 50, done: false, cta: "Enable 2FA", category: "one-time" },
   { id: "first-trade", icon: <TrendingUp className="w-5 h-5 text-blue-500" />, title: "Complete your first trade", description: "Buy or sell any crypto on Pexly", pts: 50, done: false, cta: "Start trading", category: "one-time" },
   { id: "first-swap", icon: <Repeat2 className="w-5 h-5 text-cyan-500" />, title: "Complete your first swap", description: "Swap any two crypto assets", pts: 30, done: false, cta: "Swap", category: "one-time" },
-  { id: "deposit", icon: <Wallet className="w-5 h-5 text-purple-500" />, title: "Make a crypto deposit", description: "Deposit any supported cryptocurrency", pts: 40, done: false, cta: "Deposit", category: "one-time" },
   { id: "first-giftcard", icon: <Gift className="w-5 h-5 text-pink-500" />, title: "Buy your first gift card", description: "Purchase a gift card from Pexly", pts: 30, done: false, cta: "Buy card", category: "one-time" },
   { id: "refer", icon: <Users className="w-5 h-5 text-pink-500" />, title: "Refer a friend", description: "Earn points for every friend who joins and trades", pts: 75, done: false, cta: "Invite friends", category: "one-time" },
   { id: "complete-profile", icon: <BadgeCheck className="w-5 h-5 text-yellow-500" />, title: "Complete your profile", description: "Add a photo, bio and country", pts: 20, done: false, cta: "Edit profile", category: "one-time" },
@@ -982,7 +976,14 @@ export default function RewardsPage() {
                 {BADGES.filter(b => b.unlocked).length}/{BADGES.length} unlocked
               </p>
               <div className="grid grid-cols-4 gap-2.5">
-                {BADGES.map((badge) => <BadgeCard key={badge.id} badge={badge} />)}
+                {BADGES.map((badge) => (
+                  <BadgeCard
+                    key={badge.id}
+                    badge={badge}
+                    expanded={expandedBadge === badge.id}
+                    onToggle={() => setExpandedBadge(expandedBadge === badge.id ? null : badge.id)}
+                  />
+                ))}
               </div>
             </div>
           )}
@@ -1037,27 +1038,44 @@ export default function RewardsPage() {
           </div>
           <div className="space-y-2">
             {[
-              { title: "Convert $100 or more",    chances: 1, pts: 50 },
-              { title: "Convert $1,000 or more",  chances: 2, pts: 100 },
-              { title: "Convert $5,000 or more",  chances: 2, pts: 200 },
-              { title: "Convert $15,000 or more", chances: 2, pts: 500 },
-            ].map((item, i) => (
-              <div key={i} className="flex items-center justify-between gap-4 p-4 rounded-2xl border border-border bg-card hover:bg-muted/50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-500/15 flex items-center justify-center flex-shrink-0">
-                    <Ticket className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              { title: "Swap $100 or more",              type: "Swap",       chances: 1, pts: 50  },
+              { title: "Spot trade $500 or more",        type: "Spot",       chances: 1, pts: 75  },
+              { title: "Perpetual trade $1,000 or more", type: "Perpetual",  chances: 2, pts: 100 },
+              { title: "Swap $5,000 or more",            type: "Swap",       chances: 2, pts: 200 },
+              { title: "Spot trade $10,000 or more",     type: "Spot",       chances: 2, pts: 300 },
+              { title: "Perpetual trade $15,000 or more",type: "Perpetual",  chances: 2, pts: 500 },
+            ].map((item, i) => {
+              const typeColors: Record<string, string> = {
+                Swap:      "bg-cyan-100 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400",
+                Spot:      "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+                Perpetual: "bg-orange-100 dark:bg-orange-500/15 text-orange-600 dark:text-orange-400",
+              };
+              const typeIcons: Record<string, JSX.Element> = {
+                Swap:      <Repeat2 className="w-4 h-4" />,
+                Spot:      <TrendingUp className="w-4 h-4" />,
+                Perpetual: <BarChart2 className="w-4 h-4" />,
+              };
+              return (
+                <div key={i} className="flex items-center justify-between gap-4 p-4 rounded-2xl border border-border bg-card hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0", typeColors[item.type])}>
+                      {typeIcons[item.type]}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-xs font-semibold text-foreground">{item.title}</p>
+                        <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-full", typeColors[item.type])}>{item.type}</span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">+{item.chances} draw chance{item.chances > 1 ? "s" : ""}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs font-semibold text-foreground">{item.title}</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">+{item.chances} draw chance{item.chances > 1 ? "s" : ""}</p>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full tabular-nums">+{item.pts} pts</span>
+                    <Button variant="outline" size="sm" className="h-7 px-3 text-[10px] font-semibold rounded-lg">Accept</Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full tabular-nums">+{item.pts} pts</span>
-                  <Button variant="outline" size="sm" className="h-7 px-3 text-[10px] font-semibold rounded-lg">Accept</Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -1068,7 +1086,6 @@ export default function RewardsPage() {
             {[
               { label: "Lucky Spins", desc: "Spin to win pts & prizes", icon: "🎰", bg: "bg-purple-50 dark:bg-purple-500/10", border: "border-purple-200 dark:border-purple-500/20", btn: "text-purple-700 dark:text-purple-400" },
               { label: "Price Predictions", desc: "Predict crypto prices, earn pts", icon: "🔮", bg: "bg-blue-50 dark:bg-blue-500/10", border: "border-blue-200 dark:border-blue-500/20", btn: "text-blue-700 dark:text-blue-400" },
-              { label: "Crypto Deposit", desc: "Earn pts on every deposit", icon: "💰", bg: "bg-emerald-50 dark:bg-emerald-500/10", border: "border-emerald-200 dark:border-emerald-500/20", btn: "text-emerald-700 dark:text-emerald-400" },
               { label: "Swap & Earn", desc: "Pts on every crypto swap", icon: "🔄", bg: "bg-cyan-50 dark:bg-cyan-500/10", border: "border-cyan-200 dark:border-cyan-500/20", btn: "text-cyan-700 dark:text-cyan-400" },
               { label: "Loyalty Badges", desc: "Complete challenges for badges", icon: "🏅", bg: "bg-amber-50 dark:bg-amber-500/10", border: "border-amber-200 dark:border-amber-500/20", btn: "text-amber-700 dark:text-amber-400" },
               { label: "Cashback", desc: "Get cashback on your trades", icon: "🎁", bg: "bg-pink-50 dark:bg-pink-500/10", border: "border-pink-200 dark:border-pink-500/20", btn: "text-pink-700 dark:text-pink-400" },
