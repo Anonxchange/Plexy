@@ -154,16 +154,16 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
 
       {/* Funding / Countdown — futures mobile only */}
       {mode === "futures" && isMobile && (
-        <div className="px-2 pt-2 pb-1 flex-shrink-0">
+        <div className="px-2 pt-1 pb-0.5 flex-shrink-0">
           <span className="text-[9px] text-muted-foreground leading-none block">Funding (8h) / Countdown</span>
-          <span className="text-[11px] font-mono-num text-foreground leading-none font-medium">
+          <span className="text-[10px] font-mono-num text-foreground leading-none font-medium">
             {fundingRate} / {countdown || "—"}
           </span>
         </div>
       )}
 
       {/* Column headers */}
-      <div className="flex items-center justify-between px-2 pt-2 pb-1 flex-shrink-0">
+      <div className="flex items-center justify-between px-2 pt-1 pb-0.5 flex-shrink-0">
         <span className="text-[9px] text-muted-foreground leading-none">Price ({quote})</span>
         <button className="flex items-center gap-0.5 text-[9px] text-muted-foreground leading-none">
           Size ({quote}) <ChevronDown className="w-2.5 h-2.5" />
@@ -189,12 +189,12 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
       </div>
 
       {/* Mid price */}
-      <div className="flex flex-col px-2 py-1.5 border-y border-border/40 flex-shrink-0">
-        <span className="font-mono-num text-sm font-bold text-foreground leading-tight">
+      <div className="flex flex-col px-2 py-1 border-y border-border/40 flex-shrink-0">
+        <span className="font-mono-num text-[13px] font-bold text-foreground leading-tight">
           {midPrice || "—"}
         </span>
         {midRaw > 0 && (
-          <span className="font-mono-num text-[10px] text-muted-foreground leading-tight mt-px">
+          <span className="font-mono-num text-[9px] text-muted-foreground leading-tight">
             ${fmtPrice(midRaw)}
           </span>
         )}
@@ -219,7 +219,7 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
       </div>
 
       {/* Tick size selector */}
-      <div className="flex items-center justify-between px-2 py-1.5 border-t border-border/40 flex-shrink-0 relative mt-auto" ref={tickRef}>
+      <div className="flex items-center justify-between px-2 py-1 border-t border-border/40 flex-shrink-0 relative mt-auto" ref={tickRef}>
         <div className="grid grid-cols-2 gap-0.5 opacity-60">
           {[...Array(4)].map((_, i) => (
             <div key={i} className={`w-1.5 h-1 rounded-[1px] ${i < 2 ? "bg-trading-red" : "bg-trading-green"}`} />
