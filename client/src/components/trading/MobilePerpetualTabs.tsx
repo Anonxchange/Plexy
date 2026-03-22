@@ -426,8 +426,10 @@ const MobilePerpetualTabs = ({ chartVisible, pair, viewMode, onViewModeChange: s
             </div>
           )}
           <div className="flex border-t border-border w-full min-w-0">
-            <div className="w-[40%] min-w-0 border-r border-border overflow-hidden">
-              <OrderBook symbol={pair} mode="futures" count={9} />
+            <div className="w-[40%] relative border-r border-border self-stretch">
+              <div className="absolute inset-0 overflow-hidden">
+                <OrderBook symbol={pair} mode="futures" count={9} />
+              </div>
             </div>
             <div className="w-[60%] min-w-0">
               <FuturesTradePanel symbol={pair} />
