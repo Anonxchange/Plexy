@@ -32,26 +32,26 @@ const OrderBookTwoCol = ({ symbol }: { symbol: string }) => {
     <div className="overflow-y-auto max-h-[300px]">
       <div className="grid grid-cols-2 divide-x divide-border">
         <div>
-          <div className="grid grid-cols-2 px-2 py-1 border-b border-border text-[10px] text-muted-foreground">
+          <div className="grid grid-cols-2 px-1.5 py-0.5 border-b border-border text-[10px] text-muted-foreground">
             <span>Price</span><span className="text-right">Size</span>
           </div>
           {asks.map((r, i) => (
-            <div key={i} className="relative grid grid-cols-2 px-2 py-[3px]">
+            <div key={i} className="relative grid grid-cols-2 px-1.5 py-[2px]">
               <div className="absolute left-0 top-0 bottom-0 bg-trading-red/10" style={{ width: `${(r.qty / maxQty) * 100}%` }} />
-              <span className="relative font-mono-num text-[11px] text-trading-red">{fmtP(r.price)}</span>
-              <span className="relative font-mono-num text-[11px] text-muted-foreground text-right">{fmt(r.qty)}</span>
+              <span className="relative font-mono-num text-[11px] text-trading-red leading-tight">{fmtP(r.price)}</span>
+              <span className="relative font-mono-num text-[11px] text-muted-foreground text-right leading-tight">{fmt(r.qty)}</span>
             </div>
           ))}
         </div>
         <div>
-          <div className="grid grid-cols-2 px-2 py-1 border-b border-border text-[10px] text-muted-foreground">
+          <div className="grid grid-cols-2 px-1.5 py-0.5 border-b border-border text-[10px] text-muted-foreground">
             <span>Price</span><span className="text-right">Size</span>
           </div>
           {bids.map((r, i) => (
-            <div key={i} className="relative grid grid-cols-2 px-2 py-[3px]">
+            <div key={i} className="relative grid grid-cols-2 px-1.5 py-[2px]">
               <div className="absolute right-0 top-0 bottom-0 bg-trading-green/10" style={{ width: `${(r.qty / maxQty) * 100}%` }} />
-              <span className="relative font-mono-num text-[11px] text-trading-green">{fmtP(r.price)}</span>
-              <span className="relative font-mono-num text-[11px] text-muted-foreground text-right">{fmt(r.qty)}</span>
+              <span className="relative font-mono-num text-[11px] text-trading-green leading-tight">{fmtP(r.price)}</span>
+              <span className="relative font-mono-num text-[11px] text-muted-foreground text-right leading-tight">{fmt(r.qty)}</span>
             </div>
           ))}
         </div>
@@ -84,26 +84,26 @@ const DepthPanel = ({ symbol }: { symbol: string }) => {
     <div className="overflow-y-auto max-h-[300px]">
       <div className="grid grid-cols-2 divide-x divide-border">
         <div>
-          <div className="grid grid-cols-2 px-2 py-1 border-b border-border text-[10px] text-muted-foreground">
+          <div className="grid grid-cols-2 px-1.5 py-0.5 border-b border-border text-[10px] text-muted-foreground">
             <span>Price</span><span className="text-right">Cumulative</span>
           </div>
           {askRows.map((r, i) => (
-            <div key={i} className="relative grid grid-cols-2 px-2 py-[3px]">
+            <div key={i} className="relative grid grid-cols-2 px-1.5 py-[2px]">
               <div className="absolute left-0 top-0 bottom-0 bg-trading-red/10" style={{ width: `${(r.cum / maxCum) * 100}%` }} />
-              <span className="relative font-mono-num text-[11px] text-trading-red">{fmtP(r.price)}</span>
-              <span className="relative font-mono-num text-[11px] text-muted-foreground text-right">{fmt(r.cum)}</span>
+              <span className="relative font-mono-num text-[11px] text-trading-red leading-tight">{fmtP(r.price)}</span>
+              <span className="relative font-mono-num text-[11px] text-muted-foreground text-right leading-tight">{fmt(r.cum)}</span>
             </div>
           ))}
         </div>
         <div>
-          <div className="grid grid-cols-2 px-2 py-1 border-b border-border text-[10px] text-muted-foreground">
+          <div className="grid grid-cols-2 px-1.5 py-0.5 border-b border-border text-[10px] text-muted-foreground">
             <span>Price</span><span className="text-right">Cumulative</span>
           </div>
           {bidRows.map((r, i) => (
-            <div key={i} className="relative grid grid-cols-2 px-2 py-[3px]">
+            <div key={i} className="relative grid grid-cols-2 px-1.5 py-[2px]">
               <div className="absolute right-0 top-0 bottom-0 bg-trading-green/10" style={{ width: `${(r.cum / maxCum) * 100}%` }} />
-              <span className="relative font-mono-num text-[11px] text-trading-green">{fmtP(r.price)}</span>
-              <span className="relative font-mono-num text-[11px] text-muted-foreground text-right">{fmt(r.cum)}</span>
+              <span className="relative font-mono-num text-[11px] text-trading-green leading-tight">{fmtP(r.price)}</span>
+              <span className="relative font-mono-num text-[11px] text-muted-foreground text-right leading-tight">{fmt(r.cum)}</span>
             </div>
           ))}
         </div>
@@ -167,11 +167,11 @@ const InfoPanel = ({ symbol }: { symbol: string }) => {
     { label: "Contract Type", value: sym?.contractType ?? "PERPETUAL" },
   ];
   return (
-    <div className="px-3 py-2 space-y-0">
+    <div className="px-2 py-1 space-y-0">
       {rows.map(({ label, value, color }) => (
-        <div key={label} className="flex items-center justify-between py-2 border-b border-border/40 last:border-0">
-          <span className="text-xs text-muted-foreground">{label}</span>
-          <span className={`text-xs font-mono-num font-medium text-foreground ${color ?? ""}`}>{value}</span>
+        <div key={label} className="flex items-center justify-between py-1 border-b border-border/40 last:border-0">
+          <span className="text-[11px] text-muted-foreground">{label}</span>
+          <span className={`text-[11px] font-mono-num font-medium text-foreground ${color ?? ""}`}>{value}</span>
         </div>
       ))}
     </div>
@@ -191,12 +191,12 @@ const RecentTradesPanel = ({ symbol }: { symbol: string }) => {
   if (!list.length) return <div className="flex justify-center py-8 text-sm text-muted-foreground">No trades</div>;
   return (
     <div className="overflow-y-auto max-h-[300px]">
-      <table className="w-full text-xs">
+      <table className="w-full">
         <thead className="sticky top-0 bg-background">
           <tr className="text-muted-foreground border-b border-border">
-            <th className="text-left px-3 py-2 font-normal">Price (USDT)</th>
-            <th className="text-right px-3 py-2 font-normal">Amount</th>
-            <th className="text-right px-3 py-2 font-normal">Time</th>
+            <th className="text-left px-2 py-0.5 font-normal text-[10px]">Price (USDT)</th>
+            <th className="text-right px-2 py-0.5 font-normal text-[10px]">Amount</th>
+            <th className="text-right px-2 py-0.5 font-normal text-[10px]">Time</th>
           </tr>
         </thead>
         <tbody>
@@ -207,11 +207,11 @@ const RecentTradesPanel = ({ symbol }: { symbol: string }) => {
             const time = new Date(t.time).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
             return (
               <tr key={t.id ?? i} className="border-b border-border/30">
-                <td className={`px-3 py-1.5 font-mono-num font-medium ${isBuy ? "text-trading-green" : "text-trading-red"}`}>
+                <td className={`px-2 py-[2px] font-mono-num text-[11px] font-medium leading-tight ${isBuy ? "text-trading-green" : "text-trading-red"}`}>
                   {price.toLocaleString("en-US", { maximumSignificantDigits: 6 })}
                 </td>
-                <td className="px-3 py-1.5 text-right font-mono-num text-foreground">{qty.toFixed(4)}</td>
-                <td className="px-3 py-1.5 text-right font-mono-num text-muted-foreground">{time}</td>
+                <td className="px-2 py-[2px] text-right font-mono-num text-[11px] text-foreground leading-tight">{qty.toFixed(4)}</td>
+                <td className="px-2 py-[2px] text-right font-mono-num text-[11px] text-muted-foreground leading-tight">{time}</td>
               </tr>
             );
           })}
@@ -286,7 +286,7 @@ const MobilePerpetualTabs = ({ chartVisible, pair, viewMode, onViewModeChange: s
           <span className="text-sm text-muted-foreground">Sign in to view your orders</span>
           <button
             onClick={() => navigate("/signin")}
-            className="px-4 py-2 rounded-lg text-xs font-medium bg-trading-amber text-background"
+            className="px-6 py-2.5 rounded-lg text-sm font-bold bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
           >
             Sign In
           </button>
@@ -303,23 +303,23 @@ const MobilePerpetualTabs = ({ chartVisible, pair, viewMode, onViewModeChange: s
           <table className="w-full text-xs">
             <thead>
               <tr className="text-muted-foreground border-b border-border">
-                <th className="text-left px-3 py-2 font-normal">Symbol</th>
-                <th className="text-left px-3 py-2 font-normal">Side</th>
-                <th className="text-right px-3 py-2 font-normal">Price</th>
-                <th className="text-right px-3 py-2 font-normal">Size</th>
-                <th className="text-right px-3 py-2 font-normal">Filled</th>
-                <th className="text-right px-3 py-2 font-normal">Cancel</th>
+                <th className="text-left px-2 py-0.5 font-normal text-[10px]">Symbol</th>
+                <th className="text-left px-2 py-0.5 font-normal text-[10px]">Side</th>
+                <th className="text-right px-2 py-0.5 font-normal text-[10px]">Price</th>
+                <th className="text-right px-2 py-0.5 font-normal text-[10px]">Size</th>
+                <th className="text-right px-2 py-0.5 font-normal text-[10px]">Filled</th>
+                <th className="text-right px-2 py-0.5 font-normal text-[10px]">Cancel</th>
               </tr>
             </thead>
             <tbody>
               {orders.map((o: any) => (
                 <tr key={o.orderId} className="border-b border-border/50">
-                  <td className="px-3 py-2 text-foreground">{o.symbol}</td>
-                  <td className={`px-3 py-2 font-medium ${o.side === "BUY" ? "text-trading-green" : "text-trading-red"}`}>{o.side}</td>
-                  <td className="px-3 py-2 text-right font-mono-num text-foreground">{parseFloat(o.price).toFixed(4)}</td>
-                  <td className="px-3 py-2 text-right font-mono-num text-foreground">{parseFloat(o.origQty).toFixed(4)}</td>
-                  <td className="px-3 py-2 text-right font-mono-num text-muted-foreground">{parseFloat(o.executedQty).toFixed(4)}</td>
-                  <td className="px-3 py-2 text-right">
+                  <td className="px-2 py-[2px] text-[11px] text-foreground leading-tight">{o.symbol}</td>
+                  <td className={`px-2 py-[2px] text-[11px] font-medium leading-tight ${o.side === "BUY" ? "text-trading-green" : "text-trading-red"}`}>{o.side}</td>
+                  <td className="px-2 py-[2px] text-right font-mono-num text-[11px] text-foreground leading-tight">{parseFloat(o.price).toFixed(4)}</td>
+                  <td className="px-2 py-[2px] text-right font-mono-num text-[11px] text-foreground leading-tight">{parseFloat(o.origQty).toFixed(4)}</td>
+                  <td className="px-2 py-[2px] text-right font-mono-num text-[11px] text-muted-foreground leading-tight">{parseFloat(o.executedQty).toFixed(4)}</td>
+                  <td className="px-2 py-[2px] text-right">
                     <button
                       onClick={() => cancelMutation.mutate({ symbol: o.symbol, orderId: String(o.orderId) })}
                       disabled={cancelMutation.isPending}
@@ -347,12 +347,12 @@ const MobilePerpetualTabs = ({ chartVisible, pair, viewMode, onViewModeChange: s
           <table className="w-full text-xs">
             <thead>
               <tr className="text-muted-foreground border-b border-border">
-                <th className="text-left px-3 py-2 font-normal">Symbol</th>
-                <th className="text-left px-3 py-2 font-normal">Side</th>
-                <th className="text-right px-3 py-2 font-normal">Size</th>
-                <th className="text-right px-3 py-2 font-normal">Entry</th>
-                <th className="text-right px-3 py-2 font-normal">Mark</th>
-                <th className="text-right px-3 py-2 font-normal">PnL</th>
+                <th className="text-left px-2 py-0.5 font-normal text-[10px]">Symbol</th>
+                <th className="text-left px-2 py-0.5 font-normal text-[10px]">Side</th>
+                <th className="text-right px-2 py-0.5 font-normal text-[10px]">Size</th>
+                <th className="text-right px-2 py-0.5 font-normal text-[10px]">Entry</th>
+                <th className="text-right px-2 py-0.5 font-normal text-[10px]">Mark</th>
+                <th className="text-right px-2 py-0.5 font-normal text-[10px]">PnL</th>
               </tr>
             </thead>
             <tbody>
@@ -360,14 +360,14 @@ const MobilePerpetualTabs = ({ chartVisible, pair, viewMode, onViewModeChange: s
                 const pnl = parseFloat(p.unRealizedProfit);
                 return (
                   <tr key={p.symbol + p.positionSide} className="border-b border-border/50">
-                    <td className="px-3 py-2 text-foreground">{p.symbol}</td>
-                    <td className={`px-3 py-2 font-medium ${parseFloat(p.positionAmt) > 0 ? "text-trading-green" : "text-trading-red"}`}>
+                    <td className="px-2 py-[2px] text-[11px] text-foreground leading-tight">{p.symbol}</td>
+                    <td className={`px-2 py-[2px] text-[11px] font-medium leading-tight ${parseFloat(p.positionAmt) > 0 ? "text-trading-green" : "text-trading-red"}`}>
                       {parseFloat(p.positionAmt) > 0 ? "Long" : "Short"}
                     </td>
-                    <td className="px-3 py-2 text-right font-mono-num text-foreground">{Math.abs(parseFloat(p.positionAmt)).toFixed(4)}</td>
-                    <td className="px-3 py-2 text-right font-mono-num text-foreground">{parseFloat(p.entryPrice).toFixed(4)}</td>
-                    <td className="px-3 py-2 text-right font-mono-num text-foreground">{parseFloat(p.markPrice).toFixed(4)}</td>
-                    <td className={`px-3 py-2 text-right font-mono-num ${pnl >= 0 ? "text-trading-green" : "text-trading-red"}`}>
+                    <td className="px-2 py-[2px] text-right font-mono-num text-[11px] text-foreground leading-tight">{Math.abs(parseFloat(p.positionAmt)).toFixed(4)}</td>
+                    <td className="px-2 py-[2px] text-right font-mono-num text-[11px] text-foreground leading-tight">{parseFloat(p.entryPrice).toFixed(4)}</td>
+                    <td className="px-2 py-[2px] text-right font-mono-num text-[11px] text-foreground leading-tight">{parseFloat(p.markPrice).toFixed(4)}</td>
+                    <td className={`px-2 py-[2px] text-right font-mono-num text-[11px] leading-tight ${pnl >= 0 ? "text-trading-green" : "text-trading-red"}`}>
                       {pnl >= 0 ? "+" : ""}{pnl.toFixed(4)}
                     </td>
                   </tr>
@@ -390,19 +390,19 @@ const MobilePerpetualTabs = ({ chartVisible, pair, viewMode, onViewModeChange: s
           <table className="w-full text-xs">
             <thead>
               <tr className="text-muted-foreground border-b border-border">
-                <th className="text-left px-3 py-2 font-normal">Asset</th>
-                <th className="text-right px-3 py-2 font-normal">Balance</th>
-                <th className="text-right px-3 py-2 font-normal">Available</th>
-                <th className="text-right px-3 py-2 font-normal">Unrealized PnL</th>
+                <th className="text-left px-2 py-0.5 font-normal text-[10px]">Asset</th>
+                <th className="text-right px-2 py-0.5 font-normal text-[10px]">Balance</th>
+                <th className="text-right px-2 py-0.5 font-normal text-[10px]">Available</th>
+                <th className="text-right px-2 py-0.5 font-normal text-[10px]">Unrealized PnL</th>
               </tr>
             </thead>
             <tbody>
               {balances.map((b: any) => (
                 <tr key={b.asset} className="border-b border-border/50">
-                  <td className="px-3 py-2 font-medium text-foreground">{b.asset}</td>
-                  <td className="px-3 py-2 text-right font-mono-num text-foreground">{parseFloat(b.balance).toFixed(4)}</td>
-                  <td className="px-3 py-2 text-right font-mono-num text-foreground">{parseFloat(b.availableBalance).toFixed(4)}</td>
-                  <td className={`px-3 py-2 text-right font-mono-num ${parseFloat(b.crossUnPnl) >= 0 ? "text-trading-green" : "text-trading-red"}`}>
+                  <td className="px-2 py-[2px] font-medium text-[11px] text-foreground leading-tight">{b.asset}</td>
+                  <td className="px-2 py-[2px] text-right font-mono-num text-[11px] text-foreground leading-tight">{parseFloat(b.balance).toFixed(4)}</td>
+                  <td className="px-2 py-[2px] text-right font-mono-num text-[11px] text-foreground leading-tight">{parseFloat(b.availableBalance).toFixed(4)}</td>
+                  <td className={`px-2 py-[2px] text-right font-mono-num text-[11px] leading-tight ${parseFloat(b.crossUnPnl) >= 0 ? "text-trading-green" : "text-trading-red"}`}>
                     {parseFloat(b.crossUnPnl) >= 0 ? "+" : ""}{parseFloat(b.crossUnPnl).toFixed(4)}
                   </td>
                 </tr>
@@ -455,12 +455,12 @@ const MobilePerpetualTabs = ({ chartVisible, pair, viewMode, onViewModeChange: s
 
       {/* Chart tabs row — only visible in chart viewMode */}
       {viewMode === "chart" && (
-        <div className="flex items-center px-4 py-2 gap-1 border-t-2 border-border overflow-x-auto scrollbar-none flex-shrink-0">
+        <div className="flex items-center px-3 py-1 gap-0.5 border-t-2 border-border overflow-x-auto scrollbar-none flex-shrink-0">
           {chartTabs.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveChartTab(tab)}
-              className={`py-1.5 px-2.5 text-sm transition-colors whitespace-nowrap flex-shrink-0 rounded ${
+              className={`py-1 px-2 text-[11px] transition-colors whitespace-nowrap flex-shrink-0 rounded ${
                 activeChartTab === tab
                   ? "text-foreground font-semibold border border-border bg-accent"
                   : "text-muted-foreground"
@@ -473,13 +473,13 @@ const MobilePerpetualTabs = ({ chartVisible, pair, viewMode, onViewModeChange: s
       )}
 
       {/* Order tabs row — always visible, with separator */}
-      <div className="flex items-center px-4 py-2 border-t-2 border-border flex-shrink-0">
-        <div className="flex items-center gap-4 flex-1">
+      <div className="flex items-center px-3 py-1 border-t-2 border-border flex-shrink-0">
+        <div className="flex items-center gap-3 flex-1">
           {orderTabs.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveOrderTab(tab)}
-              className={`py-2 text-sm transition-colors ${
+              className={`py-1 text-[11px] transition-colors ${
                 activeOrderTab === tab ? "text-foreground font-semibold" : "text-muted-foreground"
               }`}
             >
