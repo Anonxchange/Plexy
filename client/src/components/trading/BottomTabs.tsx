@@ -12,6 +12,54 @@ import { useToast } from "@/hooks/use-toast";
 const orderTabs = ["Open orders", "Positions", "Assets", "TWAP"];
 const chartTabs = ["Chart", "Order book", "Trades", "Depth", "Info"];
 
+const OrderBookTwoCol = ({ symbol, mode }: { symbol: string; mode: "spot" | "futures" }) => {
+  const apiSymbol = symbol.replace("/", "");
+  const { data, isLoading } = useQuery({
+    queryKey: ["ob-2col-spot", apiSymbol],
+    queryFn: () => asterMarket.spotOrderBook(apiSymbol, "20"),
+    staleTime: 2_000,
+    refetchInterval: 3_000,
+  });
+  if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
+  const rawAsks: [string, string][] = data?.asks ?? [];
+  const rawBids: [string, string][] = data?.bids ?? [];
+  const asks = rawAsks.slice(0, 15).map(([p, q]) => ({ price: parseFloat(p), qty: parseFloat(q) }));
+  const bids = rawBids.slice(0, 15).map(([p, q]) => ({ price: parseFloat(p), qty: parseFloat(q) }));
+  const maxQty = Math.max(...asks.map(r => r.qty), ...bids.map(r => r.qty)) || 1;
+  const fmt = (n: number) => n >= 1000 ? (n / 1000).toFixed(2) + "K" : n.toFixed(2);
+  const fmtP = (n: number) => n.toLocaleString("en-US", { maximumSignificantDigits: 6 });
+  return (
+    <div className="overflow-y-auto max-h-[300px]">
+      <div className="grid grid-cols-2 divide-x divide-border">
+        <div>
+          <div className="grid grid-cols-2 px-2 py-1 border-b border-border text-[10px] text-muted-foreground">
+            <span>Price</span><span className="text-right">Size</span>
+          </div>
+          {asks.map((r, i) => (
+            <div key={i} className="relative grid grid-cols-2 px-2 py-[3px]">
+              <div className="absolute left-0 top-0 bottom-0 bg-trading-red/10" style={{ width: `${(r.qty / maxQty) * 100}%` }} />
+              <span className="relative font-mono-num text-[11px] text-trading-red">{fmtP(r.price)}</span>
+              <span className="relative font-mono-num text-[11px] text-muted-foreground text-right">{fmt(r.qty)}</span>
+            </div>
+          ))}
+        </div>
+        <div>
+          <div className="grid grid-cols-2 px-2 py-1 border-b border-border text-[10px] text-muted-foreground">
+            <span>Price</span><span className="text-right">Size</span>
+          </div>
+          {bids.map((r, i) => (
+            <div key={i} className="relative grid grid-cols-2 px-2 py-[3px]">
+              <div className="absolute right-0 top-0 bottom-0 bg-trading-green/10" style={{ width: `${(r.qty / maxQty) * 100}%` }} />
+              <span className="relative font-mono-num text-[11px] text-trading-green">{fmtP(r.price)}</span>
+              <span className="relative font-mono-num text-[11px] text-muted-foreground text-right">{fmt(r.qty)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const DepthPanel = ({ symbol }: { symbol: string }) => {
   const apiSymbol = symbol.replace("/", "");
   const { data, isLoading } = useQuery({
@@ -326,7 +374,7 @@ const BottomTabs = ({ chartVisible, pair }: BottomTabsProps) => {
           case "Chart":
             return <div className="h-[400px] flex-shrink-0"><CandlestickChart pair={pair} /></div>;
           case "Order book":
-            return <div className="h-[300px] flex-shrink-0 border-b border-border overflow-hidden"><OrderBook symbol={pair} mode="spot" /></div>;
+            return <OrderBookTwoCol symbol={pair} mode="spot" />;
           case "Trades":
             return <RecentTradesPanel symbol={pair} />;
           case "Depth":
