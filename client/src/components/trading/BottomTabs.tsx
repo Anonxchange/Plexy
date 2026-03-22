@@ -362,7 +362,7 @@ const BottomTabs = ({ chartVisible, pair, viewMode, onViewModeChange: setViewMod
           <div className="flex border-t border-border w-full min-w-0">
             <div className="w-[40%] relative border-r border-border self-stretch">
               <div className="absolute inset-0 overflow-hidden">
-                <OrderBook symbol={pair} count={9} />
+                <OrderBook symbol={pair} count={11} />
               </div>
             </div>
             <div className="w-[60%] min-w-0">
