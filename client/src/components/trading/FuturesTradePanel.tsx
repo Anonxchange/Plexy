@@ -18,10 +18,9 @@ const UI_TO_FUTURES_TYPE: Record<string, string> = {
 
 interface FuturesTradePanelProps {
   symbol?: string;
-  onOrderTypeChange?: (type: string) => void;
 }
 
-const FuturesTradePanel = ({ symbol = "ASTER/USDT", onOrderTypeChange }: FuturesTradePanelProps) => {
+const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) => {
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [marginMode, setMarginMode] = useState<"cross" | "isolated">("cross");
   const [leverage, setLeverage] = useState("20");
@@ -235,7 +234,7 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT", onOrderTypeChange }: Futures
               {orderTypes.map((type) => (
                 <button
                   key={type}
-                  onClick={() => { setOrderType(type); setDropdownOpen(false); onOrderTypeChange?.(type); }}
+                  onClick={() => { setOrderType(type); setDropdownOpen(false); }}
                   className={`w-full text-left px-2 py-1.5 text-[11px] transition-colors ${orderType === type ? "text-trading-green bg-trading-green/5" : "text-foreground hover:bg-accent"}`}
                 >
                   {type}
