@@ -28,6 +28,7 @@ interface Task {
   done: boolean;
   cta: string;
   daily?: boolean;
+  drawChances?: number;
   category: "daily" | "one-time" | "milestone";
 }
 
@@ -240,12 +241,14 @@ const ONE_TIME_TASKS: Task[] = [
 ];
 
 const MILESTONE_TASKS: Task[] = [
-  { id: "five-trades", icon: <TrendingUp className="w-5 h-5 text-blue-500" />, title: "Complete 5 trades", description: "Grow your trading history", pts: 60, done: false, cta: "View offers", category: "milestone" },
-  { id: "trade-100", icon: <ArrowUpRight className="w-5 h-5 text-primary" />, title: "Trade $100 or more", description: "Complete a single trade worth $100+", pts: 80, done: false, cta: "Start trading", category: "milestone" },
-  { id: "trade-1000", icon: <Coins className="w-5 h-5 text-yellow-500" />, title: "Trade $1,000 or more", description: "Complete a single trade worth $1,000+", pts: 200, done: false, cta: "Start trading", category: "milestone" },
-  { id: "streak-7", icon: <Flame className="w-5 h-5 text-orange-500" />, title: "7-day login streak", description: "Log in 7 days in a row", pts: 70, done: false, cta: "Keep going", category: "milestone" },
-  { id: "streak-30", icon: <Flame className="w-5 h-5 text-red-500" />, title: "30-day login streak", description: "Log in 30 days in a row", pts: 300, done: false, cta: "Keep going", category: "milestone" },
-  { id: "refer-5", icon: <Users className="w-5 h-5 text-pink-500" />, title: "Refer 5 friends", description: "Get 5 friends trading on Pexly", pts: 400, done: false, cta: "Invite friends", category: "milestone" },
+  { id: "five-trades",   icon: <TrendingUp className="w-5 h-5 text-blue-500" />,   title: "Complete 5 spot trades",          description: "Build your spot trading history on Pexly",         pts: 60,  drawChances: 0, done: false, cta: "Spot trade",    category: "milestone" },
+  { id: "swap-100",      icon: <Repeat2 className="w-5 h-5 text-cyan-500" />,       title: "Swap $100 or more",               description: "Swap at least $100 in a single transaction",         pts: 50,  drawChances: 1, done: false, cta: "Swap now",      category: "milestone" },
+  { id: "spot-1000",     icon: <TrendingUp className="w-5 h-5 text-primary" />,     title: "Spot trade $1,000 or more",       description: "Place a spot order worth $1,000 or more",            pts: 100, drawChances: 2, done: false, cta: "Spot trade",    category: "milestone" },
+  { id: "swap-5000",     icon: <Repeat2 className="w-5 h-5 text-cyan-500" />,       title: "Swap $5,000 or more",             description: "Swap at least $5,000 in a single transaction",       pts: 200, drawChances: 2, done: false, cta: "Swap now",      category: "milestone" },
+  { id: "perp-15000",    icon: <BarChart2 className="w-5 h-5 text-orange-500" />,   title: "Perpetual trade $15,000+",        description: "Open or close a perpetual position worth $15,000+",  pts: 200, drawChances: 2, done: false, cta: "Trade perps",   category: "milestone" },
+  { id: "streak-7",      icon: <Flame className="w-5 h-5 text-orange-500" />,       title: "7-day login streak",              description: "Log in 7 days in a row",                             pts: 70,  drawChances: 0, done: false, cta: "Keep going",    category: "milestone" },
+  { id: "streak-30",     icon: <Flame className="w-5 h-5 text-red-500" />,          title: "30-day login streak",             description: "Log in 30 days in a row",                            pts: 300, drawChances: 0, done: false, cta: "Keep going",    category: "milestone" },
+  { id: "refer-5",       icon: <Users className="w-5 h-5 text-pink-500" />,         title: "Refer 5 friends",                 description: "Get 5 friends trading on Pexly",                     pts: 400, drawChances: 0, done: false, cta: "Invite friends", category: "milestone" },
 ];
 
 const BADGES: Badge[] = [
@@ -590,12 +593,18 @@ function TaskCard({ task }: { task: Task }) {
         </div>
         <p className="text-[11px] text-muted-foreground leading-tight">{task.description}</p>
       </div>
-      <div className="flex flex-col items-end gap-2 flex-shrink-0">
+      <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
         <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full tabular-nums">
           +{task.pts} pts
         </span>
+        {!!task.drawChances && task.drawChances > 0 && (
+          <span className="text-[10px] font-semibold text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-500/15 px-2 py-0.5 rounded-full flex items-center gap-1">
+            <Ticket className="w-2.5 h-2.5" />
+            +{task.drawChances} draw {task.drawChances === 1 ? "chance" : "chances"}
+          </span>
+        )}
         {!task.done && (
-          <button className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-0.5 transition-colors">
+          <button className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-0.5 transition-colors mt-0.5">
             {task.cta} <ChevronRight className="w-3 h-3" />
           </button>
         )}
@@ -606,30 +615,51 @@ function TaskCard({ task }: { task: Task }) {
 
 // ─── Badge Card ───────────────────────────────────────────────────────────────
 
-const rarityBorder = { common: "border-border", rare: "border-blue-500/25 dark:border-blue-500/20", epic: "border-purple-500/30 dark:border-purple-500/25", legendary: "border-yellow-500/35 dark:border-yellow-400/30" };
-const rarityBg = { common: "bg-card", rare: "bg-blue-50 dark:bg-blue-500/[0.05]", epic: "bg-purple-50 dark:bg-purple-500/[0.07]", legendary: "bg-yellow-50 dark:bg-yellow-400/[0.06]" };
-const rarityText = { common: "text-muted-foreground", rare: "text-blue-600 dark:text-blue-400", epic: "text-purple-600 dark:text-purple-400", legendary: "text-yellow-600 dark:text-yellow-400" };
+const rarityBorder = { common: "border-border", rare: "border-blue-500/30 dark:border-blue-500/25", epic: "border-purple-500/35 dark:border-purple-500/30", legendary: "border-yellow-500/40 dark:border-yellow-400/35" };
+const rarityBg    = { common: "bg-card", rare: "bg-blue-50 dark:bg-blue-500/[0.06]", epic: "bg-purple-50 dark:bg-purple-500/[0.08]", legendary: "bg-yellow-50 dark:bg-yellow-400/[0.07]" };
+const rarityText  = { common: "text-slate-500 dark:text-slate-400", rare: "text-blue-600 dark:text-blue-400", epic: "text-purple-600 dark:text-purple-400", legendary: "text-yellow-600 dark:text-yellow-400" };
+const rarityGlow  = { common: "", rare: "shadow-blue-500/10", epic: "shadow-purple-500/10", legendary: "shadow-yellow-400/15" };
+const rarityIconBg = { common: "bg-muted", rare: "bg-blue-100 dark:bg-blue-500/15", epic: "bg-purple-100 dark:bg-purple-500/15", legendary: "bg-yellow-100 dark:bg-yellow-400/15" };
 
-function BadgeCard({ badge }: { badge: Badge }) {
+function BadgeCard({ badge, expanded, onToggle }: { badge: Badge; expanded: boolean; onToggle: () => void }) {
   return (
-    <div className={cn(
-      "relative rounded-2xl p-3 border flex flex-col items-center text-center gap-1.5 transition-all",
-      badge.unlocked ? cn(rarityBorder[badge.rarity], rarityBg[badge.rarity]) : "border-border bg-muted/30 opacity-50"
-    )}>
-      {!badge.unlocked && (
-        <div className="absolute inset-0 flex items-center justify-center rounded-2xl">
-          <Lock className="w-4 h-4 text-muted-foreground/40" />
-        </div>
+    <button
+      onClick={onToggle}
+      className={cn(
+        "relative flex-shrink-0 w-36 rounded-2xl border p-3.5 flex flex-col items-center text-center gap-2 transition-all shadow-sm text-left",
+        badge.unlocked
+          ? cn(rarityBorder[badge.rarity], rarityBg[badge.rarity], rarityGlow[badge.rarity], expanded && "ring-2 ring-primary/30")
+          : "border-border bg-muted/30 opacity-55"
       )}
-      <div className={cn("w-10 h-10 flex items-center justify-center flex-shrink-0", !badge.unlocked && "opacity-30")}>
+    >
+      {!badge.unlocked && (
+        <Lock className="absolute top-2.5 right-2.5 w-3 h-3 text-muted-foreground/40" />
+      )}
+
+      {/* Icon */}
+      <div className={cn(
+        "w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0",
+        rarityIconBg[badge.rarity],
+        !badge.unlocked && "opacity-30"
+      )}>
         {badge.icon}
       </div>
-      <div>
-        <p className="text-[11px] font-semibold text-foreground leading-tight">{badge.name}</p>
-        <p className={cn("text-[9px] font-semibold uppercase tracking-wider mt-0.5", rarityText[badge.rarity])}>{badge.rarity}</p>
+
+      {/* Name + rarity */}
+      <div className="w-full">
+        <p className="text-[12px] font-bold text-foreground leading-tight text-center">{badge.name}</p>
+        <p className={cn("text-[9px] font-bold uppercase tracking-widest mt-0.5 text-center", rarityText[badge.rarity])}>
+          {badge.rarity}
+        </p>
       </div>
-      <p className="text-[10px] text-muted-foreground leading-tight">{badge.description}</p>
-    </div>
+
+      {/* Description — only visible when expanded */}
+      {expanded && (
+        <p className="text-[10px] text-muted-foreground leading-relaxed text-center border-t border-border pt-2 w-full">
+          {badge.description}
+        </p>
+      )}
+    </button>
   );
 }
 
@@ -714,6 +744,7 @@ export default function RewardsPage() {
   const [tab, setTab] = useState<"earn" | "redeem" | "badges">("earn");
   const [redeemFilter, setRedeemFilter] = useState<"all" | "gift-card" | "airtime" | "data">("all");
   const [earnSection, setEarnSection] = useState<"daily" | "one-time" | "milestone">("daily");
+  const [expandedBadge, setExpandedBadge] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const referralCode = "PEXLY-X7Q2";
 
