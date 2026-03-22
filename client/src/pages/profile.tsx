@@ -693,28 +693,33 @@ export function Profile() {
   return (
     <div className="min-h-screen bg-slate-50 relative overflow-x-hidden">
 
-      {/* ── Top bar (replaces cover) ── */}
-      <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
-        <Link href="/" className="text-xs text-slate-600 hover:text-slate-900 font-medium transition-colors">
-          ← Pexly
-        </Link>
-        {isOwnProfile && (
-          <button onClick={handleShareProfile} className="text-xs text-primary font-medium hover:text-primary/80 transition-colors">
-            Share profile
-          </button>
-        )}
+      {/* ── Canvas header (no cover photo) ── */}
+      <div className="relative h-56 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#e8f5d0] via-[#f0fce8] to-[#dff0f8]" />
+        <BlockchainCanvas dark={false} />
+        <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-slate-50/70 to-transparent pointer-events-none" />
+        <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
+          <Link href="/" className="text-xs text-slate-600 hover:text-slate-900 font-medium bg-white/85 border border-slate-200 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm transition-colors">
+            ← Pexly
+          </Link>
+          {isOwnProfile && (
+            <button onClick={handleShareProfile} className="text-xs text-slate-700 font-medium bg-white/85 border border-slate-200 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm hover:bg-white transition-all">
+              Share profile
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 lg:px-6 pb-24 pt-6">
+      <div className="max-w-5xl mx-auto px-4 lg:px-6 pb-24">
 
         {/* ── Profile Card ── */}
-        <div className="mb-6">
+        <div className="relative -mt-14 mb-6">
           <Card className="p-6">
             <div className="flex flex-col sm:flex-row gap-5 items-start">
 
               {/* Avatar */}
-              <div className="relative flex-shrink-0 group/avatar">
-                <div className="w-24 h-24 rounded-2xl border-2 border-slate-200 shadow-md overflow-hidden flex items-center justify-center bg-gradient-to-br from-[#1e293b] to-[#475569]">
+              <div className="relative flex-shrink-0 group/avatar -mt-16">
+                <div className="w-28 h-28 rounded-2xl border-4 border-white shadow-lg overflow-hidden flex items-center justify-center bg-gradient-to-br from-[#1e293b] to-[#475569]">
                   <Avatar className="w-full h-full rounded-none">
                     <AvatarImage src={avatarSrc} alt={username} className="object-cover" />
                     <AvatarFallback className="rounded-none bg-transparent text-white text-2xl font-bold">
@@ -820,8 +825,8 @@ export function Profile() {
         {/* ── Stats Grid ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
           {[
-            { label: "30d Volume", value: volumeDisplay, sub: profileStats.thirtyDayStats.tradesSuccess !== null ? `+${profileStats.thirtyDayStats.tradesSuccess}% success` : "No recent trades", subColor: "text-emerald-600", icon: <IconPortfolio size={20} />, bg: "bg-lime-50" },
-            { label: "Feedback", value: `${winRate}%`, sub: `${profileData?.positive_feedback || 0}W · ${profileData?.negative_feedback || 0}L`, subColor: "text-slate-400", icon: <IconWinRate size={20} />, bg: "bg-emerald-50" },
+            { label: "Portfolio", value: volumeDisplay, sub: profileStats.thirtyDayStats.tradesSuccess !== null ? `+${profileStats.thirtyDayStats.tradesSuccess}% this month` : "No recent trades", subColor: "text-emerald-600", icon: <IconPortfolio size={20} />, bg: "bg-lime-50" },
+            { label: "Win Rate", value: `${winRate}%`, sub: `${profileData?.positive_feedback || 0}W · ${profileData?.negative_feedback || 0}L`, subColor: "text-slate-400", icon: <IconWinRate size={20} />, bg: "bg-emerald-50" },
             { label: "Rank", value: rank, sub: `${profileData?.total_trades || 0} trades`, subColor: "text-slate-400", icon: <IconRank size={20} />, bg: "bg-amber-50" },
             { label: "Network", value: "Multi-Chain", sub: "BTC · ETH · SOL", subColor: "text-slate-400", icon: <IconNetwork size={20} />, bg: "bg-indigo-50" },
           ].map(({ label, value, sub, subColor, icon, bg }) => (
@@ -947,55 +952,6 @@ export function Profile() {
               </Card>
             </div>
 
-            {/* Trade stats + Verifications */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card className="p-5">
-                <SectionLabel>Trade Stats</SectionLabel>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { label: "Trades Released", value: profileData?.total_trades || 0 },
-                    { label: "Trade Partners", value: profileData?.trade_partners || 0 },
-                    { label: "Trusted By", value: profileStats.trustedByCount },
-                    { label: "30d Success", value: profileStats.thirtyDayStats.tradesSuccess !== null ? `${profileStats.thirtyDayStats.tradesSuccess}%` : "—" },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="bg-slate-50 rounded-xl p-3 text-center">
-                      <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">{label}</p>
-                      <p className="text-xl font-bold text-slate-900">{value}</p>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-
-              <Card className="p-5">
-                <SectionLabel>Verifications</SectionLabel>
-                <div className="space-y-2.5">
-                  {[
-                    { label: "Email", verified: profileData?.email_verified },
-                    { label: "Phone", verified: profileData?.phone_verified },
-                    { label: "ID", verified: profileData?.is_verified },
-                  ].map(({ label, verified }) => (
-                    <div key={label} className="flex items-center gap-2">
-                      {verified
-                        ? <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
-                        : <div className="h-5 w-5 rounded-full border-2 border-slate-200 flex-shrink-0" />}
-                      <span className={verified ? "text-sm font-medium text-slate-800" : "text-sm text-slate-400"}>
-                        {label} {verified ? "verified" : "not verified"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                {(profileData?.total_trades || 0) >= 10 && (
-                  <div className="mt-4 pt-3 border-t border-slate-100">
-                    <SectionLabel>Medals</SectionLabel>
-                    <div className="flex gap-3">
-                      <img src={medalTheOg} alt="The OG" className="h-8 w-8 object-contain" />
-                      {(profileData?.total_trades || 0) >= 10 && <img src={medalInitiate} alt="Pexly Initiate" className="h-8 w-8 object-contain" />}
-                      {(profileData?.total_trades || 0) >= 100 && <img src={medalTop1} alt="Top 1% Club" className="h-8 w-8 object-contain" />}
-                    </div>
-                  </div>
-                )}
-              </Card>
-            </div>
           </div>
         )}
 
