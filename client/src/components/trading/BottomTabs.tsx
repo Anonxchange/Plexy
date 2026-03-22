@@ -359,11 +359,13 @@ const BottomTabs = ({ chartVisible, pair, viewMode, onViewModeChange: setViewMod
               <CandlestickChart pair={pair} />
             </div>
           )}
-          <div className="flex border-t border-border flex-shrink-0 w-full min-w-0">
-            <div className="w-[40%] min-w-0 border-r border-border overflow-hidden">
-              <OrderBook symbol={pair} />
+          <div className="flex border-t border-border w-full min-w-0">
+            <div className="w-[40%] relative border-r border-border self-stretch">
+              <div className="absolute inset-0 overflow-hidden">
+                <OrderBook symbol={pair} count={9} />
+              </div>
             </div>
-            <div className="w-[60%] min-w-0 overflow-hidden">
+            <div className="w-[60%] min-w-0">
               <TradePanel symbol={pair} />
             </div>
           </div>
