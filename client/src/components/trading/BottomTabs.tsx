@@ -326,7 +326,7 @@ const BottomTabs = ({ chartVisible, pair }: BottomTabsProps) => {
           case "Chart":
             return <div className="h-[400px] flex-shrink-0"><CandlestickChart pair={pair} /></div>;
           case "Order book":
-            return <div className="h-[300px] flex-shrink-0 border-b border-border"><OrderBook symbol={pair} mode="spot" /></div>;
+            return <div className="h-[300px] flex-shrink-0 border-b border-border overflow-hidden"><OrderBook symbol={pair} mode="spot" /></div>;
           case "Trades":
             return <RecentTradesPanel symbol={pair} />;
           case "Depth":
