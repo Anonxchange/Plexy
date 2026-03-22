@@ -224,10 +224,11 @@ const RecentTradesPanel = ({ symbol }: { symbol: string }) => {
 interface MobilePerpetualTabsProps {
   chartVisible: boolean;
   pair: string;
+  viewMode: "list" | "chart";
+  onViewModeChange: (mode: "list" | "chart") => void;
 }
 
-const MobilePerpetualTabs = ({ chartVisible, pair }: MobilePerpetualTabsProps) => {
-  const [viewMode, setViewMode] = useState<"list" | "chart">("list");
+const MobilePerpetualTabs = ({ chartVisible, pair, viewMode, onViewModeChange: setViewMode }: MobilePerpetualTabsProps) => {
   const [activeOrderTab, setActiveOrderTab] = useState("Open orders");
   const [activeChartTab, setActiveChartTab] = useState("Chart");
 
