@@ -425,7 +425,7 @@ const MobilePerpetualTabs = ({ chartVisible, pair, viewMode, onViewModeChange: s
               <CandlestickChart pair={pair} />
             </div>
           )}
-          <div className="flex border-t border-border flex-shrink-0 w-full min-w-0">
+          <div className="flex border-t border-border flex-shrink-0 w-full min-w-0 h-[260px]">
             <div className="w-[40%] min-w-0 border-r border-border overflow-hidden">
               <OrderBook symbol={pair} mode="futures" count={7} />
             </div>
