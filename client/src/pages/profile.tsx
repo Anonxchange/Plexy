@@ -1,52 +1,20 @@
-import { useEffect, useState, useMemo } from "react";
-import { useLocation, useRoute } from "wouter";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useLocation, useRoute, Link } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { PexlyFooter } from "@/components/pexly-footer";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { OfferCard, type OfferCardProps } from "@/components/offer-card";
+import { PexlyFooter } from "@/components/pexly-footer";
 import { getCountryFlag } from "@/lib/localization";
 import { useMarkets, type PolymarketMarket } from "@/hooks/use-polymarket";
 import { shopifyService } from "@/lib/shopify-service";
 import { cn } from "@/lib/utils";
 import DOMPurify from "dompurify";
-import { 
-  User, 
-  Copy,
-  ThumbsUp,
-  ThumbsDown,
-  CheckCircle2,
-  Users,
-  ChevronDown,
-  Share2,
-  Upload,
-  Image as ImageIcon,
-  Trophy,
-  Flag,
-  Wallet,
-  Send,
-  FilterIcon,
-  TrendingUp,
-  ArrowRight,
-} from "lucide-react";
-import medalTheOg from '@assets/generated_images/IMG_1432.png';
-import medalInitiate from '@assets/generated_images/IMG_1430.png';
-import medalTop1 from '@assets/generated_images/IMG_1425.png';
+import { Upload, User, TrendingUp, ArrowRight, CheckCircle2, ThumbsUp, ThumbsDown } from "lucide-react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,7 +24,297 @@ import { useToast } from "@/hooks/use-toast";
 import { uploadToR2 } from "@/lib/r2-storage";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { useIsMobile } from "@/hooks/use-mobile";
+import medalTheOg from "@assets/generated_images/IMG_1432.png";
+import medalInitiate from "@assets/generated_images/IMG_1430.png";
+import medalTop1 from "@assets/generated_images/IMG_1425.png";
+
+// ─── SVG Icons (from demo) ────────────────────────────────────────────────────
+
+function IconVerified({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <defs>
+        <radialGradient id="vg" cx="50%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#d4fc79" /><stop offset="100%" stopColor="#8ec506" />
+        </radialGradient>
+      </defs>
+      <path d="M12 2l2.4 4.1L19 7.5l-3.5 3.4.8 4.8L12 13.4l-4.3 2.3.8-4.8L5 7.5l4.6-1.4z" fill="url(#vg)" />
+      <path d="M9.5 12l2 2 3.5-4" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconShield({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <defs>
+        <linearGradient id="sg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#818cf8" /><stop offset="100%" stopColor="#6366f1" />
+        </linearGradient>
+      </defs>
+      <path d="M12 2L4 6v5c0 5 3.5 9.3 8 10.3C16.5 20.3 20 16 20 11V6z" fill="url(#sg)" opacity=".85" />
+      <path d="M9 12l2 2 4-4" stroke="#fff" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconCamera({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect x="2" y="7" width="20" height="14" rx="3" fill="#475569" />
+      <path d="M8 7l2-3h4l2 3" stroke="#94a3b8" strokeWidth="1.5" strokeLinejoin="round" />
+      <circle cx="12" cy="14" r="4" fill="none" stroke="#e2e8f0" strokeWidth="1.8" />
+      <circle cx="12" cy="14" r="2" fill="#cbd5e1" />
+      <circle cx="18" cy="10" r="1" fill="#94a3b8" />
+    </svg>
+  );
+}
+
+function IconPencil({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <defs>
+        <linearGradient id="pg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#94a3b8" /><stop offset="100%" stopColor="#64748b" />
+        </linearGradient>
+      </defs>
+      <path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z" fill="url(#pg)" />
+      <path d="M15 5l4 4" stroke="#cbd5e1" strokeWidth="1.2" />
+    </svg>
+  );
+}
+
+function IconCopy({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect x="9" y="9" width="13" height="13" rx="2.5" fill="none" stroke="#94a3b8" strokeWidth="2" />
+      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconMapPin({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M12 2C8.7 2 6 4.7 6 8c0 4.5 6 12 6 12s6-7.5 6-12c0-3.3-2.7-6-6-6z" fill="#94a3b8" />
+      <circle cx="12" cy="8" r="2.5" fill="#fff" />
+    </svg>
+  );
+}
+
+function IconCalendar({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="5" width="18" height="17" rx="3" fill="none" stroke="#94a3b8" strokeWidth="2" />
+      <path d="M3 10h18" stroke="#94a3b8" strokeWidth="1.5" />
+      <path d="M8 3v4M16 3v4" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" />
+      <rect x="7" y="13" width="3" height="3" rx="1" fill="#94a3b8" />
+      <rect x="14" y="13" width="3" height="3" rx="1" fill="#94a3b8" />
+    </svg>
+  );
+}
+
+function IconUsers({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="9" cy="8" r="4" fill="none" stroke="#94a3b8" strokeWidth="2" />
+      <path d="M2 20c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" />
+      <path d="M19 11a3 3 0 000-6M22 20c0-2.2-1.3-4-3-5" stroke="#94a3b8" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconAward({ size = 14, accent = false }: { size?: number; accent?: boolean }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <defs>
+        <linearGradient id="awg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#fbbf24" /><stop offset="100%" stopColor="#f59e0b" />
+        </linearGradient>
+      </defs>
+      <circle cx="12" cy="9" r="7" fill={accent ? "url(#awg)" : "none"} stroke={accent ? "none" : "#f59e0b"} strokeWidth="2" opacity={accent ? 1 : 0.8} />
+      <path d="M8.5 15.5L7 22l5-3 5 3-1.5-6.5" fill="#fde68a" stroke="#f59e0b" strokeWidth="1.5" strokeLinejoin="round" />
+      {accent && <path d="M9.5 9l2 2 3.5-4" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />}
+    </svg>
+  );
+}
+
+function IconPortfolio({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <defs>
+        <linearGradient id="portg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#b4f22e" /><stop offset="100%" stopColor="#8ec506" />
+        </linearGradient>
+      </defs>
+      <rect x="3" y="14" width="4" height="7" rx="1.5" fill="url(#portg)" opacity=".5" />
+      <rect x="10" y="9" width="4" height="12" rx="1.5" fill="url(#portg)" opacity=".75" />
+      <rect x="17" y="4" width="4" height="17" rx="1.5" fill="url(#portg)" />
+    </svg>
+  );
+}
+
+function IconWinRate({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <defs>
+        <linearGradient id="wrg" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0%" stopColor="#34d399" /><stop offset="100%" stopColor="#10b981" />
+        </linearGradient>
+      </defs>
+      <polyline points="3,17 8,11 13,14 21,5" stroke="url(#wrg)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <polyline points="16,5 21,5 21,10" stroke="url(#wrg)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <path d="M3 21h18" stroke="#d1fae5" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconRank({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <defs>
+        <linearGradient id="rkg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#fde68a" /><stop offset="100%" stopColor="#f59e0b" />
+        </linearGradient>
+      </defs>
+      <path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.9L12 18l-6.2 3.1L7 14.2 2 9.3l6.9-1z" fill="url(#rkg)" />
+      <path d="M12 6l1.8 3.7 4 .6-2.9 2.8.7 4L12 15l-3.6 1.9.7-4L6.2 10l4-.6z" fill="#fef3c7" opacity=".6" />
+    </svg>
+  );
+}
+
+function IconNetwork({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <defs>
+        <radialGradient id="netg" cx="50%" cy="50%" r="60%">
+          <stop offset="0%" stopColor="#a5b4fc" /><stop offset="100%" stopColor="#6366f1" />
+        </radialGradient>
+      </defs>
+      <circle cx="12" cy="12" r="3" fill="url(#netg)" />
+      <circle cx="4" cy="6" r="2.5" fill="#818cf8" opacity=".7" />
+      <circle cx="20" cy="6" r="2.5" fill="#818cf8" opacity=".7" />
+      <circle cx="4" cy="18" r="2.5" fill="#818cf8" opacity=".7" />
+      <circle cx="20" cy="18" r="2.5" fill="#818cf8" opacity=".7" />
+      <line x1="6.5" y1="7" x2="9.5" y2="10" stroke="#818cf8" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="17.5" y1="7" x2="14.5" y2="10" stroke="#818cf8" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="6.5" y1="17" x2="9.5" y2="14" stroke="#818cf8" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="17.5" y1="17" x2="14.5" y2="14" stroke="#818cf8" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconWallet({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <defs>
+        <linearGradient id="wlg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#94a3b8" /><stop offset="100%" stopColor="#64748b" />
+        </linearGradient>
+      </defs>
+      <rect x="2" y="6" width="20" height="15" rx="3" fill="url(#wlg)" />
+      <path d="M2 10h20" stroke="#cbd5e1" strokeWidth="1.5" />
+      <path d="M2 6l3-4h14l3 4" stroke="#94a3b8" strokeWidth="1.5" strokeLinejoin="round" />
+      <rect x="15" y="13" width="5" height="4" rx="2" fill="#e2e8f0" opacity=".7" />
+    </svg>
+  );
+}
+
+function IconClock({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" fill="none" stroke="#94a3b8" strokeWidth="2" />
+      <path d="M12 7v5l3 2" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconStar({ size = 11, filled = false }: { size?: number; filled?: boolean }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.9L12 18l-6.2 3.1L7 14.2 2 9.3l6.9-1z" fill={filled ? "#fbbf24" : "#e2e8f0"} />
+    </svg>
+  );
+}
+
+function IconChevronRight({ size = 12, className }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconExternalLink({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <polyline points="15,3 21,3 21,9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <line x1="10" y1="14" x2="21" y2="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconShoppingBag({ size = 14, gradient = false }: { size?: number; gradient?: boolean }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <defs>
+        <linearGradient id="sbg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#a5b4fc" /><stop offset="100%" stopColor="#6366f1" />
+        </linearGradient>
+      </defs>
+      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" fill={gradient ? "url(#sbg)" : "none"} stroke={gradient ? "none" : "#6366f1"} strokeWidth="2" strokeLinejoin="round" />
+      <path d="M3 6h18" stroke={gradient ? "#c7d2fe" : "#6366f1"} strokeWidth="1.5" />
+      <path d="M16 10a4 4 0 01-8 0" stroke={gradient ? "#e0e7ff" : "#6366f1"} strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconTrending({ size = 16, up = true }: { size?: number; up?: boolean }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <defs>
+        <linearGradient id="tg" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0%" stopColor={up ? "#34d399" : "#f87171"} /><stop offset="100%" stopColor={up ? "#10b981" : "#ef4444"} />
+        </linearGradient>
+      </defs>
+      {up
+        ? <><polyline points="3,17 8,11 13,14 21,5" stroke="url(#tg)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" /><polyline points="16,5 21,5 21,10" stroke="url(#tg)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" /></>
+        : <><polyline points="3,7 8,13 13,10 21,19" stroke="url(#tg)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" /><polyline points="16,19 21,19 21,14" stroke="url(#tg)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" /></>
+      }
+    </svg>
+  );
+}
+
+function IconPrediction({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <defs>
+        <linearGradient id="preg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#818cf8" /><stop offset="100%" stopColor="#6366f1" />
+        </linearGradient>
+      </defs>
+      <circle cx="12" cy="12" r="9" fill="url(#preg)" opacity=".15" stroke="url(#preg)" strokeWidth="1.5" />
+      <path d="M8 12h8M12 8v8" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" opacity=".4" />
+      <circle cx="12" cy="12" r="3" fill="#6366f1" />
+    </svg>
+  );
+}
+
+// ─── Shared UI ─────────────────────────────────────────────────────────────────
+
+function Card({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <div className={cn("bg-white rounded-2xl border border-slate-200 shadow-sm", className)}>{children}</div>;
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3">{children}</p>;
+}
+
+const TABS = ["Overview", "Predictions", "Shop", "Activity"] as const;
+type Tab = typeof TABS[number];
+
+// ─── Interfaces ───────────────────────────────────────────────────────────────
 
 interface UserProfile {
   id: string;
@@ -78,27 +336,6 @@ interface UserProfile {
   last_seen: string | null;
 }
 
-// Helper function for relative time formatting
-function formatRelativeTime(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMinutes = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const diffWeeks = Math.floor(diffDays / 7);
-  const diffMonths = Math.floor(diffDays / 30);
-  const diffYears = Math.floor(diffDays / 365);
-
-  if (diffMinutes < 1) return 'Just now';
-  if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes === 1 ? '' : 's'} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
-  if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
-  if (diffWeeks < 4) return `${diffWeeks} week${diffWeeks === 1 ? '' : 's'} ago`;
-  if (diffMonths < 12) return `${diffMonths} month${diffMonths === 1 ? '' : 's'} ago`;
-  return `${diffYears} year${diffYears === 1 ? '' : 's'} ago`;
-}
-
 interface ProfileStats {
   trustedByCount: number;
   blockedByCount: number;
@@ -111,32 +348,14 @@ interface ProfileStats {
   };
 }
 
-interface Offer {
-  id: string;
-  crypto_symbol: string;
-  fiat_currency: string;
-  payment_method: string;
-  price: number;
-  min_amount: number;
-  max_amount: number;
-  type: 'buy' | 'sell';
-}
-
 interface Feedback {
   id: string;
-  from_user: string;
   from_user_id: string;
-  rating: 'positive' | 'negative';
+  rating: "positive" | "negative";
   comment: string;
   created_at: string;
-  payment_method: string;
-  trade_count: number;
-  currency?: string;
-  offer_id?: string;
-  from_user_profile?: {
-    username: string;
-    country: string;
-  };
+  from_user_profile?: { username: string; country: string };
+  trade?: any;
 }
 
 interface TradeHistory {
@@ -144,225 +363,40 @@ interface TradeHistory {
   buyer_id: string;
   seller_id: string;
   crypto_symbol: string;
-  crypto_amount: string;
   fiat_amount: string;
   fiat_currency: string;
   status: string;
   created_at: string;
-  payment_method?: string;
 }
 
-const PredictionEventSlider = ({ markets }: { markets: PolymarketMarket[] }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [, setLocation] = useLocation();
+interface ShopProduct { id: string; title: string; images: string[]; price: number; currency: string; }
 
-  const activeMarkets = useMemo(() => {
-    if (!markets) return [];
-    return [...markets]
-      .sort((a, b) => (b.volumeNum || 0) - (a.volumeNum || 0))
-      .slice(0, 4);
-  }, [markets]);
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    if (activeMarkets.length <= 1) return;
-    const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % activeMarkets.length);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, [activeMarkets.length]);
-
-  if (activeMarkets.length === 0) return null;
-
-  const currentMarket = activeMarkets[currentIndex];
-  const prices = JSON.parse(currentMarket.outcomePrices || "[]");
-  const price = prices[0] ? Math.round(parseFloat(prices[0]) * 100) : 0;
-  const imageSrc = currentMarket.image ? DOMPurify.sanitize(currentMarket.image) : null;
-
-  return (
-    <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-secondary rounded-2xl p-4 border border-primary/20 relative overflow-hidden h-[140px] flex flex-col justify-between transition-all duration-500">
-      <div className="absolute right-0 top-0 w-24 h-24 bg-primary/10 rounded-full blur-2xl"></div>
-      
-      <div className="relative flex items-center gap-4">
-        <div className="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
-          {imageSrc ? (
-            <img 
-              src={imageSrc} 
-              alt="" 
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-                const parent = target.parentElement;
-                if (parent) {
-                  parent.classList.add('flex', 'items-center', 'justify-center');
-                  if (!parent.querySelector('.fallback-icon')) {
-                    const iconContainer = document.createElement('div');
-                    iconContainer.className = 'fallback-icon';
-                    iconContainer.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-up h-6 w-6 text-primary"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>';
-                    parent.appendChild(iconContainer);
-                  }
-                }
-              }}
-            />
-          ) : (
-            <TrendingUp className="h-6 w-6 text-primary" />
-          )}
-        </div>
-        
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Prediction Market</span>
-            <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">{price}% Yes</span>
-          </div>
-          <h3 className="text-foreground font-semibold mt-1 line-clamp-2 text-sm sm:text-base leading-tight">
-            {currentMarket.question}
-          </h3>
-          <button 
-            onClick={() => setLocation(`/prediction/${currentMarket.conditionId}`)}
-            className="flex items-center gap-1 text-primary font-medium text-sm mt-2 hover:gap-2 transition-all"
-          >
-            Predict Now
-            <ArrowRight className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-
-      <div className="flex justify-center gap-1.5 mt-2">
-        {activeMarkets.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setCurrentIndex(i)}
-            className={cn(
-              "h-1.5 rounded-full transition-all duration-300",
-              currentIndex === i ? "w-6 bg-primary" : "w-1.5 bg-muted-foreground/30"
-            )}
-          />
-        ))}
-      </div>
-    </div>
-  );
-};
-
-interface ShopProduct {
-  id: string;
-  title: string;
-  images: string[];
-  price: number;
-  currency: string;
+function formatRelativeTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffMinutes < 1) return "Just now";
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", year: "numeric" });
 }
 
-function ProductCarousel() {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [products, setProducts] = useState<ShopProduct[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [, setLocation] = useLocation();
-
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const result = await shopifyService.getProducts(10);
-        const transformed: ShopProduct[] = result.products.map((edge: any) => {
-          const p = edge.node;
-          return {
-            id: p.id,
-            title: p.title,
-            images: p.images.edges.map((e: any) => e.node.url),
-            price: parseFloat(p.priceRange.minVariantPrice.amount),
-            currency: p.priceRange.minVariantPrice.currencyCode,
-          };
-        });
-        setProducts(transformed);
-      } catch (error) {
-        console.error('Error fetching products:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchProducts();
-  }, []);
-
-  useEffect(() => {
-    if (products.length <= 1) return;
-    const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % products.length);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, [products.length]);
-
-  const handleProductClick = (productId: string) => {
-    setLocation(`/shop/product/${encodeURIComponent(productId)}`);
-  };
-
-  if (isLoading) {
-    return (
-      <div className="bg-card border border-border rounded-2xl p-6">
-        <h3 className="text-xl font-bold mb-4">Trending Products</h3>
-        <div className="relative h-[300px] sm:h-[400px] bg-muted rounded-xl flex items-center justify-center animate-pulse">
-          <div className="h-8 w-8 border-b-2 border-primary rounded-full animate-spin"></div>
-        </div>
-      </div>
-    );
-  }
-
-  if (products.length === 0) return null;
-
-  const currentProduct = products[currentIndex];
-  const imageUrl = currentProduct.images?.[0] || '';
-
-  return (
-    <div className="bg-card border border-border rounded-2xl p-6 overflow-hidden">
-      <h3 className="text-xl font-bold mb-4">Trending Products</h3>
-      <button 
-        onClick={() => handleProductClick(currentProduct.id)}
-        className="relative h-[300px] sm:h-[400px] flex items-center justify-center bg-muted rounded-xl overflow-hidden mb-4 transition-all duration-500 hover:opacity-80 cursor-pointer w-full"
-      >
-        <img 
-          src={imageUrl} 
-          alt={currentProduct.title}
-          className="w-full h-full object-cover"
-        />
-      </button>
-      
-      <div className="text-center mb-4">
-        <button
-          onClick={() => handleProductClick(currentProduct.id)}
-          className="hover:text-primary/80 transition-colors w-full"
-        >
-          <h4 className="text-lg font-semibold text-foreground line-clamp-2">{currentProduct.title}</h4>
-          <p className="text-primary font-bold text-xl mt-1">{currentProduct.price.toFixed(2)} {currentProduct.currency}</p>
-        </button>
-      </div>
-
-      <div className="flex justify-center gap-1.5">
-        {products.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setCurrentIndex(i)}
-            className={cn(
-              "h-1.5 rounded-full transition-all duration-300",
-              currentIndex === i ? "w-6 bg-primary" : "w-1.5 bg-muted-foreground/30"
-            )}
-          />
-        ))}
-      </div>
-    </div>
-  );
+function getRank(trades: number) {
+  if (trades >= 500) return "Diamond";
+  if (trades >= 100) return "Gold";
+  if (trades >= 50) return "Silver";
+  if (trades >= 10) return "Bronze";
+  return "Newcomer";
 }
 
-function ProfilePredictionSection() {
-  const { data: predictionMarkets } = useMarkets({ limit: 10 });
-  
-  if (!predictionMarkets || predictionMarkets.length === 0) {
-    return null;
-  }
-  
-  return (
-    <div className="mt-2">
-      <PredictionEventSlider markets={predictionMarkets} />
-    </div>
-  );
-}
+// ─── Profile Page ─────────────────────────────────────────────────────────────
 
 export function Profile() {
   const { user, loading } = useAuth();
@@ -370,1342 +404,848 @@ export function Profile() {
   const [, params] = useRoute("/profile/:userId");
   const { toast } = useToast();
   const supabase = createClient();
-  const isMobile = useIsMobile();
 
-  // If there's a userId in the URL, view that user's profile; otherwise view own profile
   const viewingUserId = params?.userId || user?.id;
   const isOwnProfile = !params?.userId || params?.userId === user?.id;
 
-  const [offerFilter, setOfferFilter] = useState("buying");
-  const [feedbackFilter, setFeedbackFilter] = useState("buyers");
-  const [historyFilter, setHistoryFilter] = useState("all");
+  // ── Tab / UI state ──
+  const [tab, setTab] = useState<Tab>("Overview");
+  const [copied, setCopied] = useState(false);
+
+  // ── Data state ──
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
-  const [offers, setOffers] = useState<Offer[]>([]);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [tradeHistory, setTradeHistory] = useState<TradeHistory[]>([]);
+  const [shopProducts, setShopProducts] = useState<ShopProduct[]>([]);
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [feedbackFilter, setFeedbackFilter] = useState("buyers");
+  const [historyFilter, setHistoryFilter] = useState("all");
+
+  // ── Edit profile state ──
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editForm, setEditForm] = useState({
-    username: '',
-    bio: '',
-    languages: [] as string[],
-    avatar_type: 'default' as string,
-    avatar_url: null as string | null,
-  });
+  const [editForm, setEditForm] = useState({ username: "", bio: "", languages: [] as string[], avatar_type: "default" as string, avatar_url: null as string | null });
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  // ── Trust/Block state ──
   const [isTrusted, setIsTrusted] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [trustLoading, setTrustLoading] = useState(false);
   const [blockLoading, setBlockLoading] = useState(false);
+
+  // ── Profile stats ──
   const [profileStats, setProfileStats] = useState<ProfileStats>({
-    trustedByCount: 0,
-    blockedByCount: 0,
-    hasBlockedCount: 0,
-    thirtyDayStats: {
-      tradesSuccess: null,
-      avgTimeToPayment: null,
-      avgTimeToRelease: null,
-      tradesVolume: 0,
-    },
+    trustedByCount: 0, blockedByCount: 0, hasBlockedCount: 0,
+    thirtyDayStats: { tradesSuccess: null, avgTimeToPayment: null, avgTimeToRelease: null, tradesVolume: 0 },
   });
 
+  // ── Live data ──
+  const { data: predictionMarkets } = useMarkets({ limit: 10 });
+
+  const activeMarkets = useMemo(() => {
+    if (!predictionMarkets) return [];
+    return [...predictionMarkets].sort((a, b) => (b.volumeNum || 0) - (a.volumeNum || 0));
+  }, [predictionMarkets]);
+
   const avatarTypes = [
-    { id: 'default', label: 'Default', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default' },
-    { id: 'trader', label: 'Trader', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=trader' },
-    { id: 'crypto', label: 'Crypto', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=crypto' },
-    { id: 'robot', label: 'Robot', image: 'https://api.dicebear.com/7.x/bottts/svg?seed=robot' },
-    { id: 'ninja', label: 'Ninja', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ninja' },
-    { id: 'astronaut', label: 'Astronaut', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=astronaut' },
-    { id: 'developer', label: 'Developer', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=developer' },
-    { id: 'artist', label: 'Artist', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=artist' },
+    { id: "default", label: "Default", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=default" },
+    { id: "trader", label: "Trader", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=trader" },
+    { id: "crypto", label: "Crypto", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=crypto" },
+    { id: "robot", label: "Robot", image: "https://api.dicebear.com/7.x/bottts/svg?seed=robot" },
+    { id: "ninja", label: "Ninja", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=ninja" },
+    { id: "astronaut", label: "Astronaut", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=astronaut" },
+    { id: "developer", label: "Developer", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=developer" },
+    { id: "artist", label: "Artist", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=artist" },
   ];
 
+  // ── Fetch Shopify products ──
   useEffect(() => {
-    if (!loading && !user && isOwnProfile) {
-      setLocation("/signin");
-    } else if (viewingUserId) {
+    shopifyService.getProducts(4).then(result => {
+      setShopProducts(result.products.map((edge: any) => {
+        const p = edge.node;
+        return { id: p.id, title: p.title, images: p.images.edges.map((e: any) => e.node.url), price: parseFloat(p.priceRange.minVariantPrice.amount), currency: p.priceRange.minVariantPrice.currencyCode };
+      }));
+    }).catch(() => {});
+  }, []);
+
+  // ── Auth redirect ──
+  useEffect(() => {
+    if (!loading && !user && isOwnProfile) { setLocation("/signin"); return; }
+    if (viewingUserId) {
       fetchProfileData();
       fetchFeedbacks();
       fetchProfileStats();
-      if (!isOwnProfile && user?.id) {
-        checkTrustAndBlockStatus();
-      }
+      if (!isOwnProfile && user?.id) checkTrustAndBlockStatus();
     }
-  }, [user, loading, setLocation, viewingUserId]);
+  }, [user, loading, viewingUserId]);
 
+  useEffect(() => { if (viewingUserId) fetchFeedbacks(); }, [feedbackFilter, viewingUserId]);
+  useEffect(() => { if (viewingUserId && !isOwnProfile && user?.id) fetchTradeHistory(); }, [historyFilter, viewingUserId]);
+
+  // ── Data fetchers ──
   const checkTrustAndBlockStatus = async () => {
     if (!user?.id || !viewingUserId || isOwnProfile) return;
-
     try {
-      // Check if user is trusted
-      const { data: trustData } = await supabase
-        .from('trusted_users')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('trusted_user_id', viewingUserId)
-        .single();
-
-      setIsTrusted(!!trustData);
-
-      // Check if user is blocked
-      const { data: blockData } = await supabase
-        .from('blocked_users')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('blocked_user_id', viewingUserId)
-        .single();
-
-      setIsBlocked(!!blockData);
-    } catch (error) {
-      console.error('Error checking trust/block status:', error);
-    }
+      const { data: t } = await supabase.from("trusted_users").select("id").eq("user_id", user.id).eq("trusted_user_id", viewingUserId).single();
+      setIsTrusted(!!t);
+      const { data: b } = await supabase.from("blocked_users").select("id").eq("user_id", user.id).eq("blocked_user_id", viewingUserId).single();
+      setIsBlocked(!!b);
+    } catch {}
   };
 
   const fetchProfileStats = async () => {
     if (!viewingUserId) return;
-
     try {
-      // Fetch trusted by count (how many users trust this profile)
-      const { count: trustedByCount } = await supabase
-        .from('trusted_users')
-        .select('*', { count: 'exact', head: true })
-        .eq('trusted_user_id', viewingUserId);
-
-      // Fetch blocked by count (how many users blocked this profile)
-      const { count: blockedByCount } = await supabase
-        .from('blocked_users')
-        .select('*', { count: 'exact', head: true })
-        .eq('blocked_user_id', viewingUserId);
-
-      // Fetch has blocked count (how many users this profile has blocked)
-      const { count: hasBlockedCount } = await supabase
-        .from('blocked_users')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', viewingUserId);
-
-      // Fetch 30-day trade stats
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const { data: recentTrades } = await supabase
-        .from('p2p_trades')
-        .select('*')
-        .or(`buyer_id.eq.${viewingUserId},seller_id.eq.${viewingUserId}`)
-        .gte('created_at', thirtyDaysAgo.toISOString())
-        .order('created_at', { ascending: false });
-
-      let tradesSuccess: number | null = null;
-      let avgTimeToPayment: number | null = null;
-      let avgTimeToRelease: number | null = null;
-      let tradesVolume = 0;
-
-      if (recentTrades && recentTrades.length > 0) {
-        const completedTrades = recentTrades.filter((t: any) => t.status === 'completed' || t.status === 'released');
-        const totalTrades = recentTrades.length;
-        
-        if (totalTrades > 0) {
-          tradesSuccess = Math.round((completedTrades.length / totalTrades) * 100);
-        }
-
-        // Calculate average time to payment (for trades where user is buyer)
-        const buyerTrades = recentTrades.filter((t: any) => 
-          t.buyer_id === viewingUserId && t.paid_at && t.created_at
-        );
-        if (buyerTrades.length > 0) {
-          const totalPaymentTime = buyerTrades.reduce((acc: number, t: any) => {
-            const created = new Date(t.created_at).getTime();
-            const paid = new Date(t.paid_at).getTime();
-            return acc + (paid - created);
-          }, 0);
-          avgTimeToPayment = Math.round(totalPaymentTime / buyerTrades.length / (1000 * 60)); // in minutes
-        }
-
-        // Calculate average time to release (for trades where user is seller)
-        const sellerTrades = recentTrades.filter((t: any) => 
-          t.seller_id === viewingUserId && t.released_at && t.paid_at
-        );
-        if (sellerTrades.length > 0) {
-          const totalReleaseTime = sellerTrades.reduce((acc: number, t: any) => {
-            const paid = new Date(t.paid_at).getTime();
-            const released = new Date(t.released_at).getTime();
-            return acc + (released - paid);
-          }, 0);
-          avgTimeToRelease = Math.round(totalReleaseTime / sellerTrades.length / (1000 * 60)); // in minutes
-        }
-
-        // Calculate total volume in USD
-        tradesVolume = completedTrades.reduce((acc: number, t: any) => {
-          return acc + parseFloat(t.fiat_amount || '0');
-        }, 0);
+      const { count: trustedByCount } = await supabase.from("trusted_users").select("*", { count: "exact", head: true }).eq("trusted_user_id", viewingUserId);
+      const { count: blockedByCount } = await supabase.from("blocked_users").select("*", { count: "exact", head: true }).eq("blocked_user_id", viewingUserId);
+      const { count: hasBlockedCount } = await supabase.from("blocked_users").select("*", { count: "exact", head: true }).eq("user_id", viewingUserId);
+      const ago30 = new Date(); ago30.setDate(ago30.getDate() - 30);
+      const { data: rt } = await supabase.from("p2p_trades").select("*").or(`buyer_id.eq.${viewingUserId},seller_id.eq.${viewingUserId}`).gte("created_at", ago30.toISOString());
+      let tradesSuccess: number | null = null, avgTimeToPayment: number | null = null, avgTimeToRelease: number | null = null, tradesVolume = 0;
+      if (rt?.length) {
+        const done = rt.filter((t: any) => t.status === "completed" || t.status === "released");
+        tradesSuccess = Math.round((done.length / rt.length) * 100);
+        const buyerT = rt.filter((t: any) => t.buyer_id === viewingUserId && t.paid_at && t.created_at);
+        if (buyerT.length) avgTimeToPayment = Math.round(buyerT.reduce((a: number, t: any) => a + (new Date(t.paid_at).getTime() - new Date(t.created_at).getTime()), 0) / buyerT.length / 60000);
+        const sellerT = rt.filter((t: any) => t.seller_id === viewingUserId && t.released_at && t.paid_at);
+        if (sellerT.length) avgTimeToRelease = Math.round(sellerT.reduce((a: number, t: any) => a + (new Date(t.released_at).getTime() - new Date(t.paid_at).getTime()), 0) / sellerT.length / 60000);
+        tradesVolume = done.reduce((a: number, t: any) => a + parseFloat(t.fiat_amount || "0"), 0);
       }
-
-      setProfileStats({
-        trustedByCount: trustedByCount || 0,
-        blockedByCount: blockedByCount || 0,
-        hasBlockedCount: hasBlockedCount || 0,
-        thirtyDayStats: {
-          tradesSuccess,
-          avgTimeToPayment,
-          avgTimeToRelease,
-          tradesVolume,
-        },
-      });
-    } catch (error) {
-      console.error('Error fetching profile stats:', error);
-    }
+      setProfileStats({ trustedByCount: trustedByCount || 0, blockedByCount: blockedByCount || 0, hasBlockedCount: hasBlockedCount || 0, thirtyDayStats: { tradesSuccess, avgTimeToPayment, avgTimeToRelease, tradesVolume } });
+    } catch {}
   };
 
   const fetchProfileData = async () => {
     try {
       setLoadingProfile(true);
-
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout')), 5000)
-      );
-
-      const fetchPromise = supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', viewingUserId)
-        .single();
-
-      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
-
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-
+      const timeout = new Promise((_, r) => setTimeout(() => r(new Error("timeout")), 5000));
+      const { data, error } = await Promise.race([supabase.from("user_profiles").select("*").eq("id", viewingUserId).single(), timeout]) as any;
+      if (error && error.code !== "PGRST116") throw error;
       if (data) {
-        // For email_verified: use profile data for the viewed user
-        // Only use auth data if viewing own profile
-        const emailVerified = isOwnProfile 
-          ? (user?.email_confirmed_at ? true : false)
-          : (data.email_verified || false);
-        
-        // Fetch actual feedback counts from trade_feedback table
-        const { count: positiveCount } = await supabase
-          .from('trade_feedback')
-          .select('*', { count: 'exact', head: true })
-          .eq('to_user_id', viewingUserId)
-          .eq('rating', 'positive');
-        
-        const { count: negativeCount } = await supabase
-          .from('trade_feedback')
-          .select('*', { count: 'exact', head: true })
-          .eq('to_user_id', viewingUserId)
-          .eq('rating', 'negative');
-
-        // Fetch actual trades count (completed trades where user was seller - "released")
-        const { count: tradesReleasedCount } = await supabase
-          .from('p2p_trades')
-          .select('*', { count: 'exact', head: true })
-          .eq('seller_id', viewingUserId)
-          .or('status.eq.completed,status.eq.released');
-
-        // Count unique trade partners
-        const { data: buyerTrades } = await supabase
-          .from('p2p_trades')
-          .select('seller_id')
-          .eq('buyer_id', viewingUserId)
-          .or('status.eq.completed,status.eq.released');
-
-        const { data: sellerTrades } = await supabase
-          .from('p2p_trades')
-          .select('buyer_id')
-          .eq('seller_id', viewingUserId)
-          .or('status.eq.completed,status.eq.released');
-
-        const uniquePartners = new Set([
-          ...(buyerTrades?.map(t => t.seller_id) || []),
-          ...(sellerTrades?.map(t => t.buyer_id) || [])
-        ]);
-
-        setProfileData({
-          ...data,
-          email_verified: emailVerified,
-          positive_feedback: positiveCount || 0,
-          negative_feedback: negativeCount || 0,
-          total_trades: tradesReleasedCount || 0,
-          trade_partners: uniquePartners.size,
-        });
+        const emailVerified = isOwnProfile ? !!user?.email_confirmed_at : (data.email_verified || false);
+        const { count: pos } = await supabase.from("trade_feedback").select("*", { count: "exact", head: true }).eq("to_user_id", viewingUserId).eq("rating", "positive");
+        const { count: neg } = await supabase.from("trade_feedback").select("*", { count: "exact", head: true }).eq("to_user_id", viewingUserId).eq("rating", "negative");
+        const { count: tradesCount } = await supabase.from("p2p_trades").select("*", { count: "exact", head: true }).eq("seller_id", viewingUserId).or("status.eq.completed,status.eq.released");
+        const { data: bt } = await supabase.from("p2p_trades").select("seller_id").eq("buyer_id", viewingUserId).or("status.eq.completed,status.eq.released");
+        const { data: st } = await supabase.from("p2p_trades").select("buyer_id").eq("seller_id", viewingUserId).or("status.eq.completed,status.eq.released");
+        const partners = new Set([...(bt?.map((t: any) => t.seller_id) || []), ...(st?.map((t: any) => t.buyer_id) || [])]);
+        setProfileData({ ...data, email_verified: emailVerified, positive_feedback: pos || 0, negative_feedback: neg || 0, total_trades: tradesCount || 0, trade_partners: partners.size });
       } else {
-        // Create default profile if doesn't exist
-        // Try to get country from user metadata or profile data
-        const userCountry = user?.user_metadata?.country || 
-                          user?.user_metadata?.Country || 
-                          '';
-
-        const defaultProfile = {
-          id: user?.id,
-          username: `user_${user?.id?.substring(0, 8)}`,
-          country: userCountry,
-          bio: null,
-          languages: ['English'],
-          positive_feedback: 0,
-          negative_feedback: 0,
-          total_trades: 0,
-          trade_partners: 0,
-          is_verified: false,
-          phone_verified: false,
-          email_verified: false,
-          last_seen: new Date().toISOString(),
-        };
-
-        const { data: newProfile, error: createError } = await supabase
-          .from('user_profiles')
-          .insert(defaultProfile)
-          .select()
-          .single();
-
-        if (!createError && newProfile) {
-          setProfileData(newProfile);
-        } else if (createError) {
-          console.error('Error creating default profile:', createError);
-          // Use default profile locally if DB fails
-          setProfileData(defaultProfile as UserProfile);
-        }
+        const country = user?.user_metadata?.country || user?.user_metadata?.Country || "";
+        const def: any = { id: user?.id, username: `user_${user?.id?.substring(0, 8)}`, country, bio: null, languages: ["English"], positive_feedback: 0, negative_feedback: 0, total_trades: 0, trade_partners: 0, is_verified: false, phone_verified: false, email_verified: false, last_seen: new Date().toISOString() };
+        const { data: np, error: ce } = await supabase.from("user_profiles").insert(def).select().single();
+        setProfileData((!ce && np) ? np : def);
       }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      // Set a default profile even on error to prevent blank page
-      const userCountry = user?.user_metadata?.country || 
-                        user?.user_metadata?.Country || 
-                        '';
-
-      const defaultProfile = {
-        id: user?.id || '',
-        username: `user_${user?.id?.substring(0, 8)}`,
-        country: userCountry,
-        bio: null,
-        languages: ['English'],
-        positive_feedback: 0,
-        negative_feedback: 0,
-        total_trades: 0,
-        trade_partners: 0,
-        is_verified: false,
-        phone_verified: false,
-        email_verified: false,
-        last_seen: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        avatar_type: 'default',
-        avatar_url: null,
-        pexly_pay_id: null,
-      };
-      setProfileData(defaultProfile);
-    } finally {
-      setLoadingProfile(false);
-    }
-  };
-
-  const fetchOffers = async () => {
-    try {
-      // Fetch offers for the profile being viewed (either own or another user's)
-      // When "buying" is selected, show SELL offers (so visitors can buy from this profile)
-      // When "selling" is selected, show BUY offers (so visitors can sell to this profile)
-      const type = offerFilter === "buying" ? "sell" : "buy";
-
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout')), 3000)
-      );
-
-      const fetchPromise = supabase
-        .from('p2p_offers')
-        .select('*')
-        .eq('user_id', viewingUserId)
-        .eq('offer_type', type)
-        .eq('is_active', true)
-        .limit(10);
-
-      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
-
-      if (error) {
-        console.error('Error fetching offers:', error);
-        setOffers([]);
-        return;
-      }
-
-      // Map the data to match expected schema
-      const mappedOffers = (data || []).map((offer: any) => ({
-        id: offer.id,
-        crypto_symbol: offer.crypto_symbol,
-        fiat_currency: offer.fiat_currency,
-        payment_method: Array.isArray(offer.payment_methods) 
-          ? offer.payment_methods.join(', ') 
-          : offer.payment_methods,
-        price: offer.price_type === "fixed" ? (offer.fixed_price || 0) : (offer.price_per_unit || 0),
-        min_amount: offer.min_amount || 0,
-        max_amount: offer.max_amount || 0,
-        type: offer.offer_type,
-      }));
-
-      setOffers(mappedOffers);
-    } catch (error) {
-      console.error('Error fetching offers:', error);
-      setOffers([]);
-    }
+    } catch {
+      const country = user?.user_metadata?.country || user?.user_metadata?.Country || "";
+      setProfileData({ id: user?.id || "", username: `user_${user?.id?.substring(0, 8)}`, country, bio: null, languages: ["English"], positive_feedback: 0, negative_feedback: 0, total_trades: 0, trade_partners: 0, is_verified: false, phone_verified: false, email_verified: false, last_seen: new Date().toISOString(), created_at: new Date().toISOString(), avatar_type: "default", avatar_url: null, pexly_pay_id: null });
+    } finally { setLoadingProfile(false); }
   };
 
   const fetchFeedbacks = async () => {
+    if (!viewingUserId) return;
     try {
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout')), 5000)
-      );
-
-      // Step 1: Fetch feedback with a simple query (no foreign key relationships)
-      const fetchPromise = supabase
-        .from('trade_feedback')
-        .select('*')
-        .eq('to_user_id', viewingUserId)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      const { data: feedbackData, error: feedbackError } = await Promise.race([fetchPromise, timeoutPromise]) as any;
-
-      if (feedbackError) {
-        console.error('Error fetching feedbacks:', feedbackError);
-        setFeedbacks([]);
-        return;
-      }
-
-      if (!feedbackData || feedbackData.length === 0) {
-        setFeedbacks([]);
-        return;
-      }
-
-      // Step 2: Get unique user IDs from feedback to fetch their profiles
-      const fromUserIds = Array.from(new Set(feedbackData.map((f: any) => f.from_user_id).filter(Boolean))) as string[];
-      const tradeIds = Array.from(new Set(feedbackData.map((f: any) => f.trade_id).filter(Boolean))) as string[];
-
-      // Fetch user profiles for feedback senders
-      let userProfilesMap: Record<string, any> = {};
-      if (fromUserIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from('user_profiles')
-          .select('id, username, country')
-          .in('id', fromUserIds);
-        
-        if (profiles) {
-          userProfilesMap = profiles.reduce((acc: Record<string, any>, p: any) => {
-            acc[p.id] = p;
-            return acc;
-          }, {});
-        }
-      }
-
-      // Fetch trades to get buyer/seller info for filtering
-      let tradesMap: Record<string, any> = {};
-      if (tradeIds.length > 0) {
-        const { data: trades } = await supabase
-          .from('p2p_trades')
-          .select('id, offer_id, seller_id, buyer_id')
-          .in('id', tradeIds);
-        
-        if (trades) {
-          tradesMap = trades.reduce((acc: Record<string, any>, t: any) => {
-            acc[t.id] = t;
-            return acc;
-          }, {});
-        }
-      }
-
-      // Step 3: Map the data to include user profile and trade info
-      const mappedFeedbacks = feedbackData.map((feedback: any) => ({
-        ...feedback,
-        from_user_profile: userProfilesMap[feedback.from_user_id] || null,
-        trade: tradesMap[feedback.trade_id] || null,
-        offer_id: tradesMap[feedback.trade_id]?.offer_id || null,
-      }));
-
-      // Filter based on feedbackFilter (buyers or sellers)
-      // When "buyers" tab is selected, show feedback FROM sellers (when profile owner was buying)
-      // When "sellers" tab is selected, show feedback FROM buyers (when profile owner was selling)
-      let filteredFeedbacks = mappedFeedbacks;
-      if (feedbackFilter === 'buyers') {
-        // Show feedback FROM sellers (where the profile owner was the buyer)
-        filteredFeedbacks = mappedFeedbacks.filter((f: any) => {
-          if (!f.trade || !f.trade.seller_id || !f.trade.buyer_id) return true;
-          return f.trade.buyer_id === viewingUserId && f.trade.seller_id === f.from_user_id;
-        });
-      } else if (feedbackFilter === 'sellers') {
-        // Show feedback FROM buyers (where the profile owner was the seller)
-        filteredFeedbacks = mappedFeedbacks.filter((f: any) => {
-          if (!f.trade || !f.trade.seller_id || !f.trade.buyer_id) return true;
-          return f.trade.seller_id === viewingUserId && f.trade.buyer_id === f.from_user_id;
-        });
-      }
-
-      setFeedbacks(filteredFeedbacks);
-    } catch (error) {
-      console.error('Error fetching feedbacks:', error);
-      setFeedbacks([]);
-    }
+      const timeout = new Promise((_, r) => setTimeout(() => r(new Error("timeout")), 5000));
+      const { data: fd, error } = await Promise.race([supabase.from("trade_feedback").select("*").eq("to_user_id", viewingUserId).order("created_at", { ascending: false }).limit(50), timeout]) as any;
+      if (error || !fd?.length) { setFeedbacks([]); return; }
+      const userIds = Array.from(new Set(fd.map((f: any) => f.from_user_id).filter(Boolean))) as string[];
+      const tradeIds = Array.from(new Set(fd.map((f: any) => f.trade_id).filter(Boolean))) as string[];
+      let profiles: Record<string, any> = {}, trades: Record<string, any> = {};
+      if (userIds.length) { const { data: p } = await supabase.from("user_profiles").select("id, username, country").in("id", userIds); if (p) profiles = p.reduce((a: any, x: any) => { a[x.id] = x; return a; }, {}); }
+      if (tradeIds.length) { const { data: t } = await supabase.from("p2p_trades").select("id, offer_id, seller_id, buyer_id").in("id", tradeIds); if (t) trades = t.reduce((a: any, x: any) => { a[x.id] = x; return a; }, {}); }
+      const mapped = fd.map((f: any) => ({ ...f, from_user_profile: profiles[f.from_user_id] || null, trade: trades[f.trade_id] || null }));
+      let filtered = mapped;
+      if (feedbackFilter === "buyers") filtered = mapped.filter((f: any) => !f.trade || (f.trade.buyer_id === viewingUserId && f.trade.seller_id === f.from_user_id));
+      else if (feedbackFilter === "sellers") filtered = mapped.filter((f: any) => !f.trade || (f.trade.seller_id === viewingUserId && f.trade.buyer_id === f.from_user_id));
+      setFeedbacks(filtered);
+    } catch { setFeedbacks([]); }
   };
-
-  useEffect(() => {
-    if (viewingUserId) {
-      fetchOffers();
-    }
-  }, [offerFilter, viewingUserId]);
-
-  useEffect(() => {
-    if (viewingUserId) {
-      fetchFeedbacks();
-    }
-  }, [feedbackFilter, viewingUserId]);
 
   const fetchTradeHistory = async () => {
-    if (!user?.id || !viewingUserId || isOwnProfile) {
-      setTradeHistory([]);
-      return;
-    }
-
+    if (!user?.id || !viewingUserId || isOwnProfile) { setTradeHistory([]); return; }
     try {
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout')), 5000)
-      );
-
-      let query = supabase
-        .from('p2p_trades')
-        .select('*')
-        .or(`and(buyer_id.eq.${user.id},seller_id.eq.${viewingUserId}),and(buyer_id.eq.${viewingUserId},seller_id.eq.${user.id})`)
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (historyFilter === 'bought') {
-        query = supabase
-          .from('p2p_trades')
-          .select('*')
-          .eq('buyer_id', user.id)
-          .eq('seller_id', viewingUserId)
-          .order('created_at', { ascending: false })
-          .limit(20);
-      } else if (historyFilter === 'sold') {
-        query = supabase
-          .from('p2p_trades')
-          .select('*')
-          .eq('seller_id', user.id)
-          .eq('buyer_id', viewingUserId)
-          .order('created_at', { ascending: false })
-          .limit(20);
-      }
-
-      const { data, error } = await Promise.race([query, timeoutPromise]) as any;
-
-      if (error) {
-        console.error('Error fetching trade history:', error);
-        setTradeHistory([]);
-        return;
-      }
-
+      const timeout = new Promise((_, r) => setTimeout(() => r(new Error("timeout")), 5000));
+      let q = supabase.from("p2p_trades").select("*").or(`and(buyer_id.eq.${user.id},seller_id.eq.${viewingUserId}),and(buyer_id.eq.${viewingUserId},seller_id.eq.${user.id})`).order("created_at", { ascending: false }).limit(20);
+      if (historyFilter === "bought") q = supabase.from("p2p_trades").select("*").eq("buyer_id", user.id).eq("seller_id", viewingUserId).order("created_at", { ascending: false }).limit(20);
+      else if (historyFilter === "sold") q = supabase.from("p2p_trades").select("*").eq("seller_id", user.id).eq("buyer_id", viewingUserId).order("created_at", { ascending: false }).limit(20);
+      const { data, error } = await Promise.race([q, timeout]) as any;
+      if (error) { setTradeHistory([]); return; }
       setTradeHistory(data || []);
-    } catch (error) {
-      console.error('Error fetching trade history:', error);
-      setTradeHistory([]);
-    }
+    } catch { setTradeHistory([]); }
   };
 
-  useEffect(() => {
-    if (viewingUserId && !isOwnProfile && user?.id) {
-      fetchTradeHistory();
-    }
-  }, [historyFilter, viewingUserId, isOwnProfile, user?.id]);
+  // ── Handlers ──
+  const handleCopyId = () => {
+    const id = profileData?.pexly_pay_id || `PEXLY-${(user?.id || "").substring(0, 8).toUpperCase()}`;
+    navigator.clipboard.writeText(id).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
-  if (loading || loadingProfile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
-
-  const username = profileData?.username || 'User';
-
-  const copyUsername = () => {
-    navigator.clipboard.writeText(`@${username}`);
-    toast({
-      title: "Copied!",
-      description: "Username copied to clipboard"
-    });
+  const handleShareProfile = async () => {
+    const url = `${window.location.origin}/profile/${viewingUserId}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: `@${username}'s Profile`, text: `Check out @${username}'s trading profile on Pexly`, url }); }
+      catch (e) { if (e instanceof Error && e.name !== "AbortError") { navigator.clipboard.writeText(url); toast({ title: "Link Copied!", description: "Profile link copied to clipboard" }); } }
+    } else { navigator.clipboard.writeText(url); toast({ title: "Link Copied!", description: "Profile link copied to clipboard" }); }
   };
 
   const handleEditProfile = () => {
-    setEditForm({
-      username: profileData?.username || '',
-      bio: profileData?.bio || '',
-      languages: profileData?.languages || ['English'],
-      avatar_type: profileData?.avatar_type || 'default',
-      avatar_url: profileData?.avatar_url || null,
-    });
+    setEditForm({ username: profileData?.username || "", bio: profileData?.bio || "", languages: profileData?.languages || ["English"], avatar_type: profileData?.avatar_type || "default", avatar_url: profileData?.avatar_url || null });
     setEditDialogOpen(true);
   };
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
     try {
       setUploadingAvatar(true);
-
-      // Upload to R2 storage
-      const uploadResult = await uploadToR2(file, 'profile-pictures', user?.id || '');
-
-      if (!uploadResult.success) {
-        throw new Error(uploadResult.error || 'Upload failed');
-      }
-
-      setEditForm({
-        ...editForm,
-        avatar_type: 'custom',
-        avatar_url: uploadResult.url || null,
-      });
-
-      toast({
-        title: "Success!",
-        description: "Avatar uploaded successfully"
-      });
-    } catch (error) {
-      console.error('Error uploading avatar:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to upload avatar';
-      toast({
-        title: "Upload Failed",
-        description: errorMessage.includes('Bucket not found') 
-          ? "Storage not configured. Please contact support." 
-          : errorMessage,
-        variant: "destructive"
-      });
-    } finally {
-      setUploadingAvatar(false);
-    }
+      const result = await uploadToR2(file, "profile-pictures", user?.id || "");
+      if (!result.success) throw new Error(result.error || "Upload failed");
+      setEditForm(prev => ({ ...prev, avatar_type: "custom", avatar_url: result.url || null }));
+      toast({ title: "Success!", description: "Avatar uploaded successfully" });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to upload avatar";
+      toast({ title: "Upload Failed", description: msg.includes("Bucket not found") ? "Storage not configured. Please contact support." : msg, variant: "destructive" });
+    } finally { setUploadingAvatar(false); }
   };
 
   const handleSaveProfile = async () => {
     try {
-      // Validate username
-      if (!editForm.username || editForm.username.trim().length < 3) {
-        toast({
-          title: "Invalid Username",
-          description: "Username must be at least 3 characters long",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Check if username already exists (for other users)
-      const { data: existingUser } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('username', editForm.username)
-        .neq('id', user?.id)
-        .single();
-
-      if (existingUser) {
-        toast({
-          title: "Username Taken",
-          description: "This username is already in use. Please choose another.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const updateData: any = {
-        username: editForm.username.trim(),
-        bio: editForm.bio,
-        avatar_type: editForm.avatar_type,
-        avatar_url: editForm.avatar_url,
-      };
-
-      // Only include languages if the column exists (will be added by migration)
-      if (editForm.languages && editForm.languages.length > 0) {
-        updateData.languages = editForm.languages;
-      }
-
-      const { error } = await supabase
-        .from('user_profiles')
-        .update(updateData)
-        .eq('id', user?.id);
-
+      if (!editForm.username || editForm.username.trim().length < 3) { toast({ title: "Invalid Username", description: "Username must be at least 3 characters long", variant: "destructive" }); return; }
+      const { data: existing } = await supabase.from("user_profiles").select("id").eq("username", editForm.username).neq("id", user?.id).single();
+      if (existing) { toast({ title: "Username Taken", description: "This username is already in use. Please choose another.", variant: "destructive" }); return; }
+      const upd: any = { username: editForm.username.trim(), bio: editForm.bio, avatar_type: editForm.avatar_type, avatar_url: editForm.avatar_url };
+      if (editForm.languages?.length) upd.languages = editForm.languages;
+      const { error } = await supabase.from("user_profiles").update(upd).eq("id", user?.id);
       if (error) {
-        // If languages column doesn't exist yet, try without it
-        if (error.code === 'PGRST204' && error.message.includes('languages')) {
-          delete updateData.languages;
-          const { error: retryError } = await supabase
-            .from('user_profiles')
-            .update(updateData)
-            .eq('id', user?.id);
-
-          if (retryError) throw retryError;
-        } else {
-          throw error;
-        }
+        if (error.code === "PGRST204" && error.message.includes("languages")) {
+          delete upd.languages;
+          const { error: e2 } = await supabase.from("user_profiles").update(upd).eq("id", user?.id);
+          if (e2) throw e2;
+        } else throw error;
       }
-
-      toast({
-        title: "Success!",
-        description: "Profile updated successfully"
-      });
-
+      toast({ title: "Success!", description: "Profile updated successfully" });
       setEditDialogOpen(false);
       fetchProfileData();
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update profile. Please check your database schema.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleShareProfile = async () => {
-    const profileUrl = `${window.location.origin}/profile/${user?.id}`;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `@${username}'s Profile`,
-          text: `Check out @${username}'s trading profile on Pexly`,
-          url: profileUrl,
-        });
-      } catch (error) {
-        // User cancelled or share failed
-        if (error instanceof Error && error.name !== 'AbortError') {
-          copyProfileLink(profileUrl);
-        }
-      }
-    } else {
-      copyProfileLink(profileUrl);
-    }
-  };
-
-  const copyProfileLink = (url: string) => {
-    navigator.clipboard.writeText(url);
-    toast({
-      title: "Link Copied!",
-      description: "Profile link copied to clipboard"
-    });
+    } catch { toast({ title: "Error", description: "Failed to update profile. Please check your database schema.", variant: "destructive" }); }
   };
 
   const handleTrustToggle = async () => {
     if (!user?.id || !viewingUserId || isOwnProfile) return;
-
     try {
       setTrustLoading(true);
-
       if (isTrusted) {
-        // Remove trust
-        const { error } = await supabase
-          .from('trusted_users')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('trusted_user_id', viewingUserId);
-
+        const { error } = await supabase.from("trusted_users").delete().eq("user_id", user.id).eq("trusted_user_id", viewingUserId);
         if (error) throw error;
-
-        setIsTrusted(false);
-        fetchProfileStats(); // Refresh counts after trust change
-        toast({
-          title: "User Untrusted",
-          description: `You have removed @${profileData?.username} from your trusted list`,
-        });
+        setIsTrusted(false); fetchProfileStats();
+        toast({ title: "User Untrusted", description: `Removed @${profileData?.username} from your trusted list` });
       } else {
-        // Add trust
-        const { error } = await supabase
-          .from('trusted_users')
-          .insert({
-            user_id: user.id,
-            trusted_user_id: viewingUserId,
-          });
-
-        if (error) {
-          if (error.message.includes('Cannot trust a blocked user')) {
-            toast({
-              title: "Cannot Trust User",
-              description: "You must unblock this user first before trusting them",
-              variant: "destructive",
-            });
-          } else {
-            throw error;
-          }
-          return;
-        }
-
-        setIsTrusted(true);
-        fetchProfileStats(); // Refresh counts after trust change
-        toast({
-          title: "User Trusted",
-          description: `You have added @${profileData?.username} to your trusted list`,
-        });
+        const { error } = await supabase.from("trusted_users").insert({ user_id: user.id, trusted_user_id: viewingUserId });
+        if (error) { if (error.message.includes("Cannot trust a blocked user")) toast({ title: "Cannot Trust User", description: "Unblock this user first", variant: "destructive" }); else throw error; return; }
+        setIsTrusted(true); fetchProfileStats();
+        toast({ title: "User Trusted", description: `Added @${profileData?.username} to your trusted list` });
       }
-    } catch (error) {
-      console.error('Error toggling trust:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update trust status",
-        variant: "destructive",
-      });
-    } finally {
-      setTrustLoading(false);
-    }
+    } catch { toast({ title: "Error", description: "Failed to update trust status", variant: "destructive" }); }
+    finally { setTrustLoading(false); }
   };
 
   const handleBlockToggle = async () => {
     if (!user?.id || !viewingUserId || isOwnProfile) return;
-
     try {
       setBlockLoading(true);
-
       if (isBlocked) {
-        // Unblock user
-        const { error } = await supabase
-          .from('blocked_users')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('blocked_user_id', viewingUserId);
-
+        const { error } = await supabase.from("blocked_users").delete().eq("user_id", user.id).eq("blocked_user_id", viewingUserId);
         if (error) throw error;
-
-        setIsBlocked(false);
-        fetchProfileStats(); // Refresh counts after block change
-        toast({
-          title: "User Unblocked",
-          description: `You have unblocked @${profileData?.username}`,
-        });
+        setIsBlocked(false); fetchProfileStats();
+        toast({ title: "User Unblocked", description: `Unblocked @${profileData?.username}` });
       } else {
-        // Block user
-        const { error } = await supabase
-          .from('blocked_users')
-          .insert({
-            user_id: user.id,
-            blocked_user_id: viewingUserId,
-          });
-
-        if (error) {
-          if (error.message.includes('Cannot block a trusted user')) {
-            toast({
-              title: "Cannot Block User",
-              description: "You must remove this user from your trusted list first",
-              variant: "destructive",
-            });
-          } else {
-            throw error;
-          }
-          return;
-        }
-
-        setIsBlocked(true);
-        fetchProfileStats(); // Refresh counts after block change
-        toast({
-          title: "User Blocked",
-          description: `You have blocked @${profileData?.username}`,
-        });
+        const { error } = await supabase.from("blocked_users").insert({ user_id: user.id, blocked_user_id: viewingUserId });
+        if (error) { if (error.message.includes("Cannot block a trusted user")) toast({ title: "Cannot Block User", description: "Remove from trusted list first", variant: "destructive" }); else throw error; return; }
+        setIsBlocked(true); fetchProfileStats();
+        toast({ title: "User Blocked", description: `Blocked @${profileData?.username}` });
       }
-    } catch (error) {
-      console.error('Error toggling block:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update block status",
-        variant: "destructive",
-      });
-    } finally {
-      setBlockLoading(false);
-    }
+    } catch { toast({ title: "Error", description: "Failed to update block status", variant: "destructive" }); }
+    finally { setBlockLoading(false); }
   };
 
+  // ── Guards ──
+  if (loading || loadingProfile) return <div className="min-h-screen flex items-center justify-center"><LoadingSpinner size="lg" /></div>;
+  if (!user) return null;
+
+  // ── Derived values ──
+  const username = profileData?.username || "User";
+  const totalFeedback = (profileData?.positive_feedback || 0) + (profileData?.negative_feedback || 0);
+  const winRate = totalFeedback > 0 ? Math.round(((profileData?.positive_feedback || 0) / totalFeedback) * 100) : 0;
+  const rank = getRank(profileData?.total_trades || 0);
+  const xp = Math.min((profileData?.total_trades || 0) * 20, 10000);
+  const pexlyId = profileData?.pexly_pay_id || `PEXLY-${(user?.id || "").substring(0, 8).toUpperCase()}`;
+  const memberSince = profileData?.created_at ? new Date(profileData.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" }) : "recently";
+  const kycLevel = profileData?.is_verified ? "Advanced" : profileData?.email_verified ? "Basic" : "None";
+  const volumeDisplay = profileStats.thirtyDayStats.tradesVolume >= 1000 ? `$${(profileStats.thirtyDayStats.tradesVolume / 1000).toFixed(1)}K` : `$${profileStats.thirtyDayStats.tradesVolume.toFixed(0)}`;
+
+  const badges: string[] = [];
+  if ((profileData?.total_trades || 0) >= 1) badges.push("Early Adopter");
+  if ((profileData?.total_trades || 0) >= 50) badges.push("Trade Pro");
+  if (shopProducts.length > 0) badges.push("Shop Pioneer");
+
+  const avatarSrc = profileData?.avatar_url || avatarTypes.find(a => a.id === profileData?.avatar_type)?.image || avatarTypes[0].image;
+
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <main className="flex-1 container mx-auto px-4 py-6 max-w-7xl">
-        <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-primary break-words flex items-center gap-2 flex-wrap">
-            {username} <span className="text-2xl">{getCountryFlag(profileData?.country)}</span> Profile
-          </h1>
-        </div>
+    <div className="min-h-screen bg-slate-50 relative overflow-x-hidden">
 
-        {/* Desktop: 2-column layout (Profile + Stats), Mobile: stacked */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Column 1: Profile Card + Share/Send Button */}
-          <div className="space-y-6">
-            <Card className="bg-card border-border overflow-hidden">
-          <CardContent className="p-0">
-            <div className="bg-elevate-1 p-4 sm:p-6">
-              {/* Share Button - Top Right */}
-              {isOwnProfile && (
-                <div className="flex justify-end mb-4">
-                  <Button 
-                    variant="ghost" 
-                    className="text-primary hover:text-primary/80 font-medium"
-                    onClick={handleShareProfile}
-                  >
-                    <Share2 className="h-4 w-4 mr-2" />
-                    Share
-                  </Button>
-                </div>
-              )}
-
-              {/* Medals Row */}
-              <div className="flex items-center gap-2 mb-4">
-                <div className="flex items-center gap-2 text-primary">
-                  <Trophy className="h-6 w-6 sm:h-8 sm:w-8" />
-                  <span className="text-2xl sm:text-3xl font-bold">1</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <img 
-                    src={medalTheOg} 
-                    alt="The OG" 
-                    className="h-6 w-6 sm:h-8 sm:w-8 object-contain"
-                  />
-                  {profileData && profileData.total_trades >= 10 && (
-                    <img 
-                      src={medalInitiate} 
-                      alt="Pexly Initiate" 
-                      className="h-6 w-6 sm:h-8 sm:w-8 object-contain"
-                    />
-                  )}
-                  {profileData && profileData.total_trades >= 100 && (
-                    <img 
-                      src={medalTop1} 
-                      alt="Top 1% Club" 
-                      className="h-6 w-6 sm:h-8 sm:w-8 object-contain"
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* Active Status */}
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-3 h-3 rounded-sm bg-primary"></div>
-                <span className="text-primary font-medium text-sm">
-                  {profileData?.last_seen ? (
-                    // If seen within last 5 minutes, show "Active now"
-                    (Date.now() - new Date(profileData.last_seen).getTime()) < 5 * 60 * 1000 
-                      ? 'Active now' 
-                      : `Seen ${formatRelativeTime(profileData.last_seen)}`
-                  ) : 'Seen recently'}
-                </span>
-              </div>
-
-              {/* Main Profile Section */}
-              <div className="mb-6">
-                {/* Top Row - Avatar and Username/Country */}
-                <div className="flex items-start gap-4 mb-4">
-                  {/* Left Side - Avatar */}
-                  <div className="flex-shrink-0">
-                    <Avatar className="w-20 h-20 sm:w-24 sm:h-24">
-                      {profileData?.avatar_url ? (
-                        <AvatarImage src={profileData.avatar_url} alt={username} />
-                      ) : (
-                        <>
-                          <AvatarImage 
-                            src={avatarTypes.find(a => a.id === profileData?.avatar_type)?.image || avatarTypes[0].image} 
-                            alt={username} 
-                          />
-                          <AvatarFallback className="bg-primary text-primary-foreground">
-                            <User className="h-10 w-10 sm:h-12 sm:w-12" />
-                          </AvatarFallback>
-                        </>
-                      )}
-                    </Avatar>
-                  </div>
-
-                  {/* Right Side - Username with Copy and Country */}
-                  <div className="flex-1 min-w-0">
-                    {/* Username with Copy Button */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <h2 className="text-xl sm:text-2xl font-bold truncate">
-                        @{username}
-                      </h2>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 text-primary hover:text-primary/80 flex-shrink-0"
-                        onClick={copyUsername}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
-
-                    {/* Country */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl">{getCountryFlag(profileData?.country)}</span>
-                      <span className="text-muted-foreground">{profileData?.country || ''}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Block and Trust Buttons */}
-                {!isOwnProfile && (
-                  <div className="flex gap-3 mb-4">
-                    <span 
-                      className={`font-semibold cursor-pointer flex-1 text-center py-2 rounded-md transition-colors ${
-                        isBlocked 
-                          ? 'text-red-600 bg-red-600/20 hover:bg-red-600/30' 
-                          : 'text-red-600 hover:bg-red-600/10'
-                      } ${blockLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      onClick={blockLoading ? undefined : handleBlockToggle}
-                    >
-                      {blockLoading ? 'Loading...' : isBlocked ? 'Unblock' : 'Block'}
-                    </span>
-                    <span 
-                      className={`font-semibold cursor-pointer flex-1 text-center py-2 rounded-md transition-colors ${
-                        isTrusted 
-                          ? 'text-green-600 bg-green-600/20 hover:bg-green-600/30' 
-                          : 'text-green-600 hover:bg-green-600/10'
-                      } ${trustLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      onClick={trustLoading ? undefined : handleTrustToggle}
-                    >
-                      {trustLoading ? 'Loading...' : isTrusted ? 'Untrust' : 'Trust'}
-                    </span>
-                  </div>
-                )}
-
-                {isOwnProfile && (
-                  <Button 
-                    variant="ghost" 
-                    className="text-primary hover:text-primary/80 font-medium w-full sm:w-auto mb-4"
-                    onClick={handleEditProfile}
-                  >
-                    Edit Profile
-                  </Button>
-                )}
-
-                {/* Bio Section - Only show if bio exists */}
-                {profileData?.bio && (
-                  <div className="mb-4 pb-4 border-b border-border">
-                    <p className="text-muted-foreground uppercase text-xs mb-2">Bio:</p>
-                    <p className="text-sm leading-relaxed">{profileData.bio}</p>
-                  </div>
-                )}
-
-                {/* Horizontal Info Row - Feedback, Languages, Joined */}
-                <div className="grid grid-cols-3 gap-3 sm:gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground uppercase text-xs mb-2">Feedback:</p>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                      <div className="flex items-center gap-1 text-green-500">
-                        <ThumbsUp className="h-4 w-4" />
-                        <span className="font-bold text-base sm:text-lg">{profileData?.positive_feedback || 0}</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-red-500">
-                        <ThumbsDown className="h-4 w-4" />
-                        <span className="font-bold text-base sm:text-lg">{profileData?.negative_feedback || 0}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground uppercase text-xs mb-2">Languages:</p>
-                    <p className="font-medium text-xs sm:text-sm">{profileData?.languages?.join(', ') || 'English'}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground uppercase text-xs mb-2">Joined:</p>
-                    <p className="font-medium text-xs sm:text-sm">{formatRelativeTime(profileData?.created_at || user.created_at)}</p>
-                    <p className="text-xs text-muted-foreground">{new Date(profileData?.created_at || user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
-                  </div>
-                </div>
-              </div>
-
-              </div>
-          </CardContent>
-        </Card>
-
-        {!isOwnProfile && (
-          <Button 
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg py-6"
-            onClick={() => {
-              toast({
-                title: "Send Coin",
-                description: "Send coin feature coming soon",
-              });
-            }}
-          >
-            <Send className="h-5 w-5 mr-2" />
-            Send Coin
-          </Button>
+      {/* ── Top bar (replaces cover) ── */}
+      <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+        <Link href="/" className="text-xs text-slate-600 hover:text-slate-900 font-medium transition-colors">
+          ← Pexly
+        </Link>
+        {isOwnProfile && (
+          <button onClick={handleShareProfile} className="text-xs text-primary font-medium hover:text-primary/80 transition-colors">
+            Share profile
+          </button>
         )}
+      </div>
 
-          </div>
+      <div className="max-w-5xl mx-auto px-4 lg:px-6 pb-24 pt-6">
 
-          {/* Column 2: Trades, Verifications, Trade Volumes, Trusted By */}
-          <Card className="bg-card border-border">
-            <CardContent className="p-6">
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-elevate-1 rounded-lg p-4 text-center">
-                  <p className="text-muted-foreground uppercase text-xs mb-2">Trades Released</p>
-                  <p className="text-2xl sm:text-3xl font-bold">{profileData?.total_trades || 0}</p>
+        {/* ── Profile Card ── */}
+        <div className="mb-6">
+          <Card className="p-6">
+            <div className="flex flex-col sm:flex-row gap-5 items-start">
+
+              {/* Avatar */}
+              <div className="relative flex-shrink-0 group/avatar">
+                <div className="w-24 h-24 rounded-2xl border-2 border-slate-200 shadow-md overflow-hidden flex items-center justify-center bg-gradient-to-br from-[#1e293b] to-[#475569]">
+                  <Avatar className="w-full h-full rounded-none">
+                    <AvatarImage src={avatarSrc} alt={username} className="object-cover" />
+                    <AvatarFallback className="rounded-none bg-transparent text-white text-2xl font-bold">
+                      {username.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
                 </div>
-                <div className="bg-elevate-1 rounded-lg p-4 text-center">
-                  <p className="text-muted-foreground uppercase text-xs mb-2">Trade Partners</p>
-                  <p className="text-2xl sm:text-3xl font-bold">{profileData?.trade_partners || 0}</p>
-                </div>
+                {profileData?.is_verified && (
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-primary border-2 border-white flex items-center justify-center shadow-sm">
+                    <IconVerified size={14} />
+                  </div>
+                )}
+                {isOwnProfile && (
+                  <button
+                    onClick={handleEditProfile}
+                    className="absolute inset-0 rounded-2xl bg-black/40 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity cursor-pointer"
+                  >
+                    <IconCamera size={22} />
+                  </button>
+                )}
               </div>
 
-              {(profileData && (profileData.total_trades >= 10 || profileData.total_trades >= 100)) && (
-                <div className="mb-6">
-                  <p className="text-muted-foreground uppercase text-xs mb-3">Medals</p>
-                  {profileData.total_trades >= 10 && (
-                    <div className="flex items-center gap-2 mb-4">
-                      <Trophy className="h-5 w-5 text-yellow-500" />
-                      <span className="text-sm">🎖️</span>
-                      <span className="font-medium">Pexly Initiate</span>
-                    </div>
-                  )}
-                  {profileData.total_trades >= 100 && (
-                    <div className="flex items-center gap-2 mb-4">
-                      <Trophy className="h-5 w-5 text-yellow-500" />
-                      <span className="text-sm">💎</span>
-                      <span className="font-medium">Top 1% Club</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="mb-6">
-                <p className="text-muted-foreground uppercase text-xs mb-3">Verifications</p>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    {profileData?.email_verified ? (
-                      <CheckCircle2 className="h-5 w-5 text-primary" />
-                    ) : (
-                      <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30" />
-                    )}
-                    <span className={profileData?.email_verified ? "font-medium" : "text-muted-foreground"}>
-                      Email {profileData?.email_verified ? "verified" : "not verified"}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {profileData?.phone_verified ? (
-                      <CheckCircle2 className="h-5 w-5 text-primary" />
-                    ) : (
-                      <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30" />
-                    )}
-                    <span className={profileData?.phone_verified ? "font-medium" : "text-muted-foreground"}>
-                      Phone {profileData?.phone_verified ? "verified" : "not verified"}
-                    </span>
-                  </div>
+              {/* Info */}
+              <div className="flex-1 min-w-0 mt-1">
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <h1 className="text-xl font-bold text-slate-900">{username}</h1>
+                  <span className="text-sm text-slate-400 font-mono">@{username.toLowerCase()}</span>
                   {profileData?.is_verified && (
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-primary" />
-                      <span className="font-medium">ID verified</span>
-                    </div>
+                    <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100 font-medium">
+                      <IconShield size={12} /> {kycLevel} KYC
+                    </span>
                   )}
+                  <span className="text-lg">{getCountryFlag(profileData?.country)}</span>
+                </div>
+                {profileData?.bio && (
+                  <p className="text-sm text-slate-500 leading-relaxed max-w-lg mb-2.5">{profileData.bio}</p>
+                )}
+                <div className="flex flex-wrap items-center gap-3 text-[12px] text-slate-400">
+                  {profileData?.country && <span className="flex items-center gap-1"><IconMapPin size={12} />{profileData.country}</span>}
+                  <span className="flex items-center gap-1"><IconCalendar size={12} />Joined {memberSince}</span>
+                  <span className="flex items-center gap-1"><IconUsers size={12} />{profileStats.trustedByCount} trusted by · {profileData?.trade_partners || 0} partners</span>
                 </div>
               </div>
 
-              <div className="mb-6">
-                <p className="text-muted-foreground uppercase text-xs mb-3">Trade Volumes</p>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <img src={cryptoIconUrls.BTC} alt="BTC" className="h-5 w-5" />
-                    <span className="text-sm">&lt; 10 BTC</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <img src={cryptoIconUrls.SOL} alt="SOL" className="h-5 w-5" />
-                    <span className="text-sm">&lt; 10K SOL</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <img src={cryptoIconUrls.USDT} alt="USDT" className="h-5 w-5" />
-                    <span className="text-sm">&lt; 10K USDT</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <img src={cryptoIconUrls.USDC} alt="USDC" className="h-5 w-5" />
-                    <span className="text-sm">&lt; 10K USDC</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <img src={cryptoIconUrls.BNB} alt="BNB" className="h-5 w-5" />
-                    <span className="text-sm">&lt; 1K BNB</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <img src={cryptoIconUrls.TRX} alt="TRX" className="h-5 w-5" />
-                    <span className="text-sm">&lt; 100K TRX</span>
-                  </div>
-                </div>
-              </div>
+              {/* Actions */}
+              <div className="flex items-center gap-2 flex-wrap mt-1">
+                <button
+                  onClick={handleCopyId}
+                  className="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-slate-700 transition-colors font-mono border border-slate-200 px-2.5 py-1.5 rounded-lg"
+                >
+                  <IconCopy size={12} />
+                  {copied ? "Copied!" : pexlyId}
+                </button>
 
-            </CardContent>
+                {isOwnProfile ? (
+                  <button
+                    onClick={handleEditProfile}
+                    className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-all"
+                    title="Edit profile"
+                  >
+                    <IconPencil size={14} />
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={blockLoading ? undefined : handleBlockToggle}
+                      className={cn("text-[11px] font-semibold px-3 py-1.5 rounded-lg border transition-colors",
+                        isBlocked ? "text-red-600 bg-red-50 border-red-200 hover:bg-red-100" : "text-red-500 border-slate-200 hover:bg-red-50",
+                        blockLoading && "opacity-50 cursor-not-allowed")}
+                    >
+                      {blockLoading ? "..." : isBlocked ? "Unblock" : "Block"}
+                    </button>
+                    <button
+                      onClick={trustLoading ? undefined : handleTrustToggle}
+                      className={cn("text-[11px] font-semibold px-3 py-1.5 rounded-lg border transition-colors",
+                        isTrusted ? "text-emerald-600 bg-emerald-50 border-emerald-200 hover:bg-emerald-100" : "text-emerald-600 border-slate-200 hover:bg-emerald-50",
+                        trustLoading && "opacity-50 cursor-not-allowed")}
+                    >
+                      {trustLoading ? "..." : isTrusted ? "Untrust" : "Trust"}
+                    </button>
+                  </>
+                )}
+
+                <Button size="sm" className="bg-primary text-black hover:bg-primary/90 font-semibold px-5 text-sm" onClick={isOwnProfile ? handleEditProfile : () => toast({ title: "Send Coin", description: "Send coin feature coming soon" })}>
+                  {isOwnProfile ? "Edit Profile" : "Send Coin"}
+                </Button>
+              </div>
+            </div>
+
+            {/* Badges */}
+            {badges.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-5 pt-4 border-t border-slate-100">
+                {badges.map(b => (
+                  <span key={b} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                    <IconAward size={12} /> {b}
+                  </span>
+                ))}
+              </div>
+            )}
           </Card>
         </div>
 
-        {/* Prediction Market Slider - Full width below columns */}
-        <div className="mt-6">
-          <ProfilePredictionSection />
+        {/* ── Stats Grid ── */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+          {[
+            { label: "30d Volume", value: volumeDisplay, sub: profileStats.thirtyDayStats.tradesSuccess !== null ? `+${profileStats.thirtyDayStats.tradesSuccess}% success` : "No recent trades", subColor: "text-emerald-600", icon: <IconPortfolio size={20} />, bg: "bg-lime-50" },
+            { label: "Feedback", value: `${winRate}%`, sub: `${profileData?.positive_feedback || 0}W · ${profileData?.negative_feedback || 0}L`, subColor: "text-slate-400", icon: <IconWinRate size={20} />, bg: "bg-emerald-50" },
+            { label: "Rank", value: rank, sub: `${profileData?.total_trades || 0} trades`, subColor: "text-slate-400", icon: <IconRank size={20} />, bg: "bg-amber-50" },
+            { label: "Network", value: "Multi-Chain", sub: "BTC · ETH · SOL", subColor: "text-slate-400", icon: <IconNetwork size={20} />, bg: "bg-indigo-50" },
+          ].map(({ label, value, sub, subColor, icon, bg }) => (
+            <Card key={label} className="p-4 flex items-center gap-3">
+              <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0", bg)}>{icon}</div>
+              <div className="min-w-0">
+                <div className="text-[11px] text-slate-400 mb-0.5">{label}</div>
+                <div className="text-base font-bold text-slate-900 tabular-nums leading-tight">{value}</div>
+                <div className={cn("text-[11px] truncate", subColor)}>{sub}</div>
+              </div>
+            </Card>
+          ))}
         </div>
 
-      {/* Product Carousel Section */}
-      <div className="mt-8">
-        <ProductCarousel />
-      </div>
-
-      {/* Trade History Section - Only shown when viewing another user's profile */}
-      {!isOwnProfile && user?.id && (
-        <div className="mt-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold">Trade History with {profileData?.username || 'User'}</h3>
-            <Select value={historyFilter} onValueChange={setHistoryFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Trades</SelectItem>
-                <SelectItem value="bought">You Bought</SelectItem>
-                <SelectItem value="sold">You Sold</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {tradeHistory.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>No trade history with this user</p>
+        {/* ── Wallet + XP ── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+          <Card className="p-4 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
+              <IconWallet size={18} />
             </div>
-          ) : (
-            <div className="space-y-4">
-              {tradeHistory.map((trade) => {
-                const isBuyer = trade.buyer_id === user?.id;
-                const tradeDate = new Date(trade.created_at);
-                
+            <div className="flex-1 min-w-0">
+              <div className="text-[11px] text-slate-400">Pexly ID</div>
+              <div className="text-sm font-mono font-semibold text-slate-800 truncate">{pexlyId}</div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {["BTC", "ETH", "SOL"].map(t => (
+                <span key={t} className="text-[10px] px-2 py-0.5 bg-slate-100 rounded-full border border-slate-200 text-slate-500 font-medium">{t}</span>
+              ))}
+            </div>
+          </Card>
+
+          <Card className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
+                <IconAward size={16} accent /> {rank}
+              </span>
+              <span className="text-xs text-slate-400 tabular-nums">{xp.toLocaleString()} / 10,000 XP</span>
+            </div>
+            <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+              <div className="h-full rounded-full bg-gradient-to-r from-primary to-lime-400" style={{ width: `${Math.min((xp / 10000) * 100, 100)}%` }} />
+            </div>
+            <div className="flex justify-between text-[10px] text-slate-400 mt-1.5">
+              <span>Newcomer</span><span>Diamond</span>
+            </div>
+          </Card>
+        </div>
+
+        {/* ── Tabs ── */}
+        <div className="flex gap-0.5 p-1 bg-white border border-slate-200 rounded-xl mb-5 overflow-x-auto scrollbar-hide shadow-sm">
+          {TABS.map(t => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={cn(
+                "flex-1 min-w-[90px] px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 whitespace-nowrap",
+                tab === t ? "bg-primary text-black shadow-sm" : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+              )}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+
+        {/* ── OVERVIEW TAB ── */}
+        {tab === "Overview" && (
+          <div className="space-y-4 animate-in fade-in-0 duration-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+              {/* Active Predictions */}
+              <Card className="p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <SectionLabel>Active Predictions</SectionLabel>
+                  <button onClick={() => setTab("Predictions")} className="text-xs text-primary font-medium hover:underline flex items-center gap-0.5">
+                    View all <IconChevronRight size={12} />
+                  </button>
+                </div>
+                {activeMarkets.slice(0, 3).length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-4">No markets available</p>
+                ) : (
+                  activeMarkets.slice(0, 3).map((m, i, arr) => {
+                    const prices = JSON.parse(m.outcomePrices || "[]");
+                    const yesOdds = prices[0] ? Math.round(parseFloat(prices[0]) * 100) : 0;
+                    return (
+                      <div key={m.conditionId} className={cn("flex items-center gap-3 py-3", i < arr.length - 1 ? "border-b border-slate-100" : "")}>
+                        <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center text-[10px] font-bold flex-shrink-0",
+                          yesOdds >= 50 ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-600 border border-red-200")}>
+                          {yesOdds}%
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-slate-700 truncate">{m.question}</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">Vol: {m.volume || "—"}</p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </Card>
+
+              {/* Trending Products */}
+              <Card className="p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <SectionLabel>Trending Products</SectionLabel>
+                  <button onClick={() => setTab("Shop")} className="text-xs text-primary font-medium hover:underline flex items-center gap-0.5">
+                    Shop <IconChevronRight size={12} />
+                  </button>
+                </div>
+                {shopProducts.slice(0, 3).length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-4">Loading products…</p>
+                ) : (
+                  shopProducts.slice(0, 3).map((p, i) => (
+                    <div key={p.id} className={cn("flex items-center gap-3 py-3", i < 2 ? "border-b border-slate-100" : "")}>
+                      <div className="w-9 h-9 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {p.images[0] ? <img src={p.images[0]} alt={p.title} className="w-full h-full object-cover rounded-lg" /> : <IconShoppingBag size={15} />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-slate-700 truncate">{p.title}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{p.currency}</p>
+                      </div>
+                      <span className="text-xs font-semibold text-slate-700 tabular-nums">${p.price.toFixed(2)}</span>
+                    </div>
+                  ))
+                )}
+              </Card>
+            </div>
+
+            {/* Trade stats + Verifications */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card className="p-5">
+                <SectionLabel>Trade Stats</SectionLabel>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: "Trades Released", value: profileData?.total_trades || 0 },
+                    { label: "Trade Partners", value: profileData?.trade_partners || 0 },
+                    { label: "Trusted By", value: profileStats.trustedByCount },
+                    { label: "30d Success", value: profileStats.thirtyDayStats.tradesSuccess !== null ? `${profileStats.thirtyDayStats.tradesSuccess}%` : "—" },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="bg-slate-50 rounded-xl p-3 text-center">
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">{label}</p>
+                      <p className="text-xl font-bold text-slate-900">{value}</p>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              <Card className="p-5">
+                <SectionLabel>Verifications</SectionLabel>
+                <div className="space-y-2.5">
+                  {[
+                    { label: "Email", verified: profileData?.email_verified },
+                    { label: "Phone", verified: profileData?.phone_verified },
+                    { label: "ID", verified: profileData?.is_verified },
+                  ].map(({ label, verified }) => (
+                    <div key={label} className="flex items-center gap-2">
+                      {verified
+                        ? <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
+                        : <div className="h-5 w-5 rounded-full border-2 border-slate-200 flex-shrink-0" />}
+                      <span className={verified ? "text-sm font-medium text-slate-800" : "text-sm text-slate-400"}>
+                        {label} {verified ? "verified" : "not verified"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {(profileData?.total_trades || 0) >= 10 && (
+                  <div className="mt-4 pt-3 border-t border-slate-100">
+                    <SectionLabel>Medals</SectionLabel>
+                    <div className="flex gap-3">
+                      <img src={medalTheOg} alt="The OG" className="h-8 w-8 object-contain" />
+                      {(profileData?.total_trades || 0) >= 10 && <img src={medalInitiate} alt="Pexly Initiate" className="h-8 w-8 object-contain" />}
+                      {(profileData?.total_trades || 0) >= 100 && <img src={medalTop1} alt="Top 1% Club" className="h-8 w-8 object-contain" />}
+                    </div>
+                  </div>
+                )}
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* ── PREDICTIONS TAB ── */}
+        {tab === "Predictions" && (
+          <div className="space-y-4 animate-in fade-in-0 duration-200">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-slate-900">Prediction Markets</h2>
+              <Link href="/prediction" className="text-xs text-primary font-medium hover:underline flex items-center gap-1">
+                Browse all <IconExternalLink size={12} />
+              </Link>
+            </div>
+            {activeMarkets.length === 0 ? (
+              <Card className="p-8 text-center">
+                <p className="text-sm text-slate-400">No prediction markets available</p>
+              </Card>
+            ) : (
+              activeMarkets.map(m => {
+                const prices = JSON.parse(m.outcomePrices || "[]");
+                const yesOdds = prices[0] ? Math.round(parseFloat(prices[0]) * 100) : 0;
+                const imageSrc = m.image ? DOMPurify.sanitize(m.image) : null;
                 return (
-                  <Card key={trade.id} className="bg-card border-border shadow-sm">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                            isBuyer ? 'bg-green-500/20 text-green-500' : 'bg-blue-500/20 text-blue-500'
-                          }`}>
-                            {isBuyer ? (
-                              <ThumbsUp className="h-5 w-5" />
-                            ) : (
-                              <ThumbsDown className="h-5 w-5" />
-                            )}
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-lg">
-                              {isBuyer ? 'You Bought' : 'You Sold'} {parseFloat(trade.crypto_amount).toFixed(8)} {trade.crypto_symbol}
-                            </h4>
-                            <p className="text-sm text-muted-foreground">
-                              for {parseFloat(trade.fiat_amount).toLocaleString()} {trade.fiat_currency}
-                            </p>
+                  <Card key={m.conditionId} className="p-5 hover:border-primary/50 hover:shadow-md transition-all duration-150 cursor-default">
+                    <div className="flex items-start gap-4">
+                      <div className={cn("w-13 h-12 rounded-xl flex flex-col items-center justify-center flex-shrink-0 border px-3",
+                        yesOdds >= 65 ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-amber-50 border-amber-200 text-amber-700")}>
+                        <span className="text-sm font-bold tabular-nums leading-none">{yesOdds}%</span>
+                        <span className="text-[9px] uppercase tracking-wide opacity-60">YES</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start gap-3 mb-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap gap-1.5 mb-1.5">
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200 font-medium">Crypto</span>
+                              {(m.volumeNum || 0) > 500000 && (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-lime-50 text-lime-700 border border-lime-200 font-medium flex items-center gap-1">
+                                  <IconTrending size={10} /> Trending
+                                </span>
+                              )}
+                            </div>
+                            <h3 className="text-sm font-semibold text-slate-800 leading-snug">{m.question}</h3>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <Badge 
-                            variant={trade.status === 'completed' ? 'default' : 'secondary'}
-                            className={trade.status === 'completed' ? 'bg-green-500/20 text-green-500 border-green-500/30' : ''}
-                          >
-                            {trade.status.charAt(0).toUpperCase() + trade.status.slice(1)}
-                          </Badge>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {tradeDate.toLocaleDateString('en-US', { 
-                              month: 'short', 
-                              day: 'numeric', 
-                              year: 'numeric' 
-                            })}
-                          </p>
+                        <div className="flex items-center gap-2 mb-2.5">
+                          <span className="text-[10px] text-emerald-600 font-medium w-7">YES</span>
+                          <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                            <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400" style={{ width: `${yesOdds}%` }} />
+                          </div>
+                          <span className="text-[10px] text-red-500 font-medium w-7 text-right">NO</span>
+                        </div>
+                        <div className="flex gap-4 text-[11px] text-slate-400">
+                          <span>Vol {m.volume || "—"}</span>
                         </div>
                       </div>
-
-                      {trade.payment_method && (
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className="text-sm text-muted-foreground">Payment Method:</span>
-                          <Badge variant="outline">{trade.payment_method}</Badge>
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between pt-3 border-t border-border">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Copy className="h-4 w-4" />
-                          <span className="font-mono text-xs">{trade.id.substring(0, 8)}...</span>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            navigator.clipboard.writeText(trade.id);
-                            toast({
-                              title: "Copied!",
-                              description: "Trade ID copied to clipboard"
-                            });
-                          }}
-                        >
-                          Copy Trade ID
-                        </Button>
-                      </div>
-                    </CardContent>
+                    </div>
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex gap-2">
+                      <Button size="sm" className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium border-0"
+                        onClick={() => setLocation(`/prediction/${m.conditionId}`)}>
+                        View Market
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 text-xs text-slate-400 hover:text-slate-700 ml-auto"
+                        onClick={() => setLocation(`/prediction/${m.conditionId}`)}>
+                        Details <IconChevronRight size={11} className="ml-0.5 inline" />
+                      </Button>
+                    </div>
                   </Card>
                 );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-      </main>
+              })
+            )}
+          </div>
+        )}
 
+        {/* ── SHOP TAB ── */}
+        {tab === "Shop" && (
+          <div className="animate-in fade-in-0 duration-200">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-base font-bold text-slate-900">Pexly Store</h2>
+              <Link href="/shop" className="text-xs text-primary font-medium hover:underline flex items-center gap-1">
+                Full store <IconExternalLink size={12} />
+              </Link>
+            </div>
+            {shopProducts.length === 0 ? (
+              <Card className="p-8 text-center"><p className="text-sm text-slate-400">Loading products…</p></Card>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {shopProducts.map(p => (
+                  <Card key={p.id} className="overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-150 group cursor-pointer"
+                    onClick={() => setLocation(`/shop/product/${encodeURIComponent(p.id)}`)}>
+                    <div className="h-40 flex items-center justify-center relative bg-slate-100 overflow-hidden">
+                      {p.images[0]
+                        ? <img src={p.images[0]} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        : <IconShoppingBag size={42} gradient />}
+                    </div>
+                    <div className="p-4">
+                      <h3 className="text-sm font-semibold text-slate-900 mb-2 leading-snug group-hover:text-primary transition-colors">{p.title}</h3>
+                      <div className="flex items-center gap-0.5 mb-3">
+                        {Array.from({ length: 5 }).map((_, i) => <IconStar key={i} size={12} filled={i < 4} />)}
+                        <span className="text-[11px] text-slate-400 ml-1">{p.currency}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-base font-bold text-slate-900">${p.price.toFixed(2)}</div>
+                        </div>
+                        <Button size="sm" className="h-8 text-xs font-semibold bg-primary text-black hover:bg-primary/90">
+                          View
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── ACTIVITY TAB ── */}
+        {tab === "Activity" && (
+          <div className="animate-in fade-in-0 duration-200 space-y-4">
+
+            {/* Feedback */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-slate-900">Feedback</h2>
+              <Select value={feedbackFilter} onValueChange={setFeedbackFilter}>
+                <SelectTrigger className="w-[150px] h-8 text-xs border-slate-200">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="buyers">From Sellers</SelectItem>
+                  <SelectItem value="sellers">From Buyers</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Card className="divide-y divide-slate-100">
+              {feedbacks.length === 0 ? (
+                <div className="flex items-center gap-4 px-5 py-6 text-slate-400 text-sm">No feedback yet</div>
+              ) : (
+                feedbacks.map(fb => (
+                  <div key={fb.id} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors">
+                    <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0",
+                      fb.rating === "positive" ? "bg-emerald-50 border border-emerald-200" : "bg-red-50 border border-red-200")}>
+                      {fb.rating === "positive"
+                        ? <ThumbsUp className="h-4 w-4 text-emerald-600" />
+                        : <ThumbsDown className="h-4 w-4 text-red-500" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-slate-700 font-medium truncate">
+                        @{fb.from_user_profile?.username || "User"}
+                        {fb.from_user_profile?.country && ` ${getCountryFlag(fb.from_user_profile.country)}`}
+                      </p>
+                      {fb.comment && <p className="text-xs text-slate-400 truncate">{fb.comment}</p>}
+                      <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5"><IconClock size={10} />{formatRelativeTime(fb.created_at)}</p>
+                    </div>
+                    <span className={cn("text-sm font-semibold", fb.rating === "positive" ? "text-emerald-600" : "text-red-500")}>
+                      {fb.rating === "positive" ? "+1" : "-1"}
+                    </span>
+                  </div>
+                ))
+              )}
+            </Card>
+
+            {/* Trade history when viewing another user */}
+            {!isOwnProfile && user?.id && (
+              <>
+                <div className="flex items-center justify-between mt-2">
+                  <h2 className="text-base font-bold text-slate-900">Trade History with {profileData?.username || "User"}</h2>
+                  <Select value={historyFilter} onValueChange={setHistoryFilter}>
+                    <SelectTrigger className="w-[160px] h-8 text-xs border-slate-200">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Trades</SelectItem>
+                      <SelectItem value="bought">You Bought</SelectItem>
+                      <SelectItem value="sold">You Sold</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Card className="divide-y divide-slate-100">
+                  {tradeHistory.length === 0 ? (
+                    <div className="px-5 py-6 text-sm text-slate-400">No trade history with this user</div>
+                  ) : (
+                    tradeHistory.map(trade => {
+                      const isBuyer = trade.buyer_id === user?.id;
+                      return (
+                        <div key={trade.id} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors">
+                          <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center text-[10px] font-bold flex-shrink-0",
+                            isBuyer ? "bg-emerald-50 border border-emerald-200 text-emerald-700" : "bg-amber-50 border border-amber-200 text-amber-700")}>
+                            {isBuyer ? "BUY" : "SELL"}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-slate-700 font-medium">{trade.crypto_symbol} · {trade.fiat_currency}</p>
+                            <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5"><IconClock size={10} />{formatRelativeTime(trade.created_at)}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-semibold text-slate-800">{parseFloat(trade.fiat_amount || "0").toFixed(2)} {trade.fiat_currency}</p>
+                            <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium", trade.status === "completed" || trade.status === "released" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500")}>
+                              {trade.status}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </Card>
+              </>
+            )}
+          </div>
+        )}
+
+      </div>
+
+      {/* ── Edit Profile Dialog ── */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Profile</DialogTitle>
-            <DialogDescription>
-              Update your profile information
-            </DialogDescription>
+            <DialogDescription>Update your profile information</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Avatar</Label>
               <div className="flex items-center gap-4 mb-4">
                 <Avatar className="w-20 h-20">
-                  {editForm.avatar_url ? (
-                    <AvatarImage src={editForm.avatar_url} alt="Avatar preview" />
-                  ) : (
-                    <>
-                      <AvatarImage 
-                        src={avatarTypes.find(a => a.id === editForm.avatar_type)?.image || avatarTypes[0].image} 
-                        alt="Avatar preview" 
-                      />
-                      <AvatarFallback className="bg-primary text-primary-foreground">
-                        <User className="h-10 w-10" />
-                      </AvatarFallback>
-                    </>
-                  )}
+                  {editForm.avatar_url
+                    ? <AvatarImage src={editForm.avatar_url} alt="Avatar preview" />
+                    : <><AvatarImage src={avatarTypes.find(a => a.id === editForm.avatar_type)?.image || avatarTypes[0].image} alt="Avatar preview" /><AvatarFallback className="bg-primary text-primary-foreground"><User className="h-10 w-10" /></AvatarFallback></>
+                  }
                 </Avatar>
                 <div className="flex-1">
                   <Label htmlFor="avatar-upload" className="cursor-pointer">
-                    <div className="flex items-center gap-2 px-4 py-2 border border-border rounded-md hover:bg-muted transition-colors">
+                    <div className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-md hover:bg-slate-50 transition-colors">
                       <Upload className="h-4 w-4" />
                       <span className="text-sm">Upload Image</span>
                     </div>
-                    <Input
-                      id="avatar-upload"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleAvatarUpload}
-                      disabled={uploadingAvatar}
-                    />
+                    <Input id="avatar-upload" type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} disabled={uploadingAvatar} />
                   </Label>
-                  {uploadingAvatar && <p className="text-xs text-muted-foreground mt-1">Uploading...</p>}
+                  {uploadingAvatar && <p className="text-xs text-slate-400 mt-1">Uploading…</p>}
                 </div>
               </div>
               <div>
-                <Label className="mb-2 block">Or choose an avatar type:</Label>
+                <Label className="mb-2 block">Or choose an avatar:</Label>
                 <div className="grid grid-cols-4 gap-2">
-                  {avatarTypes.map((avatar) => (
-                    <button
-                      key={avatar.id}
-                      type="button"
-                      onClick={() => setEditForm({ ...editForm, avatar_type: avatar.id, avatar_url: null })}
-                      className={`p-3 border rounded-lg flex flex-col items-center gap-1 transition-colors ${
-                        editForm.avatar_type === avatar.id && !editForm.avatar_url
-                          ? 'border-primary bg-primary/10'
-                          : 'border-border hover:bg-muted'
-                      }`}
-                    >
+                  {avatarTypes.map(avatar => (
+                    <button key={avatar.id} type="button"
+                      onClick={() => setEditForm(prev => ({ ...prev, avatar_type: avatar.id, avatar_url: null }))}
+                      className={cn("p-3 border rounded-lg flex flex-col items-center gap-1 transition-colors",
+                        editForm.avatar_type === avatar.id && !editForm.avatar_url ? "border-primary bg-primary/10" : "border-slate-200 hover:bg-slate-50")}>
                       <Avatar className="w-12 h-12">
                         <AvatarImage src={avatar.image} alt={avatar.label} />
-                        <AvatarFallback>
-                          <User className="h-6 w-6" />
-                        </AvatarFallback>
+                        <AvatarFallback><User className="h-6 w-6" /></AvatarFallback>
                       </Avatar>
                       <span className="text-xs">{avatar.label}</span>
                     </button>
@@ -1715,51 +1255,22 @@ export function Profile() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                value={editForm.username}
-                onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
-                placeholder="Enter username (min 3 characters)"
-                minLength={3}
-              />
-              <p className="text-xs text-muted-foreground">
-                Your username is different from your email and will be visible to other users
-              </p>
+              <Input id="username" value={editForm.username} onChange={e => setEditForm(prev => ({ ...prev, username: e.target.value }))} placeholder="Enter username (min 3 characters)" minLength={3} />
+              <p className="text-xs text-slate-400">Visible to other users on the platform</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="bio">Bio</Label>
-              <Textarea
-                id="bio"
-                value={editForm.bio}
-                onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
-                placeholder="Tell us about yourself..."
-                className="min-h-24 resize-none"
-                maxLength={180}
-              />
-              <p className="text-xs text-muted-foreground">
-                Maximum 180 characters ({editForm.bio.length}/180)
-              </p>
+              <Textarea id="bio" value={editForm.bio} onChange={e => setEditForm(prev => ({ ...prev, bio: e.target.value }))} placeholder="Tell us about yourself…" className="min-h-24 resize-none" maxLength={180} />
+              <p className="text-xs text-slate-400">Maximum 180 characters ({editForm.bio.length}/180)</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="languages">Languages (comma-separated)</Label>
-              <Input
-                id="languages"
-                value={editForm.languages.join(', ')}
-                onChange={(e) => setEditForm({ 
-                  ...editForm, 
-                  languages: e.target.value.split(',').map(l => l.trim()).filter(l => l) 
-                })}
-                placeholder="e.g., English, Spanish, French"
-              />
+              <Input id="languages" value={editForm.languages.join(", ")} onChange={e => setEditForm(prev => ({ ...prev, languages: e.target.value.split(",").map(l => l.trim()).filter(l => l) }))} placeholder="e.g., English, Spanish, French" />
             </div>
           </div>
           <div className="flex gap-3 justify-end">
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveProfile}>
-              Save Changes
-            </Button>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+            <Button className="bg-primary text-black hover:bg-primary/90" onClick={handleSaveProfile}>Save Changes</Button>
           </div>
         </DialogContent>
       </Dialog>
