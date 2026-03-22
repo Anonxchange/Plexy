@@ -158,10 +158,10 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
   }, []);
 
   return (
-    <div className="flex flex-col w-full bg-background h-full">
+    <div className="flex flex-col w-full bg-background">
 
       {/* ── Cross / Isolated + Leverage ── */}
-      <div className="grid grid-cols-2 gap-1 px-2 pt-1.5 pb-0.5 flex-shrink-0">
+      <div className="grid grid-cols-2 gap-1 px-2 pt-1.5 pb-0.5">
         <div className="flex items-center bg-secondary rounded overflow-hidden">
           <button
             onClick={() => setMarginMode("cross")}
@@ -202,7 +202,7 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
       </div>
 
       {/* ── Buy / Sell toggle ── */}
-      <div className="flex gap-1 px-2 pb-0.5 flex-shrink-0">
+      <div className="flex gap-1 px-2 pb-0.5">
         <button
           onClick={() => setSide("buy")}
           className={`flex-1 py-[7px] text-[11px] font-semibold rounded-md transition-colors ${side === "buy" ? "bg-trading-green text-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
@@ -217,8 +217,8 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
         </button>
       </div>
 
-      {/* ── Scrollable form body ── */}
-      <div className="flex flex-col gap-1.5 px-2 pb-2 flex-1 overflow-y-auto">
+      {/* ── Form body ── */}
+      <div className="flex flex-col gap-1.5 px-2 pb-2">
 
         {/* Order type */}
         <div className="relative" ref={dropdownRef}>
