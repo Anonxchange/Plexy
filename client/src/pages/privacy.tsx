@@ -50,7 +50,7 @@ export default function Privacy() {
       {/* Content — overlaps hero above and footer below */}
       <section className="relative z-10 -mt-20 pb-0">
         <div className="w-full bg-background rounded-3xl shadow-2xl px-6 md:px-12 py-10 -mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
 
             {/* Column 1: Legal Documents sidebar */}
             <div className="md:col-span-1">
@@ -82,31 +82,33 @@ export default function Privacy() {
 
                 {/* Desktop sidebar — always visible */}
                 <div className="hidden md:block">
-                  <div className="flex items-center justify-between w-full p-4 rounded-t-lg border-x-2 border-t-2 border-primary/30 bg-primary/5">
-                    <h3 className="text-lg font-semibold">Legal Documents</h3>
-                  </div>
-                  <div className="bg-muted/30 rounded-b-lg border-x-2 border-b-2 border-primary/30 p-4 space-y-6">
-                    {legalSections.map((section) => (
-                      <div key={section.category}>
-                        <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase">{section.category}</h4>
-                        <div className="space-y-3 ml-2">
-                          {section.links.map((link) => (
-                            <div key={link.text}>
-                              <Link to={link.href} className="text-foreground hover:text-primary hover:underline font-medium text-sm block">
-                                {link.text}
-                              </Link>
-                            </div>
-                          ))}
+                  <div className="rounded-xl border border-primary/20 bg-background/70 backdrop-blur-md shadow-md overflow-hidden">
+                    <div className="px-3 py-2.5 border-b border-primary/15 bg-primary/5">
+                      <h3 className="text-sm font-semibold">Legal Documents</h3>
+                    </div>
+                    <div className="p-3 space-y-3">
+                      {legalSections.map((section) => (
+                        <div key={section.category}>
+                          <h4 className="text-sm font-semibold text-muted-foreground mb-2 uppercase">{section.category}</h4>
+                          <div className="space-y-1.5 ml-2">
+                            {section.links.map((link) => (
+                              <div key={link.text}>
+                                <Link to={link.href} className="text-foreground hover:text-primary hover:underline font-medium text-sm block">
+                                  {link.text}
+                                </Link>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Column 2: Content */}
-            <div className="md:col-span-2 space-y-8">
+            <div className="md:col-span-3 space-y-8">
               <div className="space-y-8">
 
                 <div>
