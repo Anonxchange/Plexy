@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Zap, Menu, User, UserCircle, BarChart3, Settings, Lightbulb, LogOut, Bell, Wallet, Eye, EyeOff, LayoutDashboard, Home, ShoppingCart, Store, Trophy, Gift, TrendingUp, ChevronDown, List, Plus, Bitcoin, ArrowDownToLine, CreditCard, ShoppingBag, Smartphone, HelpCircle, MessageSquare, Users, CheckCircle2, XCircle, AlertCircle, Globe } from "lucide-react";
+import { Zap, Menu, User, UserCircle, BarChart3, Settings, Lightbulb, LogOut, Bell, Wallet, Eye, EyeOff, LayoutDashboard, Home, ShoppingCart, Store, Trophy, Gift, TrendingUp, ChevronDown, List, Plus, Bitcoin, ArrowDownToLine, CreditCard, ShoppingBag, Smartphone, HelpCircle, MessageSquare, Users, CheckCircle2, XCircle, AlertCircle, Globe, Search } from "lucide-react";
 import { SecurityShieldIcon } from "@/components/ui/security-shield";
 import { Link, useLocation } from "wouter";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -17,6 +17,7 @@ import {
   DropdownMenuLabel
 } from "@/components/ui/dropdown-menu";
 const AppSidebar = lazy(() => import("./app-sidebar").then(m => ({ default: m.AppSidebar })));
+const SymbolSelector = lazy(() => import("./trading/SymbolSelector"));
 import { useAuth } from "@/lib/auth-context";
 import { getSupabase } from "@/lib/supabase";
 import { useVerificationGuard } from "@/hooks/use-verification-guard";
@@ -179,6 +180,12 @@ export function AppHeader() {
 
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [selectedLang, setSelectedLang] = useState("EN");
+  const [symbolSelectorOpen, setSymbolSelectorOpen] = useState(false);
+
+  const handleSymbolSelect = (sym: string) => {
+    const raw = sym.replace("/", "");
+    navigate(`/market?symbol=${raw}`);
+  };
 
   const securityInfo = useMemo(() => {
     if (!user) return { level: 'low' as const, score: 0, label: 'At Risk', color: 'red' };
@@ -472,6 +479,27 @@ export function AppHeader() {
             </div>
           </DropdownMenu>
         </nav>
+
+        {/* Bybit-style search — xl desktops only */}
+        <div className="hidden xl:flex items-center gap-2 mx-4 flex-shrink-0">
+          {/* Search pill with trending pair inside */}
+          <button
+            onClick={() => setSymbolSelectorOpen(true)}
+            className="h-9 flex items-center gap-2 px-4 rounded-full border border-input bg-secondary/60 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors focus:outline-none min-w-[180px]"
+          >
+            <Search className="h-3.5 w-3.5 flex-shrink-0" />
+            <span className="text-xs font-semibold text-foreground">🔥 BTC/USDT</span>
+          </button>
+          <Suspense fallback={null}>
+            <SymbolSelector
+              open={symbolSelectorOpen}
+              onClose={() => setSymbolSelectorOpen(false)}
+              onSelect={handleSymbolSelect}
+              variant="dialog"
+              defaultCategory="Spot"
+            />
+          </Suspense>
+        </div>
 
         <div className="flex items-center gap-2 ml-auto">
           {user ? (
