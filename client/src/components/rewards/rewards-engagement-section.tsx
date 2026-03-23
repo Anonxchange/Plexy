@@ -7,6 +7,9 @@ import {
   Repeat2, TrendingUp, BarChart2, Lock, Users, Copy,
 } from "lucide-react";
 import {
+  FilterAllIcon, FilterGiftCardIcon, FilterAirtimeIcon, FilterDataIcon,
+} from "./reward-brand-icons";
+import {
   DAILY_TASKS, ONE_TIME_TASKS, MILESTONE_TASKS,
   BADGES, REDEEM_ITEMS, USER_PTS,
   type Task, type Badge, type RedeemItem,
@@ -254,17 +257,18 @@ export function RewardsEngagementSection() {
 
             <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
               {([
-                { key: "all", label: "All", icon: "🎁" },
-                { key: "gift-card", label: "Gift Cards", icon: "🛒" },
-                { key: "airtime", label: "Airtime", icon: "📱" },
-                { key: "data", label: "Data", icon: "📡" },
-              ] as const).map((f) => (
+                { key: "all"       as const, label: "All",        Icon: FilterAllIcon       },
+                { key: "gift-card" as const, label: "Gift Cards", Icon: FilterGiftCardIcon  },
+                { key: "airtime"   as const, label: "Airtime",    Icon: FilterAirtimeIcon   },
+                { key: "data"      as const, label: "Data",       Icon: FilterDataIcon      },
+              ]).map((f) => (
                 <button key={f.key} onClick={() => setRedeemFilter(f.key)}
                   className={cn(
                     "flex-shrink-0 flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[11px] font-semibold transition-all border",
                     redeemFilter === f.key ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border hover:text-foreground"
                   )}>
-                  <span>{f.icon}</span> {f.label}
+                  <f.Icon size={12} />
+                  {f.label}
                 </button>
               ))}
             </div>
