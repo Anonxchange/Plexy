@@ -125,7 +125,7 @@ function RedeemCard({ item, userPts }: { item: RedeemItem; userPts: number }) {
             : "bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400"
         )}>{item.badge}</span>
       )}
-      <span className="text-2xl">{item.icon}</span>
+      <div className="w-8 h-8 flex-shrink-0 rounded-lg overflow-hidden">{item.icon}</div>
       <div className="flex-1">
         <p className="text-xs font-bold text-foreground leading-tight pr-10">{item.name}</p>
         <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{item.description}</p>
