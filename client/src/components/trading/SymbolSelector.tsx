@@ -26,9 +26,10 @@ const categories = ["Favorites", "Futures", "Spot"];
 interface SymbolSelectorProps {
   open: boolean;
   onClose: () => void;
-  onSelect: (symbol: string) => void;
+  onSelect: (symbol: string, category: string) => void;
   defaultCategory?: "Spot" | "Futures" | "Favorites";
   variant?: "fullscreen" | "dialog";
+  initialSearch?: string;
 }
 
 function getBaseSymbol(displayPair: string): string {
@@ -103,8 +104,8 @@ function buildRows(
 }
 
 
-const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot", variant = "fullscreen" }: SymbolSelectorProps) => {
-  const [search,         setSearch]         = useState("");
+const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot", variant = "fullscreen", initialSearch = "" }: SymbolSelectorProps) => {
+  const [search,         setSearch]         = useState(initialSearch);
   const [activeCategory, setActiveCategory] = useState(defaultCategory);
   const [activeFilter,   setActiveFilter]   = useState("All markets");
 
@@ -227,10 +228,10 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot", var
   useEffect(() => {
     if (open) {
       setActiveCategory(defaultCategory);
-      setSearch("");
+      setSearch(initialSearch);
       setActiveFilter("All markets");
     }
-  }, [open, defaultCategory]);
+  }, [open, defaultCategory, initialSearch]);
 
   const currentFilters = activeCategory === "Spot" ? SPOT_FILTERS : presentFuturesSubTypes.map(f => FUTURES_FILTER_LABELS[f] ?? f);
 
@@ -338,7 +339,7 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot", var
           filtered.map((m, idx) => (
             <button
               key={m.symbol + idx}
-              onClick={() => { onSelect(m.symbol); onClose(); }}
+              onClick={() => { onSelect(m.symbol, activeCategory); onClose(); }}
               className="flex items-center w-full px-4 py-3 hover:bg-accent/50 transition-colors"
             >
               <div className="flex items-center gap-2 flex-1 min-w-0">
