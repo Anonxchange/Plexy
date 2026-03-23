@@ -247,8 +247,8 @@ function Router() {
       <Route path="/notifications">{() => <ProtectedRoute component={NotificationsPage} />}</Route>
       <Route path="/verification">{() => <ProtectedRoute component={VerificationPage} />}</Route>
       <Route path="/kyc/callback">{() => <ProtectedRoute component={KYCCallback} />}</Route>
-      <Route path="/referral">{() => <ProtectedRoute component={ReferralPage} />}</Route>
-      <Route path="/rewards">{() => <ProtectedRoute component={RewardsPage} />}</Route>
+      <Route path="/referral">{() => <ReferralPage />}</Route>
+      <Route path="/rewards">{() => <RewardsPage />}</Route>
       <Route path="/medals">{() => <ProtectedRoute component={MedalsPage} />}</Route>
       <Route path="/analysis">{() => <ProtectedRoute component={Analysis} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/checkout">{() => <ProtectedRoute component={Checkout} />}</Route>
