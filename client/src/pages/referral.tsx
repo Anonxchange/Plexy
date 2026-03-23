@@ -1,58 +1,473 @@
-
 import { useHead } from "@unhead/react";
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { 
-  Users, 
-  Copy, 
-  Share2, 
-  DollarSign, 
-  Gift, 
-  TrendingUp,
-  CheckCircle2,
-  ArrowRight,
-  Info,
-  ChevronDown,
-  HelpCircle,
-  Award
+import { cn } from "@/lib/utils";
+import {
+  Copy, Share2, ChevronDown, ChevronRight,
+  Users, Coins, TrendingUp, CheckCircle2, ArrowRight,
+  Zap, Gift, Star,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
-import { Progress } from "@/components/ui/progress";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useLocation } from "wouter";
-import { PexlyFooter } from "@/components/pexly-footer";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const PTS_PER_REFERRAL = 75;
+const USDT_PER_REFERRAL = 2.5;
+const FRIEND_USDT = 2.5;
+const MAX_USDT = 250;
+const TIER1_PCT = 40;
+const TIER2_PCT = 10;
+
+// Mock logged-in stats
+const STATS = {
+  referrals: 12,
+  usdtEarned: 847.50,
+  ptsEarned: 900,
+  linkOpens: 38,
+  signups: 14,
+  kycDone: 12,
+  firstTrade: 9,
+};
+
+// ─── Shared sub-components ────────────────────────────────────────────────────
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3 px-1">
+      {children}
+    </p>
+  );
+}
+
+function FaqItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger className="flex items-center justify-between w-full py-4 text-left">
+        <span className="text-sm font-medium text-foreground pr-4">{q}</span>
+        <ChevronDown className={cn("w-4 h-4 flex-shrink-0 text-muted-foreground transition-transform duration-200", open && "rotate-180")} />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="pb-4 text-[13px] text-muted-foreground leading-relaxed">
+        {a}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+const FAQS = [
+  {
+    q: "What trading products does the commission apply to?",
+    a: "All products on Pexly — P2P Trading, Spot Trading, and Swap. You earn commission from every trading fee your referrals generate.",
+  },
+  {
+    q: "When do my rewards land?",
+    a: "Points are credited instantly when your friend completes their first verified trade. USDT commission is distributed daily at 4 AM UTC.",
+  },
+  {
+    q: "Why does my friend's referral show someone else's code?",
+    a: "The first referral link used is permanently tied to that account. If they signed up via another link first, that code takes priority.",
+  },
+  {
+    q: "Is there a cap on how much I can earn?",
+    a: `You can earn up to ${MAX_USDT} USDT in USDT rewards. Points earnings are uncapped — invite as many friends as you like.`,
+  },
+  {
+    q: "When does the program end?",
+    a: "The program is ongoing. We'll give advance notice of any changes to commission rates or structure.",
+  },
+];
+
+// ─── How It Works steps ───────────────────────────────────────────────────────
+
+const STEPS = [
+  { icon: Share2,      title: "Share your link",     body: "Copy your unique referral link or code and share it anywhere — social, chat, email." },
+  { icon: Users,       title: "Friend signs up",      body: "They create a Pexly account using your link and complete identity verification." },
+  { icon: TrendingUp,  title: "They trade",           body: "Once they complete their first trade you both get rewarded immediately." },
+  { icon: Coins,       title: "You earn",             body: `${PTS_PER_REFERRAL} pts + ${USDT_PER_REFERRAL} USDT per friend, up to ${MAX_USDT} USDT total.` },
+];
+
+// ─── Commission split bar ─────────────────────────────────────────────────────
+
+function CommissionBar() {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-bold text-foreground">Commission split</p>
+        <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">Up to {TIER1_PCT}%</span>
+      </div>
+
+      {/* Split bar */}
+      <div className="relative h-8 rounded-xl overflow-hidden flex">
+        <div className="h-full bg-primary flex items-center justify-center" style={{ width: "66.6%" }}>
+          <span className="text-[11px] font-bold text-primary-foreground">You {TIER1_PCT}%</span>
+        </div>
+        <div className="h-full bg-primary/25 flex items-center justify-center flex-1">
+          <span className="text-[11px] font-bold text-primary">Friend {TIER2_PCT}%</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { label: "Tier 1 (your referrals)", value: `${TIER1_PCT}%`, sub: "of their trading fees" },
+          { label: "Tier 2 (their referrals)", value: `${TIER2_PCT}%`, sub: "of trading fees" },
+        ].map((row) => (
+          <div key={row.label} className="bg-muted rounded-xl px-3 py-3">
+            <p className="text-base font-bold text-foreground tabular-nums">{row.value}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{row.label}</p>
+            <p className="text-[10px] text-muted-foreground/70 leading-tight">{row.sub}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Guest View ───────────────────────────────────────────────────────────────
+
+function GuestView({ onSignup }: { onSignup: () => void }) {
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      <div className="border-b border-border bg-background">
+        <div className="max-w-2xl mx-auto px-4 py-3.5 flex items-center justify-between">
+          <div>
+            <h1 className="text-base font-bold text-foreground">Refer &amp; Earn</h1>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Invite friends, earn together</p>
+          </div>
+          <button
+            onClick={onSignup}
+            className="text-[11px] font-bold text-primary bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20 hover:bg-primary/15 transition-colors"
+          >
+            Sign up
+          </button>
+        </div>
+      </div>
+
+      <div className="max-w-2xl mx-auto w-full px-4 py-5 space-y-4 pb-12">
+
+        {/* Hero card */}
+        <div className="relative rounded-3xl overflow-hidden border border-border bg-card shadow-sm">
+          <div className="absolute -top-14 -right-14 w-52 h-52 bg-primary/6 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-indigo-500/4 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative p-6 pb-5">
+            <div className="flex items-start gap-4 mb-6">
+              <div className="flex-1">
+                <div className="inline-flex items-center gap-1.5 bg-primary/10 border border-primary/20 rounded-full px-3 py-1 mb-3">
+                  <Zap className="w-3 h-3 text-primary" />
+                  <span className="text-[11px] font-bold text-primary">Referral program</span>
+                </div>
+                <h2 className="text-2xl font-bold text-foreground leading-tight">
+                  Invite friends.<br />
+                  <span className="text-primary">Earn together.</span>
+                </h2>
+                <p className="text-[13px] text-muted-foreground mt-2 leading-relaxed">
+                  You earn <span className="text-foreground font-semibold">{PTS_PER_REFERRAL} pts + {USDT_PER_REFERRAL} USDT</span> for every friend who joins and trades. They get <span className="text-foreground font-semibold">{FRIEND_USDT} USDT</span> on their first trade.
+                </p>
+              </div>
+
+              {/* Decorative stat bubble */}
+              <div className="flex-shrink-0 w-20 h-20 rounded-2xl bg-primary flex flex-col items-center justify-center shadow-lg shadow-primary/30">
+                <span className="text-2xl font-black text-primary-foreground">{TIER1_PCT}%</span>
+                <span className="text-[9px] font-bold text-primary-foreground/80 uppercase tracking-wider">Commission</span>
+              </div>
+            </div>
+
+            {/* 3 reward metrics */}
+            <div className="grid grid-cols-3 gap-2 mb-5">
+              {[
+                { label: "You get / friend", value: `${PTS_PER_REFERRAL} pts`, sub: `+ ${USDT_PER_REFERRAL} USDT`, color: "text-primary" },
+                { label: "Friend gets", value: `${FRIEND_USDT} USDT`, sub: "on first trade", color: "text-foreground" },
+                { label: "Max total", value: `$${MAX_USDT}`, sub: "USDT cap", color: "text-foreground" },
+              ].map((m) => (
+                <div key={m.label} className="bg-muted rounded-xl px-2 py-3 text-center">
+                  <p className={cn("text-sm font-bold tabular-nums leading-tight", m.color)}>{m.value}</p>
+                  <p className="text-[9px] text-muted-foreground/80 leading-tight">{m.sub}</p>
+                  <p className="text-[9px] text-muted-foreground mt-1 leading-tight">{m.label}</p>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={onSignup}
+              className="w-full h-12 rounded-2xl bg-primary text-primary-foreground font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity active:scale-[0.98]"
+            >
+              Sign up to start earning
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* How it works */}
+        <div>
+          <SectionLabel>How it works</SectionLabel>
+          <div className="rounded-2xl border border-border bg-card overflow-hidden divide-y divide-border">
+            {STEPS.map((step, i) => (
+              <div key={step.title} className="flex items-start gap-4 px-5 py-4">
+                <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center mt-0.5">
+                  <step.icon className="w-4 h-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-primary/60 uppercase tracking-widest">Step {i + 1}</span>
+                  </div>
+                  <p className="text-sm font-bold text-foreground mt-0.5">{step.title}</p>
+                  <p className="text-[12px] text-muted-foreground mt-0.5 leading-relaxed">{step.body}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Commission split */}
+        <CommissionBar />
+
+        {/* FAQ */}
+        <div>
+          <SectionLabel>Frequently asked</SectionLabel>
+          <div className="rounded-2xl border border-border bg-card px-5 divide-y divide-border">
+            {FAQS.map((f) => <FaqItem key={f.q} q={f.q} a={f.a} />)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Logged-in View ───────────────────────────────────────────────────────────
+
+function LoggedInView({ referralCode, referralLink, onCopy, onShare }: {
+  referralCode: string;
+  referralLink: string;
+  onCopy: (text: string, label: string) => void;
+  onShare: () => void;
+}) {
+  const [activeTab, setActiveTab] = useState<"all" | "completed" | "progress" | "expired">("all");
+  const usdtProgress = Math.min((STATS.usdtEarned / MAX_USDT) * 100, 100);
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      <div className="border-b border-border bg-background">
+        <div className="max-w-2xl mx-auto px-4 py-3.5 flex items-center justify-between">
+          <div>
+            <h1 className="text-base font-bold text-foreground">Refer &amp; Earn</h1>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Invite friends, earn together</p>
+          </div>
+          <div className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full">
+            <Coins className="w-3.5 h-3.5 text-primary" />
+            <span className="text-sm font-bold tabular-nums text-foreground">{STATS.ptsEarned.toLocaleString()}</span>
+            <span className="text-[10px] text-muted-foreground">pts</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-2xl mx-auto w-full px-4 py-5 space-y-4 pb-12">
+
+        {/* Hero / referral card */}
+        <div className="relative rounded-3xl overflow-hidden border border-border bg-card shadow-sm">
+          <div className="absolute -top-14 -right-14 w-52 h-52 bg-primary/6 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-indigo-500/4 rounded-full blur-3xl pointer-events-none" />
+          <div className="relative p-6">
+
+            {/* Earnings headline */}
+            <div className="flex items-start justify-between gap-4 mb-5">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Total earned</p>
+                <p className="text-3xl font-black text-foreground tabular-nums leading-none">
+                  ${STATS.usdtEarned.toLocaleString("en", { minimumFractionDigits: 2 })}
+                  <span className="text-base font-medium text-muted-foreground ml-1.5">USDT</span>
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  <span className="text-primary font-semibold">{STATS.ptsEarned.toLocaleString()} pts</span>
+                  {" "}· {STATS.referrals} friends referred
+                </p>
+              </div>
+              <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-primary flex flex-col items-center justify-center shadow-lg shadow-primary/30">
+                <span className="text-xl font-black text-primary-foreground">{TIER1_PCT}%</span>
+                <span className="text-[8px] font-bold text-primary-foreground/80 uppercase tracking-wider">Rate</span>
+              </div>
+            </div>
+
+            {/* USDT progress */}
+            <div className="mb-5">
+              <div className="flex justify-between text-[10px] text-muted-foreground mb-1.5 font-medium">
+                <span>Earnings progress</span>
+                <span className="tabular-nums">${STATS.usdtEarned} / ${MAX_USDT} USDT cap</span>
+              </div>
+              <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-primary to-[#7ECB0C] transition-all duration-1000"
+                  style={{ width: `${usdtProgress}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Stats row */}
+            <div className="grid grid-cols-3 gap-2 mb-5 pt-4 border-t border-border">
+              {[
+                { label: "Friends invited", value: STATS.referrals, color: "text-foreground" },
+                { label: "Pts earned",       value: `+${STATS.ptsEarned}`, color: "text-primary" },
+                { label: "Commission",       value: `${TIER1_PCT}%`, color: "text-foreground" },
+              ].map((s) => (
+                <div key={s.label} className="text-center">
+                  <p className={cn("text-sm font-bold tabular-nums", s.color)}>{s.value}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{s.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Code row */}
+            <div className="flex items-center gap-2 bg-muted rounded-2xl px-4 py-3 mb-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-muted-foreground mb-0.5">Your referral code</p>
+                <p className="font-mono font-black text-foreground text-base tracking-wider">{referralCode}</p>
+              </div>
+              <button
+                onClick={() => onCopy(referralCode, "Referral code")}
+                className="w-9 h-9 rounded-xl bg-background border border-border flex items-center justify-center hover:bg-muted transition-colors flex-shrink-0"
+              >
+                <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+              </button>
+            </div>
+
+            {/* Link row */}
+            <div className="flex items-center gap-2 bg-muted rounded-2xl px-4 py-3 mb-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-muted-foreground mb-0.5">Referral link</p>
+                <p className="text-sm text-foreground truncate font-medium">{referralLink}</p>
+              </div>
+              <button
+                onClick={() => onCopy(referralLink, "Referral link")}
+                className="w-9 h-9 rounded-xl bg-background border border-border flex items-center justify-center hover:bg-muted transition-colors flex-shrink-0"
+              >
+                <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+              </button>
+            </div>
+
+            {/* CTA */}
+            <button
+              onClick={onShare}
+              className="w-full h-12 rounded-2xl bg-primary text-primary-foreground font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity active:scale-[0.98]"
+            >
+              <Share2 className="w-4 h-4" />
+              Invite &amp; Earn
+            </button>
+          </div>
+        </div>
+
+        {/* Per-referral reward callout */}
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 px-5 py-4 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center flex-shrink-0">
+            <Gift className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-bold text-foreground">Per referral reward</p>
+            <p className="text-[12px] text-muted-foreground mt-0.5">
+              You earn <span className="text-primary font-bold">{PTS_PER_REFERRAL} pts</span> + <span className="text-primary font-bold">{USDT_PER_REFERRAL} USDT</span> · friend earns <span className="font-semibold text-foreground">{FRIEND_USDT} USDT</span>
+            </p>
+          </div>
+          <Star className="w-4 h-4 text-primary/60 flex-shrink-0" />
+        </div>
+
+        {/* Funnel stats */}
+        <div>
+          <SectionLabel>Referral funnel</SectionLabel>
+          <div className="rounded-2xl border border-border bg-card overflow-hidden divide-y divide-border">
+            {[
+              { label: "Link opened",             value: STATS.linkOpens, icon: ChevronRight },
+              { label: "Signed up",               value: STATS.signups,   icon: CheckCircle2 },
+              { label: "KYC completed",           value: STATS.kycDone,   icon: CheckCircle2 },
+              { label: "Completed first trade",   value: STATS.firstTrade, icon: CheckCircle2, highlight: true },
+            ].map((row) => (
+              <div key={row.label} className="flex items-center justify-between px-5 py-3.5">
+                <div className="flex items-center gap-3">
+                  <row.icon className={cn("w-4 h-4 flex-shrink-0", row.highlight ? "text-primary" : "text-muted-foreground/40")} />
+                  <span className="text-sm text-foreground">{row.label}</span>
+                </div>
+                <span className={cn("text-sm font-bold tabular-nums", row.highlight ? "text-primary" : "text-foreground")}>
+                  {row.value}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Referral list */}
+        <div>
+          <SectionLabel>Your referrals</SectionLabel>
+
+          {/* Tabs */}
+          <div className="flex gap-1 bg-muted rounded-xl p-1 mb-3">
+            {(["all", "completed", "progress", "expired"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setActiveTab(t)}
+                className={cn(
+                  "flex-1 py-1.5 rounded-lg text-[11px] font-semibold capitalize transition-all",
+                  activeTab === t ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {t === "progress" ? "In progress" : t.charAt(0).toUpperCase() + t.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          {/* Empty state */}
+          <div className="rounded-2xl border border-border bg-card flex flex-col items-center justify-center py-14 px-6 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mb-4">
+              <Users className="w-6 h-6 text-muted-foreground/50" />
+            </div>
+            <p className="text-sm font-semibold text-foreground mb-1">No referrals yet</p>
+            <p className="text-[12px] text-muted-foreground mb-5">Share your link to start tracking friends here</p>
+            <button className="h-9 px-5 rounded-xl bg-primary text-primary-foreground text-[12px] font-bold hover:opacity-90 transition-opacity">
+              Share referral link
+            </button>
+          </div>
+        </div>
+
+        {/* Commission split */}
+        <CommissionBar />
+
+        {/* FAQ */}
+        <div>
+          <SectionLabel>Frequently asked</SectionLabel>
+          <div className="rounded-2xl border border-border bg-card px-5 divide-y divide-border">
+            {FAQS.map((f) => <FaqItem key={f.q} q={f.q} a={f.a} />)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ReferralPage() {
-  useHead({ title: "Referral Program | Pexly", meta: [{ name: "description", content: "Share your referral link and earn rewards when your network joins Pexly." }] });
+  useHead({
+    title: "Refer & Earn | Pexly",
+    meta: [{ name: "description", content: "Invite friends to Pexly and earn points plus USDT commission on every trade they make." }],
+  });
+
   const { user } = useAuth();
   const { toast } = useToast();
-  const [showTerms, setShowTerms] = useState(false);
   const [, navigate] = useLocation();
 
   const referralCode = user?.id ? `PEX${user.id.slice(0, 8).toUpperCase()}` : "PEXUSER123";
   const referralLink = `https://pexly.com/signup?ref=${referralCode}`;
-  const totalReferrals = 12;
-  const totalEarnings = 847.50;
-  const currentCommissionRate = 25;
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    toast({
-      title: "Copied!",
-      description: `${label} copied to clipboard`,
-    });
+    toast({ title: "Copied!", description: `${label} copied to clipboard` });
   };
 
   const shareReferral = () => {
     if (navigator.share) {
       navigator.share({
-        title: 'Join Pexly',
-        text: `Join Pexly using my referral code and earn rewards! Use code: ${referralCode}`,
+        title: "Join Pexly",
+        text: `Use my referral code and get ${FRIEND_USDT} USDT when you complete your first trade! Code: ${referralCode}`,
         url: referralLink,
       });
     } else {
@@ -60,473 +475,16 @@ export default function ReferralPage() {
     }
   };
 
-  // Guest view (not logged in)
   if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background">
-        <div className="container mx-auto px-4 py-8 max-w-4xl">
-          {/* Hero Section */}
-          <div className="text-center mb-12">
-            <div className="mb-8 flex justify-center">
-              <div className="relative w-64 h-64">
-                <img 
-                  src="/assets/IMG_2668.png" 
-                  alt="Referral illustration" 
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            </div>
-            
-            <h1 className="text-3xl md:text-4xl font-bold mb-4">
-              Refer Your Friends and Earn<br />
-              <span className="text-primary">40% Commission</span>
-            </h1>
-            
-            <p className="text-muted-foreground text-lg mb-8 max-w-xl mx-auto">
-              Invite your friends to create an account and start trading. You can earn up to{" "}
-              <span className="text-primary font-semibold">40% Commission</span> from their trading fees!
-            </p>
-
-            <Button 
-              size="lg" 
-              className="w-full max-w-md h-14 text-lg"
-              onClick={() => navigate("/signup")}
-            >
-              Register / Login to invite friends
-            </Button>
-          </div>
-
-          {/* How to Join Section */}
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="text-2xl">How to join</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex gap-4">
-                <div className="flex-shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-primary font-bold text-lg">1</span>
-                  </div>
-                  <div className="w-0.5 h-16 bg-primary/20 ml-5 mt-2"></div>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-lg mb-2">Choose commission split</h3>
-                  <p className="text-muted-foreground">
-                    Determine commissions split between you and your friends
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-4">
-                <div className="flex-shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-primary font-bold text-lg">2</span>
-                  </div>
-                  <div className="w-0.5 h-16 bg-primary/20 ml-5 mt-2"></div>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-lg mb-2">Invite friends</h3>
-                  <p className="text-muted-foreground">
-                    Send your friends referral links and guide them to sign up, start trading!
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-4">
-                <div className="flex-shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-primary font-bold text-lg">3</span>
-                  </div>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-lg mb-2">Earn commission</h3>
-                  <p className="text-muted-foreground">
-                    You can earn up to 40% commission of tier-1 referrals' trading fees and 10% of tier-2's trading feeds
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* FAQs Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-2xl">FAQs</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Collapsible>
-                <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 rounded-lg transition-colors">
-                  <span className="text-left font-medium">
-                    What trading products does this program commission apply to?
-                  </span>
-                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="px-4 pb-4 text-muted-foreground">
-                  The referral commission applies to all trading products on Pexly including P2P Trading, Spot Trading, and Swap. You'll earn commission from all trading fees generated by your referrals.
-                </CollapsibleContent>
-              </Collapsible>
-
-              <Separator />
-
-              <Collapsible>
-                <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 rounded-lg transition-colors">
-                  <span className="text-left font-medium">
-                    Why does my friend referral code is from someone else, not mine?
-                  </span>
-                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="px-4 pb-4 text-muted-foreground">
-                  The referral code is assigned to the first person who referred your friend. If they signed up using someone else's referral link first, that code will be associated with their account permanently.
-                </CollapsibleContent>
-              </Collapsible>
-
-              <Separator />
-
-              <Collapsible>
-                <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 rounded-lg transition-colors">
-                  <span className="text-left font-medium">
-                    What are terms and conditions of the program?
-                  </span>
-                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="px-4 pb-4 text-muted-foreground">
-                  Please refer to our Terms & Conditions section at the bottom of this page for detailed information about the referral program rules, commission structure, and eligibility requirements.
-                </CollapsibleContent>
-              </Collapsible>
-
-              <Separator />
-
-              <Collapsible>
-                <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 rounded-lg transition-colors">
-                  <span className="text-left font-medium">
-                    When will this program end?
-                  </span>
-                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="px-4 pb-4 text-muted-foreground">
-                  The Pexly referral program is ongoing. However, we reserve the right to modify or terminate the program at any time. Any changes will be communicated in advance to all participants.
-                </CollapsibleContent>
-              </Collapsible>
-
-              <Separator />
-
-              <Collapsible>
-                <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 rounded-lg transition-colors">
-                  <span className="text-left font-medium">
-                    What pairs are considered for $3000 trading volume?
-                  </span>
-                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="px-4 pb-4 text-muted-foreground">
-                  All trading pairs on Pexly count towards the trading volume calculation, including all cryptocurrency pairs available on our Spot Trading platform. The volume is calculated in USDT equivalent.
-                </CollapsibleContent>
-              </Collapsible>
-            </CardContent>
-          </Card>
-        </div>
-
-        <PexlyFooter />
-      </div>
-    );
+    return <GuestView onSignup={() => navigate("/signup")} />;
   }
 
-  // Logged in user view
   return (
-    <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-b from-primary/5 to-background py-12">
-        <div className="container mx-auto px-4 max-w-4xl">
-          <div className="text-center mb-8">
-            <div className="mb-6 flex justify-center">
-              <div className="relative w-48 h-48">
-                <img 
-                  src="/assets/IMG_2668.png" 
-                  alt="Refer & Win" 
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            </div>
-            
-            <h1 className="text-3xl md:text-4xl font-bold mb-4">
-              Refer & Win: Easy Rewards for<br />You and Friends!
-            </h1>
-            
-            <p className="text-muted-foreground text-base max-w-2xl mx-auto mb-8">
-              Share the joy with friends and earn exciting rewards. Enjoy vouchers, spins, and coins with every invite. The more you share, the more you win!
-            </p>
-          </div>
-
-          {/* Referral Code & Link */}
-          <div className="space-y-3 mb-6">
-            <div className="flex items-center justify-between px-4 py-3 border border-border rounded-xl bg-card">
-              <span className="text-muted-foreground text-sm">Referral code</span>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-foreground">{referralCode}</span>
-                <Button 
-                  size="icon" 
-                  variant="ghost"
-                  className="h-8 w-8 text-primary hover:text-primary/80"
-                  onClick={() => copyToClipboard(referralCode, "Referral code")}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between px-4 py-3 border border-border rounded-xl bg-card">
-              <span className="text-muted-foreground text-sm">Referral link</span>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-foreground truncate max-w-[180px]">{referralLink}</span>
-                <Button 
-                  size="icon" 
-                  variant="ghost"
-                  className="h-8 w-8 text-primary hover:text-primary/80"
-                  onClick={() => copyToClipboard(referralLink, "Referral link")}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            <Button className="w-full h-12 text-base font-semibold rounded-xl" size="lg" onClick={shareReferral}>
-              Invite and Earn
-            </Button>
-          </div>
-
-          {/* Rewards Section */}
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold mb-4">Rewards</h2>
-            <Card>
-              <CardContent className="py-12 text-center">
-                <div className="flex flex-col items-center justify-center space-y-4">
-                  <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center">
-                    <Gift className="h-12 w-12 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-xl font-semibold">You have no reward!</h3>
-                  <p className="text-sm text-muted-foreground max-w-md">
-                    Invite your friends to get more rewards
-                  </p>
-                  <Button variant="outline" onClick={shareReferral}>
-                    Invite and Earn
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Referrals Tracking */}
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold mb-4">Referrals</h2>
-            <Card className="mb-4">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <Users className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Invited Friends</div>
-                    <div className="text-3xl font-bold">{totalReferrals}</div>
-                  </div>
-                </div>
-
-                <Separator className="my-4" />
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Open referral link</span>
-                    <span className="font-medium">0</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Register & KYC LV2</span>
-                    <span className="font-medium">0</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Complete first trade</span>
-                    <span className="font-medium">0</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Reach $1500 coin-to-fiat volume</span>
-                    <span className="font-medium">0</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Tabs for referral status */}
-            <div className="mb-4">
-              <div className="overflow-x-auto scrollbar-hide border-b">
-                <div className="flex gap-4 min-w-max">
-                  <button className="pb-2 px-4 text-sm font-medium border-b-2 border-primary whitespace-nowrap">All</button>
-                  <button className="pb-2 px-4 text-sm font-medium text-muted-foreground whitespace-nowrap">Completed</button>
-                  <button className="pb-2 px-4 text-sm font-medium text-muted-foreground whitespace-nowrap">In progress</button>
-                  <button className="pb-2 px-4 text-sm font-medium text-muted-foreground whitespace-nowrap">Expired</button>
-                </div>
-              </div>
-            </div>
-
-            <Card>
-              <CardContent className="py-12 text-center">
-                <div className="flex flex-col items-center justify-center space-y-4">
-                  <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center">
-                    <Users className="h-12 w-12 text-muted-foreground" />
-                  </div>
-                  <div className="text-muted-foreground">No data</div>
-                  <Button variant="default" onClick={shareReferral}>
-                    Invite and Earn
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-
-      {/* Earn More Deals Section */}
-      <div className="container mx-auto px-4 py-12 max-w-4xl">
-        <h2 className="text-2xl font-bold mb-6">Earn more deals</h2>
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardContent className="p-6 text-center">
-              <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center">
-                <TrendingUp className="h-10 w-10 text-primary" />
-              </div>
-              <h3 className="font-semibold mb-4">Lucky spins</h3>
-              <Button variant="outline" className="w-full">
-                Hunt for rewards
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardContent className="p-6 text-center">
-              <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center">
-                <Award className="h-10 w-10 text-primary" />
-              </div>
-              <h3 className="font-semibold mb-4">Loyalty badges</h3>
-              <Button variant="outline" className="w-full">
-                Hunt for rewards
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardContent className="p-6 text-center">
-              <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center">
-                <Gift className="h-10 w-10 text-primary" />
-              </div>
-              <h3 className="font-semibold mb-4">Cashback vouchers</h3>
-              <Button variant="outline" className="w-full">
-                Hunt for rewards
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardContent className="p-6 text-center">
-              <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center">
-                <DollarSign className="h-10 w-10 text-primary" />
-              </div>
-              <h3 className="font-semibold mb-4">Crypto Deposit Rewards</h3>
-              <Button variant="outline" className="w-full">
-                Hunt for rewards
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* FAQs Section */}
-      <div className="px-4 py-12">
-
-      <h2 className="text-2xl font-bold mb-6">FAQs</h2>
-        <Card>
-          <CardContent className="p-0">
-            <Collapsible>
-              <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors">
-                <span className="text-left font-medium">
-                  What are terms and conditions of the program?
-                </span>
-                <ChevronDown className="h-5 w-5 text-muted-foreground" />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="px-4 pb-4 text-sm text-muted-foreground">
-                Please refer to our Terms & Conditions. The referral program applies to all trading on Pexly. Commissions are distributed daily at 4AM UTC based on your referees' net trading fees.
-              </CollapsibleContent>
-            </Collapsible>
-
-            <Separator />
-
-            <Collapsible>
-              <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors">
-                <span className="text-left font-medium">
-                  What trading products does this program commission apply to?
-                </span>
-                <ChevronDown className="h-5 w-5 text-muted-foreground" />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="px-4 pb-4 text-sm text-muted-foreground">
-                The referral commission applies to all trading products on Pexly including P2P Trading, Spot Trading, and Swap. You'll earn commission from all trading fees generated by your referrals.
-              </CollapsibleContent>
-            </Collapsible>
-
-            <Separator />
-
-            <Collapsible>
-              <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors">
-                <span className="text-left font-medium">
-                  Why does my friend referral code is from someone else, not mine?
-                </span>
-                <ChevronDown className="h-5 w-5 text-muted-foreground" />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="px-4 pb-4 text-sm text-muted-foreground">
-                The referral code is assigned to the first person who referred your friend. If they signed up using someone else's referral link first, that code will be associated with their account permanently.
-              </CollapsibleContent>
-            </Collapsible>
-
-            <Separator />
-
-            <Collapsible>
-              <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors">
-                <span className="text-left font-medium">
-                  How to earn referral bonus?
-                </span>
-                <ChevronDown className="h-5 w-5 text-muted-foreground" />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="px-4 pb-4 text-sm text-muted-foreground">
-                Share your referral code or link with friends. When they sign up and complete trades, you earn commissions. The more active your referrals, the more you earn.
-              </CollapsibleContent>
-            </Collapsible>
-
-            <Separator />
-
-            <Collapsible>
-              <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors">
-                <span className="text-left font-medium">
-                  When will this program end?
-                </span>
-                <ChevronDown className="h-5 w-5 text-muted-foreground" />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="px-4 pb-4 text-sm text-muted-foreground">
-                The Pexly referral program is ongoing. However, we reserve the right to modify or terminate the program at any time. Any changes will be communicated in advance to all participants.
-              </CollapsibleContent>
-            </Collapsible>
-
-            <Separator />
-
-            <Collapsible>
-              <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors">
-                <span className="text-left font-medium">
-                  What pairs are considered for $3000 trading volume?
-                </span>
-                <ChevronDown className="h-5 w-5 text-muted-foreground" />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="px-4 pb-4 text-sm text-muted-foreground">
-                All trading pairs on Pexly count towards the trading volume calculation, including all cryptocurrency pairs available on our Spot Trading platform. The volume is calculated in USDT equivalent.
-              </CollapsibleContent>
-            </Collapsible>
-          </CardContent>
-        </Card>
-      </div>
-
-      <PexlyFooter />
-    </div>
+    <LoggedInView
+      referralCode={referralCode}
+      referralLink={referralLink}
+      onCopy={copyToClipboard}
+      onShare={shareReferral}
+    />
   );
 }
