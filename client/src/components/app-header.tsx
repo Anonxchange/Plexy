@@ -182,9 +182,13 @@ export function AppHeader() {
   const [selectedLang, setSelectedLang] = useState("EN");
   const [symbolSelectorOpen, setSymbolSelectorOpen] = useState(false);
 
-  const handleSymbolSelect = (sym: string) => {
+  const handleSymbolSelect = (sym: string, category: string) => {
     const raw = sym.replace("/", "");
-    navigate(`/market?symbol=${raw}`);
+    if (category === "Futures") {
+      navigate(`/perpetual?symbol=${raw}`);
+    } else {
+      navigate(`/spot?symbol=${raw}`);
+    }
   };
 
   const securityInfo = useMemo(() => {
