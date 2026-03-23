@@ -9,8 +9,8 @@ export default function RewardsPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
 
-      {/* ── Sticky Header ─────────────────────────────────────── */}
-      <div className="sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur-xl">
+      {/* ── Page Header ───────────────────────────────────────── */}
+      <div className="border-b border-border bg-background">
         <div className="max-w-2xl mx-auto px-4 py-3.5 flex items-center justify-between">
           <div>
             <h1 className="text-base font-bold text-foreground">Rewards</h1>
