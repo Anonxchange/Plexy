@@ -1,3 +1,61 @@
+// ─── Filter pill icons (no background, currentColor) ─────────────────────────
+
+export function FilterAllIcon({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      {/* gift box body */}
+      <rect x="1.5" y="7" width="13" height="7.5" rx="1.2" stroke="currentColor" strokeWidth="1.5" />
+      {/* lid */}
+      <rect x="1" y="4.5" width="14" height="2.8" rx="1" stroke="currentColor" strokeWidth="1.5" />
+      {/* vertical ribbon */}
+      <line x1="8" y1="4.5" x2="8" y2="14.5" stroke="currentColor" strokeWidth="1.5" />
+      {/* bow left */}
+      <path d="M8 4.5 C6.5 3 4.5 2.5 4.5 4 C4.5 5 6.5 5 8 4.5Z" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinejoin="round" />
+      {/* bow right */}
+      <path d="M8 4.5 C9.5 3 11.5 2.5 11.5 4 C11.5 5 9.5 5 8 4.5Z" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function FilterGiftCardIcon({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      {/* card outline */}
+      <rect x="1" y="3.5" width="14" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+      {/* magnetic stripe */}
+      <rect x="1" y="6" width="14" height="2.2" fill="currentColor" opacity="0.35" />
+      {/* chip */}
+      <rect x="3" y="9.5" width="3" height="2" rx="0.5" stroke="currentColor" strokeWidth="1.2" />
+    </svg>
+  );
+}
+
+export function FilterAirtimeIcon({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      {/* phone body */}
+      <rect x="4" y="1" width="8" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" />
+      {/* speaker slot */}
+      <line x1="6.5" y1="3" x2="9.5" y2="3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      {/* home button */}
+      <circle cx="8" cy="12.5" r="1" stroke="currentColor" strokeWidth="1.2" />
+    </svg>
+  );
+}
+
+export function FilterDataIcon({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      {/* three wifi arcs */}
+      <path d="M2 8 Q8 2.5 14 8"   stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" opacity="0.45" />
+      <path d="M4 10.5 Q8 6.5 12 10.5" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" opacity="0.7" />
+      <path d="M6 13 Q8 11 10 13"  stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+      {/* dot */}
+      <circle cx="8" cy="15" r="1.1" fill="currentColor" />
+    </svg>
+  );
+}
+
 // ─── Airtime / Phone ──────────────────────────────────────────────────────────
 
 export function PhoneIcon({ size = 32 }: { size?: number }) {
