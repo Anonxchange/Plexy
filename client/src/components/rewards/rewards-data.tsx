@@ -9,6 +9,10 @@ import {
   IconStarBurst, IconWave, IconCrown, IconGiftBox,
   TierIconNewcomer, TierIconBronze, TierIconSilver, TierIconGold, TierIconDiamond,
 } from "@/components/reward-icons";
+import {
+  PhoneIcon, WifiIcon, AmazonIcon, GooglePlayIcon,
+  AppleIcon, UberIcon, SpotifyIcon, SteamIcon, NetflixIcon,
+} from "@/components/rewards/reward-brand-icons";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -58,7 +62,7 @@ export interface Tier {
 
 export interface RedeemItem {
   id: string;
-  icon: string;
+  icon: React.ReactNode;
   name: string;
   description: string;
   cost: number;
@@ -259,20 +263,20 @@ export const BADGES: Badge[] = [
 ];
 
 export const REDEEM_ITEMS: RedeemItem[] = [
-  { id: "airtime-1",      icon: "📱", name: "$1 Mobile Airtime",        description: "Any network, any country",   cost: 280,  category: "airtime",    badge: "Best value" },
-  { id: "airtime-2",      icon: "📱", name: "$2 Mobile Airtime",        description: "Any network, any country",   cost: 520,  category: "airtime" },
-  { id: "airtime-5",      icon: "📱", name: "$5 Mobile Airtime",        description: "Any network, any country",   cost: 1200, category: "airtime" },
-  { id: "airtime-10",     icon: "📱", name: "$10 Mobile Airtime",       description: "Any network, any country",   cost: 2200, category: "airtime" },
-  { id: "data-1gb",       icon: "📡", name: "1 GB Data Bundle",         description: "Mobile data, any carrier",   cost: 400,  category: "data" },
-  { id: "data-3gb",       icon: "📡", name: "3 GB Data Bundle",         description: "Mobile data, any carrier",   cost: 1050, category: "data" },
-  { id: "data-10gb",      icon: "📡", name: "10 GB Data Bundle",        description: "Mobile data, any carrier",   cost: 3000, category: "data" },
-  { id: "data-unlimited", icon: "📡", name: "Unlimited Data (7 days)",  description: "Truly unlimited mobile data", cost: 6500, category: "data",     badge: "Popular" },
-  { id: "amazon-5",       icon: "🛒", name: "Amazon $5 Gift Card",      description: "Shop anything on Amazon",    cost: 1400, category: "gift-card" },
-  { id: "amazon-10",      icon: "🛒", name: "Amazon $10 Gift Card",     description: "Shop anything on Amazon",    cost: 2600, category: "gift-card", badge: "Hot" },
-  { id: "google-5",       icon: "🎮", name: "Google Play $5",           description: "Apps, games & content",      cost: 1400, category: "gift-card" },
-  { id: "apple-10",       icon: "🍎", name: "Apple $10 Gift Card",      description: "App Store & iTunes",         cost: 2600, category: "gift-card" },
-  { id: "uber-5",         icon: "🚗", name: "Uber $5 Credit",           description: "Rides and Uber Eats",        cost: 1400, category: "gift-card" },
-  { id: "spotify-1m",     icon: "🎵", name: "Spotify Premium 1 Month",  description: "Ad-free music streaming",    cost: 2600, category: "gift-card" },
-  { id: "steam-10",       icon: "🎮", name: "Steam $10 Gift Card",      description: "PC games & DLC",             cost: 2600, category: "gift-card" },
-  { id: "netflix-1m",     icon: "🎬", name: "Netflix 1 Month",          description: "Stream unlimited movies",    cost: 4200, category: "gift-card", badge: "Most popular" },
+  { id: "airtime-1",      icon: <PhoneIcon />,      name: "$1 Mobile Airtime",        description: "Any network, any country",    cost: 280,  category: "airtime",    badge: "Best value" },
+  { id: "airtime-2",      icon: <PhoneIcon />,      name: "$2 Mobile Airtime",        description: "Any network, any country",    cost: 520,  category: "airtime" },
+  { id: "airtime-5",      icon: <PhoneIcon />,      name: "$5 Mobile Airtime",        description: "Any network, any country",    cost: 1200, category: "airtime" },
+  { id: "airtime-10",     icon: <PhoneIcon />,      name: "$10 Mobile Airtime",       description: "Any network, any country",    cost: 2200, category: "airtime" },
+  { id: "data-1gb",       icon: <WifiIcon />,       name: "1 GB Data Bundle",         description: "Mobile data, any carrier",    cost: 400,  category: "data" },
+  { id: "data-3gb",       icon: <WifiIcon />,       name: "3 GB Data Bundle",         description: "Mobile data, any carrier",    cost: 1050, category: "data" },
+  { id: "data-10gb",      icon: <WifiIcon />,       name: "10 GB Data Bundle",        description: "Mobile data, any carrier",    cost: 3000, category: "data" },
+  { id: "data-unlimited", icon: <WifiIcon />,       name: "Unlimited Data (7 days)",  description: "Truly unlimited mobile data", cost: 6500, category: "data",     badge: "Popular" },
+  { id: "amazon-5",       icon: <AmazonIcon />,     name: "Amazon $5 Gift Card",      description: "Shop anything on Amazon",     cost: 1400, category: "gift-card" },
+  { id: "amazon-10",      icon: <AmazonIcon />,     name: "Amazon $10 Gift Card",     description: "Shop anything on Amazon",     cost: 2600, category: "gift-card", badge: "Hot" },
+  { id: "google-5",       icon: <GooglePlayIcon />, name: "Google Play $5",           description: "Apps, games & content",       cost: 1400, category: "gift-card" },
+  { id: "apple-10",       icon: <AppleIcon />,      name: "Apple $10 Gift Card",      description: "App Store & iTunes",          cost: 2600, category: "gift-card" },
+  { id: "uber-5",         icon: <UberIcon />,       name: "Uber $5 Credit",           description: "Rides and Uber Eats",         cost: 1400, category: "gift-card" },
+  { id: "spotify-1m",     icon: <SpotifyIcon />,    name: "Spotify Premium 1 Month",  description: "Ad-free music streaming",     cost: 2600, category: "gift-card" },
+  { id: "steam-10",       icon: <SteamIcon />,      name: "Steam $10 Gift Card",      description: "PC games & DLC",              cost: 2600, category: "gift-card" },
+  { id: "netflix-1m",     icon: <NetflixIcon />,    name: "Netflix 1 Month",          description: "Stream unlimited movies",     cost: 4200, category: "gift-card", badge: "Most popular" },
 ];
