@@ -124,7 +124,7 @@ export default {
       backgroundImage: {
         "gradient-brand": "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.65) 100%)",
         "gradient-surface": "linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--card) / 0.80) 100%)",
-        "gradient-dark": "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+        "gradient-dark": "linear-gradient(135deg, #1a1a1a 0%, #212121 100%)",
         "gradient-hero": "linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--primary) / 0.04) 50%, hsl(var(--background)) 100%)",
       },
       transitionTimingFunction: {
