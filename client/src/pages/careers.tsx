@@ -171,7 +171,7 @@ const Careers = () => {
 
       {/* ══ 2. CULTURE — dark, rounded top ═════════════════════════════════ */}
       <section
-        className="relative z-10 -mt-10 rounded-t-3xl bg-[hsl(222_14%_10%)] pt-16 pb-24"
+        className="relative z-10 -mt-10 rounded-t-3xl bg-[hsl(0_0%_10%)] pt-16 pb-24"
         style={{
           backgroundImage: "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
           backgroundSize: "40px 40px",
@@ -293,7 +293,7 @@ const Careers = () => {
 
       {/* ══ 4. BENEFITS ══════════════════════════════════════════════════════ */}
       <section
-        className="relative z-30 -mt-10 rounded-t-3xl bg-[hsl(222_14%_10%)] pt-16 pb-24"
+        className="relative z-30 -mt-10 rounded-t-3xl bg-[hsl(0_0%_10%)] pt-16 pb-24"
         style={{
           backgroundImage: "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
           backgroundSize: "40px 40px",
