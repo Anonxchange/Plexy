@@ -699,7 +699,7 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
   const wrapperRef   = useRef<HTMLDivElement>(null);
 
   /* toolbar state */
-  const [toolsVisible,    setToolsVisible]    = useState(true);
+  const [toolsVisible,    setToolsVisible]    = useState(() => window.innerWidth >= 768);
   const [interval,        setInterval]        = useState("D");
   const [showOrdersMenu,  setShowOrdersMenu]  = useState(false);
   const [orderOverlays,   setOrderOverlays]   = useState<OrderOverlays>({
@@ -716,7 +716,9 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
   const [showLineType,    setShowLineType]    = useState(false);
   const [showIndicators,  setShowIndicators]  = useState(false);
   const [showSettings,    setShowSettings]    = useState(false);
-  const [selectedStudies, setSelectedStudies] = useState<string[]>([]);
+  const [selectedStudies, setSelectedStudies] = useState<string[]>(() =>
+    window.innerWidth >= 768 ? ["MAExp@tv-basicstudies", "MASimple@tv-basicstudies"] : []
+  );
   const [favoriteStudies, setFavoriteStudies] = useState<string[]>([]);
   const [chartStyle,      setChartStyle]      = useState(1);
   const [showVolume,      setShowVolume]      = useState(true);
