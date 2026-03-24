@@ -16,7 +16,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children, defaultTheme = "light" }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem("theme") as Theme) || defaultTheme
+    () => (localStorage.getItem("pexly-theme") as Theme) || defaultTheme
   );
 
   useEffect(() => {
@@ -32,7 +32,7 @@ export function ThemeProvider({ children, defaultTheme = "light" }: ThemeProvide
       root.classList.add(theme);
     }
 
-    localStorage.setItem("theme", theme);
+    localStorage.setItem("pexly-theme", theme);
   }, [theme]);
 
   return (
