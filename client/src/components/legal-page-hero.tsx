@@ -3,7 +3,7 @@ import { useMemo } from "react";
 const R = 42;
 const H = R * Math.sqrt(3);
 const COL_SPACING = R * 1.5;
-const HEX = "#0f172a";
+const HEX = "currentColor";
 
 function hexPoints(cx: number, cy: number, r = R) {
   return Array.from({ length: 6 }, (_, i) => {
@@ -103,7 +103,7 @@ interface LegalPageHeroProps {
 
 export function LegalPageHero({ title, subtitle, lastUpdated }: LegalPageHeroProps) {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/5 to-background pt-20 pb-40 px-4">
+    <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/5 to-background dark:bg-none dark:bg-background pt-20 pb-40 px-4">
       <HoneycombGrid />
 
       <div
@@ -114,8 +114,8 @@ export function LegalPageHero({ title, subtitle, lastUpdated }: LegalPageHeroPro
         }}
       />
 
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/15 rounded-full blur-[80px] pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-[350px] h-[350px] bg-primary/10 rounded-full blur-[60px] pointer-events-none" />
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/15 rounded-full blur-[80px] pointer-events-none dark:hidden" />
+      <div className="absolute bottom-0 left-0 w-[350px] h-[350px] bg-primary/10 rounded-full blur-[60px] pointer-events-none dark:hidden" />
 
       <div className="max-w-4xl mx-auto relative z-10 text-center">
         <h1 className="text-4xl md:text-6xl font-bold mb-6 text-foreground">
