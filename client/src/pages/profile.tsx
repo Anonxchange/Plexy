@@ -583,7 +583,7 @@ export function Profile() {
 
               {/* Avatar */}
               <div className="relative flex-shrink-0 group/avatar -mt-16">
-                <div className="w-28 h-28 rounded-2xl border-4 border-white shadow-lg overflow-hidden flex items-center justify-center bg-gradient-to-br from-[#1e293b] to-[#475569]">
+                <div className="w-28 h-28 rounded-2xl border-4 border-white shadow-lg overflow-hidden flex items-center justify-center bg-gradient-to-br from-[#2a2a2a] to-[#4a4a4a]">
                   <Avatar className="w-full h-full rounded-none">
                     <AvatarImage src={avatarSrc} alt={username} className="object-cover" />
                     <AvatarFallback className="rounded-none bg-transparent text-white text-2xl font-bold">
