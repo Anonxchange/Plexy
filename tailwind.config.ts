@@ -10,12 +10,11 @@ export default {
   theme: {
     extend: {
       borderRadius: {
-        lg: ".5625rem", /* 9px */
-        md: ".375rem", /* 6px */
-        sm: ".1875rem", /* 3px */
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
       },
       colors: {
-        // Flat / base colors (regular buttons)
         background: "hsl(var(--background) / <alpha-value>)",
         foreground: "hsl(var(--foreground) / <alpha-value>)",
         border: "hsl(var(--border) / <alpha-value>)",
@@ -103,6 +102,36 @@ export default {
         serif: ["var(--font-serif)"],
         mono: ["var(--font-mono)"],
       },
+      letterSpacing: {
+        tightest: "-0.04em",
+        tighter: "-0.03em",
+        tight: "-0.02em",
+        "display-xl": "-0.035em",
+        "display-lg": "-0.025em",
+        "display-md": "-0.018em",
+        label: "0.08em",
+        "label-wide": "0.12em",
+      },
+      boxShadow: {
+        notification: "0 2px 8px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08)",
+        "notification-hover": "0 4px 14px rgba(0,0,0,0.18), 0 2px 6px rgba(0,0,0,0.10)",
+        "card-lg": "0 24px 48px -12px rgba(0,0,0,0.18), 0 8px 24px -8px rgba(0,0,0,0.10)",
+        "card-brand": "0 8px 32px -4px hsl(var(--primary) / 0.30), 0 4px 12px -4px hsl(var(--primary) / 0.20)",
+        glass: "0 8px 32px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.10)",
+        "glass-lg": "0 24px 64px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.12)",
+        "inset-top": "inset 0 1px 0 rgba(255,255,255,0.08)",
+      },
+      backgroundImage: {
+        "gradient-brand": "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.65) 100%)",
+        "gradient-surface": "linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--card) / 0.80) 100%)",
+        "gradient-dark": "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+        "gradient-hero": "linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--primary) / 0.04) 50%, hsl(var(--background)) 100%)",
+      },
+      transitionTimingFunction: {
+        spring: "cubic-bezier(0.16, 1, 0.3, 1)",
+        smooth: "cubic-bezier(0.4, 0, 0.2, 1)",
+        bounce: "cubic-bezier(0.34, 1.56, 0.64, 1)",
+      },
       keyframes: {
         "accordion-down": {
           from: { height: "0" },
@@ -128,6 +157,35 @@ export default {
           "0%": { opacity: "0" },
           "100%": { opacity: "1" },
         },
+        "fade-up": {
+          "0%": { opacity: "0", transform: "translateY(16px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "scale-in": {
+          "0%": { opacity: "0", transform: "scale(0.94)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
+        "slide-up": {
+          "0%": { transform: "translateY(100%)", opacity: "0" },
+          "100%": { transform: "translateY(0)", opacity: "1" },
+        },
+        "shimmer": {
+          "0%": { backgroundPosition: "200% 0" },
+          "100%": { backgroundPosition: "-200% 0" },
+        },
+        "float-up": {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-6px)" },
+        },
+        "pulse-glow": {
+          "0%, 100%": { boxShadow: "0 0 0 0 hsl(var(--primary) / 0.4)" },
+          "50%": { boxShadow: "0 0 0 8px hsl(var(--primary) / 0)" },
+        },
+        "badge-pop": {
+          "0%": { transform: "scale(0.6)", opacity: "0" },
+          "70%": { transform: "scale(1.15)" },
+          "100%": { transform: "scale(1)", opacity: "1" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -137,7 +195,14 @@ export default {
         "sparkle": "sparkle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
         "sparkle-delay-1": "sparkle 2s cubic-bezier(0.4, 0, 0.6, 1) 0.3s infinite",
         "sparkle-delay-2": "sparkle 2s cubic-bezier(0.4, 0, 0.6, 1) 0.6s infinite",
-        "fade-in": "fade-in 0.6s ease-out forwards",
+        "fade-in": "fade-in 0.5s ease-out forwards",
+        "fade-up": "fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "scale-in": "scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "slide-up": "slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "shimmer": "shimmer 1.6s ease-in-out infinite",
+        "float-up": "float-up 4s ease-in-out infinite",
+        "pulse-glow": "pulse-glow 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "badge-pop": "badge-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
       },
     },
   },
