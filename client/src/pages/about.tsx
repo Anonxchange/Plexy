@@ -268,7 +268,7 @@ const About = () => {
 
       {/* ══ 5. VALUES — dark, tucked under Vision, curved bottom ═════════ */}
       <section
-        className="relative z-20 -mt-20 rounded-b-3xl bg-[hsl(222_14%_10%)] pt-28 pb-24"
+        className="relative z-20 -mt-20 rounded-b-3xl bg-[hsl(0_0%_10%)] pt-28 pb-24"
         style={{
           backgroundImage: "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
           backgroundSize: "40px 40px",
@@ -373,7 +373,7 @@ const About = () => {
       </section>
 
       {/* ══ 7. IN THE MEDIA — dark, curved bottom ═════════════════════════ */}
-      <section className="relative z-30 rounded-b-3xl bg-[hsl(222_14%_8%)] pt-14 pb-24">
+      <section className="relative z-30 rounded-b-3xl bg-[hsl(0_0%_8%)] pt-14 pb-24">
         <div className="max-w-7xl mx-auto px-6 lg:px-10">
           <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-3">
             Featured On
