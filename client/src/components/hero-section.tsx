@@ -12,7 +12,7 @@ function hexPoints(cx: number, cy: number, r = R) {
   }).join(" ");
 }
 
-const HEX = "#0f172a";
+const HEX = "currentColor";
 
 function HoneycombGrid() {
   const cells = useMemo(() => {
@@ -130,7 +130,7 @@ function HoneycombGrid() {
 
 export function HeroSection() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/5 to-background min-h-[85vh] flex items-center" style={{ willChange: 'transform', transform: 'translateZ(0)' }}>
+    <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/5 to-background dark:bg-none dark:bg-background min-h-[85vh] flex items-center" style={{ willChange: 'transform', transform: 'translateZ(0)' }}>
 
       <HoneycombGrid />
 
@@ -142,8 +142,8 @@ export function HeroSection() {
         }}
       />
 
-      <div className="absolute top-10 right-0 w-[600px] h-[600px] bg-primary/15 rounded-full blur-[80px] pointer-events-none" style={{ willChange: 'transform', transform: 'translateZ(0)' }} />
-      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-primary/10 rounded-full blur-[60px] pointer-events-none" style={{ willChange: 'transform', transform: 'translateZ(0)' }} />
+      <div className="absolute top-10 right-0 w-[600px] h-[600px] bg-primary/15 rounded-full blur-[80px] pointer-events-none dark:hidden" style={{ willChange: 'transform', transform: 'translateZ(0)' }} />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-primary/10 rounded-full blur-[60px] pointer-events-none dark:hidden" style={{ willChange: 'transform', transform: 'translateZ(0)' }} />
 
       <div className="max-w-7xl mx-auto px-4 lg:px-8 py-4 relative z-10 w-full">
         <div className="lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
