@@ -13,15 +13,25 @@ export interface EncryptedVault {
 }
 
 /**
+ * Passkey vault — encrypted with a raw 32-byte key derived from a WebAuthn PRF assertion.
+ * No salt/KDF needed because the PRF output is already high-entropy.
+ */
+export interface PasskeyVault {
+  version: 2;
+  ciphertext: string;
+  iv: string;
+}
+
+/**
  * Encrypts a mnemonic into a secure vault using scrypt + AES-256-GCM.
  */
 export async function encryptVault(mnemonic: string, password: string): Promise<EncryptedVault> {
   const encoder = new TextEncoder();
   const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
   const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
-  
+
   const keyBuffer = await deriveEncryptionKey(password, salt, DEFAULT_KDF_PARAMS);
-  
+
   const cryptoKey = await crypto.subtle.importKey(
     "raw",
     keyBuffer,
@@ -29,13 +39,13 @@ export async function encryptVault(mnemonic: string, password: string): Promise<
     false,
     ["encrypt"]
   );
-  
+
   const ciphertext = await crypto.subtle.encrypt(
     { name: "AES-GCM", iv },
     cryptoKey,
     encoder.encode(mnemonic)
   );
-  
+
   return {
     version: 1,
     ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
@@ -54,9 +64,9 @@ export async function decryptVault(vault: EncryptedVault, password: string): Pro
     const salt = new Uint8Array(atob(vault.salt).split("").map(c => c.charCodeAt(0)));
     const iv = new Uint8Array(atob(vault.iv).split("").map(c => c.charCodeAt(0)));
     const ciphertext = new Uint8Array(atob(vault.ciphertext).split("").map(c => c.charCodeAt(0)));
-    
+
     const keyBuffer = await deriveEncryptionKey(password, salt, vault.kdfParams);
-    
+
     const cryptoKey = await crypto.subtle.importKey(
       "raw",
       keyBuffer,
@@ -64,13 +74,13 @@ export async function decryptVault(vault: EncryptedVault, password: string): Pro
       false,
       ["decrypt"]
     );
-    
+
     const decrypted = await crypto.subtle.decrypt(
       { name: "AES-GCM", iv },
       cryptoKey,
       ciphertext
     );
-    
+
     return new TextDecoder().decode(decrypted);
   } catch (err) {
     console.error("Decryption failed:", err);
@@ -79,30 +89,65 @@ export async function decryptVault(vault: EncryptedVault, password: string): Pro
 }
 
 /**
+ * Encrypts a mnemonic using a raw 32-byte key (from WebAuthn PRF).
+ * Skips scrypt — the PRF output is already cryptographically strong.
+ */
+export async function encryptVaultWithRawKey(data: string, rawKey: ArrayBuffer): Promise<PasskeyVault> {
+  const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw", rawKey, { name: "AES-GCM" }, false, ["encrypt"]
+  );
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    cryptoKey,
+    new TextEncoder().encode(data)
+  );
+  return {
+    version: 2,
+    ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
+    iv: btoa(String.fromCharCode(...iv)),
+  };
+}
+
+/**
+ * Decrypts a PasskeyVault using a raw 32-byte key (from WebAuthn PRF).
+ */
+export async function decryptVaultWithRawKey(vault: PasskeyVault, rawKey: ArrayBuffer): Promise<string> {
+  try {
+    const iv = Uint8Array.from(atob(vault.iv), c => c.charCodeAt(0));
+    const ciphertext = Uint8Array.from(atob(vault.ciphertext), c => c.charCodeAt(0));
+    const cryptoKey = await crypto.subtle.importKey(
+      "raw", rawKey, { name: "AES-GCM" }, false, ["decrypt"]
+    );
+    const decrypted = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv },
+      cryptoKey,
+      ciphertext
+    );
+    return new TextDecoder().decode(decrypted);
+  } catch {
+    throw new Error("Passkey vault decryption failed. Your passkey may not match.");
+  }
+}
+
+/**
  * Migration tool for legacy PBKDF2 or non-vault formats.
  */
 export async function migrateLegacyVault(legacyData: any, password: string, userId: string): Promise<EncryptedVault> {
   let mnemonic: string;
-  
-  // Detection logic for legacy formats
+
   if (typeof legacyData === "string") {
-    // Attempt to decrypt using the previous simple derive + AES method
-    // In our last turn, we had a different deriveEncryptionKey signature.
-    // This part is tricky because we don't have the old salt.
-    // If it was just a string, it might have been the simple combined format.
     try {
-      // Re-implementing the old decryption logic for one-off migration
       const combined = new Uint8Array(atob(legacyData).split("").map(c => c.charCodeAt(0)));
-      const saltStr = `pexly_v1_vault_${userId}`; 
+      const saltStr = `pexly_v1_vault_${userId}`;
       const encoder = new TextEncoder();
       const saltBuffer = encoder.encode(saltStr);
-      
-      // Assume the old simple scrypt derivation
+
       const keyBuffer = await deriveEncryptionKey(password, saltBuffer, DEFAULT_KDF_PARAMS);
-      
+
       const iv = combined.slice(0, 12);
       const ciphertext = combined.slice(12);
-      
+
       const cryptoKey = await crypto.subtle.importKey("raw", keyBuffer, { name: "AES-GCM" }, false, ["decrypt"]);
       const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, cryptoKey, ciphertext);
       mnemonic = new TextDecoder().decode(decrypted);
@@ -110,10 +155,10 @@ export async function migrateLegacyVault(legacyData: any, password: string, user
       throw new Error("Could not migrate legacy vault: Decryption failed");
     }
   } else if (legacyData.version === 1) {
-    return legacyData; // Already upgraded
+    return legacyData;
   } else {
     throw new Error("Unknown vault format");
   }
-  
+
   return encryptVault(mnemonic, password);
 }
