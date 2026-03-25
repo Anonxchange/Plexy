@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -45,8 +45,15 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
   const { user, sessionPassword, setSessionPassword } = useAuth();
   const { toast } = useToast();
   const { hasWalletPasskey, isSupported: passkeySupported, getMnemonicWithPasskey } = useWalletPasskey();
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [step, setStep] = useState<Step>("select");
   const [selectedCrypto, setSelectedCrypto] = useState<string>("");
+
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (open) {
@@ -273,7 +280,8 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
 
     toast({ title: "Transaction Signed!", description: "Your transaction has been signed locally. In this demo, it is logged to the console." });
     setSuccess(true);
-    setTimeout(() => { setSuccess(false); onOpenChange(false); resetForm(); onSuccess?.(); }, 2000);
+    if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    successTimerRef.current = setTimeout(() => { setSuccess(false); onOpenChange(false); resetForm(); onSuccess?.(); }, 2000);
   };
 
   const handleSend = async () => {
