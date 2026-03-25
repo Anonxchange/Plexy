@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertCircle, Loader2, CheckCircle2, X, Copy, ShieldCheck, ShieldAlert, ShieldQuestion } from "lucide-react";
+import { AlertCircle, Loader2, CheckCircle2, X, Copy, ShieldCheck, ShieldAlert, ShieldQuestion, Fingerprint } from "lucide-react";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { signBitcoinTransaction } from "@/lib/bitcoinSigner";
 import { signEVMTransaction } from "@/lib/evmSigner";
@@ -29,6 +29,7 @@ import { useSendFee } from "@/hooks/use-fees";
 import { getCryptoPrices, convertCurrency } from "@/lib/crypto-prices";
 import { useToast } from "@/hooks/use-toast";
 import { preTransactionCheck, type AddressSecurityResult, type TokenSecurityResult, GOPLUS_CHAINS } from "@/lib/goplusSecurity";
+import { useWalletPasskey } from "@/hooks/use-wallet-passkey";
 
 interface SendCryptoDialogProps {
   open: boolean;
@@ -43,6 +44,7 @@ type Step = "select" | "details";
 export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, onSuccess }: SendCryptoDialogProps) {
   const { user, sessionPassword, setSessionPassword } = useAuth();
   const { toast } = useToast();
+  const { hasWalletPasskey, isSupported: passkeySupported, getMnemonicWithPasskey } = useWalletPasskey();
   const [step, setStep] = useState<Step>("select");
   const [selectedCrypto, setSelectedCrypto] = useState<string>("");
 
@@ -213,151 +215,110 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
     setStep("details");
   };
 
+  const validateSendForm = (): string | null => {
+    if (!selectedCrypto || !toAddress || !amount) return "Please fill in all required fields";
+    const cryptoAmountNum = amountInputMode === "crypto" ? parseFloat(amount) : parseFloat(cryptoAmount);
+    if (isNaN(cryptoAmountNum) || cryptoAmountNum <= 0) return "Please enter a valid amount";
+    if (selectedWallet && total > selectedWallet.balance) return "Insufficient balance";
+    if (!securityCheck.safe) return "Security check failed. This address may be malicious.";
+    return null;
+  };
+
+  const executeSend = async (mnemonic: string) => {
+    if (!user) return;
+    const cryptoAmountNum = amountInputMode === "crypto" ? parseFloat(amount) : parseFloat(cryptoAmount);
+    const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
+    const userWallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
+    const symbolMap: Record<string, string> = {
+      'BTC': 'Bitcoin (SegWit)', 'ETH': 'Ethereum', 'SOL': 'Solana',
+      'BNB': 'Binance Smart Chain (BEP-20)', 'TRX': 'Tron (TRC-20)',
+      'USDT': 'USDT', 'USDC': 'USDC',
+    };
+    const chainIdToFind = symbolMap[selectedCrypto] || selectedCrypto;
+    const targetWallet = userWallets.find(w =>
+      w.chainId === chainIdToFind || w.chainId === selectedNetwork || w.assetType === selectedCrypto
+    );
+    if (!targetWallet) throw new Error("Local wallet not found for the selected asset");
+    if (!mnemonic) throw new Error("Mnemonic phrase not found for signing");
+
+    const txData = { to: toAddress, amount: cryptoAmountNum.toString(), currency: symbolToUse as any };
+
+    if (selectedNetwork.includes("Bitcoin")) {
+      const feeResponse = await fetch('https://blockstream.info/api/fee-estimates');
+      const fees = await feeResponse.json();
+      const fastFee = fees['1'] || 10;
+      const btcTxData = {
+        to: toAddress,
+        amount: Math.floor(cryptoAmountNum * 1e8),
+        utxos: await (await fetch(`https://blockstream.info/api/address/${targetWallet.address}/utxo`)).json(),
+        feeRate: fastFee,
+      };
+      await signBitcoinTransaction(mnemonic, btcTxData as any);
+    } else if (selectedNetwork.includes("Ethereum") || selectedNetwork.includes("Binance")) {
+      await signEVMTransaction(mnemonic, txData as any);
+    } else if (selectedNetwork.includes("Solana")) {
+      const response = await fetch('https://api.mainnet-beta.solana.com', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getLatestBlockhash' }),
+      });
+      const { result } = await response.json();
+      if (!result?.value?.blockhash) throw new Error("Failed to fetch recent blockhash for Solana");
+      await signSolanaTransaction(mnemonic, { to: toAddress, amount: cryptoAmountNum.toString(), currency: "SOL", recentBlockhash: result.value.blockhash });
+    } else if (selectedNetwork.includes("Tron")) {
+      await signTronTransaction(mnemonic, { to: toAddress, amount: cryptoAmountNum.toString(), currency: symbolToUse as any });
+    } else {
+      throw new Error(`Signing not supported for ${selectedNetwork}`);
+    }
+
+    toast({ title: "Transaction Signed!", description: "Your transaction has been signed locally. In this demo, it is logged to the console." });
+    setSuccess(true);
+    setTimeout(() => { setSuccess(false); onOpenChange(false); resetForm(); onSuccess?.(); }, 2000);
+  };
+
   const handleSend = async () => {
     if (!user) return;
-    if (!selectedCrypto || !toAddress || !amount) {
-      setError("Please fill in all required fields");
-      return;
-    }
-
-    // Check if password is needed
-    if (!sessionPassword && !userPassword) {
-      setError("Please enter your wallet password");
-      return;
-    }
-
-    const cryptoAmountNum = amountInputMode === "crypto" 
-      ? parseFloat(amount) 
-      : parseFloat(cryptoAmount);
-      
-    if (isNaN(cryptoAmountNum) || cryptoAmountNum <= 0) {
-      setError("Please enter a valid amount");
-      return;
-    }
-
-    if (selectedWallet && total > selectedWallet.balance) {
-      setError("Insufficient balance");
-      return;
-    }
-
-    if (!securityCheck.safe) {
-      setError("Security check failed. This address may be malicious.");
-      return;
-    }
+    const validationError = validateSendForm();
+    if (validationError) { setError(validationError); return; }
+    if (!sessionPassword && !userPassword) { setError("Please enter your wallet password"); return; }
 
     setError("");
     setLoading(true);
-
     try {
-      // Use non-custodial signer directly
-      const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
-      
-      const userWallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
-      
-      // Map display symbols to internal chain IDs
-      const symbolMap: Record<string, string> = {
-        'BTC': 'Bitcoin (SegWit)',
-        'ETH': 'Ethereum',
-        'SOL': 'Solana',
-        'BNB': 'Binance Smart Chain (BEP-20)',
-        'TRX': 'Tron (TRC-20)',
-        'USDT': 'USDT',
-        'USDC': 'USDC'
-      };
-
-      const chainIdToFind = symbolMap[selectedCrypto] || selectedCrypto;
-      const targetWallet = userWallets.find(w => 
-        w.chainId === chainIdToFind || 
-        w.chainId === selectedNetwork ||
-        w.assetType === selectedCrypto
-      );
-      
       const passwordToUse = sessionPassword || userPassword;
-      
-      if (!targetWallet) {
-        throw new Error("Local wallet not found for the selected asset");
-      }
-
-      const mnemonic = await nonCustodialWalletManager.getWalletMnemonic(targetWallet.id, passwordToUse, user.id);
-
-      if (!mnemonic) {
-        throw new Error("Mnemonic phrase not found for signing");
-      }
-
-      let signedTx;
-      const txData = {
-        to: toAddress,
-        amount: cryptoAmountNum.toString(),
-        currency: symbolToUse as any,
+      const userWallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
+      const symbolMap: Record<string, string> = {
+        'BTC': 'Bitcoin (SegWit)', 'ETH': 'Ethereum', 'SOL': 'Solana',
+        'BNB': 'Binance Smart Chain (BEP-20)', 'TRX': 'Tron (TRC-20)',
+        'USDT': 'USDT', 'USDC': 'USDC',
       };
-
-      if (selectedNetwork.includes("Bitcoin")) {
-        // Fetch real network fee rate for Bitcoin
-        const feeResponse = await fetch('https://blockstream.info/api/fee-estimates');
-        const fees = await feeResponse.json();
-        const fastFee = fees['1'] || 10; // default to 10 if API fails
-        
-        const btcTxData = {
-          to: toAddress,
-          amount: Math.floor(cryptoAmountNum * 1e8),
-          utxos: await (await fetch(`https://blockstream.info/api/address/${targetWallet.address}/utxo`)).json(),
-          feeRate: fastFee,
-        };
-        signedTx = await signBitcoinTransaction(mnemonic, btcTxData as any);
-      } else if (selectedNetwork.includes("Ethereum") || selectedNetwork.includes("Binance")) {
-        signedTx = await signEVMTransaction(mnemonic, txData as any);
-      } else if (selectedNetwork.includes("Solana")) {
-        // Fetch recent blockhash for Solana
-        const response = await fetch('https://api.mainnet-beta.solana.com', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            id: 1,
-            method: 'getLatestBlockhash',
-          }),
-        });
-        const { result } = await response.json();
-        if (!result || !result.value || !result.value.blockhash) {
-          throw new Error("Failed to fetch recent blockhash for Solana");
-        }
-        const recentBlockhash = result.value.blockhash;
-
-        signedTx = await signSolanaTransaction(mnemonic, { 
-          to: toAddress, 
-          amount: cryptoAmountNum.toString(), 
-          currency: "SOL",
-          recentBlockhash 
-        });
-      } else if (selectedNetwork.includes("Tron")) {
-        signedTx = await signTronTransaction(mnemonic, { to: toAddress, amount: cryptoAmountNum.toString(), currency: symbolToUse as any });
-      } else {
-        // Fallback or error if no signer available
-        throw new Error(`Signing not supported for ${selectedNetwork}`);
-      }
-
-      
-      // Cache password if not already cached
-      if (!sessionPassword && userPassword) {
-        setSessionPassword(userPassword);
-      }
-      
-      // In a non-custodial architecture, we provide the signed transaction for the user to broadcast
-      // or we broadcast it to a public provider. We do not use the custodial backend.
-      toast({ 
-        title: "Transaction Signed!", 
-        description: "Your transaction has been signed locally. In this demo, it is logged to the console." 
-      });
-      
-      setSuccess(true);
-      setTimeout(() => {
-        setSuccess(false);
-        onOpenChange(false);
-        resetForm();
-        onSuccess?.();
-      }, 2000);
+      const chainIdToFind = symbolMap[selectedCrypto] || selectedCrypto;
+      const targetWallet = userWallets.find(w =>
+        w.chainId === chainIdToFind || w.chainId === selectedNetwork || w.assetType === selectedCrypto
+      );
+      if (!targetWallet) throw new Error("Local wallet not found for the selected asset");
+      const mnemonic = await nonCustodialWalletManager.getWalletMnemonic(targetWallet.id, passwordToUse, user.id);
+      if (!mnemonic) throw new Error("Mnemonic phrase not found for signing");
+      if (!sessionPassword && userPassword) setSessionPassword(userPassword);
+      await executeSend(mnemonic);
     } catch (err: any) {
       setError(err.message || "Failed to send crypto");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendWithPasskey = async () => {
+    if (!user) return;
+    const validationError = validateSendForm();
+    if (validationError) { setError(validationError); return; }
+    setError("");
+    setLoading(true);
+    try {
+      const mnemonic = await getMnemonicWithPasskey();
+      await executeSend(mnemonic);
+    } catch (err: any) {
+      setError(err.message || "Passkey authentication failed");
     } finally {
       setLoading(false);
     }
@@ -453,7 +414,35 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
         ) : (
           <ScrollArea className="max-h-[500px] pr-4">
           <div className="space-y-4">
-            {!sessionPassword && (
+            {sessionPassword ? (
+              <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 mb-4">
+                <p className="text-xs text-green-800 dark:text-green-200">
+                  ✓ Password cached for session. Transaction will sign automatically.
+                </p>
+              </div>
+            ) : passkeySupported && hasWalletPasskey ? (
+              <div className="bg-muted/50 border border-border rounded-lg p-3 mb-4 space-y-2.5">
+                <p className="text-xs text-muted-foreground font-medium">Authorize transaction</p>
+                <Button
+                  className="w-full gap-2"
+                  size="sm"
+                  onClick={handleSendWithPasskey}
+                  disabled={loading || !selectedCrypto || !toAddress || !amount}
+                >
+                  {loading
+                    ? <><Loader2 className="h-4 w-4 animate-spin" />Signing…</>
+                    : <><Fingerprint className="h-4 w-4" />Use Passkey</>}
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">— or type your password —</p>
+                <Input
+                  type="password"
+                  placeholder="Wallet password"
+                  value={userPassword}
+                  onChange={(e) => setUserPassword(e.target.value)}
+                  className="h-10 bg-muted"
+                />
+              </div>
+            ) : (
               <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 mb-4">
                 <p className="text-xs text-blue-800 dark:text-blue-200">
                   Enter your password once - it will be cached for this session.
@@ -465,13 +454,6 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
                   onChange={(e) => setUserPassword(e.target.value)}
                   className="h-10 mt-2 bg-muted"
                 />
-              </div>
-            )}
-            {sessionPassword && (
-              <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 mb-4">
-                <p className="text-xs text-green-800 dark:text-green-200">
-                  ✓ Password cached for session. Transaction will sign automatically.
-                </p>
               </div>
             )}
             <div>
