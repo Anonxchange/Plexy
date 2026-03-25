@@ -145,7 +145,12 @@ async function invoke(action: string, params: Record<string, string | undefined>
   const { data, error } = await supabase.functions.invoke('asterdex', options);
 
   if (error) {
-    const message = data?.error || data?.msg || error.message || 'AsterDEX request failed';
+    let message = error.message || 'AsterDEX request failed';
+    try {
+      const body = await (error as any).context?.json?.();
+      if (body?.error) message = body.error;
+      else if (body?.msg) message = body.msg;
+    } catch {}
     throw new Error(message);
   }
   if (data?.code && data.code < 0) throw new Error(data.msg || `AsterDEX error ${data.code}`);
