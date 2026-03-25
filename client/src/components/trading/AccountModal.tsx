@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  X, ChevronDown, ClipboardList, Copy, Check, Loader2, AlertCircle, Eye, EyeOff,
+  X, ChevronDown, ClipboardList, Loader2, AlertCircle, Eye, EyeOff,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
@@ -168,7 +168,6 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
   const [coinOpen, setCoinOpen]           = useState(false);
   const [amount, setAmount]               = useState("");
   const [withdrawAddress, setWithdrawAddress] = useState("");
-  const [copied, setCopied]               = useState(false);
 
   // Wallet registration state
   const [isAsterRegistered, setIsAsterRegistered] = useState(false);
@@ -527,12 +526,6 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
   });
 
   // ── Handlers ─────────────────────────────────────────
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   const resetSendState = () => {
     setSendPassword("");
     setSendTxHash(null);
@@ -779,73 +772,10 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     </div>
   );
 
-  // Shared deposit address display block — only shown after wallet is linked.
+  // Registration gate — shown when the user hasn't linked their wallet yet.
   const DepositAddressBlock = () => {
-    // Always gate on registration — the public treasury address is useless without a linked account.
-    if (!isAsterRegistered && user) {
-      return <RegistrationBlock />;
-    }
-    if (depositBusy) {
-      return (
-        <div className="flex items-center gap-2 mb-4 text-xs text-muted-foreground">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          <span>Loading deposit address…</span>
-        </div>
-      );
-    }
-    if (depositAddress) {
-      return (
-        <div className="space-y-2 mb-4">
-          {/* Destination: exchange treasury address */}
-          <div className="border border-trading-green/30 bg-trading-green/5 rounded-lg px-4 py-3">
-            <div className="text-xs text-trading-green mb-1 font-medium">
-              Send {coin} to · {CHAIN_MAP[network]?.name ?? network}
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-foreground font-mono break-all">{depositAddress}</span>
-              <button onClick={() => handleCopy(depositAddress)} className="shrink-0 text-muted-foreground hover:text-foreground ml-2">
-                {copied ? <Check className="h-3.5 w-3.5 text-trading-green" /> : <Copy className="h-3.5 w-3.5" />}
-              </button>
-            </div>
-            {depositMemo && (
-              <div className="mt-2 pt-2 border-t border-primary/20">
-                <p className="text-xs text-primary font-medium">Memo required</p>
-                <p className="text-xs text-foreground font-mono mt-0.5">{depositMemo}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Include this memo or funds may be lost.</p>
-              </div>
-            )}
-            {selectedNetworkInfo?.depositMin && (
-              <p className="text-xs text-muted-foreground mt-2">
-                Min. deposit: {selectedNetworkInfo.depositMin} {coin}
-              </p>
-            )}
-          </div>
-          {/* Sender notice: AsterDEX identifies deposits by FROM address */}
-          <div className="border border-yellow-500/30 bg-yellow-500/5 rounded-lg px-4 py-3">
-            <p className="text-xs text-yellow-500 font-medium mb-1">Send from your registered wallet only</p>
-            <p className="text-xs text-muted-foreground">
-              AsterDEX credits your account based on the <span className="text-foreground font-medium">sender address</span>.
-              You must send from the wallet linked to your account.
-            </p>
-            {network === "SOL" ? (
-              userSolWallet?.address && (
-                <div className="mt-2 pt-2 border-t border-yellow-500/20">
-                  <p className="text-xs text-muted-foreground mb-0.5">Your Solana wallet (send from this):</p>
-                  <span className="text-xs text-foreground font-mono break-all">{userSolWallet.address}</span>
-                </div>
-              )
-            ) : (
-              userEvmWallet?.address && (
-                <div className="mt-2 pt-2 border-t border-yellow-500/20">
-                  <p className="text-xs text-muted-foreground mb-0.5">Your registered wallet (send from this):</p>
-                  <span className="text-xs text-foreground font-mono break-all">{userEvmWallet.address}</span>
-                </div>
-              )
-            )}
-          </div>
-        </div>
-      );
-    }
+    if (!user) return null;
+    if (!isAsterRegistered) return <RegistrationBlock />;
     if (depositError) {
       return (
         <div className="flex items-center gap-2 mb-4 text-xs text-destructive">
@@ -857,6 +787,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     return null;
   };
 
+  // CTA shown when user is not logged in or needs to complete registration.
   const DepositCTA = () => {
     if (!user) return (
       <button onClick={requireAuth}
@@ -864,7 +795,6 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
         Sign in to Deposit
       </button>
     );
-    // Registration required before any deposit address can be shown
     if (!isAsterRegistered) {
       if (walletLoading) return (
         <button disabled className="w-full py-3.5 rounded-lg text-sm font-semibold bg-secondary text-muted-foreground flex items-center justify-center gap-2">
@@ -884,25 +814,11 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
         >
           {registerMutation.isPending
             ? <><Loader2 className="h-4 w-4 animate-spin" />Signing…</>
-            : "Sign & Activate Deposit Address"}
+            : "Sign & Activate"}
         </button>
       );
     }
-    if (depositBusy) return (
-      <button disabled className="w-full py-3.5 rounded-lg text-sm font-semibold bg-secondary text-muted-foreground">
-        Loading…
-      </button>
-    );
-    if (depositAddress) return (
-      <button disabled className="w-full py-3.5 rounded-lg text-sm font-semibold bg-secondary text-muted-foreground">
-        Send {coin} to the address above
-      </button>
-    );
-    return (
-      <button disabled className="w-full py-3.5 rounded-lg text-sm font-semibold bg-secondary text-muted-foreground">
-        Loading…
-      </button>
-    );
+    return null;
   };
 
   // ── "Send from My Wallet" handler ─────────────────────
@@ -933,7 +849,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
       setSendTxHash(result.txHash);
       setSendTxUrl(result.explorerUrl);
       setSendPassword("");
-      toast({ title: "Deposit sent!", description: `Transaction broadcast successfully.` });
+      toast({ title: "Deposit sent!", description: "Transaction broadcast successfully." });
     } catch (err: any) {
       setSendError(err.message ?? "Transaction failed. Please try again.");
     } finally {
@@ -941,11 +857,10 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     }
   };
 
-  // "Send from My Wallet" block — shown on deposit tab after address is loaded.
-  // The user picks amount, enters their wallet password, and broadcasts directly.
+  // Sign-and-send block — shown after registration, replaces manual address copy.
   const SendFromWalletBlock = () => {
+    if (!isAsterRegistered) return null;
     const wallet = network === "SOL" ? userSolWallet : userEvmWallet;
-    if (!isAsterRegistered || !depositAddress || !wallet) return null;
 
     if (sendTxHash) {
       return (
@@ -957,12 +872,8 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
           <div className="flex items-center gap-2">
             <span className="text-xs text-foreground font-mono truncate">{sendTxHash.slice(0, 20)}…</span>
             {sendTxUrl && (
-              <a
-                href={sendTxUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-primary underline shrink-0"
-              >
+              <a href={sendTxUrl} target="_blank" rel="noopener noreferrer"
+                className="text-xs text-primary underline shrink-0">
                 View on explorer
               </a>
             )}
@@ -971,11 +882,29 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
       );
     }
 
+    if (depositBusy || !depositAddress) {
+      return (
+        <div className="flex items-center gap-2 mb-4 text-xs text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          <span>Loading deposit address…</span>
+        </div>
+      );
+    }
+
+    if (!wallet) {
+      return (
+        <div className="flex items-center gap-2 mb-4 text-xs text-destructive">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+          <span>No {network === "SOL" ? "Solana" : "EVM"} wallet found. Create one in Wallet first.</span>
+        </div>
+      );
+    }
+
     return (
       <div className="border border-border rounded-lg px-4 py-4 mb-4 space-y-3">
-        <p className="text-xs font-medium text-foreground">Send from My Wallet</p>
+        <p className="text-xs font-medium text-foreground">Sign & Send</p>
         <p className="text-xs text-muted-foreground">
-          Enter your wallet password to broadcast the deposit directly — no manual copying needed.
+          Enter your wallet password to sign and broadcast the deposit directly.
         </p>
 
         {sendError && (
@@ -993,11 +922,8 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
             onChange={e => setSendPassword(e.target.value)}
             className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm pr-10 focus:outline-none focus:ring-1 focus:ring-primary/50"
           />
-          <button
-            type="button"
-            onClick={() => setShowSendPwd(v => !v)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          >
+          <button type="button" onClick={() => setShowSendPwd(v => !v)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
             {showSendPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         </div>
@@ -1009,7 +935,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
         >
           {sendLoading
             ? <><Loader2 className="h-4 w-4 animate-spin" />Sending…</>
-            : `Send ${amount || "0"} ${coin} now`}
+            : `Send ${amount || "0"} ${coin}`}
         </button>
 
         <p className="text-xs text-muted-foreground text-center">
@@ -1021,6 +947,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
       </div>
     );
   };
+
 
   // ── Render ─────────────────────────────────────────────
   const modalBody = (
