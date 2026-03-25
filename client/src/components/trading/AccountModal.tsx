@@ -301,12 +301,12 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     isFetching: depositFetching,
     error: depositError,
   } = useQuery({
-    queryKey: ["deposit-address", coin, network],
+    queryKey: ["deposit-address", coin, network, chainAccountType],
     queryFn: () => {
       // EVM: shared treasury address per chain (from ae/deposit-address).
-      // Solana: per-coin bank address (from deposit/assets), so pass coin too.
+      // Solana: per-coin bank address (from deposit/assets), so pass coin and accountType too.
       const chainId = CHAIN_MAP[network]?.chainId ?? 56;
-      return asterGetDepositAddress(chainId, coin);
+      return asterGetDepositAddress(chainId, coin, chainAccountType);
     },
     // Fetch as soon as the deposit tab is open — this is a public endpoint, no API key needed
     enabled: !!user && open && activeTab === "deposit" && !!network,
