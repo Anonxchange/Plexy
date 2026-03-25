@@ -1,4 +1,4 @@
-import { createClient } from '../supabase';
+import { getSupabase } from '../supabase';
 
 export type SecurityEventType = 
   | 'login_success'
@@ -49,7 +49,6 @@ const THREAT_PATTERNS: ThreatPattern[] = [
 ];
 
 class SecurityLogger {
-  private supabase = createClient();
   private listeners: ((event: SecurityEvent) => void)[] = [];
 
   async log(event: Omit<SecurityEvent, 'ip_address' | 'user_agent'>): Promise<void> {
@@ -59,7 +58,8 @@ class SecurityLogger {
         user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
       };
 
-      const { error } = await this.supabase
+      const supabase = await getSupabase();
+      const { error } = await supabase
         .from('security_events')
         .insert({
           event_type: fullEvent.event_type,
@@ -102,9 +102,10 @@ class SecurityLogger {
     if (!pattern) return;
 
     try {
+      const supabase = await getSupabase();
       const windowStart = new Date(Date.now() - pattern.windowMs).toISOString();
       
-      const { count, error } = await this.supabase
+      const { count, error } = await supabase
         .from('security_events')
         .select('id', { count: 'exact', head: true })
         .eq('event_type', event.event_type)
@@ -130,7 +131,8 @@ class SecurityLogger {
     count: number
   ): Promise<void> {
     try {
-      const { error } = await this.supabase
+      const supabase = await getSupabase();
+      const { error } = await supabase
         .from('security_alerts')
         .insert({
           alert_type: 'threat_detected',
@@ -166,31 +168,41 @@ class SecurityLogger {
   }
 
   async getRecentEvents(limit = 50): Promise<any[]> {
-    const { data, error } = await this.supabase
-      .from('security_events')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(limit);
+    try {
+      const supabase = await getSupabase();
+      const { data, error } = await supabase
+        .from('security_events')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(limit);
 
-    if (error) {
-      console.error('Failed to fetch security events:', error);
+      if (error) {
+        console.error('Failed to fetch security events:', error);
+        return [];
+      }
+      return data || [];
+    } catch {
       return [];
     }
-    return data || [];
   }
 
   async getActiveAlerts(): Promise<any[]> {
-    const { data, error } = await this.supabase
-      .from('security_alerts')
-      .select('*')
-      .eq('status', 'open')
-      .order('created_at', { ascending: false });
+    try {
+      const supabase = await getSupabase();
+      const { data, error } = await supabase
+        .from('security_alerts')
+        .select('*')
+        .eq('status', 'open')
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Failed to fetch security alerts:', error);
+      if (error) {
+        console.error('Failed to fetch security alerts:', error);
+        return [];
+      }
+      return data || [];
+    } catch {
       return [];
     }
-    return data || [];
   }
 
   async getSecurityStats(): Promise<{
@@ -199,36 +211,42 @@ class SecurityLogger {
     activeAlerts: number;
     blockedIPs: number;
   }> {
-    const now = new Date();
-    const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    try {
+      const supabase = await getSupabase();
+      const now = new Date();
+      const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-    const [eventsResult, criticalResult, alertsResult] = await Promise.all([
-      this.supabase
-        .from('security_events')
-        .select('id', { count: 'exact' })
-        .gte('created_at', dayAgo.toISOString()),
-      this.supabase
-        .from('security_events')
-        .select('id', { count: 'exact' })
-        .eq('severity', 'critical')
-        .gte('created_at', dayAgo.toISOString()),
-      this.supabase
-        .from('security_alerts')
-        .select('id', { count: 'exact' })
-        .eq('status', 'open'),
-    ]);
+      const [eventsResult, criticalResult, alertsResult] = await Promise.all([
+        supabase
+          .from('security_events')
+          .select('id', { count: 'exact' })
+          .gte('created_at', dayAgo.toISOString()),
+        supabase
+          .from('security_events')
+          .select('id', { count: 'exact' })
+          .eq('severity', 'critical')
+          .gte('created_at', dayAgo.toISOString()),
+        supabase
+          .from('security_alerts')
+          .select('id', { count: 'exact' })
+          .eq('status', 'open'),
+      ]);
 
-    return {
-      totalEvents: eventsResult.count || 0,
-      criticalEvents: criticalResult.count || 0,
-      activeAlerts: alertsResult.count || 0,
-      blockedIPs: 0,
-    };
+      return {
+        totalEvents: eventsResult.count || 0,
+        criticalEvents: criticalResult.count || 0,
+        activeAlerts: alertsResult.count || 0,
+        blockedIPs: 0,
+      };
+    } catch {
+      return { totalEvents: 0, criticalEvents: 0, activeAlerts: 0, blockedIPs: 0 };
+    }
   }
 
   async resolveAlert(alertId: string, resolution: string): Promise<boolean> {
     try {
-      const { error } = await this.supabase
+      const supabase = await getSupabase();
+      const { error } = await supabase
         .from('security_alerts')
         .update({
           status: 'resolved',
