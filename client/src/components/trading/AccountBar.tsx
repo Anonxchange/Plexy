@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { asterTrading } from "@/lib/asterdex-service";
-import { AccountModal } from "./AccountModal";
+
+const AccountModal = lazy(() =>
+  import("./AccountModal").then((m) => ({ default: m.AccountModal }))
+);
 
 interface AccountBarProps {
   variant?: "bar" | "panel";
@@ -123,13 +126,15 @@ const AccountBar = ({ variant = "bar", pair }: AccountBarProps) => {
         </div>
       )}
 
-      <AccountModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        defaultTab={defaultTab}
-        defaultAccountType="Spot account"
-        variant="dialog"
-      />
+      <Suspense fallback={null}>
+        <AccountModal
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          defaultTab={defaultTab}
+          defaultAccountType="Spot account"
+          variant="dialog"
+        />
+      </Suspense>
     </>
   );
 };
