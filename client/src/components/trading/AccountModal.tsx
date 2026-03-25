@@ -11,6 +11,7 @@ import { asterTrading, asterWallet, asterGetNonce, asterCreateApiKey, asterGetDe
 import { supabase } from "@/lib/supabase";
 import { nonCustodialWalletManager, NonCustodialWallet } from "@/lib/non-custodial-wallet";
 import { signEVMMessage } from "@/lib/evmSigner";
+import { broadcastDeposit } from "@/lib/deposit-broadcaster";
 import { useToast } from "@/hooks/use-toast";
 import { getCryptoIconUrl } from "@/lib/crypto-icons";
 
@@ -176,6 +177,14 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
   const [walletLoading, setWalletLoading]   = useState(false);
   const [walletPassword, setWalletPassword] = useState("");
   const [showPassword, setShowPassword]     = useState(false);
+
+  // "Send from My Wallet" state (deposit tab one-click flow)
+  const [sendPassword, setSendPassword]   = useState("");
+  const [showSendPwd, setShowSendPwd]     = useState(false);
+  const [sendLoading, setSendLoading]     = useState(false);
+  const [sendTxHash, setSendTxHash]       = useState<string | null>(null);
+  const [sendTxUrl, setSendTxUrl]         = useState<string | null>(null);
+  const [sendError, setSendError]         = useState<string | null>(null);
 
   // Track previous network to detect real transitions and clear stale state
   const prevNetworkRef = useRef<string>(network);
@@ -522,6 +531,13 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const resetSendState = () => {
+    setSendPassword("");
+    setSendTxHash(null);
+    setSendTxUrl(null);
+    setSendError(null);
+  };
+
   const handleTabChange = (tab: "deposit" | "withdraw" | "transfer") => {
     setActiveTab(tab);
     setAmount("");
@@ -529,22 +545,26 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     setCoinOpen(false);
     setChainOpen(false);
     setAccountTypeOpen(false);
+    resetSendState();
   };
 
   const handleAccountTypeChange = (type: AccountType) => {
     setAccountType(type);
     setAccountTypeOpen(false);
     setAmount("");
+    resetSendState();
   };
 
   const handleNetworkChange = (n: string) => {
     setNetwork(n);
     setChainOpen(false);
     setAmount("");
+    resetSendState();
   };
 
   const handleCoinChange = (c: string) => {
     setCoin(c);
+    resetSendState();
     // For withdraw only: switch to first valid network if current isn't supported for this coin
     if (activeTab === "withdraw") {
       const info = selectorCoins.find(ci => ci.coin === c);
@@ -883,6 +903,123 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     );
   };
 
+  // ── "Send from My Wallet" handler ─────────────────────
+  const handleSendFromWallet = async () => {
+    if (!user || !depositAddress || !amount) return;
+    const wallet = network === "SOL" ? userSolWallet : userEvmWallet;
+    if (!wallet) return;
+
+    setSendLoading(true);
+    setSendError(null);
+    setSendTxHash(null);
+    setSendTxUrl(null);
+
+    try {
+      const vaultKey = wallet.encryptedMnemonic ?? wallet.encryptedPrivateKey;
+      if (!vaultKey) throw new Error("Wallet data not found. Please recreate your wallet.");
+      const mnemonic = await nonCustodialWalletManager.decryptPrivateKey(vaultKey, sendPassword);
+
+      const result = await broadcastDeposit({
+        coin,
+        network,
+        amount,
+        mnemonic,
+        depositAddress,
+        walletAddress: wallet.address,
+      });
+
+      setSendTxHash(result.txHash);
+      setSendTxUrl(result.explorerUrl);
+      setSendPassword("");
+      toast({ title: "Deposit sent!", description: `Transaction broadcast successfully.` });
+    } catch (err: any) {
+      setSendError(err.message ?? "Transaction failed. Please try again.");
+    } finally {
+      setSendLoading(false);
+    }
+  };
+
+  // "Send from My Wallet" block — shown on deposit tab after address is loaded.
+  // The user picks amount, enters their wallet password, and broadcasts directly.
+  const SendFromWalletBlock = () => {
+    const wallet = network === "SOL" ? userSolWallet : userEvmWallet;
+    if (!isAsterRegistered || !depositAddress || !wallet) return null;
+
+    if (sendTxHash) {
+      return (
+        <div className="border border-trading-green/30 bg-trading-green/5 rounded-lg px-4 py-4 mb-4">
+          <p className="text-xs text-trading-green font-medium mb-1">Deposit sent successfully</p>
+          <p className="text-xs text-muted-foreground mb-2">
+            Your transaction has been broadcast. It will credit once confirmed on-chain.
+          </p>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-foreground font-mono truncate">{sendTxHash.slice(0, 20)}…</span>
+            {sendTxUrl && (
+              <a
+                href={sendTxUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-primary underline shrink-0"
+              >
+                View on explorer
+              </a>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="border border-border rounded-lg px-4 py-4 mb-4 space-y-3">
+        <p className="text-xs font-medium text-foreground">Send from My Wallet</p>
+        <p className="text-xs text-muted-foreground">
+          Enter your wallet password to broadcast the deposit directly — no manual copying needed.
+        </p>
+
+        {sendError && (
+          <div className="flex items-start gap-2 text-xs text-destructive">
+            <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+            <span>{sendError}</span>
+          </div>
+        )}
+
+        <div className="relative">
+          <input
+            type={showSendPwd ? "text" : "password"}
+            placeholder="Wallet password"
+            value={sendPassword}
+            onChange={e => setSendPassword(e.target.value)}
+            className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm pr-10 focus:outline-none focus:ring-1 focus:ring-primary/50"
+          />
+          <button
+            type="button"
+            onClick={() => setShowSendPwd(v => !v)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            {showSendPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
+
+        <button
+          onClick={handleSendFromWallet}
+          disabled={!sendPassword || !amount || Number(amount) <= 0 || sendLoading}
+          className="w-full py-3 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {sendLoading
+            ? <><Loader2 className="h-4 w-4 animate-spin" />Sending…</>
+            : `Send ${amount || "0"} ${coin} now`}
+        </button>
+
+        <p className="text-xs text-muted-foreground text-center">
+          Sending from{" "}
+          <span className="font-mono text-foreground">
+            {wallet.address.slice(0, 8)}…{wallet.address.slice(-6)}
+          </span>
+        </p>
+      </div>
+    );
+  };
+
   // ── Render ─────────────────────────────────────────────
   const modalBody = (
     <>
@@ -924,6 +1061,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
                 <CoinAmountRow />
                 <BalanceLine value={`${spotBalanceFor(coin).toFixed(4)} ${coin}`} />
                 <DepositAddressBlock />
+                <SendFromWalletBlock />
                 <DepositCTA />
               </>
             )}
@@ -934,6 +1072,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
                 <CoinAmountRow />
                 <BalanceLine value={`${futuresAvailFor(coin).toFixed(4)} ${coin}`} />
                 <DepositAddressBlock />
+                <SendFromWalletBlock />
                 <DepositCTA />
                 <p className="text-xs text-center text-muted-foreground mt-3">
                   Already have funds in Spot?{" "}
