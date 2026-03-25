@@ -278,6 +278,9 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
   });
 
   // ── Queries ───────────────────────────────────────────
+  // Defined early so it can be used in query keys below without hitting TDZ
+  const chainAccountType = isSpot ? 'spot' : 'perp';
+
   const { data: spotAccount, isLoading: spotLoading } = useQuery({
     queryKey: ["spot-account"],
     queryFn: () => asterTrading.spotAccount(),
@@ -353,7 +356,6 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
   // Chain assets — fetches coins for the selected chain on both deposit and withdraw tabs.
   // Spot and Perpetual have different coin lists per chain, so we pass accountType accordingly.
   // SOL uses networks=SOL (handled in asterGetChainAssets), EVM chains use networks=EVM.
-  const chainAccountType = isSpot ? 'spot' : 'perp';
   const {
     data: chainAssetsData,
     isLoading: chainAssetsLoading,
