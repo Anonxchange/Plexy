@@ -250,6 +250,33 @@ function hasPendingOTP(): boolean {
   }
 }
 
+// Returns true only if there is a non-expired pending OTP challenge for this
+// specific user. If the stored OTP belongs to a different user (stale from a
+// previous flow), it is cleared and false is returned so the new session can
+// proceed normally. This prevents a stale OTP from blocking a valid login.
+function isOTPBlockingUser(userId: string): boolean {
+  try {
+    const raw = sessionStorage.getItem('pendingOTP_data');
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    // Expired — always discard
+    if (Date.now() - (parsed.createdAt || 0) > 10 * 60 * 1000) {
+      sessionStorage.removeItem('pendingOTP_data');
+      sessionStorage.removeItem('pendingOTP_session');
+      return false;
+    }
+    // Different user's OTP — discard; let this user's session through
+    if (parsed.userId && parsed.userId !== userId) {
+      sessionStorage.removeItem('pendingOTP_data');
+      sessionStorage.removeItem('pendingOTP_session');
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // ─── Custom inactivity-based session expiry (no Supabase premium required) ──
 // Supabase silently refreshes the access token, so the JWT timeout setting
 // alone never logs users out. Instead we track the last moment the user was
@@ -389,11 +416,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const sessionTokenRef = useRef<string | null>(null);
   const isSigningOutRef = useRef(false);
   const activeUserIdRef = useRef<string | null>(null);
+  // Ref mirrors for values used inside long-lived callbacks to avoid stale closures
+  const isWalletUnlockedRef = useRef(false);
 
-  // Keep activeUserIdRef in sync so the activity handler never has a stale userId
+  // Keep refs in sync with state so callbacks always see current values
   useEffect(() => {
     activeUserIdRef.current = user?.id ?? null;
   }, [user?.id]);
+
+  useEffect(() => {
+    isWalletUnlockedRef.current = isWalletUnlocked;
+  }, [isWalletUnlocked]);
 
   const checkWalletOnAuth = useCallback(async (userId: string, force: boolean = false) => {
     if (!userId) return;
@@ -430,7 +463,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // 2. If wallet is already unlocked in memory -> Wallet Ready
-      if (wallets.length > 0 && isWalletUnlocked) {
+      // Use ref to avoid stale closure (useCallback has [] deps)
+      if (wallets.length > 0 && isWalletUnlockedRef.current) {
         setWalletImportState({ required: false, expectedAddress: null });
         return;
       }
@@ -448,7 +482,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .maybeSingle();
         
-      const walletAddress = profile?.wallet_address || user?.user_metadata?.wallet_address;
+      // Use profile data only — avoids stale `user` closure from useCallback([])
+      const walletAddress = profile?.wallet_address;
 
       if (walletAddress) {
         // IMPORT REQUIRED: User owns a wallet (address exists) but we have no encrypted blob.
@@ -529,6 +564,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Main auth effect
   useEffect(() => {
+    // Guard against the effect running after the component unmounts. Because
+    // getSupabase() is async, the cleanup function below may fire before the
+    // Promise resolves. Without this flag, the async callback would continue
+    // running (setting up subscriptions, updating state) on an unmounted tree.
+    let aborted = false;
+
+    // Helper: clear stale OTP React state when sessionStorage was wiped
+    const clearOTPState = () => {
+      setPendingOTPVerification(null);
+      setPendingSession(null);
+    };
+
     // Clean up stale OTP data older than 10 minutes
     try {
       const otpData = sessionStorage.getItem('pendingOTP_data');
@@ -538,8 +585,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (Date.now() - createdAt > 10 * 60 * 1000) {
           sessionStorage.removeItem('pendingOTP_data');
           sessionStorage.removeItem('pendingOTP_session');
-          setPendingOTPVerification(null);
-          setPendingSession(null);
+          clearOTPState();
         }
       }
     } catch { /* silent */ }
@@ -559,8 +605,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Load Supabase asynchronously — vendor-db chunk is NOT part of the
     // initial bundle; it downloads in the background after first render.
     getSupabase().then((supabase) => {
+      if (aborted) return; // component unmounted before client resolved
+
       // Set up auth state listener FIRST
       const { data: { subscription: sub } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+        if (aborted) return;
         if (window.location.pathname === '/verify-email') {
           setSession(null);
           setUser(null);
@@ -586,7 +635,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // Handle logout/session clear
         if (event === 'SIGNED_OUT' || !currentSession) {
-          if (currentSession === null && user?.id) clearLastActivity(user.id);
           setSession(null);
           setUser(null);
           setWalletImportState({ required: false, expectedAddress: null });
@@ -594,16 +642,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        // Check sessionStorage directly to avoid stale closure
-        if (!hasPendingOTP()) {
+        // Use user-aware OTP check: stale OTP for a different user is cleared
+        // automatically inside isOTPBlockingUser so the real session gets through.
+        if (!isOTPBlockingUser(currentSession.user.id)) {
           setSession(currentSession);
           setUser(currentSession.user);
-          
+
           if (event === 'SIGNED_IN') {
             // Stamp activity at login so the 30-min inactivity clock starts now
             touchLastActivity(currentSession.user.id, true);
             // Defer async work to avoid blocking the callback
             setTimeout(() => {
+              if (aborted) return;
               trackDevice(currentSession.user.id);
               checkWalletOnAuthRef.current(currentSession.user.id);
             }, 0);
@@ -615,8 +665,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Add periodic session health check
       healthCheckInterval = setInterval(async () => {
+        if (aborted) return;
         const { data: { session: currentSession } } = await supabase.auth.getSession();
-        if (currentSession && sessionTokenRef.current !== currentSession.access_token && !hasPendingOTP()) {
+        if (currentSession && sessionTokenRef.current !== currentSession.access_token && !isOTPBlockingUser(currentSession.user.id)) {
           setSession(currentSession);
           setUser(currentSession.user);
         }
@@ -624,16 +675,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Then get initial session
       supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
-        if (!hasPendingOTP()) {
+        if (aborted) return;
+        // isOTPBlockingUser is user-aware: if pendingOTP_data belongs to a
+        // different user (stale from a prior flow), it clears it and returns
+        // false so this session is allowed through. Also sync React state.
+        const blocked = initialSession?.user
+          ? isOTPBlockingUser(initialSession.user.id)
+          : hasPendingOTP();
+        if (!blocked) {
           setSession(initialSession);
           setUser(initialSession?.user ?? null);
         }
         setLoading(false);
       }).catch(() => {
-        setLoading(false);
+        if (!aborted) setLoading(false);
       });
     }).catch(() => {
-      setLoading(false);
+      if (!aborted) setLoading(false);
     });
 
     // Force wallet check handler (no supabase needed — delegates to ref)
@@ -650,6 +708,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener('force-wallet-check', handleForceCheck as EventListener);
 
     return () => {
+      aborted = true;
       subscription?.unsubscribe();
       if (healthCheckInterval !== undefined) clearInterval(healthCheckInterval);
       window.removeEventListener('force-wallet-check', handleForceCheck as EventListener);
