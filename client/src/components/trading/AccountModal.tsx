@@ -299,10 +299,10 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
   } = useQuery({
     queryKey: ["deposit-address", coin, network],
     queryFn: () => {
-      // Use the public BAPI treasury deposit-address endpoint — keyed by chain.
-      // Returns the exchange's deposit address for this chain (no API key needed).
+      // EVM: shared treasury address per chain (from ae/deposit-address).
+      // Solana: per-coin bank address (from deposit/assets), so pass coin too.
       const chainId = CHAIN_MAP[network]?.chainId ?? 56;
-      return asterGetDepositAddress(chainId);
+      return asterGetDepositAddress(chainId, coin);
     },
     // Fetch as soon as the deposit tab is open — this is a public endpoint, no API key needed
     enabled: !!user && open && activeTab === "deposit" && !!network,
@@ -762,28 +762,45 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     }
     if (depositAddress) {
       return (
-        <div className="border border-trading-green/30 bg-trading-green/5 rounded-lg px-4 py-3 mb-4">
-          <div className="text-xs text-trading-green mb-1 font-medium">
-            Deposit address · {CHAIN_MAP[network]?.name ?? network}
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs text-foreground font-mono break-all">{depositAddress}</span>
-            <button onClick={() => handleCopy(depositAddress)} className="shrink-0 text-muted-foreground hover:text-foreground ml-2">
-              {copied ? <Check className="h-3.5 w-3.5 text-trading-green" /> : <Copy className="h-3.5 w-3.5" />}
-            </button>
-          </div>
-          {depositMemo && (
-            <div className="mt-2 pt-2 border-t border-primary/20">
-              <p className="text-xs text-primary font-medium">Memo required</p>
-              <p className="text-xs text-foreground font-mono mt-0.5">{depositMemo}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Include this memo or funds may be lost.</p>
+        <div className="space-y-2 mb-4">
+          {/* Destination: exchange treasury address */}
+          <div className="border border-trading-green/30 bg-trading-green/5 rounded-lg px-4 py-3">
+            <div className="text-xs text-trading-green mb-1 font-medium">
+              Send {coin} to · {CHAIN_MAP[network]?.name ?? network}
             </div>
-          )}
-          {selectedNetworkInfo?.depositMin && (
-            <p className="text-xs text-muted-foreground mt-2">
-              Min. deposit: {selectedNetworkInfo.depositMin} {coin}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-foreground font-mono break-all">{depositAddress}</span>
+              <button onClick={() => handleCopy(depositAddress)} className="shrink-0 text-muted-foreground hover:text-foreground ml-2">
+                {copied ? <Check className="h-3.5 w-3.5 text-trading-green" /> : <Copy className="h-3.5 w-3.5" />}
+              </button>
+            </div>
+            {depositMemo && (
+              <div className="mt-2 pt-2 border-t border-primary/20">
+                <p className="text-xs text-primary font-medium">Memo required</p>
+                <p className="text-xs text-foreground font-mono mt-0.5">{depositMemo}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Include this memo or funds may be lost.</p>
+              </div>
+            )}
+            {selectedNetworkInfo?.depositMin && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Min. deposit: {selectedNetworkInfo.depositMin} {coin}
+              </p>
+            )}
+          </div>
+          {/* Sender notice: AsterDEX identifies deposits by FROM address */}
+          <div className="border border-yellow-500/30 bg-yellow-500/5 rounded-lg px-4 py-3">
+            <p className="text-xs text-yellow-500 font-medium mb-1">Send from your registered wallet only</p>
+            <p className="text-xs text-muted-foreground">
+              AsterDEX credits your account based on the <span className="text-foreground font-medium">sender address</span>.
+              You must send from the wallet linked to your account.
             </p>
-          )}
+            {userEvmWallet?.address && network !== "SOL" && (
+              <div className="mt-2 pt-2 border-t border-yellow-500/20">
+                <p className="text-xs text-muted-foreground mb-0.5">Your registered wallet:</p>
+                <span className="text-xs text-foreground font-mono break-all">{userEvmWallet.address}</span>
+              </div>
+            )}
+          </div>
         </div>
       );
     }
