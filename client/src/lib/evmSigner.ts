@@ -20,18 +20,22 @@ secp.utils.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]) => {
 /* -------------------------------------------------------------------------- */
 
 export const CHAIN_CONFIGS: Record<string, { rpcUrl: string; chainId: number; symbol: string }> = {
-  ETH: { rpcUrl: "https://eth.llamarpc.com", chainId: 1, symbol: "ETH" },
-  BSC: { rpcUrl: "https://binance.llamarpc.com", chainId: 56, symbol: "BNB" },
-  BNB: { rpcUrl: "https://binance.llamarpc.com", chainId: 56, symbol: "BNB" }
+  ETH: { rpcUrl: "https://eth.llamarpc.com",       chainId: 1,     symbol: "ETH" },
+  BSC: { rpcUrl: "https://binance.llamarpc.com",    chainId: 56,    symbol: "BNB" },
+  BNB: { rpcUrl: "https://binance.llamarpc.com",    chainId: 56,    symbol: "BNB" },
+  ARB: { rpcUrl: "https://arbitrum.llamarpc.com",   chainId: 42161, symbol: "ETH" },
 };
 
 export const TOKEN_CONTRACTS: Record<string, { address: string; decimals: number }> = {
-  USDT_ETH: { address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", decimals: 6 },
-  USDC_ETH: { address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", decimals: 6 },
-  USDT_BSC: { address: "0x55d398326f99059fF775485246999027B3197955", decimals: 18 },
-  USDC_BSC: { address: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", decimals: 18 },
-  USDT_BNB: { address: "0x55d398326f99059fF775485246999027B3197955", decimals: 18 },
-  USDC_BNB: { address: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", decimals: 18 }
+  USDT_ETH:  { address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", decimals: 6  },
+  USDC_ETH:  { address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", decimals: 6  },
+  USDT_BSC:  { address: "0x55d398326f99059fF775485246999027B3197955", decimals: 18 },
+  USDC_BSC:  { address: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", decimals: 18 },
+  USDT_BNB:  { address: "0x55d398326f99059fF775485246999027B3197955", decimals: 18 },
+  USDC_BNB:  { address: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", decimals: 18 },
+  USDT_ARB:  { address: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9", decimals: 6  },
+  USDC_ARB:  { address: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", decimals: 6  },
+  USDCE_ARB: { address: "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8", decimals: 6  },
 };
 
 /* -------------------------------------------------------------------------- */
@@ -42,10 +46,11 @@ export interface EVMTransactionRequest {
   to: string;
   amount: string;
   currency:
-    | "ETH" | "BSC" | "BNB"
+    | "ETH" | "BSC" | "BNB" | "ARB"
     | "USDT_ETH" | "USDC_ETH"
     | "USDT_BSC" | "USDC_BSC"
-    | "USDT_BNB" | "USDC_BNB";
+    | "USDT_BNB" | "USDC_BNB"
+    | "USDT_ARB" | "USDC_ARB" | "USDCE_ARB";
   gasPrice?: string;
   gasLimit?: string;
   nonce?: number;
