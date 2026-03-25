@@ -186,6 +186,9 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
   const [sendTxUrl, setSendTxUrl]         = useState<string | null>(null);
   const [sendError, setSendError]         = useState<string | null>(null);
 
+  // Passkey-based registration loading state
+  const [passkeyRegLoading, setPasskeyRegLoading] = useState(false);
+
   // Track previous network to detect real transitions and clear stale state
   const prevNetworkRef = useRef<string>(network);
 
@@ -841,7 +844,6 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
   };
 
   // ── Passkey-based registration handler ────────────────
-  const [passkeyRegLoading, setPasskeyRegLoading] = useState(false);
   const handleRegisterWithPasskey = async () => {
     if (!userEvmWallet || !user) return;
     setPasskeyRegLoading(true);
