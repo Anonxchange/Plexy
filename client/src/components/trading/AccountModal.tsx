@@ -318,15 +318,14 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
   const depositBusy = depositLoading || depositFetching;
 
   // Load wallets when:
-  // - user is on deposit tab and not yet registered (registration flow always needs EVM wallet)
-  // - user opens the withdraw tab (need address silently for autoWithdraw)
+  // - deposit tab: registration flow needs EVM wallet, AND Solana deposit shows user's SOL address
+  // - withdraw tab: always need the right wallet to auto-fill the withdrawal address
   useEffect(() => {
     if (!user || walletLoading) return;
-    const needsEvm  = (activeTab === "deposit" && !isAsterRegistered) || activeTab === "withdraw";
-    const needsSol  = activeTab === "withdraw" && network === "SOL";
-    const missingEvm = !userEvmWallet;
-    const missingSol = !userSolWallet;
-    if ((needsEvm && missingEvm) || (needsSol && missingSol)) {
+    const onDepositOrWithdraw = activeTab === "deposit" || activeTab === "withdraw";
+    const needsSol = onDepositOrWithdraw && network === "SOL" && !userSolWallet;
+    const needsEvm = ((activeTab === "deposit" && !isAsterRegistered) || activeTab === "withdraw") && !userEvmWallet;
+    if (needsSol || needsEvm) {
       loadWallets();
     }
   }, [isAsterRegistered, user, loadWallets, activeTab, network, userEvmWallet, userSolWallet, walletLoading]);
@@ -806,11 +805,20 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
               AsterDEX credits your account based on the <span className="text-foreground font-medium">sender address</span>.
               You must send from the wallet linked to your account.
             </p>
-            {userEvmWallet?.address && network !== "SOL" && (
-              <div className="mt-2 pt-2 border-t border-yellow-500/20">
-                <p className="text-xs text-muted-foreground mb-0.5">Your registered wallet:</p>
-                <span className="text-xs text-foreground font-mono break-all">{userEvmWallet.address}</span>
-              </div>
+            {network === "SOL" ? (
+              userSolWallet?.address && (
+                <div className="mt-2 pt-2 border-t border-yellow-500/20">
+                  <p className="text-xs text-muted-foreground mb-0.5">Your Solana wallet (send from this):</p>
+                  <span className="text-xs text-foreground font-mono break-all">{userSolWallet.address}</span>
+                </div>
+              )
+            ) : (
+              userEvmWallet?.address && (
+                <div className="mt-2 pt-2 border-t border-yellow-500/20">
+                  <p className="text-xs text-muted-foreground mb-0.5">Your registered wallet (send from this):</p>
+                  <span className="text-xs text-foreground font-mono break-all">{userEvmWallet.address}</span>
+                </div>
+              )
             )}
           </div>
         </div>
