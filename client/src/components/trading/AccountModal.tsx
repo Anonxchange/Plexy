@@ -172,6 +172,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
   // Wallet registration state
   const [isAsterRegistered, setIsAsterRegistered] = useState(false);
   const [userEvmWallet, setUserEvmWallet]   = useState<NonCustodialWallet | null>(null);
+  const [userSolWallet, setUserSolWallet]   = useState<NonCustodialWallet | null>(null);
   const [walletLoading, setWalletLoading]   = useState(false);
   const [walletPassword, setWalletPassword] = useState("");
   const [showPassword, setShowPassword]     = useState(false);
@@ -212,9 +213,9 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     }
   }, [user]);
 
-  // Load EVM wallet whenever needed — for registration flow AND for withdraw autoWithdraw address.
-  // Not gated on isAsterRegistered so a connected user can still get their wallet address.
-  const loadEvmWallet = useCallback(async () => {
+  // Load both EVM and Solana wallets in a single pass.
+  // Used for the registration flow, withdraw auto-fill, and Solana deposit attribution.
+  const loadWallets = useCallback(async () => {
     if (!user) return;
     setWalletLoading(true);
     try {
@@ -224,9 +225,12 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
           w.chainId.toLowerCase().includes(k)
         ) && w.address.startsWith("0x")
       );
+      const sol = wallets.find(w => w.chainId.toLowerCase() === "solana");
       setUserEvmWallet(evm ?? null);
+      setUserSolWallet(sol ?? null);
     } catch {
       setUserEvmWallet(null);
+      setUserSolWallet(null);
     } finally {
       setWalletLoading(false);
     }
@@ -313,22 +317,30 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
 
   const depositBusy = depositLoading || depositFetching;
 
-  // Load EVM wallet when:
-  // - user is on deposit tab and not yet registered (registration flow always needs wallet)
+  // Load wallets when:
+  // - user is on deposit tab and not yet registered (registration flow always needs EVM wallet)
   // - user opens the withdraw tab (need address silently for autoWithdraw)
   useEffect(() => {
-    if (!user || userEvmWallet || walletLoading) return;
-    if ((activeTab === "deposit" && !isAsterRegistered) || activeTab === "withdraw") {
-      loadEvmWallet();
+    if (!user || walletLoading) return;
+    const needsEvm  = (activeTab === "deposit" && !isAsterRegistered) || activeTab === "withdraw";
+    const needsSol  = activeTab === "withdraw" && network === "SOL";
+    const missingEvm = !userEvmWallet;
+    const missingSol = !userSolWallet;
+    if ((needsEvm && missingEvm) || (needsSol && missingSol)) {
+      loadWallets();
     }
-  }, [isAsterRegistered, user, loadEvmWallet, activeTab, userEvmWallet, walletLoading]);
+  }, [isAsterRegistered, user, loadWallets, activeTab, network, userEvmWallet, userSolWallet, walletLoading]);
 
-  // Silently populate withdrawAddress from the connected wallet (autoWithdraw — no manual input needed)
+  // Silently populate withdrawAddress from the connected wallet (autoWithdraw).
+  // Use the Solana wallet address when on the SOL network, EVM otherwise.
   useEffect(() => {
-    if (activeTab === "withdraw" && userEvmWallet?.address) {
+    if (activeTab !== "withdraw") return;
+    if (network === "SOL" && userSolWallet?.address) {
+      setWithdrawAddress(userSolWallet.address);
+    } else if (network !== "SOL" && userEvmWallet?.address) {
       setWithdrawAddress(userEvmWallet.address);
     }
-  }, [activeTab, userEvmWallet]);
+  }, [activeTab, network, userEvmWallet, userSolWallet]);
 
   // Chain assets — fetches coins for the selected chain on both deposit and withdraw tabs.
   // Spot and Perpetual have different coin lists per chain, so we pass accountType accordingly.
