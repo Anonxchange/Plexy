@@ -1,5 +1,5 @@
 
-import { createClient } from './supabase';
+import { getSupabase } from './supabase';
 
 export interface WebAuthnCredential {
   id: string;
@@ -12,8 +12,6 @@ export interface WebAuthnCredential {
 }
 
 class WebAuthnService {
-  private supabase = createClient();
-
   async isSupported(): Promise<boolean> {
     return !!window.PublicKeyCredential;
   }
@@ -100,7 +98,8 @@ class WebAuthnService {
           .join('')
       : '';
 
-    await this.supabase
+    const supabase = await getSupabase();
+    await supabase
       .from('webauthn_credentials')
       .insert({
         user_id: userId,
@@ -117,7 +116,8 @@ class WebAuthnService {
       throw new Error('WebAuthn is not supported on this browser');
     }
 
-    const { data: credentials } = await this.supabase
+    const supabase = await getSupabase();
+    const { data: credentials } = await supabase
       .from('webauthn_credentials')
       .select('*')
       .eq('user_id', userId);
@@ -152,7 +152,8 @@ class WebAuthnService {
   }
 
   async listCredentials(userId: string): Promise<WebAuthnCredential[]> {
-    const { data } = await this.supabase
+    const supabase = await getSupabase();
+    const { data } = await supabase
       .from('webauthn_credentials')
       .select('*')
       .eq('user_id', userId)
@@ -162,7 +163,8 @@ class WebAuthnService {
   }
 
   async listHardwareKeys(userId: string): Promise<WebAuthnCredential[]> {
-    const { data } = await this.supabase
+    const supabase = await getSupabase();
+    const { data } = await supabase
       .from('webauthn_credentials')
       .select('*')
       .eq('user_id', userId)
@@ -173,7 +175,8 @@ class WebAuthnService {
   }
 
   async listPasskeys(userId: string): Promise<WebAuthnCredential[]> {
-    const { data } = await this.supabase
+    const supabase = await getSupabase();
+    const { data } = await supabase
       .from('webauthn_credentials')
       .select('*')
       .eq('user_id', userId)
@@ -184,7 +187,8 @@ class WebAuthnService {
   }
 
   async removeCredential(credentialId: string): Promise<void> {
-    await this.supabase
+    const supabase = await getSupabase();
+    await supabase
       .from('webauthn_credentials')
       .delete()
       .eq('id', credentialId);
