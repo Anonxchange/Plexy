@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  X, ChevronDown, ClipboardList, Loader2, AlertCircle, Eye, EyeOff,
+  X, ChevronDown, ClipboardList, Loader2, AlertCircle, Eye, EyeOff, Fingerprint,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
@@ -14,6 +14,7 @@ import { signEVMMessage } from "@/lib/evmSigner";
 import { broadcastDeposit } from "@/lib/deposit-broadcaster";
 import { useToast } from "@/hooks/use-toast";
 import { getCryptoIconUrl } from "@/lib/crypto-icons";
+import { useWalletPasskey } from "@/hooks/use-wallet-passkey";
 
 // ── Chain config ──────────────────────────────────────────
 const CHAINS = [
@@ -192,6 +193,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { hasWalletPasskey, isSupported: passkeySupported, getMnemonicWithPasskey } = useWalletPasskey();
   const isSpot = accountType === "Spot account";
 
   // Reset state when modal opens
@@ -752,22 +754,39 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
           No EVM wallet found. Please create one in your Wallet first.
         </p>
       ) : (
-        <div className="relative">
-          <input
-            type={showPassword ? "text" : "password"}
-            placeholder="Wallet password"
-            value={walletPassword}
-            onChange={e => setWalletPassword(e.target.value)}
-            className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm pr-10 focus:outline-none focus:ring-1 focus:ring-primary/50"
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(v => !v)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          >
-            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
-        </div>
+        <>
+          {passkeySupported && hasWalletPasskey ? (
+            <button
+              onClick={handleRegisterWithPasskey}
+              disabled={passkeyRegLoading}
+              className="w-full py-2.5 rounded-lg text-sm font-semibold border border-primary text-primary hover:bg-primary/10 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
+            >
+              {passkeyRegLoading
+                ? <><Loader2 className="h-4 w-4 animate-spin" />Verifying…</>
+                : <><Fingerprint className="h-4 w-4" />Use Passkey to Verify</>}
+            </button>
+          ) : null}
+          <div className={passkeySupported && hasWalletPasskey ? "relative opacity-60" : "relative"}>
+            {passkeySupported && hasWalletPasskey && (
+              <p className="text-xs text-muted-foreground mb-1.5">Or type your password:</p>
+            )}
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Wallet password"
+              value={walletPassword}
+              onChange={e => setWalletPassword(e.target.value)}
+              className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm pr-10 focus:outline-none focus:ring-1 focus:ring-primary/50"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(v => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              style={{ top: passkeySupported && hasWalletPasskey ? "calc(50% + 10px)" : "50%" }}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+        </>
       )}
     </div>
   );
@@ -821,31 +840,42 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     return null;
   };
 
-  // ── "Send from My Wallet" handler ─────────────────────
-  const handleSendFromWallet = async () => {
-    if (!user || !depositAddress || !amount) return;
-    const wallet = network === "SOL" ? userSolWallet : userEvmWallet;
-    if (!wallet) return;
+  // ── Passkey-based registration handler ────────────────
+  const [passkeyRegLoading, setPasskeyRegLoading] = useState(false);
+  const handleRegisterWithPasskey = async () => {
+    if (!userEvmWallet || !user) return;
+    setPasskeyRegLoading(true);
+    try {
+      const mnemonic = await getMnemonicWithPasskey();
+      const nonce = await asterGetNonce(userEvmWallet.address);
+      const message = `You are signing into Astherus ${nonce}`;
+      const signature = await signEVMMessage(mnemonic, message);
+      const { apiKey, apiSecret } = await asterCreateApiKey(userEvmWallet.address, signature);
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: { aster_api_key: apiKey, aster_api_secret: apiSecret },
+      });
+      if (updateError) throw new Error("Linked but failed to save credentials: " + updateError.message);
+      if (user) localStorage.setItem(asterRegKey(user.id), "true");
+      setIsAsterRegistered(true);
+      toast({ title: "Wallet linked", description: "Your deposit address is ready." });
+      queryClient.invalidateQueries({ queryKey: ["deposit-address"] });
+    } catch (err: any) {
+      toast({ title: "Passkey sign-in failed", description: err.message, variant: "destructive" });
+    } finally {
+      setPasskeyRegLoading(false);
+    }
+  };
 
+  // ── "Send from My Wallet" handler ─────────────────────
+  const handleSendFromWalletWithMnemonic = async (mnemonic: string) => {
+    const wallet = network === "SOL" ? userSolWallet : userEvmWallet;
+    if (!wallet || !depositAddress || !amount) return;
     setSendLoading(true);
     setSendError(null);
     setSendTxHash(null);
     setSendTxUrl(null);
-
     try {
-      const vaultKey = wallet.encryptedMnemonic ?? wallet.encryptedPrivateKey;
-      if (!vaultKey) throw new Error("Wallet data not found. Please recreate your wallet.");
-      const mnemonic = await nonCustodialWalletManager.decryptPrivateKey(vaultKey, sendPassword);
-
-      const result = await broadcastDeposit({
-        coin,
-        network,
-        amount,
-        mnemonic,
-        depositAddress,
-        walletAddress: wallet.address,
-      });
-
+      const result = await broadcastDeposit({ coin, network, amount, mnemonic, depositAddress, walletAddress: wallet.address });
       setSendTxHash(result.txHash);
       setSendTxUrl(result.explorerUrl);
       setSendPassword("");
@@ -854,6 +884,34 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
       setSendError(err.message ?? "Transaction failed. Please try again.");
     } finally {
       setSendLoading(false);
+    }
+  };
+
+  const handleSendFromWallet = async () => {
+    if (!user || !depositAddress || !amount) return;
+    const wallet = network === "SOL" ? userSolWallet : userEvmWallet;
+    if (!wallet) return;
+    try {
+      const vaultKey = wallet.encryptedMnemonic ?? wallet.encryptedPrivateKey;
+      if (!vaultKey) throw new Error("Wallet data not found. Please recreate your wallet.");
+      const mnemonic = await nonCustodialWalletManager.decryptPrivateKey(vaultKey, sendPassword);
+      await handleSendFromWalletWithMnemonic(mnemonic);
+    } catch (err: any) {
+      setSendLoading(false);
+      setSendError(err.message ?? "Transaction failed. Please try again.");
+    }
+  };
+
+  const handleSendFromWalletWithPasskey = async () => {
+    if (!user || !depositAddress || !amount) return;
+    setSendLoading(true);
+    setSendError(null);
+    try {
+      const mnemonic = await getMnemonicWithPasskey();
+      await handleSendFromWalletWithMnemonic(mnemonic);
+    } catch (err: any) {
+      setSendLoading(false);
+      setSendError(err.message ?? "Passkey authentication failed.");
     }
   };
 
@@ -904,7 +962,9 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
       <div className="border border-border rounded-lg px-4 py-4 mb-4 space-y-3">
         <p className="text-xs font-medium text-foreground">Sign & Send</p>
         <p className="text-xs text-muted-foreground">
-          Enter your wallet password to sign and broadcast the deposit directly.
+          {passkeySupported && hasWalletPasskey
+            ? "Use biometrics or your wallet password to sign and broadcast the deposit."
+            : "Enter your wallet password to sign and broadcast the deposit directly."}
         </p>
 
         {sendError && (
@@ -912,6 +972,22 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
             <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
             <span>{sendError}</span>
           </div>
+        )}
+
+        {passkeySupported && hasWalletPasskey && (
+          <button
+            onClick={handleSendFromWalletWithPasskey}
+            disabled={!amount || Number(amount) <= 0 || sendLoading}
+            className="w-full py-3 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {sendLoading
+              ? <><Loader2 className="h-4 w-4 animate-spin" />Sending…</>
+              : <><Fingerprint className="h-4 w-4" />Send {amount || "0"} {coin} with Passkey</>}
+          </button>
+        )}
+
+        {passkeySupported && hasWalletPasskey && (
+          <p className="text-xs text-muted-foreground text-center">— or use password —</p>
         )}
 
         <div className="relative">
