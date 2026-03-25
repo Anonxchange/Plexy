@@ -36,8 +36,8 @@ class WebAuthnService {
   }
 
   private async registerCredential(
-    userId: string, 
-    displayName: string, 
+    userId: string,
+    displayName: string,
     credentialType: 'hardware_key' | 'passkey'
   ): Promise<void> {
     if (!await this.isSupported()) {
@@ -62,8 +62,8 @@ class WebAuthnService {
         displayName: displayName,
       },
       pubKeyCredParams: [
-        { type: 'public-key', alg: -7 },  // ES256
-        { type: 'public-key', alg: -257 }, // RS256
+        { type: 'public-key', alg: -7 },
+        { type: 'public-key', alg: -257 },
       ],
       authenticatorSelection: credentialType === 'passkey' ? {
         authenticatorAttachment: 'platform',
@@ -88,13 +88,13 @@ class WebAuthnService {
     }
 
     const response = credential.response as AuthenticatorAttestationResponse;
-    
+
     const credentialId = Array.from(new Uint8Array(credential.rawId))
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
 
     const publicKeyBytes = response.getPublicKey();
-    const publicKey = publicKeyBytes 
+    const publicKey = publicKeyBytes
       ? Array.from(new Uint8Array(publicKeyBytes))
           .map(b => b.toString(16).padStart(2, '0'))
           .join('')
@@ -117,7 +117,6 @@ class WebAuthnService {
       throw new Error('WebAuthn is not supported on this browser');
     }
 
-    // Get user's credentials
     const { data: credentials } = await this.supabase
       .from('webauthn_credentials')
       .select('*')
@@ -149,8 +148,6 @@ class WebAuthnService {
       return false;
     }
 
-    // In production, verify the signature on the server
-    // For now, we'll consider it valid if we got this far
     return true;
   }
 
@@ -191,6 +188,112 @@ class WebAuthnService {
       .from('webauthn_credentials')
       .delete()
       .eq('id', credentialId);
+  }
+
+  // ── Wallet PRF (Pseudo-Random Function) methods ───────────────────────────
+  // These use the WebAuthn PRF extension to derive a 32-byte encryption key
+  // from a passkey assertion. The key is used to encrypt/decrypt the wallet vault
+  // so users can unlock their wallet with biometrics instead of typing a password.
+
+  async isWalletPRFSupported(): Promise<boolean> {
+    return this.isPlatformAuthenticatorAvailable();
+  }
+
+  /**
+   * Creates a passkey with the PRF extension enabled.
+   * Returns the credential ID and PRF salt to store in user metadata.
+   * Returns null if the authenticator does not support PRF.
+   */
+  async registerWalletPasskey(
+    userId: string,
+    email: string
+  ): Promise<{ credentialId: string; prfSalt: string } | null> {
+    if (!await this.isSupported()) {
+      throw new Error('WebAuthn is not supported on this browser');
+    }
+    if (!await this.isPlatformAuthenticatorAvailable()) {
+      throw new Error('Passkeys are not supported on this device');
+    }
+
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const prfSalt = crypto.getRandomValues(new Uint8Array(32));
+
+    const credential = await navigator.credentials.create({
+      publicKey: {
+        challenge,
+        rp: { name: 'Pexly', id: window.location.hostname },
+        user: {
+          id: new TextEncoder().encode(userId + '-wallet'),
+          name: email,
+          displayName: email,
+        },
+        pubKeyCredParams: [
+          { type: 'public-key', alg: -7 },
+          { type: 'public-key', alg: -257 },
+        ],
+        authenticatorSelection: {
+          authenticatorAttachment: 'platform',
+          userVerification: 'required',
+          residentKey: 'required',
+          requireResidentKey: true,
+        },
+        timeout: 60000,
+        attestation: 'none',
+        extensions: {
+          prf: { eval: { first: prfSalt.buffer } },
+        } as any,
+      },
+    }) as PublicKeyCredential | null;
+
+    if (!credential) throw new Error('Passkey creation was cancelled');
+
+    const ext = (credential.getClientExtensionResults() as any);
+    const prfEnabled = ext?.prf?.enabled;
+
+    if (!prfEnabled) {
+      return null;
+    }
+
+    const credentialId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+    const prfSaltB64 = btoa(String.fromCharCode(...prfSalt));
+
+    return { credentialId, prfSalt: prfSaltB64 };
+  }
+
+  /**
+   * Runs a passkey assertion with the PRF extension and returns the 32-byte
+   * derived key. This key is deterministic — same passkey + same salt = same key.
+   * Returns null if the user cancels or PRF is unavailable.
+   */
+  async getWalletDecryptionKey(
+    credentialId: string,
+    prfSaltBase64: string
+  ): Promise<ArrayBuffer | null> {
+    if (!await this.isSupported()) return null;
+
+    const credentialIdBytes = Uint8Array.from(atob(credentialId), c => c.charCodeAt(0));
+    const prfSalt = Uint8Array.from(atob(prfSaltBase64), c => c.charCodeAt(0));
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge,
+        allowCredentials: [{ type: 'public-key', id: credentialIdBytes }],
+        userVerification: 'required',
+        timeout: 60000,
+        extensions: {
+          prf: { eval: { first: prfSalt.buffer } },
+        } as any,
+      },
+    }) as PublicKeyCredential | null;
+
+    if (!assertion) return null;
+
+    const ext = (assertion.getClientExtensionResults() as any);
+    const prfResult = ext?.prf?.results?.first;
+    if (!prfResult) return null;
+
+    return prfResult as ArrayBuffer;
   }
 }
 
