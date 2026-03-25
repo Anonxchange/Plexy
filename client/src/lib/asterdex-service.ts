@@ -305,6 +305,11 @@ export interface AsterAsset {
   isNative: boolean;
   chainId: number;
   network: string;
+  // Solana-specific fields (present when chainId === 101)
+  bank?: string;
+  solVault?: string;
+  tokenMint?: string;
+  tokenVault?: string;
 }
 
 // Fetch supported deposit assets for a given chainId from the public BAPI.
@@ -391,9 +396,37 @@ export async function asterCreateApiKey(
   return json.data ?? json;
 }
 
-// Fetch the AsterDEX treasury deposit address for a given chain.
-// This is a public endpoint — no API key needed.
-export async function asterGetDepositAddress(chainId: number): Promise<string> {
+// Fetch the AsterDEX deposit address for a given chain and coin.
+// - EVM chains (ETH/BSC/ARB): shared treasury contract address from ae/deposit-address.
+// - Solana (chainId 101): per-coin program bank address from the deposit/assets endpoint.
+//   Each SPL token has its own bank; native SOL uses the shared solVault address.
+export async function asterGetDepositAddress(chainId: number, coin?: string): Promise<string> {
+  if (chainId === 101) {
+    // Solana: look up the coin's bank address from the deposit assets list
+    const networkParam = 'SOL';
+    const res = await fetch(
+      `${ASTER_BAPI_ROOT}/aster/deposit/assets?chainIds=${chainId}&networks=${networkParam}&accountType=spot`,
+    );
+    const json = await res.json();
+    if (!json.success) throw new Error(json.message ?? 'Failed to get Solana deposit address');
+    const assets: AsterAsset[] = json.data ?? [];
+
+    if (coin) {
+      const match = assets.find(a => a.name === coin || a.displayName === coin);
+      if (match) {
+        // Native SOL uses solVault; SPL tokens use per-coin bank address
+        const addr = match.isNative ? match.solVault : match.bank;
+        if (addr) return addr;
+      }
+    }
+    // Fallback: use the shared solVault from the first asset that has one
+    const vaultAsset = assets.find(a => a.solVault);
+    if (vaultAsset) return vaultAsset.solVault!;
+
+    throw new Error('No Solana deposit address available for this coin');
+  }
+
+  // EVM chains: shared treasury contract address
   const res = await fetch(
     `${ASTER_BAPI}/ae/deposit-address?chainId=${chainId}`,
   );
