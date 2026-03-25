@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertCircle, Loader2, CheckCircle2, X, Copy, ShieldCheck, ShieldAlert, ShieldQuestion, Fingerprint } from "lucide-react";
+import { AlertCircle, Loader2, CheckCircle2, X, Copy, ShieldCheck, ShieldAlert, ShieldQuestion } from "lucide-react";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { signBitcoinTransaction } from "@/lib/bitcoinSigner";
 import { signEVMTransaction } from "@/lib/evmSigner";
@@ -29,7 +29,6 @@ import { useSendFee } from "@/hooks/use-fees";
 import { getCryptoPrices, convertCurrency } from "@/lib/crypto-prices";
 import { useToast } from "@/hooks/use-toast";
 import { preTransactionCheck, type AddressSecurityResult, type TokenSecurityResult, GOPLUS_CHAINS } from "@/lib/goplusSecurity";
-import { useWalletPasskey } from "@/hooks/use-wallet-passkey";
 
 interface SendCryptoDialogProps {
   open: boolean;
@@ -44,7 +43,6 @@ type Step = "select" | "details";
 export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, onSuccess }: SendCryptoDialogProps) {
   const { user, sessionPassword, setSessionPassword } = useAuth();
   const { toast } = useToast();
-  const { hasWalletPasskey, isSupported: passkeySupported, getMnemonicWithPasskey } = useWalletPasskey();
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [step, setStep] = useState<Step>("select");
   const [selectedCrypto, setSelectedCrypto] = useState<string>("");
@@ -316,22 +314,6 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
     }
   };
 
-  const handleSendWithPasskey = async () => {
-    if (!user) return;
-    const validationError = validateSendForm();
-    if (validationError) { setError(validationError); return; }
-    setError("");
-    setLoading(true);
-    try {
-      const mnemonic = await getMnemonicWithPasskey();
-      await executeSend(mnemonic);
-    } catch (err: any) {
-      setError(err.message || "Passkey authentication failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
@@ -427,28 +409,6 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
                 <p className="text-xs text-green-800 dark:text-green-200">
                   ✓ Password cached for session. Transaction will sign automatically.
                 </p>
-              </div>
-            ) : passkeySupported && hasWalletPasskey ? (
-              <div className="bg-muted/50 border border-border rounded-lg p-3 mb-4 space-y-2.5">
-                <p className="text-xs text-muted-foreground font-medium">Authorize transaction</p>
-                <Button
-                  className="w-full gap-2"
-                  size="sm"
-                  onClick={handleSendWithPasskey}
-                  disabled={loading || !selectedCrypto || !toAddress || !amount}
-                >
-                  {loading
-                    ? <><Loader2 className="h-4 w-4 animate-spin" />Signing…</>
-                    : <><Fingerprint className="h-4 w-4" />Use Passkey</>}
-                </Button>
-                <p className="text-xs text-muted-foreground text-center">— or type your password —</p>
-                <Input
-                  type="password"
-                  placeholder="Wallet password"
-                  value={userPassword}
-                  onChange={(e) => setUserPassword(e.target.value)}
-                  className="h-10 bg-muted"
-                />
               </div>
             ) : (
               <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 mb-4">
