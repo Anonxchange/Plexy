@@ -30,7 +30,7 @@ import {
   Trash2,
   Copy,
 } from "lucide-react";
-import { WalletPasskeySetup } from "@/components/wallet-passkey-setup";
+
 
 export function SecuritySection() {
   const { user } = useAuth();
@@ -733,8 +733,6 @@ export function SecuritySection() {
       </div>
       <IPWhitelistDialog open={showIPWhitelistDialog} onOpenChange={setShowIPWhitelistDialog} />
 
-      {/* Wallet Passkey */}
-      <WalletPasskeySetup />
 
       {/* Non-Custodial Wallet Backup */}
       <Card className="border-destructive/20 shadow-sm overflow-hidden">
