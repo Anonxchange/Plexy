@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -178,9 +179,16 @@ export function AppHeader() {
     return `${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${preferredCurrency}`;
   };
 
+  const { t, i18n } = useTranslation();
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const [selectedLang, setSelectedLang] = useState("EN");
   const [symbolSelectorOpen, setSymbolSelectorOpen] = useState(false);
+
+  const switchLanguage = (code: string) => {
+    const currentPath = window.location.pathname;
+    const segments = currentPath.split("/").filter(Boolean);
+    const withoutBase = segments.slice(1).join("/");
+    window.location.href = `/${code}${withoutBase ? `/${withoutBase}` : ""}`;
+  };
 
   const handleSymbolSelect = (sym: string, category: string) => {
     const raw = sym.replace("/", "");
@@ -241,7 +249,7 @@ export function AppHeader() {
                   size="sm"
                   className="gap-1 group text-sm font-medium px-2 xl:px-3"
                 >
-                  Trade
+                  {t("nav.trade")}
                   <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
                 </Button>
               </DropdownMenuTrigger>
@@ -252,21 +260,21 @@ export function AppHeader() {
               >
                 <DropdownMenuItem onClick={() => { navigate('/buy-crypto'); setActiveDropdown(null); }} className="cursor-pointer">
                   <div className="flex items-center justify-between w-full">
-                    <span>Buy Crypto</span>
+                    <span>{t("trade.buy_crypto")}</span>
                     <Badge variant="secondary" className="text-xs">LOW FEES</Badge>
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { navigate('/spot'); setActiveDropdown(null); }} className="cursor-pointer">
-                  Spot Trading
+                  {t("trade.spot_trading")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { navigate('/perpetual'); setActiveDropdown(null); }} className="cursor-pointer">
-                  Perpetual Trade
+                  {t("trade.perpetual")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { navigate('/swap'); setActiveDropdown(null); }} className="cursor-pointer">
-                  Swap
+                  {t("trade.swap")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { navigate('/prediction'); setActiveDropdown(null); }} className="cursor-pointer">
-                  Prediction
+                  {t("trade.prediction")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </div>
@@ -278,7 +286,7 @@ export function AppHeader() {
               size="sm"
               className="text-sm font-medium px-2 xl:px-3"
             >
-              Gift Cards
+              {t("nav.gift_cards")}
             </Button>
           </Link>
 
@@ -288,7 +296,7 @@ export function AppHeader() {
               size="sm"
               className="text-sm font-medium px-2 xl:px-3"
             >
-              Explorer
+              {t("nav.explorer")}
             </Button>
           </Link>
 
@@ -304,7 +312,7 @@ export function AppHeader() {
                   size="sm"
                   className="gap-1 group text-sm font-medium px-2 xl:px-3"
                 >
-                  Wallet
+                  {t("nav.wallet")}
                   <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
                 </Button>
               </DropdownMenuTrigger>
@@ -316,43 +324,43 @@ export function AppHeader() {
                 <DropdownMenuItem onClick={() => { navigate('/wallet'); setActiveDropdown(null); }} className="cursor-pointer h-auto py-3">
                   <Bitcoin className="h-5 w-5 mr-3 flex-shrink-0" />
                   <div className="flex flex-col">
-                    <span className="font-semibold">Assets</span>
-                    <span className="text-xs text-muted-foreground">My assets in the Pexly wallet</span>
+                    <span className="font-semibold">{t("wallet.assets")}</span>
+                    <span className="text-xs text-muted-foreground">{t("wallet.assets_desc")}</span>
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { navigate('/wallet/receive'); setActiveDropdown(null); }} className="cursor-pointer h-auto py-3">
                   <ArrowDownToLine className="h-5 w-5 mr-3 flex-shrink-0" />
                   <div className="flex flex-col">
-                    <span className="font-semibold">Receive</span>
-                    <span className="text-xs text-muted-foreground">Receive crypto or deposit using fiat</span>
+                    <span className="font-semibold">{t("wallet.receive")}</span>
+                    <span className="text-xs text-muted-foreground">{t("wallet.receive_desc")}</span>
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { navigate('/wallet/visa-card'); setActiveDropdown(null); }} className="cursor-pointer h-auto py-3">
                   <CreditCard className="h-5 w-5 mr-3 flex-shrink-0" />
                   <div className="flex flex-col">
-                    <span className="font-semibold">Visa card</span>
-                    <span className="text-xs text-muted-foreground">Spend your crypto</span>
+                    <span className="font-semibold">{t("wallet.visa_card")}</span>
+                    <span className="text-xs text-muted-foreground">{t("wallet.visa_card_desc")}</span>
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { navigate('/wallet/lightning'); setActiveDropdown(null); }} className="cursor-pointer h-auto py-3">
                   <Zap className="h-5 w-5 mr-3 flex-shrink-0" />
                   <div className="flex flex-col">
-                    <span className="font-semibold">Lightning</span>
-                    <span className="text-xs text-muted-foreground">Send Bitcoin ultra fast</span>
+                    <span className="font-semibold">{t("wallet.lightning")}</span>
+                    <span className="text-xs text-muted-foreground">{t("wallet.lightning_desc")}</span>
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { navigate('/wallet/mobile-topup'); setActiveDropdown(null); }} className="cursor-pointer h-auto py-3">
                   <Smartphone className="h-5 w-5 mr-3 flex-shrink-0" />
                   <div className="flex flex-col">
-                    <span className="font-semibold">Mobile top-up</span>
-                    <span className="text-xs text-muted-foreground">Recharge your phone using crypto</span>
+                    <span className="font-semibold">{t("wallet.mobile_topup")}</span>
+                    <span className="text-xs text-muted-foreground">{t("wallet.mobile_topup_desc")}</span>
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { navigate('/utility'); setActiveDropdown(null); }} className="cursor-pointer h-auto py-3">
                   <Settings className="h-5 w-5 mr-3 flex-shrink-0" />
                   <div className="flex flex-col">
-                    <span className="font-semibold">Utility</span>
-                    <span className="text-xs text-muted-foreground">Pay bills and other services</span>
+                    <span className="font-semibold">{t("wallet.utility")}</span>
+                    <span className="text-xs text-muted-foreground">{t("wallet.utility_desc")}</span>
                   </div>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -365,7 +373,7 @@ export function AppHeader() {
               size="sm"
               className="text-sm font-medium px-2 xl:px-3"
             >
-              Market
+              {t("nav.market")}
             </Button>
           </Link>
 
@@ -381,7 +389,7 @@ export function AppHeader() {
                   size="sm"
                   className="gap-1 group text-sm font-medium px-2 xl:px-3"
                 >
-                  Shop
+                  {t("nav.shop")}
                   <Badge variant="secondary" className="text-[10px] px-1">BETA</Badge>
                   <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
                 </Button>
@@ -393,13 +401,13 @@ export function AppHeader() {
               >
                 <DropdownMenuItem onClick={() => { navigate('/shop'); setActiveDropdown(null); }} className="cursor-pointer">
                   <List className="h-4 w-4 mr-2" />
-                  Listings
+                  {t("shop.listings")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { navigate('/shop/post'); setActiveDropdown(null); }} className="cursor-pointer">
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center">
                       <Plus className="h-4 w-4 mr-2" />
-                      <span className="font-semibold">Post Ad</span>
+                      <span className="font-semibold">{t("shop.post_ad")}</span>
                     </div>
                     <Badge variant="secondary" className="text-xs">FREE</Badge>
                   </div>
@@ -420,7 +428,7 @@ export function AppHeader() {
                   size="sm"
                   className="gap-1 group text-sm font-medium px-2 xl:px-3"
                 >
-                  Earn
+                  {t("nav.earn")}
                   <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
                 </Button>
               </DropdownMenuTrigger>
@@ -433,18 +441,18 @@ export function AppHeader() {
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center">
                       <TrendingUp className="h-4 w-4 mr-2" />
-                      <span>Stake</span>
+                      <span>{t("earn.stake")}</span>
                     </div>
                     <Badge variant="secondary" className="text-xs bg-red-500 text-white hover:bg-red-600 border-none animate-pulse">HOT</Badge>
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { navigate('/referral'); setActiveDropdown(null); }} className="cursor-pointer">
                   <Users className="h-4 w-4 mr-2" />
-                  Referral Program
+                  {t("earn.referral_program")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { navigate('/rewards'); setActiveDropdown(null); }} className="cursor-pointer">
                   <Gift className="h-4 w-4 mr-2" />
-                  Rewards
+                  {t("earn.rewards")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </div>
@@ -462,7 +470,7 @@ export function AppHeader() {
                   size="sm"
                   className="gap-1 group text-sm font-medium px-2 xl:px-3"
                 >
-                  Support
+                  {t("nav.support")}
                   <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
                 </Button>
               </DropdownMenuTrigger>
@@ -473,11 +481,11 @@ export function AppHeader() {
               >
                 <DropdownMenuItem onClick={() => { navigate('/contact'); setActiveDropdown(null); }} className="cursor-pointer">
                   <MessageSquare className="h-4 w-4 mr-2" />
-                  Contact Support
+                  {t("support.contact_support")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { window.open('https://help.pexly.app', '_blank'); setActiveDropdown(null); }} className="cursor-pointer">
                   <HelpCircle className="h-4 w-4 mr-2" />
-                  Help Center / FAQ
+                  {t("support.help_center")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </div>
@@ -592,7 +600,7 @@ export function AppHeader() {
                             }}
                           >
                             <SecurityShieldIcon level={securityInfo.level} size={11} />
-                            {securityInfo.label}
+                            {securityInfo.level === 'high' ? t("security.strong") : securityInfo.level === 'medium' ? t("security.fair") : t("security.at_risk")}
                           </span>
                         </div>
                       </div>
@@ -606,8 +614,8 @@ export function AppHeader() {
                         <LayoutDashboard className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                       </div>
                       <div className="flex flex-col min-w-0">
-                        <span className="text-sm font-medium text-foreground">Dashboard</span>
-                        <span className="text-[10px] text-muted-foreground">Overview & activity</span>
+                        <span className="text-sm font-medium text-foreground">{t("nav.dashboard")}</span>
+                        <span className="text-[10px] text-muted-foreground">{t("user_menu.overview_activity")}</span>
                       </div>
                     </DropdownMenuItem>
 
@@ -616,8 +624,8 @@ export function AppHeader() {
                         <User className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                       </div>
                       <div className="flex flex-col min-w-0">
-                        <span className="text-sm font-medium text-foreground">Profile</span>
-                        <span className="text-[10px] text-muted-foreground">Public profile & reputation</span>
+                        <span className="text-sm font-medium text-foreground">{t("user_menu.profile")}</span>
+                        <span className="text-[10px] text-muted-foreground">{t("user_menu.public_profile")}</span>
                       </div>
                     </DropdownMenuItem>
 
@@ -626,8 +634,8 @@ export function AppHeader() {
                         <Settings className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                       </div>
                       <div className="flex flex-col min-w-0">
-                        <span className="text-sm font-medium text-foreground">Account Settings</span>
-                        <span className="text-[10px] text-muted-foreground">Preferences & security</span>
+                        <span className="text-sm font-medium text-foreground">{t("user_menu.account_settings")}</span>
+                        <span className="text-[10px] text-muted-foreground">{t("user_menu.preferences_security")}</span>
                       </div>
                     </DropdownMenuItem>
 
@@ -636,8 +644,8 @@ export function AppHeader() {
                         <Lightbulb className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                       </div>
                       <div className="flex flex-col min-w-0">
-                        <span className="text-sm font-medium text-foreground">Submit Idea</span>
-                        <span className="text-[10px] text-muted-foreground">Share your feedback</span>
+                        <span className="text-sm font-medium text-foreground">{t("user_menu.submit_idea")}</span>
+                        <span className="text-[10px] text-muted-foreground">{t("user_menu.share_feedback")}</span>
                       </div>
                     </DropdownMenuItem>
                   </div>
@@ -656,12 +664,12 @@ export function AppHeader() {
                     >
                       {/* Header row: label + status word */}
                       <div className="flex items-center justify-between mb-2.5">
-                        <span className="text-[10px] font-semibold text-foreground/60 uppercase tracking-widest">Account Security</span>
+                        <span className="text-[10px] font-semibold text-foreground/60 uppercase tracking-widest">{t("security.account_security")}</span>
                         <span
                           className="text-[11px] font-bold tracking-wide"
                           style={{ color: securityInfo.color === 'green' ? '#16a34a' : securityInfo.color === 'yellow' ? '#ca8a04' : '#dc2626' }}
                         >
-                          {securityInfo.label}
+                          {securityInfo.level === 'high' ? t("security.strong") : securityInfo.level === 'medium' ? t("security.fair") : t("security.at_risk")}
                         </span>
                       </div>
 
@@ -702,9 +710,9 @@ export function AppHeader() {
                           {/* Security checks — compact inline */}
                           <div className="flex flex-col gap-[3px]">
                             {[
-                              { label: 'Email verified', ok: !!user?.email_confirmed_at },
-                              { label: 'Phone linked',   ok: !!user?.phone },
-                              { label: '2FA enabled',    ok: !!user?.user_metadata?.two_factor_enabled },
+                              { label: t("security.email_verified"), ok: !!user?.email_confirmed_at },
+                              { label: t("security.phone_linked"),   ok: !!user?.phone },
+                              { label: t("security.two_fa_enabled"), ok: !!user?.user_metadata?.two_factor_enabled },
                             ].map(({ label, ok }) => (
                               <div key={label} className="flex items-center justify-between">
                                 <span className="text-[10px] text-foreground/65 leading-none">{label}</span>
@@ -724,7 +732,7 @@ export function AppHeader() {
                           className="mt-2.5 w-full text-[10px] font-semibold py-1.5 rounded-lg transition-all duration-150 hover:opacity-90 active:scale-[0.98] text-white"
                           style={{ backgroundColor: securityInfo.color === 'yellow' ? '#ca8a04' : '#dc2626' }}
                         >
-                          Improve Security →
+                          {t("security.improve_security")}
                         </button>
                       )}
                     </div>
@@ -739,7 +747,7 @@ export function AppHeader() {
                       <div className="w-7 h-7 rounded-md bg-red-50 dark:bg-red-950/30 flex items-center justify-center flex-shrink-0">
                         <LogOut className="h-3.5 w-3.5 text-red-500" />
                       </div>
-                      <span className="text-sm font-medium">Sign Out</span>
+                      <span className="text-sm font-medium">{t("auth.sign_out")}</span>
                     </DropdownMenuItem>
                   </div>
                 </DropdownMenuContent>
@@ -765,14 +773,14 @@ export function AppHeader() {
                 onClick={() => navigate("/signin")}
                 className="hidden sm:inline-flex"
               >
-                Sign In
+                {t("auth.sign_in")}
               </Button>
               <Button 
                 size="sm" 
                 onClick={() => navigate("/signup")}
                 className="hidden sm:inline-flex"
               >
-                Get Started
+                {t("auth.get_started")}
               </Button>
             </>
           )}
@@ -782,31 +790,35 @@ export function AppHeader() {
                 variant="ghost"
                 size="icon"
                 className="hidden lg:flex h-9 w-9 text-muted-foreground hover:text-foreground"
-                title={selectedLang}
+                title={t("header.language")}
               >
                 <Globe className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuLabel className="text-xs text-muted-foreground">Language</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-xs text-muted-foreground">{t("header.language")}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {[
-                { code: "EN", label: "English" },
-                { code: "ES", label: "Español" },
-                { code: "FR", label: "Français" },
-                { code: "DE", label: "Deutsch" },
-                { code: "ZH", label: "中文" },
-                { code: "AR", label: "العربية" },
-                { code: "PT", label: "Português" },
-                { code: "RU", label: "Русский" },
+                { code: "en", label: "English", flag: "🇬🇧" },
+                { code: "es", label: "Español", flag: "🇪🇸" },
+                { code: "fr", label: "Français", flag: "🇫🇷" },
+                { code: "pt", label: "Português", flag: "🇧🇷" },
+                { code: "ar", label: "العربية", flag: "🇸🇦" },
+                { code: "zh", label: "中文", flag: "🇨🇳" },
+                { code: "ru", label: "Русский", flag: "🇷🇺" },
+                { code: "de", label: "Deutsch", flag: "🇩🇪" },
+                { code: "tr", label: "Türkçe", flag: "🇹🇷" },
+                { code: "hi", label: "हिन्दी", flag: "🇮🇳" },
+                { code: "id", label: "Bahasa Indonesia", flag: "🇮🇩" },
+                { code: "vi", label: "Tiếng Việt", flag: "🇻🇳" },
               ].map((lang) => (
                 <DropdownMenuItem
                   key={lang.code}
-                  onClick={() => setSelectedLang(lang.code)}
+                  onClick={() => switchLanguage(lang.code)}
                   className="cursor-pointer flex items-center justify-between"
                 >
-                  <span>{lang.label}</span>
-                  {selectedLang === lang.code && (
+                  <span className="flex items-center gap-2"><span>{lang.flag}</span><span>{lang.label}</span></span>
+                  {i18n.language === lang.code && (
                     <span className="w-1.5 h-1.5 rounded-full bg-primary" />
                   )}
                 </DropdownMenuItem>
