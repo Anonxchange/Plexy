@@ -30,3 +30,4 @@ export async function detectLanguageFromIP(): Promise<SupportedLang> {
   }
   return "en";
 }
+
