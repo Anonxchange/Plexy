@@ -1,77 +1,25 @@
 {
-  "nav": {
-    "trade": "Ticaret",
-    "gift_cards": "Hediye Kartları",
-    "explorer": "Gezgin",
-    "wallet": "Cüzdan",
-    "market": "Pazar",
-    "shop": "Mağaza",
-    "earn": "Kazan",
-    "support": "Destek",
-    "dashboard": "Kontrol Paneli"
-  },
-  "trade": {
-    "buy_crypto": "Kripto Satın Al",
-    "spot_trading": "Spot İşlem",
-    "perpetual": "Süresiz Sözleşme",
-    "swap": "Takas",
-    "prediction": "Tahmin"
-  },
-  "wallet": {
-    "assets": "Varlıklar",
-    "assets_desc": "Pexly cüzdanımdaki varlıklarım",
-    "receive": "Al",
-    "receive_desc": "Kripto al veya fiat ile yatır",
-    "visa_card": "Visa Kartı",
-    "visa_card_desc": "Kriptonu harca",
-    "lightning": "Lightning",
-    "lightning_desc": "Bitcoin'i süper hızlı gönder",
-    "mobile_topup": "Mobil Yükleme",
-    "mobile_topup_desc": "Telefonunu kripto ile yükle",
-    "utility": "Faturalar",
-    "utility_desc": "Faturaları ve diğer hizmetleri öde"
-  },
-  "shop": {
-    "listings": "İlanlar",
-    "post_ad": "İlan Ver"
-  },
-  "earn": {
-    "stake": "Stake",
-    "referral_program": "Referans Programı",
-    "rewards": "Ödüller"
-  },
-  "support": {
-    "contact_support": "Destek ile İletişim",
-    "help_center": "Yardım Merkezi / SSS",
-    "contact_us": "Bize Ulaşın",
-    "help_center_short": "Yardım Merkezi"
-  },
-  "auth": {
-    "sign_in": "Giriş Yap",
-    "sign_out": "Çıkış Yap",
-    "get_started": "Başla",
-    "register": "Kayıt Ol"
-  },
-  "user_menu": {
-    "profile": "Profil",
-    "account_settings": "Hesap Ayarları",
-    "submit_idea": "Fikir Gönder",
-    "overview_activity": "Genel bakış & etkinlik",
-    "public_profile": "Açık profil & itibar",
-    "preferences_security": "Tercihler & güvenlik",
-    "share_feedback": "Geri bildirim paylaş"
-  },
-  "security": {
-    "account_security": "Hesap Güvenliği",
-    "strong": "Güçlü",
-    "fair": "Orta",
-    "at_risk": "Risk Altında",
-    "email_verified": "E-posta doğrulandı",
-    "phone_linked": "Telefon bağlı",
-    "two_fa_enabled": "2FA etkin",
-    "improve_security": "Güvenliği Artır →"
-  },
-  "header": {
-    "language": "Dil"
-  }
+  "nav": { "trade": "Ticaret", "gift_cards": "Hediye Kartları", "explorer": "Gezgin", "wallet": "Cüzdan", "market": "Pazar", "shop": "Mağaza", "earn": "Kazan", "support": "Destek", "dashboard": "Kontrol Paneli", "home": "Ana Sayfa", "prices": "Fiyatlar", "blog": "Blog", "careers": "Kariyer", "about": "Hakkımızda" },
+  "trade": { "buy_crypto": "Kripto Satın Al", "spot_trading": "Spot İşlem", "perpetual": "Süresiz Sözleşme", "swap": "Takas", "prediction": "Tahmin", "p2p": "P2P Ticaret", "history": "İşlem Geçmişi", "open_orders": "Açık Emirler", "completed": "Tamamlandı", "cancelled": "İptal Edildi", "in_progress": "Devam Ediyor" },
+  "wallet": { "assets": "Varlıklar", "assets_desc": "Pexly cüzdanımdaki varlıklarım", "receive": "Al", "receive_desc": "Kripto al veya fiat ile yatır", "visa_card": "Visa Kartı", "visa_card_desc": "Kriptonu harca", "lightning": "Lightning", "lightning_desc": "Bitcoin'i süper hızlı gönder", "mobile_topup": "Mobil Yükleme", "mobile_topup_desc": "Telefonunu kripto ile yükle", "utility": "Faturalar", "utility_desc": "Faturaları ve diğer hizmetleri öde", "send": "Gönder", "balance": "Bakiye", "total_balance": "Toplam Bakiye", "portfolio": "Portföy", "transactions": "İşlemler", "deposit": "Para Yatır", "withdraw": "Para Çek", "available": "Mevcut", "in_orders": "Emirlerde", "network": "Ağ", "address": "Adres", "copy_address": "Adresi Kopyala", "scan_qr": "QR Kod Tara", "amount": "Miktar", "fee": "Ücret", "total": "Toplam", "confirm": "Onayla", "no_transactions": "Henüz işlem yok" },
+  "shop": { "listings": "İlanlar", "post_ad": "İlan Ver", "buy": "Satın Al", "sell": "Sat", "all": "Tümü", "filter": "Filtrele", "sort_by": "Sırala", "price": "Fiyat", "payment_method": "Ödeme Yöntemi", "min_amount": "Min Miktar", "max_amount": "Maks Miktar", "no_offers": "Teklif bulunamadı", "view_offer": "Teklifi Gör", "trade_now": "Şimdi Al-Sat", "merchant": "Satıcı", "verified": "Doğrulanmış", "online": "Çevrimiçi", "offline": "Çevrimdışı", "response_time": "Yanıt Süresi", "completion_rate": "Tamamlanma Oranı", "trades": "İşlemler", "limits": "Limitler" },
+  "earn": { "stake": "Stake", "referral_program": "Referans Programı", "rewards": "Ödüller", "apy": "Yıllık Getiri", "total_staked": "Toplam Stake", "your_rewards": "Ödülleriniz", "claim": "Talep Et", "lock_period": "Kilit Süresi", "flexible": "Esnek", "fixed_term": "Sabit Vade", "duration": "Süre", "days": "Gün", "unstake": "Stake'i Çöz", "earn_with": "ile Kazan", "referral_link": "Referans Bağlantısı", "referred_users": "Yönlendirilen Kullanıcılar", "total_earned": "Toplam Kazanılan", "copy_link": "Bağlantıyı Kopyala", "share": "Paylaş", "how_it_works": "Nasıl Çalışır", "invite_friends": "Arkadaşlarını Davet Et", "earn_commission": "Komisyon Kazan" },
+  "support": { "contact_support": "Destek ile İletişim", "help_center": "Yardım Merkezi / SSS", "contact_us": "Bize Ulaşın", "help_center_short": "Yardım Merkezi", "submit_ticket": "Bilet Gönder", "ticket_subject": "Konu", "ticket_message": "Mesaj", "ticket_category": "Kategori", "send_message": "Mesaj Gönder", "faq": "Sıkça Sorulan Sorular", "search_faq": "SSS'de ara...", "no_results": "Sonuç bulunamadı", "live_chat": "Canlı Destek", "email_us": "E-posta Gönder", "response_time": "Genellikle 24 saat içinde yanıtlarız", "ticket_created": "Bilet Oluşturuldu", "ticket_success": "Destek talebiniz başarıyla gönderildi." },
+  "auth": { "sign_in": "Giriş Yap", "sign_out": "Çıkış Yap", "get_started": "Başla", "register": "Kayıt Ol", "email": "E-posta", "password": "Şifre", "confirm_password": "Şifreyi Onayla", "forgot_password": "Şifremi Unuttum?", "no_account": "Hesabınız yok mu?", "have_account": "Zaten hesabınız var mı?", "create_account": "Hesap Oluştur", "or_continue": "Veya devam et", "terms_agree": "Kullanım Şartlarını ve Gizlilik Politikasını kabul ediyorum", "username": "Kullanıcı Adı", "full_name": "Ad Soyad", "phone": "Telefon Numarası", "country": "Ülke", "referral_code": "Referans Kodu (isteğe bağlı)", "verify_email": "E-postayı Doğrula", "verify_email_desc": "E-postanıza doğrulama kodu gönderdik.", "enter_code": "Doğrulama Kodunu Girin", "resend_code": "Kodu Yeniden Gönder", "back_to_login": "Girişe Dön", "reset_password": "Şifreyi Sıfırla", "reset_desc": "Sıfırlama bağlantısı almak için e-postanızı girin.", "check_email": "Sıfırlama bağlantısı için e-postanızı kontrol edin." },
+  "user_menu": { "profile": "Profil", "account_settings": "Hesap Ayarları", "submit_idea": "Fikir Gönder", "overview_activity": "Genel bakış & etkinlik", "public_profile": "Açık profil & itibar", "preferences_security": "Tercihler & güvenlik", "share_feedback": "Geri bildirim paylaş", "notifications": "Bildirimler", "language": "Dil", "theme": "Tema", "dark_mode": "Karanlık Mod", "light_mode": "Aydınlık Mod" },
+  "security": { "account_security": "Hesap Güvenliği", "strong": "Güçlü", "fair": "Orta", "at_risk": "Risk Altında", "email_verified": "E-posta doğrulandı", "phone_linked": "Telefon bağlı", "two_fa_enabled": "2FA etkin", "improve_security": "Güvenliği Artır →", "enable_2fa": "2FA'yı Etkinleştir", "disable_2fa": "2FA'yı Devre Dışı Bırak", "two_fa_desc": "Hesabınızı iki faktörlü kimlik doğrulama ile koruyun", "passkey": "Geçiş Anahtarı", "passkey_desc": "Biyometri ile güvenli giriş yapın", "sessions": "Aktif Oturumlar", "sessions_desc": "Bağlı cihazlarınızı yönetin", "change_password": "Şifreyi Değiştir", "current_password": "Mevcut Şifre", "new_password": "Yeni Şifre" },
+  "header": { "language": "Dil" },
+  "home": { "hero_title": "Kripto Güvenle Al ve Sat", "hero_subtitle": "140 ülkede 500'den fazla ödeme yöntemi ile P2P işlem yapın. Anahtarlarınız, varlıklarınız.", "hero_cta": "İşlem Yapmaya Başla", "hero_cta_secondary": "Piyasaları Keşfet", "trusted_by": "Dünya genelinde yatırımcılar tarafından güvenilen platform", "stats_users": "Aktif Kullanıcı", "stats_volume": "İşlem Hacmi", "stats_countries": "Ülke", "stats_methods": "Ödeme Yöntemi", "how_it_works_title": "Nasıl Çalışır", "how_it_works_subtitle": "Birkaç basit adımda işlem yapmaya başlayın", "step1_title": "Hesabınızı Oluşturun", "step1_desc": "Dakikalar içinde ücretsiz kaydolun. Başlamak için KYC gerekmiyor.", "step2_title": "Teklif Bulun", "step2_desc": "Tercih ettiğiniz ödeme yöntemiyle binlerce alım satım teklifine göz atın.", "step3_title": "Güvenle İşlem Yapın", "step3_desc": "Maksimum koruma için işlem sırasında fonlar emanet hesabında tutulur.", "step4_title": "Ödemenizi Alın", "step4_desc": "Her iki taraf da onayladıktan sonra kriptoyu serbest bırakın ve anında ödeme alın.", "features_title": "İhtiyacınız Olan Her Şey", "features_subtitle": "Tüm kripto ihtiyaçlarınız için eksiksiz merkeziyetsiz platform", "feature_p2p_title": "P2P Ticaret", "feature_p2p_desc": "500'den fazla ödeme yöntemi ile diğer kullanıcılarla doğrudan kripto alıp satın.", "feature_escrow_title": "Emanet Koruması", "feature_escrow_desc": "Fonlar her iki taraf da memnun olana kadar akıllı sözleşme emanetinde kilitlidir.", "feature_wallet_title": "Dahili Cüzdan", "feature_wallet_desc": "Birden fazla kripto para birimini tek bir güvenli cüzdanda saklayın, gönderin ve alın.", "feature_swap_title": "Anında Takas", "feature_swap_desc": "En iyi mevcut kurlarla kripto para birimleri arasında anında takas yapın.", "feature_cards_title": "Hediye Kartları", "feature_cards_desc": "Kripto bakiyenizle yüzlerce marka için hediye kartı satın alın.", "feature_stake_title": "Staking & Getiri", "feature_stake_desc": "Esnek koşullarla kripto varlıklarınızı stake ederek pasif gelir elde edin.", "testimonials_title": "Yatırımcılarımız Ne Diyor", "testimonials_subtitle": "Pexly'ye güvenen binlerce memnun kullanıcıya katılın", "faq_title": "Sıkça Sorulan Sorular", "faq_subtitle": "Pexly hakkında bilmeniz gereken her şey", "cta_title": "İşlem Yapmaya Hazır mısınız?", "cta_subtitle": "En güvenli P2P kripto platformunda 1 milyondan fazla yatırımcıya katılın.", "cta_button": "Ücretsiz Hesap Oluştur", "cta_no_fees": "Gizli ücret yok" },
+  "dashboard": { "title": "Kontrol Paneli", "welcome": "Tekrar Hoş Geldiniz", "overview": "Genel Bakış", "portfolio_value": "Portföy Değeri", "total_trades": "Toplam İşlem", "active_trades": "Aktif İşlemler", "pending": "Bekliyor", "completed": "Tamamlandı", "recent_activity": "Son Aktivite", "no_activity": "Son aktivite yok", "quick_trade": "Hızlı İşlem", "market_overview": "Pazar Genel Bakışı", "p2p_offers": "P2P Tekliflerim", "notifications": "Bildirimler", "no_notifications": "Yeni bildirim yok", "mark_all_read": "Tümünü Okundu İşaretle" },
+  "markets": { "title": "Piyasalar", "search": "Piyasa ara...", "name": "Ad", "price": "Fiyat", "change_24h": "24s Değişim", "volume_24h": "24s Hacim", "market_cap": "Piyasa Değeri", "all": "Tümü", "favorites": "Favoriler", "gainers": "En Çok Kazananlar", "losers": "En Çok Kaybedenler", "new": "Yeni Listeler", "add_favorite": "Favorilere Ekle", "remove_favorite": "Favorilerden Çıkar", "view_chart": "Grafik Gör", "trade": "İşlem Yap" },
+  "explorer": { "title": "Blockchain Gezgini", "search": "Adres, işlem hash veya bloğa göre ara...", "blocks": "Bloklar", "transactions": "İşlemler", "block_height": "Blok Yüksekliği", "block_hash": "Blok Hash", "tx_hash": "İşlem Hash", "from": "Kimden", "to": "Kime", "value": "Değer", "gas": "Gas", "gas_price": "Gas Fiyatı", "timestamp": "Zaman Damgası", "confirmations": "Onaylar", "status": "Durum", "confirmed": "Onaylandı", "pending": "Bekliyor", "failed": "Başarısız", "latest_blocks": "Son Bloklar", "latest_transactions": "Son İşlemler", "view_all": "Tümünü Gör" },
+  "swap": { "title": "Takas", "from": "Kimden", "to": "Kime", "amount": "Miktar", "rate": "Kur", "fee": "Ücret", "slippage": "Kayma", "min_received": "Minimum Alınan", "price_impact": "Fiyat Etkisi", "swap_now": "Şimdi Takas Yap", "connect_wallet": "Cüzdan Bağla", "insufficient_balance": "Yetersiz Bakiye", "confirm_swap": "Takası Onayla", "swap_success": "Takas Başarılı", "swap_failed": "Takas Başarısız", "enter_amount": "Miktar Girin", "select_token": "Token Seçin" },
+  "p2p": { "title": "P2P Ticaret", "buy": "Satın Al", "sell": "Sat", "amount": "Miktar", "currency": "Para Birimi", "payment_method": "Ödeme Yöntemi", "all_methods": "Tüm Yöntemler", "find_offers": "Teklif Bul", "create_offer": "Teklif Oluştur", "my_offers": "Tekliflerim", "offer_details": "Teklif Detayları", "price_per_coin": "Coin Başına Fiyat", "available": "Mevcut", "limits": "Limitler", "instructions": "İşlem Talimatları", "start_trade": "İşlemi Başlat", "trade_started": "İşlem Başladı", "release": "Kripto Serbest Bırak", "dispute": "Anlaşmazlık Aç", "cancel": "İşlemi İptal Et", "chat": "İşlem Sohbeti", "time_left": "Kalan Süre", "waiting_payment": "Ödeme Bekleniyor", "payment_sent": "Ödeme Gönderildi", "paid": "Ödendi Olarak İşaretle", "completed": "İşlem Tamamlandı", "escrow": "Emanet Koruması Aktif" },
+  "profile": { "title": "Profil", "edit": "Profili Düzenle", "username": "Kullanıcı Adı", "bio": "Biyografi", "location": "Konum", "member_since": "Üyelik Tarihi", "last_seen": "Son Görülme", "positive_ratings": "Olumlu Değerlendirmeler", "negative_ratings": "Olumsuz Değerlendirmeler", "total_trades": "Toplam İşlem", "feedback": "Geri Bildirimler", "no_feedback": "Henüz geri bildirim yok", "verified_merchant": "Doğrulanmış Satıcı", "trust_score": "Güven Puanı", "block_user": "Kullanıcıyı Engelle", "report_user": "Kullanıcıyı Bildir", "send_message": "Mesaj Gönder", "follow": "Takip Et", "unfollow": "Takibi Bırak", "followers": "Takipçiler", "following": "Takip Edilenler" },
+  "account": { "title": "Hesap Ayarları", "personal_info": "Kişisel Bilgiler", "save_changes": "Değişiklikleri Kaydet", "cancel": "İptal", "avatar": "Profil Fotoğrafı", "change_avatar": "Fotoğrafı Değiştir", "display_name": "Görünen Ad", "email": "E-posta Adresi", "phone": "Telefon Numarası", "language": "Dil", "currency": "Para Birimi", "timezone": "Saat Dilimi", "notifications": "Bildirim Tercihleri", "email_notifications": "E-posta Bildirimleri", "push_notifications": "Push Bildirimleri", "sms_notifications": "SMS Bildirimleri", "trade_alerts": "İşlem Uyarıları", "price_alerts": "Fiyat Uyarıları", "news_updates": "Haberler & Güncellemeler", "payment_methods": "Ödeme Yöntemleri", "add_payment": "Ödeme Yöntemi Ekle", "bank_account": "Banka Hesabı", "delete_account": "Hesabı Sil", "delete_warning": "Bu işlem geri alınamaz." },
+  "gift_cards": { "title": "Hediye Kartları", "search": "Marka ara...", "categories": "Kategoriler", "all": "Tümü", "gaming": "Oyun", "shopping": "Alışveriş", "food": "Yiyecek", "entertainment": "Eğlence", "travel": "Seyahat", "fashion": "Moda", "popular": "Popüler", "featured": "Öne Çıkan", "amount": "Miktar", "buy_now": "Şimdi Satın Al", "in_stock": "Stokta Var", "out_of_stock": "Stokta Yok", "delivery": "Anında Teslimat", "redeemable_in": "Kullanılabilir" },
+  "mobile_topup": { "title": "Mobil Yükleme", "phone_number": "Telefon Numarası", "select_country": "Ülke Seç", "select_operator": "Operatör Seç", "select_plan": "Plan Seç", "amount": "Yükleme Miktarı", "pay_with": "İle Öde", "confirm": "Yüklemeyi Onayla", "success": "Yükleme Başarılı", "error": "Yükleme Başarısız", "instant": "Anında Teslimat", "popular_plans": "Popüler Planlar" },
+  "stake": { "title": "Staking", "subtitle": "Kripto paranızla pasif gelir kazanın", "your_stakes": "Stake'lerim", "available_pools": "Mevcut Havuzlar", "asset": "Varlık", "apy": "Yıllık Getiri", "total_staked": "Toplam Stake", "duration": "Süre", "flexible": "Esnek", "locked": "Kilitli", "stake_now": "Şimdi Stake Et", "unstake": "Stake'i Çöz", "claim_rewards": "Ödülleri Al", "rewards_earned": "Kazanılan Ödüller", "lock_period": "Kilit Süresi", "unlock_date": "Açılış Tarihi", "days": "gün", "minimum": "Minimum", "terms": "Şartlar ve Koşullar", "learn_more": "Daha Fazla Öğren" },
+  "common": { "search": "Ara", "filter": "Filtrele", "sort": "Sırala", "loading": "Yükleniyor...", "error": "Bir hata oluştu", "retry": "Tekrar Dene", "cancel": "İptal", "confirm": "Onayla", "save": "Kaydet", "close": "Kapat", "back": "Geri", "next": "İleri", "submit": "Gönder", "copy": "Kopyala", "copied": "Kopyalandı!", "share": "Paylaş", "view_all": "Tümünü Gör", "see_more": "Daha Fazla Gör", "hide": "Gizle", "show": "Göster", "edit": "Düzenle", "delete": "Sil", "remove": "Kaldır", "add": "Ekle", "create": "Oluştur", "update": "Güncelle", "yes": "Evet", "no": "Hayır", "or": "veya", "and": "ve", "from": "Kimden", "to": "Kime", "date": "Tarih", "time": "Saat", "status": "Durum", "type": "Tür", "amount": "Miktar", "price": "Fiyat", "total": "Toplam", "fee": "Ücret", "min": "Min", "max": "Maks", "available": "Mevcut", "required": "Gerekli", "optional": "İsteğe Bağlı", "success": "Başarılı", "warning": "Uyarı", "info": "Bilgi", "not_found": "Bulunamadı", "page_not_found": "Aradığınız sayfa mevcut değil.", "go_home": "Ana Sayfaya Git", "coming_soon": "Çok Yakında", "learn_more": "Daha Fazla Öğren", "read_more": "Devamını Oku", "no_data": "Veri yok", "select": "Seç", "all": "Tümü", "active": "Aktif", "inactive": "Pasif", "enabled": "Etkin", "disabled": "Devre Dışı", "verified": "Doğrulanmış", "unverified": "Doğrulanmamış", "online": "Çevrimiçi", "offline": "Çevrimdışı", "buy": "Satın Al", "sell": "Sat" },
+  "footer": { "company": "Şirket", "about": "Hakkımızda", "blog": "Blog", "careers": "Kariyer", "press": "Basın", "affiliate": "Ortaklık Programı", "products": "Ürünler", "p2p_trading": "P2P Ticaret", "spot_trading": "Spot İşlem", "swap": "Takas", "gift_cards": "Hediye Kartları", "visa_card": "Visa Kartı", "staking": "Staking", "legal": "Yasal", "terms": "Kullanım Şartları", "privacy": "Gizlilik Politikası", "aml": "AML Politikası", "cookies": "Çerez Politikası", "community": "Topluluk", "help_center": "Yardım Merkezi", "contact": "Bize Ulaşın", "newsletter": "Bülten", "subscribe_desc": "En son kripto haberlerini ve güncellemelerini alın.", "email_placeholder": "E-postanızı girin", "subscribe": "Abone Ol", "rights_reserved": "Tüm hakları saklıdır.", "non_custodial": "Saklama Dışı & Merkeziyetsiz" }
 }
