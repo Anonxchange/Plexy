@@ -63,9 +63,22 @@ export function SignIn() {
   }, []);
 
   const handleConditionalPasskeySuccess = useCallback(async (email: string) => {
-    if (!email) return;
+    // Guard: autofill-assisted passkey gives us the email from the input at the time
+    // of assertion. If the field was empty when the browser fired the autofill event
+    // we cannot proceed — show a prompt instead of sending a bad OTP request.
+    if (!email) {
+      toast({
+        title: "Email required",
+        description: "Please enter your email address and try the passkey sign-in again.",
+        variant: "destructive",
+      });
+      return;
+    }
     setLoading(true);
     try {
+      // Note: signInWithOtp fires a 'magiclink' auth event, not a 'password' event.
+      // Any Supabase Auth Hook (Authentication → Hooks) must handle this event type
+      // gracefully, or it will reject the passkey login flow with an error.
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
@@ -346,17 +359,62 @@ export function SignIn() {
   };
 
   const handlePasskeySignIn = async () => {
+    // Step 1: resolve the email to use.
+    // Prefer whatever the user already typed; fall back to a credential-ID lookup
+    // so that the passkey button works even when the email field is empty.
+    const typedEmail = inputValue.trim();
+
     conditionalAbortRef.current?.abort();
     setLoading(true);
     try {
+      // Step 2: verify the passkey with the device authenticator.
       const credentialIdHex = await webAuthnService.authenticateDiscoverable();
       if (!credentialIdHex) {
         toast({ title: "Cancelled", description: "Passkey sign-in was cancelled" });
         return;
       }
 
+      // Step 3: resolve the email.
+      // If the user typed one, use it. Otherwise look up which account owns this
+      // credential so we know where to send the magic-link.
+      let emailToUse = typedEmail;
+      if (!emailToUse) {
+        // Query the webauthn_credentials table (public read allowed for lookup).
+        // We use the anon client — no session required — so this is safe.
+        const { data: credRow } = await supabase
+          .from("webauthn_credentials")
+          .select("user_id")
+          .eq("credential_id", credentialIdHex)
+          .maybeSingle();
+
+        if (credRow?.user_id) {
+          // Fetch the email from user_profiles (must be readable by anon for this lookup).
+          const { data: profile } = await supabase
+            .from("user_profiles")
+            .select("email")
+            .eq("id", credRow.user_id)
+            .maybeSingle();
+
+          emailToUse = profile?.email ?? "";
+        }
+      }
+
+      if (!emailToUse) {
+        toast({
+          title: "Email required",
+          description: "Please enter your email address so we know where to send your sign-in link.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Step 4: issue a magic-link OTP to the resolved email.
+      // Note: if you have a Supabase Auth Hook configured under Authentication → Hooks,
+      // make sure it handles the OTP / magic-link event type gracefully — passkey login
+      // uses signInWithOtp internally and will trigger those hooks with type = 'magiclink',
+      // not type = 'password'. Any hook that assumes a password context will fail here.
       const { error: otpError } = await supabase.auth.signInWithOtp({
-        email: inputValue.trim(),
+        email: emailToUse,
         options: {
           ...(captchaToken ? { captchaToken } : {}),
         },
@@ -365,7 +423,7 @@ export function SignIn() {
 
       toast({
         title: "Check your email",
-        description: `Passkey verified! We sent a sign-in link to ${inputValue.trim()}.`,
+        description: `Passkey verified! We sent a sign-in link to ${emailToUse}.`,
       });
     } catch (error) {
       toast({
