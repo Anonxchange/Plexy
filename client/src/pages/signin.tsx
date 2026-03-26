@@ -294,17 +294,6 @@ export function SignIn() {
         return;
       }
 
-      const { data: credData, error: credError } = await supabase
-        .from('webauthn_credentials')
-        .select('user_id')
-        .eq('credential_id', credentialIdHex)
-        .eq('credential_type', 'passkey')
-        .single();
-
-      if (credError || !credData) {
-        throw new Error("No passkey registered for this account. Please sign in with your password.");
-      }
-
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email: inputValue.trim(),
         options: { shouldCreateUser: false },
