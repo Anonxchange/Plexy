@@ -1,5 +1,7 @@
-import { Switch, Route, useLocation, Redirect } from "wouter";
-import { lazy, Suspense, useEffect } from "react";
+import { Switch, Route, useLocation, Redirect, Router as WouterRouter } from "wouter";
+import { lazy, Suspense, useEffect, useState } from "react";
+import i18n from "@/lib/i18n";
+import { detectLanguageFromIP, isValidLang } from "@/lib/detect-language";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -183,7 +185,7 @@ function AuthRoute({
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-function Router() {
+function AppRoutes() {
   return (
     <Switch>
       {/* ── Public pages ── */}
@@ -277,7 +279,7 @@ function AppContent() {
       {!hideHeaderAndNav && <AppHeader />}
       {!hideHeaderAndNav && !hidePageNav && <PageNavigation />}
       <main className="flex-1 flex flex-col">
-        <Router />
+        <AppRoutes />
       </main>
       {!hideAppFooter && <AppFooter />}
 
@@ -300,32 +302,56 @@ function AppContent() {
   );
 }
 
+function getInitialLangBase(): string | null {
+  const seg = window.location.pathname.split("/").filter(Boolean)[0];
+  return isValidLang(seg) ? `/${seg}` : null;
+}
+
 function App() {
-  const isHelp = typeof window !== 'undefined' && window.location.hostname === 'help.pexly.app';
+  const [langBase, setLangBase] = useState<string | null>(getInitialLangBase);
+
+  useEffect(() => {
+    if (langBase) {
+      i18n.changeLanguage(langBase.slice(1));
+    } else {
+      detectLanguageFromIP().then((lang) => {
+        const rest = window.location.pathname;
+        window.history.replaceState(null, "", `/${lang}${rest === "/" ? "" : rest}`);
+        i18n.changeLanguage(lang);
+        setLangBase(`/${lang}`);
+      });
+    }
+  }, []);
+
+  if (!langBase) return null;
+
+  const isHelp = window.location.hostname === "help.pexly.app";
 
   return (
-    <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <AuthProvider>
-            <GiftCardCartProvider>
-              <CartProvider>
-                <TooltipProvider>
-                  {isHelp ? (
-                    <Suspense fallback={<PageSkeleton />}>
-                      <Support />
-                    </Suspense>
-                  ) : (
-                    <>
-                      <Suspense fallback={null}><GlobalNotificationListener /></Suspense>
-                      <AppContent />
-                    </>
-                  )}
-                </TooltipProvider>
-              </CartProvider>
-            </GiftCardCartProvider>
-          </AuthProvider>
-        </ThemeProvider>
-    </QueryClientProvider>
+    <WouterRouter base={langBase}>
+      <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            <AuthProvider>
+              <GiftCardCartProvider>
+                <CartProvider>
+                  <TooltipProvider>
+                    {isHelp ? (
+                      <Suspense fallback={<PageSkeleton />}>
+                        <Support />
+                      </Suspense>
+                    ) : (
+                      <>
+                        <Suspense fallback={null}><GlobalNotificationListener /></Suspense>
+                        <AppContent />
+                      </>
+                    )}
+                  </TooltipProvider>
+                </CartProvider>
+              </GiftCardCartProvider>
+            </AuthProvider>
+          </ThemeProvider>
+      </QueryClientProvider>
+    </WouterRouter>
   );
 }
 
