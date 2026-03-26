@@ -68,7 +68,10 @@ export function SignIn() {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { shouldCreateUser: false, captchaToken: captchaToken ?? undefined },
+        options: {
+          shouldCreateUser: false,
+          ...(captchaToken ? { captchaToken } : {}),
+        },
       });
       if (error) throw error;
       toast({
@@ -357,7 +360,7 @@ export function SignIn() {
         email: inputValue.trim(),
         options: {
           shouldCreateUser: false,
-          captchaToken: captchaToken ?? undefined,
+          ...(captchaToken ? { captchaToken } : {}),
         },
       });
       if (otpError) throw otpError;
