@@ -149,7 +149,7 @@ export function SignUp() {
   const [otpCountdown, setOtpCountdown] = useState(300);
   const [resendCooldown, setResendCooldown] = useState(60);
   const [isResending, setIsResending] = useState(false);
-  const { signUp, signIn, user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
@@ -345,24 +345,25 @@ export function SignUp() {
         console.error("AML screening error:", error);
       }
 
-      // Send OTP email
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-verification-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      // Use Supabase native signup — sends OTP confirmation email automatically.
+      // No custom Edge Function needed. Make sure "Confirm email" is enabled and
+      // the email template uses {{ .Token }} so users receive a 6-digit code.
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: fullName, country },
+          emailRedirectTo: undefined,
+          ...(captchaToken ? { captchaToken } : {}),
         },
-        body: JSON.stringify({ email, type: 'signup' }),
       });
 
       setLoading(false);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error("Send verification error:", response.status, errorData);
+      if (signUpError) {
         toast({
           title: "Error",
-          description: errorData.error || "Failed to send verification code. Please try again.",
+          description: signUpError.message,
           variant: "destructive",
         });
         return;
@@ -394,52 +395,50 @@ export function SignUp() {
 
   const handleEmailOtpVerify = async () => {
     setLoading(true);
-    
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify({
-        email,
-        otp: emailOtp,
-        password,
-        fullName,
-        country,
-      }),
+
+    // Verify OTP using Supabase native auth — no Edge Function needed.
+    const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+      email,
+      token: emailOtp,
+      type: 'signup',
     });
 
-    const data = await response.json();
-    setLoading(false);
-
-    if (!response.ok) {
+    if (verifyError) {
+      setLoading(false);
       toast({
         title: "Verification Failed",
-        description: data.error || "Invalid verification code",
+        description: verifyError.message || "Invalid verification code",
         variant: "destructive",
       });
       return;
     }
 
-    // Sign in the user
-    await signIn(email, password);
-    
+    const verifiedUser = verifyData.user;
+
+    // Save additional profile data that isn't stored by signUp itself
+    if (verifiedUser) {
+      await supabase.from('user_profiles').upsert({
+        id: verifiedUser.id,
+        email: verifiedUser.email,
+        full_name: fullName,
+        country,
+      }, { onConflict: 'id' });
+
+      try {
+        await deviceFingerprint.registerDeviceAsTrusted(verifiedUser.id);
+      } catch (error) {
+        console.error('Error auto-trusting device during signup:', error);
+      }
+
+      setUserId(verifiedUser.id);
+    }
+
+    setLoading(false);
     toast({
       title: "Success!",
       description: "Email verified! Account created successfully!",
     });
-    
-    const { data: userData } = await supabase.auth.getUser();
-    if (userData.user) {
-      try {
-        await deviceFingerprint.registerDeviceAsTrusted(userData.user.id);
-      } catch (error) {
-        console.error('Error auto-trusting device during signup:', error);
-      }
-      setUserId(userData.user.id);
-      setStep("phone");
-    }
+    setStep("phone");
   };
 
   const handlePhoneVerified = async (verifiedPhoneNumber: string) => {
@@ -504,23 +503,19 @@ export function SignUp() {
 
   const handleResendOtp = async () => {
     setIsResending(true);
-    
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-verification-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify({ email }),
+
+    // Resend using Supabase native auth — no Edge Function needed.
+    const { error: resendError } = await supabase.auth.resend({
+      type: 'signup',
+      email,
     });
 
     setIsResending(false);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+    if (resendError) {
       toast({
         title: "Error",
-        description: errorData.error || "Failed to resend verification code. Please try again.",
+        description: resendError.message || "Failed to resend verification code. Please try again.",
         variant: "destructive",
       });
       return;
