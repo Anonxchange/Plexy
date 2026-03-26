@@ -296,7 +296,10 @@ export function SignIn() {
 
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email: inputValue.trim(),
-        options: { shouldCreateUser: false },
+        options: {
+          shouldCreateUser: false,
+          captchaToken: captchaToken ?? undefined,
+        },
       });
       if (otpError) throw otpError;
 
@@ -670,7 +673,7 @@ export function SignIn() {
                 <button
                   type="button"
                   onClick={handlePasskeySignIn}
-                  disabled={loading}
+                  disabled={loading || (!!import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken && !captchaError)}
                   className={`w-full flex items-center justify-center gap-2 py-3 rounded-full text-sm font-medium transition-colors mt-3 disabled:opacity-50 ${
                     isDark
                       ? 'border border-gray-700 text-gray-300 hover:bg-gray-800'
