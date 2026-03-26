@@ -12,6 +12,7 @@ import { ThemeToggle } from "./theme-toggle";
 import { useAuth } from "@/lib/auth-context";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 const LANGUAGES = [
   { code: "en", label: "English", flag: "🇬🇧" },
@@ -151,19 +152,23 @@ function SubItem({ label, href, badge, onClick, active, external }: SubItemProps
 export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const [location, navigate] = useLocation();
   const { user } = useAuth();
-  const [language, setLanguage] = useState<string>(
-    () => localStorage.getItem("pexly_lang") || "en"
-  );
+  const { t, i18n } = useTranslation();
 
   const go = (path: string) => {
     navigate(path);
     onNavigate?.();
   };
 
-  const handleLanguageChange = (code: string) => {
-    setLanguage(code);
-    localStorage.setItem("pexly_lang", code);
+  const switchLanguage = (code: string) => {
+    const base = `/${i18n.language}`;
+    const currentPath = window.location.pathname;
+    const withoutBase = currentPath.startsWith(base)
+      ? currentPath.slice(base.length) || "/"
+      : currentPath;
+    window.location.href = `/${code}${withoutBase}`;
   };
+
+  const currentLang = LANGUAGES.find(l => l.code === i18n.language) || LANGUAGES[0];
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -184,7 +189,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
         {user && (
           <NavItem
-            label="Dashboard"
+            label={t("nav.dashboard")}
             href="/dashboard"
             active={location === "/dashboard"}
             onClick={onNavigate}
@@ -192,70 +197,70 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         )}
 
         <NavGroup
-          label="Trade"
+          label={t("nav.trade")}
           defaultOpen={
             ["/buy-crypto", "/spot", "/perpetual", "/swap", "/prediction"].includes(location)
           }
         >
-          <SubItem label="Buy Crypto" href="/buy-crypto" active={location === "/buy-crypto"} onClick={onNavigate}
+          <SubItem label={t("trade.buy_crypto")} href="/buy-crypto" active={location === "/buy-crypto"} onClick={onNavigate}
             badge={<Badge variant="secondary" className="text-[10px] py-0">LOW FEES</Badge>} />
-          <SubItem label="Spot Trading" href="/spot" active={location === "/spot"} onClick={onNavigate} />
-          <SubItem label="Perpetual" href="/perpetual" active={location === "/perpetual"} onClick={onNavigate} />
-          <SubItem label="Swap" href="/swap" active={location === "/swap"} onClick={onNavigate} />
-          <SubItem label="Prediction" href="/prediction" active={location === "/prediction"} onClick={onNavigate} />
+          <SubItem label={t("trade.spot_trading")} href="/spot" active={location === "/spot"} onClick={onNavigate} />
+          <SubItem label={t("trade.perpetual")} href="/perpetual" active={location === "/perpetual"} onClick={onNavigate} />
+          <SubItem label={t("trade.swap")} href="/swap" active={location === "/swap"} onClick={onNavigate} />
+          <SubItem label={t("trade.prediction")} href="/prediction" active={location === "/prediction"} onClick={onNavigate} />
         </NavGroup>
 
         <NavItem
-          label="Gift Cards"
+          label={t("nav.gift_cards")}
           href="/gift-cards"
           active={location.startsWith("/gift-cards")}
           onClick={onNavigate}
         />
 
         <NavGroup
-          label="Wallet"
+          label={t("nav.wallet")}
           defaultOpen={location.startsWith("/wallet")}
         >
-          <SubItem label="Assets" href="/wallet" active={location === "/wallet"} onClick={onNavigate} />
-          <SubItem label="Visa Card" href="/wallet/visa-card" active={location === "/wallet/visa-card"} onClick={onNavigate} />
-          <SubItem label="Lightning" href="/wallet/lightning" active={location === "/wallet/lightning"} onClick={onNavigate} />
-          <SubItem label="Mobile Top-up" href="/wallet/mobile-topup" active={location === "/wallet/mobile-topup"} onClick={onNavigate} />
-          <SubItem label="Utility Bills" href="/utility" active={location === "/utility"} onClick={onNavigate} />
+          <SubItem label={t("wallet.assets")} href="/wallet" active={location === "/wallet"} onClick={onNavigate} />
+          <SubItem label={t("wallet.visa_card")} href="/wallet/visa-card" active={location === "/wallet/visa-card"} onClick={onNavigate} />
+          <SubItem label={t("wallet.lightning")} href="/wallet/lightning" active={location === "/wallet/lightning"} onClick={onNavigate} />
+          <SubItem label={t("wallet.mobile_topup")} href="/wallet/mobile-topup" active={location === "/wallet/mobile-topup"} onClick={onNavigate} />
+          <SubItem label={t("wallet.utility")} href="/utility" active={location === "/utility"} onClick={onNavigate} />
         </NavGroup>
 
         <NavGroup
-          label="Shop"
+          label={t("nav.shop")}
           badge={<Badge variant="secondary" className="text-[10px] py-0">BETA</Badge>}
           defaultOpen={location.startsWith("/shop")}
         >
-          <SubItem label="Listings" href="/shop" active={location === "/shop"} onClick={onNavigate} />
-          <SubItem label="Post Ad" href="/shop/post" active={location === "/shop/post"} onClick={onNavigate}
+          <SubItem label={t("shop.listings")} href="/shop" active={location === "/shop"} onClick={onNavigate} />
+          <SubItem label={t("shop.post_ad")} href="/shop/post" active={location === "/shop/post"} onClick={onNavigate}
             badge={<Badge variant="secondary" className="text-[10px] py-0">FREE</Badge>} />
         </NavGroup>
 
         <NavGroup
-          label="Earn"
+          label={t("nav.earn")}
           defaultOpen={["/wallet/stake", "/referral", "/rewards"].includes(location)}
         >
-          <SubItem label="Stake" href="/wallet/stake" active={location === "/wallet/stake"} onClick={onNavigate}
+          <SubItem label={t("earn.stake")} href="/wallet/stake" active={location === "/wallet/stake"} onClick={onNavigate}
             badge={<Badge className="text-[10px] py-0 bg-red-500 hover:bg-red-500 border-none animate-pulse">HOT</Badge>} />
-          <SubItem label="Referral Program" href="/referral" active={location === "/referral"} onClick={onNavigate} />
-          <SubItem label="Rewards" href="/rewards" active={location === "/rewards"} onClick={onNavigate} />
+          <SubItem label={t("earn.referral_program")} href="/referral" active={location === "/referral"} onClick={onNavigate} />
+          <SubItem label={t("earn.rewards")} href="/rewards" active={location === "/rewards"} onClick={onNavigate} />
         </NavGroup>
 
         <NavItem
-          label="Explorer"
+          label={t("nav.explorer")}
           href="/explorer"
           active={location.startsWith("/explorer")}
           onClick={onNavigate}
         />
 
         <NavGroup
-          label="Support"
+          label={t("nav.support")}
           defaultOpen={["/contact", "/support"].includes(location)}
         >
-          <SubItem label="Help Center" href="https://help.pexly.app" external />
-          <SubItem label="Contact Us" href="/contact" active={location === "/contact"} onClick={onNavigate} />
+          <SubItem label={t("support.help_center")} href="https://help.pexly.app" external />
+          <SubItem label={t("support.contact_support")} href="/contact" active={location === "/contact"} onClick={onNavigate} />
         </NavGroup>
 
       </nav>
@@ -269,32 +274,27 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
               className="rounded-xl font-semibold"
               onClick={() => go("/signin")}
             >
-              Sign In
+              {t("auth.sign_in")}
             </Button>
             <Button
               variant="secondary"
               className="rounded-xl font-semibold"
               onClick={() => go("/signup")}
             >
-              Register
+              {t("auth.register")}
             </Button>
           </div>
         )}
 
         {/* Language selector */}
-        <Select value={language} onValueChange={handleLanguageChange}>
+        <Select value={i18n.language} onValueChange={switchLanguage}>
           <SelectTrigger className="w-full rounded-xl gap-2">
             <Globe className="h-4 w-4 text-muted-foreground flex-shrink-0" />
             <SelectValue>
-              {(() => {
-                const lang = LANGUAGES.find(l => l.code === language);
-                return lang ? (
-                  <span className="flex items-center gap-2">
-                    <span>{lang.flag}</span>
-                    <span>{lang.label}</span>
-                  </span>
-                ) : null;
-              })()}
+              <span className="flex items-center gap-2">
+                <span>{currentLang.flag}</span>
+                <span>{currentLang.label}</span>
+              </span>
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
