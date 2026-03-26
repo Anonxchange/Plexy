@@ -1,5 +1,5 @@
 import { useHead } from "@unhead/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import portraitImage from "@assets/young-woman-portrait-close-up_1_3_optimized.webp";
 import { useAuth } from "@/lib/auth-context";
@@ -37,6 +37,7 @@ export function SignIn() {
   const [captchaKey, setCaptchaKey] = useState(0);
   const [displayedText, setDisplayedText] = useState("");
   const [passkeySupported, setPasskeySupported] = useState(false);
+  const conditionalAbortRef = useRef<AbortController | null>(null);
   const { signIn, signOut, user, session, pendingOTPVerification, completeOTPVerification, cancelOTPVerification } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -61,10 +62,67 @@ export function SignIn() {
     detectCountry();
   }, []);
 
-  // Check passkey support on mount
+  const handleConditionalPasskeySuccess = useCallback(async (email: string) => {
+    if (!email) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: false, captchaToken: captchaToken ?? undefined },
+      });
+      if (error) throw error;
+      toast({
+        title: "Check your email",
+        description: `Passkey verified! We sent a sign-in link to ${email}.`,
+      });
+    } catch (err) {
+      toast({
+        title: "Passkey sign-in failed",
+        description: err instanceof Error ? err.message : "Could not complete sign-in",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [captchaToken, toast]);
+
+  // Check passkey support and start conditional UI (autofill-assisted passkey)
   useEffect(() => {
-    webAuthnService.isPlatformAuthenticatorAvailable().then(setPasskeySupported).catch(() => setPasskeySupported(false));
-  }, []);
+    webAuthnService.isPlatformAuthenticatorAvailable().then(async (supported) => {
+      setPasskeySupported(supported);
+      if (!supported) return;
+
+      try {
+        const controller = new AbortController();
+        conditionalAbortRef.current = controller;
+        const challenge = crypto.getRandomValues(new Uint8Array(32));
+
+        const assertion = await navigator.credentials.get({
+          signal: controller.signal,
+          mediation: 'conditional' as CredentialMediationRequirement,
+          publicKey: {
+            challenge,
+            allowCredentials: [],
+            userVerification: 'preferred',
+            timeout: 300000,
+          },
+        } as any) as PublicKeyCredential | null;
+
+        if (!assertion || controller.signal.aborted) return;
+
+        const emailField = document.getElementById('signin-email') as HTMLInputElement | null;
+        const email = emailField?.value?.trim() || '';
+        await handleConditionalPasskeySuccess(email);
+      } catch (err: any) {
+        if (err?.name === 'AbortError' || err?.name === 'NotAllowedError') return;
+        console.error('Conditional passkey error:', err);
+      }
+    }).catch(() => setPasskeySupported(false));
+
+    return () => {
+      conditionalAbortRef.current?.abort();
+    };
+  }, [handleConditionalPasskeySuccess]);
 
   // Typewriter effect for welcome message
   useEffect(() => {
@@ -286,6 +344,7 @@ export function SignIn() {
   };
 
   const handlePasskeySignIn = async () => {
+    conditionalAbortRef.current?.abort();
     setLoading(true);
     try {
       const credentialIdHex = await webAuthnService.authenticateDiscoverable();
@@ -543,9 +602,11 @@ export function SignIn() {
                   </div>
                 )}
                 <input
+                  id="signin-email"
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
+                  autoComplete={isPhoneNumber ? "tel" : "username webauthn"}
                   className={`w-full px-4 py-4 rounded-xl text-base ${
                     isDark 
                       ? 'bg-muted text-foreground border border-border focus:border-lime-400' 
