@@ -25,17 +25,37 @@ class WebAuthnService {
     }
   }
 
+  private getDeviceName(): string {
+    const ua = navigator.userAgent;
+    let browser = 'Browser';
+    if (/Edg\//.test(ua)) browser = 'Edge';
+    else if (/Chrome\//.test(ua)) browser = 'Chrome';
+    else if (/Firefox\//.test(ua)) browser = 'Firefox';
+    else if (/Safari\//.test(ua)) browser = 'Safari';
+
+    let os = 'Device';
+    if (/iPhone/.test(ua)) os = 'iPhone';
+    else if (/iPad/.test(ua)) os = 'iPad';
+    else if (/Android/.test(ua)) os = 'Android';
+    else if (/Windows/.test(ua)) os = 'Windows';
+    else if (/Mac OS X/.test(ua)) os = 'Mac';
+    else if (/Linux/.test(ua)) os = 'Linux';
+
+    return `${browser} on ${os}`;
+  }
+
   async register(userId: string, deviceName: string): Promise<void> {
-    await this.registerCredential(userId, deviceName, 'hardware_key');
+    await this.registerCredential(userId, deviceName, deviceName, 'hardware_key');
   }
 
   async registerPasskey(userId: string, email: string): Promise<void> {
-    await this.registerCredential(userId, email, 'passkey');
+    await this.registerCredential(userId, email, this.getDeviceName(), 'passkey');
   }
 
   private async registerCredential(
     userId: string,
-    displayName: string,
+    userEmail: string,
+    deviceName: string,
     credentialType: 'hardware_key' | 'passkey'
   ): Promise<void> {
     if (!await this.isSupported()) {
@@ -56,8 +76,8 @@ class WebAuthnService {
       },
       user: {
         id: new TextEncoder().encode(userId),
-        name: displayName,
-        displayName: displayName,
+        name: userEmail,
+        displayName: userEmail,
       },
       pubKeyCredParams: [
         { type: 'public-key', alg: -7 },
@@ -99,16 +119,41 @@ class WebAuthnService {
       : '';
 
     const supabase = await getSupabase();
-    await supabase
+    const { error } = await supabase
       .from('webauthn_credentials')
       .insert({
         user_id: userId,
         credential_id: credentialId,
         public_key: publicKey,
         counter: 0,
-        device_name: displayName,
+        device_name: deviceName,
         credential_type: credentialType,
       });
+
+    if (error) {
+      throw new Error(`Failed to save passkey: ${error.message}`);
+    }
+  }
+
+  async authenticateDiscoverable(): Promise<string | null> {
+    if (!await this.isSupported()) {
+      throw new Error('WebAuthn is not supported on this browser');
+    }
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge,
+        allowCredentials: [],
+        userVerification: 'required',
+        timeout: 60000,
+      },
+    }) as PublicKeyCredential | null;
+
+    if (!assertion) return null;
+
+    return Array.from(new Uint8Array(assertion.rawId))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
   }
 
   async authenticate(userId: string): Promise<boolean> {
