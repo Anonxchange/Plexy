@@ -60,6 +60,11 @@ export function PasskeySetup({ userId, userEmail }: PasskeySetupProps) {
       setPasskeys(creds);
     } catch (error) {
       console.error('Error loading passkeys:', error);
+      toast({
+        title: "Could not load passkeys",
+        description: error instanceof Error ? error.message : "Failed to fetch registered passkeys",
+        variant: "destructive",
+      });
     }
   };
 
