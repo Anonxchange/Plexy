@@ -13,6 +13,7 @@ import tr from "@/locales/tr.json";
 import hi from "@/locales/hi.json";
 import id from "@/locales/id.json";
 import vi from "@/locales/vi.json";
+import ja from "@/locales/ja.json";
 
 i18n.use(initReactI18next).init({
   resources: {
@@ -28,6 +29,7 @@ i18n.use(initReactI18next).init({
     hi: { translation: hi },
     id: { translation: id },
     vi: { translation: vi },
+    ja: { translation: ja },
   },
   lng: "en",
   fallbackLng: "en",
