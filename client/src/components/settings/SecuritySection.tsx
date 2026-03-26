@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { createAccountChangeNotification } from "@/lib/notifications-api";
 import { TwoFactorSetupDialog } from "@/components/two-factor-setup-dialog";
+import { PasskeySetup } from "@/components/passkey-setup";
 import { WithdrawalWhitelistDialog } from "@/components/withdrawal-whitelist-dialog";
 import { IPWhitelistDialog } from "@/components/ip-whitelist-dialog";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
@@ -685,6 +686,14 @@ export function SecuritySection() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Passkeys */}
+      {user?.id && user?.email && (
+        <div>
+          <h4 className="text-lg font-semibold mb-4">Passkeys</h4>
+          <PasskeySetup userId={user.id} userEmail={user.email} />
+        </div>
+      )}
 
       <WithdrawalWhitelistDialog open={showWithdrawalWhitelistDialog} onOpenChange={setShowWithdrawalWhitelistDialog} />
 
