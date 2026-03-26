@@ -1,77 +1,25 @@
 {
-  "nav": {
-    "trade": "Giao dịch",
-    "gift_cards": "Thẻ quà tặng",
-    "explorer": "Khám phá",
-    "wallet": "Ví",
-    "market": "Thị trường",
-    "shop": "Cửa hàng",
-    "earn": "Kiếm tiền",
-    "support": "Hỗ trợ",
-    "dashboard": "Bảng điều khiển"
-  },
-  "trade": {
-    "buy_crypto": "Mua tiền mã hoá",
-    "spot_trading": "Giao dịch Spot",
-    "perpetual": "Hợp đồng vĩnh cửu",
-    "swap": "Hoán đổi",
-    "prediction": "Dự đoán"
-  },
-  "wallet": {
-    "assets": "Tài sản",
-    "assets_desc": "Tài sản của tôi trong ví Pexly",
-    "receive": "Nhận",
-    "receive_desc": "Nhận tiền mã hoá hoặc nạp bằng fiat",
-    "visa_card": "Thẻ Visa",
-    "visa_card_desc": "Chi tiêu tiền mã hoá của bạn",
-    "lightning": "Lightning",
-    "lightning_desc": "Gửi Bitcoin siêu nhanh",
-    "mobile_topup": "Nạp tiền điện thoại",
-    "mobile_topup_desc": "Nạp tiền điện thoại bằng tiền mã hoá",
-    "utility": "Tiện ích",
-    "utility_desc": "Thanh toán hóa đơn và các dịch vụ khác"
-  },
-  "shop": {
-    "listings": "Danh sách",
-    "post_ad": "Đăng quảng cáo"
-  },
-  "earn": {
-    "stake": "Đặt cược",
-    "referral_program": "Chương trình giới thiệu",
-    "rewards": "Phần thưởng"
-  },
-  "support": {
-    "contact_support": "Liên hệ hỗ trợ",
-    "help_center": "Trung tâm trợ giúp / FAQ",
-    "contact_us": "Liên hệ chúng tôi",
-    "help_center_short": "Trung tâm trợ giúp"
-  },
-  "auth": {
-    "sign_in": "Đăng nhập",
-    "sign_out": "Đăng xuất",
-    "get_started": "Bắt đầu",
-    "register": "Đăng ký"
-  },
-  "user_menu": {
-    "profile": "Hồ sơ",
-    "account_settings": "Cài đặt tài khoản",
-    "submit_idea": "Gửi ý tưởng",
-    "overview_activity": "Tổng quan & hoạt động",
-    "public_profile": "Hồ sơ công khai & danh tiếng",
-    "preferences_security": "Tùy chọn & bảo mật",
-    "share_feedback": "Chia sẻ phản hồi"
-  },
-  "security": {
-    "account_security": "Bảo mật tài khoản",
-    "strong": "Mạnh",
-    "fair": "Trung bình",
-    "at_risk": "Có rủi ro",
-    "email_verified": "Email đã xác minh",
-    "phone_linked": "Điện thoại đã liên kết",
-    "two_fa_enabled": "2FA đã bật",
-    "improve_security": "Cải thiện bảo mật →"
-  },
-  "header": {
-    "language": "Ngôn ngữ"
-  }
+  "nav": { "trade": "Giao dịch", "gift_cards": "Thẻ quà tặng", "explorer": "Khám phá", "wallet": "Ví", "market": "Thị trường", "shop": "Cửa hàng", "earn": "Kiếm tiền", "support": "Hỗ trợ", "dashboard": "Bảng điều khiển", "home": "Trang chủ", "prices": "Giá cả", "blog": "Blog", "careers": "Tuyển dụng", "about": "Về chúng tôi" },
+  "trade": { "buy_crypto": "Mua tiền mã hoá", "spot_trading": "Giao dịch Spot", "perpetual": "Hợp đồng vĩnh cửu", "swap": "Hoán đổi", "prediction": "Dự đoán", "p2p": "Giao dịch P2P", "history": "Lịch sử giao dịch", "open_orders": "Lệnh đang mở", "completed": "Hoàn thành", "cancelled": "Đã hủy", "in_progress": "Đang thực hiện" },
+  "wallet": { "assets": "Tài sản", "assets_desc": "Tài sản của tôi trong ví Pexly", "receive": "Nhận", "receive_desc": "Nhận tiền mã hoá hoặc nạp bằng fiat", "visa_card": "Thẻ Visa", "visa_card_desc": "Chi tiêu tiền mã hoá của bạn", "lightning": "Lightning", "lightning_desc": "Gửi Bitcoin siêu nhanh", "mobile_topup": "Nạp tiền điện thoại", "mobile_topup_desc": "Nạp tiền điện thoại bằng tiền mã hoá", "utility": "Tiện ích", "utility_desc": "Thanh toán hóa đơn và các dịch vụ khác", "send": "Gửi", "balance": "Số dư", "total_balance": "Tổng số dư", "portfolio": "Danh mục", "transactions": "Giao dịch", "deposit": "Nạp tiền", "withdraw": "Rút tiền", "available": "Khả dụng", "in_orders": "Trong lệnh", "network": "Mạng lưới", "address": "Địa chỉ", "copy_address": "Sao chép địa chỉ", "scan_qr": "Quét mã QR", "amount": "Số tiền", "fee": "Phí", "total": "Tổng cộng", "confirm": "Xác nhận", "no_transactions": "Chưa có giao dịch" },
+  "shop": { "listings": "Danh sách", "post_ad": "Đăng quảng cáo", "buy": "Mua", "sell": "Bán", "all": "Tất cả", "filter": "Lọc", "sort_by": "Sắp xếp", "price": "Giá", "payment_method": "Phương thức thanh toán", "min_amount": "Số tiền tối thiểu", "max_amount": "Số tiền tối đa", "no_offers": "Không tìm thấy đề nghị", "view_offer": "Xem đề nghị", "trade_now": "Giao dịch ngay", "merchant": "Người bán", "verified": "Đã xác minh", "online": "Trực tuyến", "offline": "Ngoại tuyến", "response_time": "Thời gian phản hồi", "completion_rate": "Tỷ lệ hoàn thành", "trades": "Giao dịch", "limits": "Giới hạn" },
+  "earn": { "stake": "Đặt cược", "referral_program": "Chương trình giới thiệu", "rewards": "Phần thưởng", "apy": "Lợi nhuận hằng năm", "total_staked": "Tổng đặt cược", "your_rewards": "Phần thưởng của bạn", "claim": "Nhận thưởng", "lock_period": "Thời gian khóa", "flexible": "Linh hoạt", "fixed_term": "Kỳ hạn cố định", "duration": "Thời hạn", "days": "Ngày", "unstake": "Rút cược", "earn_with": "Kiếm với", "referral_link": "Liên kết giới thiệu", "referred_users": "Người dùng được giới thiệu", "total_earned": "Tổng thu nhập", "copy_link": "Sao chép liên kết", "share": "Chia sẻ", "how_it_works": "Cách thức hoạt động", "invite_friends": "Mời bạn bè", "earn_commission": "Kiếm hoa hồng" },
+  "support": { "contact_support": "Liên hệ hỗ trợ", "help_center": "Trung tâm trợ giúp / FAQ", "contact_us": "Liên hệ chúng tôi", "help_center_short": "Trung tâm trợ giúp", "submit_ticket": "Gửi yêu cầu", "ticket_subject": "Chủ đề", "ticket_message": "Tin nhắn", "ticket_category": "Danh mục", "send_message": "Gửi tin nhắn", "faq": "Câu hỏi thường gặp", "search_faq": "Tìm kiếm FAQ...", "no_results": "Không tìm thấy kết quả", "live_chat": "Chat trực tuyến", "email_us": "Gửi email cho chúng tôi", "response_time": "Chúng tôi thường phản hồi trong 24 giờ", "ticket_created": "Đã tạo yêu cầu", "ticket_success": "Yêu cầu hỗ trợ của bạn đã được gửi thành công." },
+  "auth": { "sign_in": "Đăng nhập", "sign_out": "Đăng xuất", "get_started": "Bắt đầu", "register": "Đăng ký", "email": "Email", "password": "Mật khẩu", "confirm_password": "Xác nhận mật khẩu", "forgot_password": "Quên mật khẩu?", "no_account": "Chưa có tài khoản?", "have_account": "Đã có tài khoản?", "create_account": "Tạo tài khoản", "or_continue": "Hoặc tiếp tục với", "terms_agree": "Tôi đồng ý với Điều khoản dịch vụ và Chính sách bảo mật", "username": "Tên người dùng", "full_name": "Họ và tên", "phone": "Số điện thoại", "country": "Quốc gia", "referral_code": "Mã giới thiệu (tùy chọn)", "verify_email": "Xác minh email", "verify_email_desc": "Chúng tôi đã gửi mã xác minh đến email của bạn.", "enter_code": "Nhập mã xác minh", "resend_code": "Gửi lại mã", "back_to_login": "Quay lại đăng nhập", "reset_password": "Đặt lại mật khẩu", "reset_desc": "Nhập email để nhận liên kết đặt lại.", "check_email": "Kiểm tra email để lấy liên kết đặt lại." },
+  "user_menu": { "profile": "Hồ sơ", "account_settings": "Cài đặt tài khoản", "submit_idea": "Gửi ý tưởng", "overview_activity": "Tổng quan & hoạt động", "public_profile": "Hồ sơ công khai & danh tiếng", "preferences_security": "Tùy chọn & bảo mật", "share_feedback": "Chia sẻ phản hồi", "notifications": "Thông báo", "language": "Ngôn ngữ", "theme": "Giao diện", "dark_mode": "Chế độ tối", "light_mode": "Chế độ sáng" },
+  "security": { "account_security": "Bảo mật tài khoản", "strong": "Mạnh", "fair": "Trung bình", "at_risk": "Có rủi ro", "email_verified": "Email đã xác minh", "phone_linked": "Điện thoại đã liên kết", "two_fa_enabled": "2FA đã bật", "improve_security": "Cải thiện bảo mật →", "enable_2fa": "Bật 2FA", "disable_2fa": "Tắt 2FA", "two_fa_desc": "Bảo vệ tài khoản bằng xác thực hai yếu tố", "passkey": "Khóa thông hành", "passkey_desc": "Đăng nhập an toàn bằng sinh trắc học", "sessions": "Phiên hoạt động", "sessions_desc": "Quản lý thiết bị đã đăng nhập", "change_password": "Đổi mật khẩu", "current_password": "Mật khẩu hiện tại", "new_password": "Mật khẩu mới" },
+  "header": { "language": "Ngôn ngữ" },
+  "home": { "hero_title": "Mua và Bán Tiền Mã Hoá An Toàn", "hero_subtitle": "Giao dịch P2P với 500+ phương thức thanh toán tại 140 quốc gia. Chìa khoá của bạn, tài sản của bạn.", "hero_cta": "Bắt đầu giao dịch", "hero_cta_secondary": "Khám phá thị trường", "trusted_by": "Được tin tưởng bởi các nhà giao dịch trên toàn thế giới", "stats_users": "Người dùng hoạt động", "stats_volume": "Khối lượng giao dịch", "stats_countries": "Quốc gia", "stats_methods": "Phương thức thanh toán", "how_it_works_title": "Cách thức hoạt động", "how_it_works_subtitle": "Bắt đầu giao dịch chỉ với vài bước đơn giản", "step1_title": "Tạo tài khoản", "step1_desc": "Đăng ký miễn phí trong vài phút. Không cần KYC để bắt đầu.", "step2_title": "Tìm đề nghị", "step2_desc": "Duyệt hàng nghìn đề nghị mua bán với phương thức thanh toán ưa thích.", "step3_title": "Giao dịch an toàn", "step3_desc": "Tiền được giữ trong tài khoản escrow trong quá trình giao dịch để bảo vệ tối đa.", "step4_title": "Nhận thanh toán", "step4_desc": "Giải phóng tiền mã hoá và nhận thanh toán ngay lập tức sau khi cả hai bên xác nhận.", "features_title": "Tất cả những gì bạn cần", "features_subtitle": "Nền tảng phi tập trung hoàn chỉnh cho mọi nhu cầu tiền mã hoá", "feature_p2p_title": "Giao dịch P2P", "feature_p2p_desc": "Mua và bán tiền mã hoá trực tiếp với người dùng khác qua 500+ phương thức thanh toán.", "feature_escrow_title": "Bảo vệ Escrow", "feature_escrow_desc": "Tiền được khóa trong hợp đồng thông minh escrow cho đến khi cả hai bên hài lòng.", "feature_wallet_title": "Ví tích hợp", "feature_wallet_desc": "Lưu trữ, gửi và nhận nhiều tiền mã hoá trong một ví an toàn.", "feature_swap_title": "Hoán đổi tức thì", "feature_swap_desc": "Hoán đổi giữa các tiền mã hoá tức thì với tỷ giá tốt nhất.", "feature_cards_title": "Thẻ quà tặng", "feature_cards_desc": "Mua thẻ quà tặng cho hàng trăm thương hiệu bằng số dư tiền mã hoá.", "feature_stake_title": "Staking & Lợi nhuận", "feature_stake_desc": "Kiếm thu nhập thụ động bằng cách stake tài sản tiền mã hoá với điều khoản linh hoạt.", "testimonials_title": "Nhà giao dịch nói gì", "testimonials_subtitle": "Tham gia cùng hàng nghìn người dùng hài lòng tin tưởng Pexly", "faq_title": "Câu hỏi thường gặp", "faq_subtitle": "Tất cả những gì bạn cần biết về Pexly", "cta_title": "Sẵn sàng bắt đầu giao dịch?", "cta_subtitle": "Tham gia hơn 1 triệu nhà giao dịch trên nền tảng P2P tiền mã hoá an toàn nhất.", "cta_button": "Tạo tài khoản miễn phí", "cta_no_fees": "Không phí ẩn" },
+  "dashboard": { "title": "Bảng điều khiển", "welcome": "Chào mừng trở lại", "overview": "Tổng quan", "portfolio_value": "Giá trị danh mục", "total_trades": "Tổng giao dịch", "active_trades": "Giao dịch đang hoạt động", "pending": "Đang chờ", "completed": "Hoàn thành", "recent_activity": "Hoạt động gần đây", "no_activity": "Không có hoạt động gần đây", "quick_trade": "Giao dịch nhanh", "market_overview": "Tổng quan thị trường", "p2p_offers": "Đề nghị P2P của tôi", "notifications": "Thông báo", "no_notifications": "Không có thông báo mới", "mark_all_read": "Đánh dấu tất cả là đã đọc" },
+  "markets": { "title": "Thị trường", "search": "Tìm kiếm thị trường...", "name": "Tên", "price": "Giá", "change_24h": "Thay đổi 24h", "volume_24h": "Khối lượng 24h", "market_cap": "Vốn hóa thị trường", "all": "Tất cả", "favorites": "Yêu thích", "gainers": "Tăng nhiều nhất", "losers": "Giảm nhiều nhất", "new": "Niêm yết mới", "add_favorite": "Thêm vào yêu thích", "remove_favorite": "Xóa khỏi yêu thích", "view_chart": "Xem biểu đồ", "trade": "Giao dịch" },
+  "explorer": { "title": "Trình khám phá Blockchain", "search": "Tìm kiếm theo địa chỉ, hash giao dịch hoặc khối...", "blocks": "Khối", "transactions": "Giao dịch", "block_height": "Chiều cao khối", "block_hash": "Hash khối", "tx_hash": "Hash giao dịch", "from": "Từ", "to": "Đến", "value": "Giá trị", "gas": "Gas", "gas_price": "Giá Gas", "timestamp": "Dấu thời gian", "confirmations": "Xác nhận", "status": "Trạng thái", "confirmed": "Đã xác nhận", "pending": "Đang chờ", "failed": "Thất bại", "latest_blocks": "Khối mới nhất", "latest_transactions": "Giao dịch mới nhất", "view_all": "Xem tất cả" },
+  "swap": { "title": "Hoán đổi", "from": "Từ", "to": "Đến", "amount": "Số tiền", "rate": "Tỷ giá", "fee": "Phí", "slippage": "Trượt giá", "min_received": "Tối thiểu nhận được", "price_impact": "Tác động giá", "swap_now": "Hoán đổi ngay", "connect_wallet": "Kết nối ví", "insufficient_balance": "Số dư không đủ", "confirm_swap": "Xác nhận hoán đổi", "swap_success": "Hoán đổi thành công", "swap_failed": "Hoán đổi thất bại", "enter_amount": "Nhập số tiền", "select_token": "Chọn token" },
+  "p2p": { "title": "Giao dịch P2P", "buy": "Mua", "sell": "Bán", "amount": "Số tiền", "currency": "Tiền tệ", "payment_method": "Phương thức thanh toán", "all_methods": "Tất cả phương thức", "find_offers": "Tìm đề nghị", "create_offer": "Tạo đề nghị", "my_offers": "Đề nghị của tôi", "offer_details": "Chi tiết đề nghị", "price_per_coin": "Giá mỗi đồng", "available": "Khả dụng", "limits": "Giới hạn", "instructions": "Hướng dẫn giao dịch", "start_trade": "Bắt đầu giao dịch", "trade_started": "Giao dịch đã bắt đầu", "release": "Giải phóng tiền mã hoá", "dispute": "Mở tranh chấp", "cancel": "Hủy giao dịch", "chat": "Chat giao dịch", "time_left": "Thời gian còn lại", "waiting_payment": "Đang chờ thanh toán", "payment_sent": "Đã gửi thanh toán", "paid": "Đánh dấu là đã thanh toán", "completed": "Giao dịch hoàn thành", "escrow": "Bảo vệ Escrow đang hoạt động" },
+  "profile": { "title": "Hồ sơ", "edit": "Chỉnh sửa hồ sơ", "username": "Tên người dùng", "bio": "Giới thiệu", "location": "Vị trí", "member_since": "Thành viên từ", "last_seen": "Lần cuối thấy", "positive_ratings": "Đánh giá tích cực", "negative_ratings": "Đánh giá tiêu cực", "total_trades": "Tổng giao dịch", "feedback": "Phản hồi", "no_feedback": "Chưa có phản hồi", "verified_merchant": "Người bán đã xác minh", "trust_score": "Điểm tin cậy", "block_user": "Chặn người dùng", "report_user": "Báo cáo người dùng", "send_message": "Gửi tin nhắn", "follow": "Theo dõi", "unfollow": "Bỏ theo dõi", "followers": "Người theo dõi", "following": "Đang theo dõi" },
+  "account": { "title": "Cài đặt tài khoản", "personal_info": "Thông tin cá nhân", "save_changes": "Lưu thay đổi", "cancel": "Hủy", "avatar": "Ảnh đại diện", "change_avatar": "Thay đổi ảnh", "display_name": "Tên hiển thị", "email": "Địa chỉ email", "phone": "Số điện thoại", "language": "Ngôn ngữ", "currency": "Tiền tệ", "timezone": "Múi giờ", "notifications": "Tùy chọn thông báo", "email_notifications": "Thông báo email", "push_notifications": "Thông báo đẩy", "sms_notifications": "Thông báo SMS", "trade_alerts": "Cảnh báo giao dịch", "price_alerts": "Cảnh báo giá", "news_updates": "Tin tức & Cập nhật", "payment_methods": "Phương thức thanh toán", "add_payment": "Thêm phương thức thanh toán", "bank_account": "Tài khoản ngân hàng", "delete_account": "Xóa tài khoản", "delete_warning": "Hành động này không thể hoàn tác." },
+  "gift_cards": { "title": "Thẻ quà tặng", "search": "Tìm kiếm thương hiệu...", "categories": "Danh mục", "all": "Tất cả", "gaming": "Game", "shopping": "Mua sắm", "food": "Ẩm thực", "entertainment": "Giải trí", "travel": "Du lịch", "fashion": "Thời trang", "popular": "Phổ biến", "featured": "Nổi bật", "amount": "Số tiền", "buy_now": "Mua ngay", "in_stock": "Còn hàng", "out_of_stock": "Hết hàng", "delivery": "Giao hàng tức thì", "redeemable_in": "Có thể đổi tại" },
+  "mobile_topup": { "title": "Nạp tiền điện thoại", "phone_number": "Số điện thoại", "select_country": "Chọn quốc gia", "select_operator": "Chọn nhà mạng", "select_plan": "Chọn gói cước", "amount": "Số tiền nạp", "pay_with": "Thanh toán bằng", "confirm": "Xác nhận nạp tiền", "success": "Nạp tiền thành công", "error": "Nạp tiền thất bại", "instant": "Giao hàng tức thì", "popular_plans": "Gói cước phổ biến" },
+  "stake": { "title": "Staking", "subtitle": "Kiếm thu nhập thụ động từ tiền mã hoá của bạn", "your_stakes": "Stake của tôi", "available_pools": "Pool khả dụng", "asset": "Tài sản", "apy": "Lợi nhuận hằng năm", "total_staked": "Tổng stake", "duration": "Thời hạn", "flexible": "Linh hoạt", "locked": "Bị khóa", "stake_now": "Stake ngay", "unstake": "Rút cược", "claim_rewards": "Nhận phần thưởng", "rewards_earned": "Phần thưởng đã kiếm", "lock_period": "Thời gian khóa", "unlock_date": "Ngày mở khóa", "days": "ngày", "minimum": "Tối thiểu", "terms": "Điều khoản & Điều kiện", "learn_more": "Tìm hiểu thêm" },
+  "common": { "search": "Tìm kiếm", "filter": "Lọc", "sort": "Sắp xếp", "loading": "Đang tải...", "error": "Đã xảy ra lỗi", "retry": "Thử lại", "cancel": "Hủy", "confirm": "Xác nhận", "save": "Lưu", "close": "Đóng", "back": "Quay lại", "next": "Tiếp theo", "submit": "Gửi", "copy": "Sao chép", "copied": "Đã sao chép!", "share": "Chia sẻ", "view_all": "Xem tất cả", "see_more": "Xem thêm", "hide": "Ẩn", "show": "Hiển thị", "edit": "Chỉnh sửa", "delete": "Xóa", "remove": "Loại bỏ", "add": "Thêm", "create": "Tạo", "update": "Cập nhật", "yes": "Có", "no": "Không", "or": "hoặc", "and": "và", "from": "Từ", "to": "Đến", "date": "Ngày", "time": "Giờ", "status": "Trạng thái", "type": "Loại", "amount": "Số tiền", "price": "Giá", "total": "Tổng", "fee": "Phí", "min": "Tối thiểu", "max": "Tối đa", "available": "Khả dụng", "required": "Bắt buộc", "optional": "Tùy chọn", "success": "Thành công", "warning": "Cảnh báo", "info": "Thông tin", "not_found": "Không tìm thấy", "page_not_found": "Trang bạn đang tìm kiếm không tồn tại.", "go_home": "Về trang chủ", "coming_soon": "Sắp ra mắt", "learn_more": "Tìm hiểu thêm", "read_more": "Đọc thêm", "no_data": "Không có dữ liệu", "select": "Chọn", "all": "Tất cả", "active": "Hoạt động", "inactive": "Không hoạt động", "enabled": "Đã bật", "disabled": "Đã tắt", "verified": "Đã xác minh", "unverified": "Chưa xác minh", "online": "Trực tuyến", "offline": "Ngoại tuyến", "buy": "Mua", "sell": "Bán" },
+  "footer": { "company": "Công ty", "about": "Về chúng tôi", "blog": "Blog", "careers": "Tuyển dụng", "press": "Báo chí", "affiliate": "Chương trình liên kết", "products": "Sản phẩm", "p2p_trading": "Giao dịch P2P", "spot_trading": "Giao dịch Spot", "swap": "Hoán đổi", "gift_cards": "Thẻ quà tặng", "visa_card": "Thẻ Visa", "staking": "Staking", "legal": "Pháp lý", "terms": "Điều khoản dịch vụ", "privacy": "Chính sách bảo mật", "aml": "Chính sách AML", "cookies": "Chính sách Cookie", "community": "Cộng đồng", "help_center": "Trung tâm trợ giúp", "contact": "Liên hệ", "newsletter": "Bản tin", "subscribe_desc": "Nhận tin tức và cập nhật tiền mã hoá mới nhất.", "email_placeholder": "Nhập email của bạn", "subscribe": "Đăng ký", "rights_reserved": "Đã đăng ký bản quyền.", "non_custodial": "Phi lưu ký & Phi tập trung" }
 }
