@@ -1,0 +1,77 @@
+{
+  "nav": {
+    "trade": "ट्रेड",
+    "gift_cards": "गिफ्ट कार्ड",
+    "explorer": "एक्सप्लोरर",
+    "wallet": "वॉलेट",
+    "market": "बाजार",
+    "shop": "शॉप",
+    "earn": "कमाएं",
+    "support": "सहायता",
+    "dashboard": "डैशबोर्ड"
+  },
+  "trade": {
+    "buy_crypto": "क्रिप्टो खरीदें",
+    "spot_trading": "स्पॉट ट्रेडिंग",
+    "perpetual": "परपेचुअल कॉन्ट्रैक्ट",
+    "swap": "स्वैप",
+    "prediction": "भविष्यवाणी"
+  },
+  "wallet": {
+    "assets": "संपत्ति",
+    "assets_desc": "Pexly वॉलेट में मेरी संपत्ति",
+    "receive": "प्राप्त करें",
+    "receive_desc": "क्रिप्टो प्राप्त करें या फिएट जमा करें",
+    "visa_card": "वीजा कार्ड",
+    "visa_card_desc": "अपनी क्रिप्टो खर्च करें",
+    "lightning": "लाइटनिंग",
+    "lightning_desc": "अल्ट्रा फास्ट बिटकॉइन भेजें",
+    "mobile_topup": "मोबाइल टॉप-अप",
+    "mobile_topup_desc": "क्रिप्टो से फोन रिचार्ज करें",
+    "utility": "यूटिलिटी",
+    "utility_desc": "बिल और अन्य सेवाएं भुगतान करें"
+  },
+  "shop": {
+    "listings": "लिस्टिंग",
+    "post_ad": "विज्ञापन पोस्ट करें"
+  },
+  "earn": {
+    "stake": "स्टेक",
+    "referral_program": "रेफरल प्रोग्राम",
+    "rewards": "पुरस्कार"
+  },
+  "support": {
+    "contact_support": "सहायता से संपर्क करें",
+    "help_center": "हेल्प सेंटर / FAQ",
+    "contact_us": "हमसे संपर्क करें",
+    "help_center_short": "हेल्प सेंटर"
+  },
+  "auth": {
+    "sign_in": "साइन इन",
+    "sign_out": "साइन आउट",
+    "get_started": "शुरू करें",
+    "register": "रजिस्टर"
+  },
+  "user_menu": {
+    "profile": "प्रोफाइल",
+    "account_settings": "अकाउंट सेटिंग्स",
+    "submit_idea": "आइडिया सबमिट करें",
+    "overview_activity": "अवलोकन और गतिविधि",
+    "public_profile": "सार्वजनिक प्रोफाइल और प्रतिष्ठा",
+    "preferences_security": "प्राथमिकताएं और सुरक्षा",
+    "share_feedback": "फीडबैक साझा करें"
+  },
+  "security": {
+    "account_security": "अकाउंट सुरक्षा",
+    "strong": "मजबूत",
+    "fair": "ठीक",
+    "at_risk": "खतरे में",
+    "email_verified": "ईमेल सत्यापित",
+    "phone_linked": "फोन लिंक",
+    "two_fa_enabled": "2FA सक्षम",
+    "improve_security": "सुरक्षा सुधारें →"
+  },
+  "header": {
+    "language": "भाषा"
+  }
+}

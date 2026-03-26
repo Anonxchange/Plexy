@@ -1,0 +1,77 @@
+{
+  "nav": {
+    "trade": "Perdagangan",
+    "gift_cards": "Kartu Hadiah",
+    "explorer": "Penjelajah",
+    "wallet": "Dompet",
+    "market": "Pasar",
+    "shop": "Toko",
+    "earn": "Hasilkan",
+    "support": "Dukungan",
+    "dashboard": "Dasbor"
+  },
+  "trade": {
+    "buy_crypto": "Beli Kripto",
+    "spot_trading": "Trading Spot",
+    "perpetual": "Kontrak Abadi",
+    "swap": "Tukar",
+    "prediction": "Prediksi"
+  },
+  "wallet": {
+    "assets": "Aset",
+    "assets_desc": "Aset saya di dompet Pexly",
+    "receive": "Terima",
+    "receive_desc": "Terima kripto atau setor dengan fiat",
+    "visa_card": "Kartu Visa",
+    "visa_card_desc": "Belanja dengan kripto Anda",
+    "lightning": "Lightning",
+    "lightning_desc": "Kirim Bitcoin ultra cepat",
+    "mobile_topup": "Isi Ulang Pulsa",
+    "mobile_topup_desc": "Isi ulang ponsel dengan kripto",
+    "utility": "Utilitas",
+    "utility_desc": "Bayar tagihan dan layanan lainnya"
+  },
+  "shop": {
+    "listings": "Daftar Iklan",
+    "post_ad": "Pasang Iklan"
+  },
+  "earn": {
+    "stake": "Stake",
+    "referral_program": "Program Referral",
+    "rewards": "Hadiah"
+  },
+  "support": {
+    "contact_support": "Hubungi Dukungan",
+    "help_center": "Pusat Bantuan / FAQ",
+    "contact_us": "Hubungi Kami",
+    "help_center_short": "Pusat Bantuan"
+  },
+  "auth": {
+    "sign_in": "Masuk",
+    "sign_out": "Keluar",
+    "get_started": "Mulai",
+    "register": "Daftar"
+  },
+  "user_menu": {
+    "profile": "Profil",
+    "account_settings": "Pengaturan Akun",
+    "submit_idea": "Kirim Ide",
+    "overview_activity": "Ikhtisar & aktivitas",
+    "public_profile": "Profil publik & reputasi",
+    "preferences_security": "Preferensi & keamanan",
+    "share_feedback": "Bagikan umpan balik"
+  },
+  "security": {
+    "account_security": "Keamanan Akun",
+    "strong": "Kuat",
+    "fair": "Cukup",
+    "at_risk": "Berisiko",
+    "email_verified": "Email terverifikasi",
+    "phone_linked": "Ponsel terhubung",
+    "two_fa_enabled": "2FA diaktifkan",
+    "improve_security": "Tingkatkan Keamanan →"
+  },
+  "header": {
+    "language": "Bahasa"
+  }
+}

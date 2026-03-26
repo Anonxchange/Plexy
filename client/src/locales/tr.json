@@ -1,0 +1,77 @@
+{
+  "nav": {
+    "trade": "Ticaret",
+    "gift_cards": "Hediye Kartları",
+    "explorer": "Gezgin",
+    "wallet": "Cüzdan",
+    "market": "Pazar",
+    "shop": "Mağaza",
+    "earn": "Kazan",
+    "support": "Destek",
+    "dashboard": "Kontrol Paneli"
+  },
+  "trade": {
+    "buy_crypto": "Kripto Satın Al",
+    "spot_trading": "Spot İşlem",
+    "perpetual": "Süresiz Sözleşme",
+    "swap": "Takas",
+    "prediction": "Tahmin"
+  },
+  "wallet": {
+    "assets": "Varlıklar",
+    "assets_desc": "Pexly cüzdanımdaki varlıklarım",
+    "receive": "Al",
+    "receive_desc": "Kripto al veya fiat ile yatır",
+    "visa_card": "Visa Kartı",
+    "visa_card_desc": "Kriptonu harca",
+    "lightning": "Lightning",
+    "lightning_desc": "Bitcoin'i süper hızlı gönder",
+    "mobile_topup": "Mobil Yükleme",
+    "mobile_topup_desc": "Telefonunu kripto ile yükle",
+    "utility": "Faturalar",
+    "utility_desc": "Faturaları ve diğer hizmetleri öde"
+  },
+  "shop": {
+    "listings": "İlanlar",
+    "post_ad": "İlan Ver"
+  },
+  "earn": {
+    "stake": "Stake",
+    "referral_program": "Referans Programı",
+    "rewards": "Ödüller"
+  },
+  "support": {
+    "contact_support": "Destek ile İletişim",
+    "help_center": "Yardım Merkezi / SSS",
+    "contact_us": "Bize Ulaşın",
+    "help_center_short": "Yardım Merkezi"
+  },
+  "auth": {
+    "sign_in": "Giriş Yap",
+    "sign_out": "Çıkış Yap",
+    "get_started": "Başla",
+    "register": "Kayıt Ol"
+  },
+  "user_menu": {
+    "profile": "Profil",
+    "account_settings": "Hesap Ayarları",
+    "submit_idea": "Fikir Gönder",
+    "overview_activity": "Genel bakış & etkinlik",
+    "public_profile": "Açık profil & itibar",
+    "preferences_security": "Tercihler & güvenlik",
+    "share_feedback": "Geri bildirim paylaş"
+  },
+  "security": {
+    "account_security": "Hesap Güvenliği",
+    "strong": "Güçlü",
+    "fair": "Orta",
+    "at_risk": "Risk Altında",
+    "email_verified": "E-posta doğrulandı",
+    "phone_linked": "Telefon bağlı",
+    "two_fa_enabled": "2FA etkin",
+    "improve_security": "Güvenliği Artır →"
+  },
+  "header": {
+    "language": "Dil"
+  }
+}

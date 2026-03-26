@@ -1,0 +1,77 @@
+{
+  "nav": {
+    "trade": "Торговля",
+    "gift_cards": "Подарочные карты",
+    "explorer": "Обозреватель",
+    "wallet": "Кошелёк",
+    "market": "Рынок",
+    "shop": "Магазин",
+    "earn": "Заработок",
+    "support": "Поддержка",
+    "dashboard": "Панель управления"
+  },
+  "trade": {
+    "buy_crypto": "Купить криптовалюту",
+    "spot_trading": "Спот-торговля",
+    "perpetual": "Бессрочный контракт",
+    "swap": "Обмен",
+    "prediction": "Прогнозирование"
+  },
+  "wallet": {
+    "assets": "Активы",
+    "assets_desc": "Мои активы в кошельке Pexly",
+    "receive": "Получить",
+    "receive_desc": "Получить криптовалюту или пополнить фиатом",
+    "visa_card": "Карта Visa",
+    "visa_card_desc": "Тратьте свою криптовалюту",
+    "lightning": "Lightning",
+    "lightning_desc": "Отправляйте Bitcoin молниеносно",
+    "mobile_topup": "Пополнение телефона",
+    "mobile_topup_desc": "Пополняйте телефон криптовалютой",
+    "utility": "Коммунальные услуги",
+    "utility_desc": "Оплачивайте счета и другие услуги"
+  },
+  "shop": {
+    "listings": "Объявления",
+    "post_ad": "Разместить объявление"
+  },
+  "earn": {
+    "stake": "Стейкинг",
+    "referral_program": "Реферальная программа",
+    "rewards": "Награды"
+  },
+  "support": {
+    "contact_support": "Написать в поддержку",
+    "help_center": "Центр помощи / FAQ",
+    "contact_us": "Связаться с нами",
+    "help_center_short": "Центр помощи"
+  },
+  "auth": {
+    "sign_in": "Войти",
+    "sign_out": "Выйти",
+    "get_started": "Начать",
+    "register": "Зарегистрироваться"
+  },
+  "user_menu": {
+    "profile": "Профиль",
+    "account_settings": "Настройки аккаунта",
+    "submit_idea": "Предложить идею",
+    "overview_activity": "Обзор и активность",
+    "public_profile": "Публичный профиль и репутация",
+    "preferences_security": "Настройки и безопасность",
+    "share_feedback": "Поделиться отзывом"
+  },
+  "security": {
+    "account_security": "Безопасность аккаунта",
+    "strong": "Высокая",
+    "fair": "Средняя",
+    "at_risk": "Под угрозой",
+    "email_verified": "Email подтверждён",
+    "phone_linked": "Телефон привязан",
+    "two_fa_enabled": "2FA включена",
+    "improve_security": "Улучшить безопасность →"
+  },
+  "header": {
+    "language": "Язык"
+  }
+}

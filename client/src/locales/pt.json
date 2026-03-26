@@ -1,0 +1,77 @@
+{
+  "nav": {
+    "trade": "Negociar",
+    "gift_cards": "Cartões Presente",
+    "explorer": "Explorador",
+    "wallet": "Carteira",
+    "market": "Mercado",
+    "shop": "Loja",
+    "earn": "Ganhar",
+    "support": "Suporte",
+    "dashboard": "Painel"
+  },
+  "trade": {
+    "buy_crypto": "Comprar Cripto",
+    "spot_trading": "Trading Spot",
+    "perpetual": "Contrato Perpétuo",
+    "swap": "Troca",
+    "prediction": "Previsão"
+  },
+  "wallet": {
+    "assets": "Ativos",
+    "assets_desc": "Meus ativos na carteira Pexly",
+    "receive": "Receber",
+    "receive_desc": "Receba cripto ou deposite com fiat",
+    "visa_card": "Cartão Visa",
+    "visa_card_desc": "Gaste sua cripto",
+    "lightning": "Lightning",
+    "lightning_desc": "Envie Bitcoin ultra rápido",
+    "mobile_topup": "Recarga Móvel",
+    "mobile_topup_desc": "Recarregue seu telefone com cripto",
+    "utility": "Utilidades",
+    "utility_desc": "Pague contas e outros serviços"
+  },
+  "shop": {
+    "listings": "Anúncios",
+    "post_ad": "Publicar Anúncio"
+  },
+  "earn": {
+    "stake": "Staking",
+    "referral_program": "Programa de Referência",
+    "rewards": "Recompensas"
+  },
+  "support": {
+    "contact_support": "Contatar Suporte",
+    "help_center": "Central de Ajuda / FAQ",
+    "contact_us": "Fale Conosco",
+    "help_center_short": "Central de Ajuda"
+  },
+  "auth": {
+    "sign_in": "Entrar",
+    "sign_out": "Sair",
+    "get_started": "Começar",
+    "register": "Registrar"
+  },
+  "user_menu": {
+    "profile": "Perfil",
+    "account_settings": "Configurações da Conta",
+    "submit_idea": "Enviar Ideia",
+    "overview_activity": "Visão geral & atividade",
+    "public_profile": "Perfil público & reputação",
+    "preferences_security": "Preferências & segurança",
+    "share_feedback": "Compartilhe seu feedback"
+  },
+  "security": {
+    "account_security": "Segurança da Conta",
+    "strong": "Forte",
+    "fair": "Regular",
+    "at_risk": "Em Risco",
+    "email_verified": "Email verificado",
+    "phone_linked": "Telefone vinculado",
+    "two_fa_enabled": "2FA ativado",
+    "improve_security": "Melhorar Segurança →"
+  },
+  "header": {
+    "language": "Idioma"
+  }
+}

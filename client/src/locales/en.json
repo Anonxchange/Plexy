@@ -1,0 +1,77 @@
+{
+  "nav": {
+    "trade": "Trade",
+    "gift_cards": "Gift Cards",
+    "explorer": "Explorer",
+    "wallet": "Wallet",
+    "market": "Market",
+    "shop": "Shop",
+    "earn": "Earn",
+    "support": "Support",
+    "dashboard": "Dashboard"
+  },
+  "trade": {
+    "buy_crypto": "Buy Crypto",
+    "spot_trading": "Spot Trading",
+    "perpetual": "Perpetual Trade",
+    "swap": "Swap",
+    "prediction": "Prediction"
+  },
+  "wallet": {
+    "assets": "Assets",
+    "assets_desc": "My assets in the Pexly wallet",
+    "receive": "Receive",
+    "receive_desc": "Receive crypto or deposit using fiat",
+    "visa_card": "Visa Card",
+    "visa_card_desc": "Spend your crypto",
+    "lightning": "Lightning",
+    "lightning_desc": "Send Bitcoin ultra fast",
+    "mobile_topup": "Mobile Top-up",
+    "mobile_topup_desc": "Recharge your phone using crypto",
+    "utility": "Utility",
+    "utility_desc": "Pay bills and other services"
+  },
+  "shop": {
+    "listings": "Listings",
+    "post_ad": "Post Ad"
+  },
+  "earn": {
+    "stake": "Stake",
+    "referral_program": "Referral Program",
+    "rewards": "Rewards"
+  },
+  "support": {
+    "contact_support": "Contact Support",
+    "help_center": "Help Center / FAQ",
+    "contact_us": "Contact Us",
+    "help_center_short": "Help Center"
+  },
+  "auth": {
+    "sign_in": "Sign In",
+    "sign_out": "Sign Out",
+    "get_started": "Get Started",
+    "register": "Register"
+  },
+  "user_menu": {
+    "profile": "Profile",
+    "account_settings": "Account Settings",
+    "submit_idea": "Submit Idea",
+    "overview_activity": "Overview & activity",
+    "public_profile": "Public profile & reputation",
+    "preferences_security": "Preferences & security",
+    "share_feedback": "Share your feedback"
+  },
+  "security": {
+    "account_security": "Account Security",
+    "strong": "Strong",
+    "fair": "Fair",
+    "at_risk": "At Risk",
+    "email_verified": "Email verified",
+    "phone_linked": "Phone linked",
+    "two_fa_enabled": "2FA enabled",
+    "improve_security": "Improve Security →"
+  },
+  "header": {
+    "language": "Language"
+  }
+}

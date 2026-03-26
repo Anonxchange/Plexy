@@ -1,0 +1,77 @@
+{
+  "nav": {
+    "trade": "交易",
+    "gift_cards": "礼品卡",
+    "explorer": "浏览器",
+    "wallet": "钱包",
+    "market": "市场",
+    "shop": "商店",
+    "earn": "赚取",
+    "support": "支持",
+    "dashboard": "仪表板"
+  },
+  "trade": {
+    "buy_crypto": "购买加密货币",
+    "spot_trading": "现货交易",
+    "perpetual": "永续合约",
+    "swap": "兑换",
+    "prediction": "预测"
+  },
+  "wallet": {
+    "assets": "资产",
+    "assets_desc": "我在Pexly钱包中的资产",
+    "receive": "接收",
+    "receive_desc": "接收加密货币或存入法币",
+    "visa_card": "Visa卡",
+    "visa_card_desc": "消费您的加密货币",
+    "lightning": "闪电网络",
+    "lightning_desc": "超快速发送比特币",
+    "mobile_topup": "手机充值",
+    "mobile_topup_desc": "使用加密货币为手机充值",
+    "utility": "公用事业",
+    "utility_desc": "支付账单和其他服务"
+  },
+  "shop": {
+    "listings": "商品列表",
+    "post_ad": "发布广告"
+  },
+  "earn": {
+    "stake": "质押",
+    "referral_program": "推荐计划",
+    "rewards": "奖励"
+  },
+  "support": {
+    "contact_support": "联系支持",
+    "help_center": "帮助中心 / 常见问题",
+    "contact_us": "联系我们",
+    "help_center_short": "帮助中心"
+  },
+  "auth": {
+    "sign_in": "登录",
+    "sign_out": "退出登录",
+    "get_started": "开始使用",
+    "register": "注册"
+  },
+  "user_menu": {
+    "profile": "个人资料",
+    "account_settings": "账户设置",
+    "submit_idea": "提交想法",
+    "overview_activity": "概览与活动",
+    "public_profile": "公开资料与声誉",
+    "preferences_security": "偏好设置与安全",
+    "share_feedback": "分享您的反馈"
+  },
+  "security": {
+    "account_security": "账户安全",
+    "strong": "强",
+    "fair": "一般",
+    "at_risk": "有风险",
+    "email_verified": "邮箱已验证",
+    "phone_linked": "手机已绑定",
+    "two_fa_enabled": "已开启两步验证",
+    "improve_security": "提高安全性 →"
+  },
+  "header": {
+    "language": "语言"
+  }
+}

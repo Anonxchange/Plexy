@@ -1,0 +1,77 @@
+{
+  "nav": {
+    "trade": "Giao dịch",
+    "gift_cards": "Thẻ quà tặng",
+    "explorer": "Khám phá",
+    "wallet": "Ví",
+    "market": "Thị trường",
+    "shop": "Cửa hàng",
+    "earn": "Kiếm tiền",
+    "support": "Hỗ trợ",
+    "dashboard": "Bảng điều khiển"
+  },
+  "trade": {
+    "buy_crypto": "Mua tiền mã hoá",
+    "spot_trading": "Giao dịch Spot",
+    "perpetual": "Hợp đồng vĩnh cửu",
+    "swap": "Hoán đổi",
+    "prediction": "Dự đoán"
+  },
+  "wallet": {
+    "assets": "Tài sản",
+    "assets_desc": "Tài sản của tôi trong ví Pexly",
+    "receive": "Nhận",
+    "receive_desc": "Nhận tiền mã hoá hoặc nạp bằng fiat",
+    "visa_card": "Thẻ Visa",
+    "visa_card_desc": "Chi tiêu tiền mã hoá của bạn",
+    "lightning": "Lightning",
+    "lightning_desc": "Gửi Bitcoin siêu nhanh",
+    "mobile_topup": "Nạp tiền điện thoại",
+    "mobile_topup_desc": "Nạp tiền điện thoại bằng tiền mã hoá",
+    "utility": "Tiện ích",
+    "utility_desc": "Thanh toán hóa đơn và các dịch vụ khác"
+  },
+  "shop": {
+    "listings": "Danh sách",
+    "post_ad": "Đăng quảng cáo"
+  },
+  "earn": {
+    "stake": "Đặt cược",
+    "referral_program": "Chương trình giới thiệu",
+    "rewards": "Phần thưởng"
+  },
+  "support": {
+    "contact_support": "Liên hệ hỗ trợ",
+    "help_center": "Trung tâm trợ giúp / FAQ",
+    "contact_us": "Liên hệ chúng tôi",
+    "help_center_short": "Trung tâm trợ giúp"
+  },
+  "auth": {
+    "sign_in": "Đăng nhập",
+    "sign_out": "Đăng xuất",
+    "get_started": "Bắt đầu",
+    "register": "Đăng ký"
+  },
+  "user_menu": {
+    "profile": "Hồ sơ",
+    "account_settings": "Cài đặt tài khoản",
+    "submit_idea": "Gửi ý tưởng",
+    "overview_activity": "Tổng quan & hoạt động",
+    "public_profile": "Hồ sơ công khai & danh tiếng",
+    "preferences_security": "Tùy chọn & bảo mật",
+    "share_feedback": "Chia sẻ phản hồi"
+  },
+  "security": {
+    "account_security": "Bảo mật tài khoản",
+    "strong": "Mạnh",
+    "fair": "Trung bình",
+    "at_risk": "Có rủi ro",
+    "email_verified": "Email đã xác minh",
+    "phone_linked": "Điện thoại đã liên kết",
+    "two_fa_enabled": "2FA đã bật",
+    "improve_security": "Cải thiện bảo mật →"
+  },
+  "header": {
+    "language": "Ngôn ngữ"
+  }
+}

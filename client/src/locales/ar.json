@@ -1,0 +1,77 @@
+{
+  "nav": {
+    "trade": "تداول",
+    "gift_cards": "بطاقات الهدايا",
+    "explorer": "المستكشف",
+    "wallet": "المحفظة",
+    "market": "السوق",
+    "shop": "المتجر",
+    "earn": "اكسب",
+    "support": "الدعم",
+    "dashboard": "لوحة التحكم"
+  },
+  "trade": {
+    "buy_crypto": "شراء العملات المشفرة",
+    "spot_trading": "التداول الفوري",
+    "perpetual": "عقود دائمة",
+    "swap": "مبادلة",
+    "prediction": "التنبؤ"
+  },
+  "wallet": {
+    "assets": "الأصول",
+    "assets_desc": "أصولي في محفظة Pexly",
+    "receive": "استلام",
+    "receive_desc": "استلام العملات المشفرة أو الإيداع بالعملة الورقية",
+    "visa_card": "بطاقة فيزا",
+    "visa_card_desc": "أنفق عملاتك المشفرة",
+    "lightning": "برق",
+    "lightning_desc": "أرسل البيتكوين بسرعة فائقة",
+    "mobile_topup": "شحن الهاتف",
+    "mobile_topup_desc": "اشحن هاتفك باستخدام العملات المشفرة",
+    "utility": "الخدمات",
+    "utility_desc": "ادفع الفواتير والخدمات الأخرى"
+  },
+  "shop": {
+    "listings": "الإعلانات",
+    "post_ad": "نشر إعلان"
+  },
+  "earn": {
+    "stake": "تعهد",
+    "referral_program": "برنامج الإحالة",
+    "rewards": "المكافآت"
+  },
+  "support": {
+    "contact_support": "تواصل مع الدعم",
+    "help_center": "مركز المساعدة / FAQ",
+    "contact_us": "اتصل بنا",
+    "help_center_short": "مركز المساعدة"
+  },
+  "auth": {
+    "sign_in": "تسجيل الدخول",
+    "sign_out": "تسجيل الخروج",
+    "get_started": "ابدأ الآن",
+    "register": "التسجيل"
+  },
+  "user_menu": {
+    "profile": "الملف الشخصي",
+    "account_settings": "إعدادات الحساب",
+    "submit_idea": "تقديم فكرة",
+    "overview_activity": "نظرة عامة والنشاط",
+    "public_profile": "الملف العام والسمعة",
+    "preferences_security": "التفضيلات والأمان",
+    "share_feedback": "شارك ملاحظاتك"
+  },
+  "security": {
+    "account_security": "أمان الحساب",
+    "strong": "قوي",
+    "fair": "متوسط",
+    "at_risk": "في خطر",
+    "email_verified": "البريد الإلكتروني مُحقق",
+    "phone_linked": "الهاتف مرتبط",
+    "two_fa_enabled": "التحقق الثنائي مُفعّل",
+    "improve_security": "تحسين الأمان →"
+  },
+  "header": {
+    "language": "اللغة"
+  }
+}

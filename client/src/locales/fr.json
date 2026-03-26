@@ -1,0 +1,77 @@
+{
+  "nav": {
+    "trade": "Échanger",
+    "gift_cards": "Cartes Cadeaux",
+    "explorer": "Explorateur",
+    "wallet": "Portefeuille",
+    "market": "Marché",
+    "shop": "Boutique",
+    "earn": "Gagner",
+    "support": "Support",
+    "dashboard": "Tableau de bord"
+  },
+  "trade": {
+    "buy_crypto": "Acheter des Cryptos",
+    "spot_trading": "Trading Spot",
+    "perpetual": "Trading Perpétuel",
+    "swap": "Échange",
+    "prediction": "Prédiction"
+  },
+  "wallet": {
+    "assets": "Actifs",
+    "assets_desc": "Mes actifs dans le portefeuille Pexly",
+    "receive": "Recevoir",
+    "receive_desc": "Recevoir des cryptos ou déposer en fiat",
+    "visa_card": "Carte Visa",
+    "visa_card_desc": "Dépensez vos cryptos",
+    "lightning": "Lightning",
+    "lightning_desc": "Envoyer du Bitcoin ultra rapidement",
+    "mobile_topup": "Recharge Mobile",
+    "mobile_topup_desc": "Rechargez votre téléphone avec des cryptos",
+    "utility": "Services",
+    "utility_desc": "Payer vos factures et autres services"
+  },
+  "shop": {
+    "listings": "Annonces",
+    "post_ad": "Publier une annonce"
+  },
+  "earn": {
+    "stake": "Staker",
+    "referral_program": "Programme de parrainage",
+    "rewards": "Récompenses"
+  },
+  "support": {
+    "contact_support": "Contacter le support",
+    "help_center": "Centre d'aide / FAQ",
+    "contact_us": "Nous contacter",
+    "help_center_short": "Centre d'aide"
+  },
+  "auth": {
+    "sign_in": "Se connecter",
+    "sign_out": "Se déconnecter",
+    "get_started": "Commencer",
+    "register": "S'inscrire"
+  },
+  "user_menu": {
+    "profile": "Profil",
+    "account_settings": "Paramètres du compte",
+    "submit_idea": "Soumettre une idée",
+    "overview_activity": "Aperçu & activité",
+    "public_profile": "Profil public & réputation",
+    "preferences_security": "Préférences & sécurité",
+    "share_feedback": "Partagez votre avis"
+  },
+  "security": {
+    "account_security": "Sécurité du compte",
+    "strong": "Fort",
+    "fair": "Moyen",
+    "at_risk": "À risque",
+    "email_verified": "Email vérifié",
+    "phone_linked": "Téléphone lié",
+    "two_fa_enabled": "2FA activé",
+    "improve_security": "Améliorer la sécurité →"
+  },
+  "header": {
+    "language": "Langue"
+  }
+}
