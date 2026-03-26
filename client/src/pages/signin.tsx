@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import portraitImage from "@assets/young-woman-portrait-close-up_1_3_optimized.webp";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, Sun, Moon, ShieldCheck, Zap } from "lucide-react";
+import { Eye, EyeOff, Sun, Moon, ShieldCheck, Zap, Fingerprint } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { FaApple, FaFacebook } from "react-icons/fa";
 import { CountryCodeSelector } from "@/components/country-code-selector";
@@ -14,6 +14,7 @@ import { supabase } from "@/lib/supabase";
 import { useTheme } from "@/components/theme-provider";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { deviceFingerprint } from "@/lib/security/device-fingerprint";
+import { webAuthnService } from "@/lib/webauthn";
 
 export function SignIn() {
   useHead({ title: "Sign In | Pexly", meta: [{ name: "description", content: "Sign in to access your Pexly wallet, swaps, staking, gift cards, and account features." }] });
@@ -35,6 +36,7 @@ export function SignIn() {
   const [captchaError, setCaptchaError] = useState<string | null>(null);
   const [captchaKey, setCaptchaKey] = useState(0);
   const [displayedText, setDisplayedText] = useState("");
+  const [passkeySupported, setPasskeySupported] = useState(false);
   const { signIn, signOut, user, session, pendingOTPVerification, completeOTPVerification, cancelOTPVerification } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -57,6 +59,11 @@ export function SignIn() {
       }
     };
     detectCountry();
+  }, []);
+
+  // Check passkey support on mount
+  useEffect(() => {
+    webAuthnService.isPlatformAuthenticatorAvailable().then(setPasskeySupported).catch(() => setPasskeySupported(false));
   }, []);
 
   // Typewriter effect for welcome message
@@ -276,6 +283,47 @@ export function SignIn() {
   const handleDeviceVerificationCancel = async () => {
     await signOut();
     setShowDeviceVerification(false);
+  };
+
+  const handlePasskeySignIn = async () => {
+    setLoading(true);
+    try {
+      const credentialIdHex = await webAuthnService.authenticateDiscoverable();
+      if (!credentialIdHex) {
+        toast({ title: "Cancelled", description: "Passkey sign-in was cancelled" });
+        return;
+      }
+
+      const { data: credData, error: credError } = await supabase
+        .from('webauthn_credentials')
+        .select('user_id')
+        .eq('credential_id', credentialIdHex)
+        .eq('credential_type', 'passkey')
+        .single();
+
+      if (credError || !credData) {
+        throw new Error("No passkey registered for this account. Please sign in with your password.");
+      }
+
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: inputValue.trim(),
+        options: { shouldCreateUser: false },
+      });
+      if (otpError) throw otpError;
+
+      toast({
+        title: "Check your email",
+        description: `Passkey verified! We sent a sign-in link to ${inputValue.trim()}.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Passkey sign-in failed",
+        description: error instanceof Error ? error.message : "Could not sign in with passkey",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleVerify2FA = async (e: React.FormEvent) => {
@@ -627,6 +675,23 @@ export function SignIn() {
               >
                 {loading ? "Signing in..." : isPhoneNumber ? "Continue with SMS" : "Sign in"}
               </button>
+
+              {/* Passkey Sign In — only for users who have passkeys on a supporting device */}
+              {!isPhoneNumber && passkeySupported && inputValue.includes('@') && (
+                <button
+                  type="button"
+                  onClick={handlePasskeySignIn}
+                  disabled={loading}
+                  className={`w-full flex items-center justify-center gap-2 py-3 rounded-full text-sm font-medium transition-colors mt-3 disabled:opacity-50 ${
+                    isDark
+                      ? 'border border-gray-700 text-gray-300 hover:bg-gray-800'
+                      : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <Fingerprint size={18} />
+                  Sign in with Passkey
+                </button>
+              )}
 
               {/* Sign Up Link */}
               <div className={`text-center mt-8 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
