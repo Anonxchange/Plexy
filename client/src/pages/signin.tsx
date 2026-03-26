@@ -62,46 +62,8 @@ export function SignIn() {
     detectCountry();
   }, []);
 
-  const handleConditionalPasskeySuccess = useCallback(async (email: string) => {
-    // Guard: autofill-assisted passkey gives us the email from the input at the time
-    // of assertion. If the field was empty when the browser fired the autofill event
-    // we cannot proceed — show a prompt instead of sending a bad OTP request.
-    if (!email) {
-      toast({
-        title: "Email required",
-        description: "Please enter your email address and try the passkey sign-in again.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setLoading(true);
-    try {
-      // Note: signInWithOtp fires a 'magiclink' auth event, not a 'password' event.
-      // Any Supabase Auth Hook (Authentication → Hooks) must handle this event type
-      // gracefully, or it will reject the passkey login flow with an error.
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          ...(captchaToken ? { captchaToken } : {}),
-        },
-      });
-      if (error) throw error;
-      toast({
-        title: "Check your email",
-        description: `Passkey verified! We sent a sign-in link to ${email}.`,
-      });
-    } catch (err) {
-      toast({
-        title: "Passkey sign-in failed",
-        description: err instanceof Error ? err.message : "Could not complete sign-in",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [captchaToken, toast]);
-
   // Check passkey support and start conditional UI (autofill-assisted passkey)
+  // Uses a server-generated challenge so the assertion is cryptographically verified server-side
   useEffect(() => {
     webAuthnService.isPlatformAuthenticatorAvailable().then(async (supported) => {
       setPasskeySupported(supported);
@@ -110,7 +72,9 @@ export function SignIn() {
       try {
         const controller = new AbortController();
         conditionalAbortRef.current = controller;
-        const challenge = crypto.getRandomValues(new Uint8Array(32));
+
+        // Fetch a server-side challenge — this is required by the WebAuthn standard
+        const { challenge, challengeId } = await webAuthnService.startConditionalSignIn();
 
         const assertion = await navigator.credentials.get({
           signal: controller.signal,
@@ -118,16 +82,31 @@ export function SignIn() {
           publicKey: {
             challenge,
             allowCredentials: [],
-            userVerification: 'preferred',
+            userVerification: 'required',
             timeout: 300000,
           },
         } as any) as PublicKeyCredential | null;
 
         if (!assertion || controller.signal.aborted) return;
 
-        const emailField = document.getElementById('signin-email') as HTMLInputElement | null;
-        const email = emailField?.value?.trim() || '';
-        await handleConditionalPasskeySuccess(email);
+        setLoading(true);
+        try {
+          // Server verifies signature, counter, origin — then issues a session token
+          const result = await webAuthnService.finishConditionalSignIn(assertion, challengeId);
+          const { error } = await supabase.auth.verifyOtp({
+            token_hash: result.tokenHash,
+            type: 'email',
+          });
+          if (error) throw error;
+        } catch (err) {
+          toast({
+            title: "Passkey sign-in failed",
+            description: err instanceof Error ? err.message : "Could not complete sign-in",
+            variant: "destructive",
+          });
+        } finally {
+          setLoading(false);
+        }
       } catch (err: any) {
         if (err?.name === 'AbortError' || err?.name === 'NotAllowedError') return;
         console.error('Conditional passkey error:', err);
@@ -137,7 +116,7 @@ export function SignIn() {
     return () => {
       conditionalAbortRef.current?.abort();
     };
-  }, [handleConditionalPasskeySuccess]);
+  }, [toast]);
 
   // Typewriter effect for welcome message
   useEffect(() => {
@@ -359,73 +338,24 @@ export function SignIn() {
   };
 
   const handlePasskeySignIn = async () => {
-    // Step 1: resolve the email to use.
-    // Prefer whatever the user already typed; fall back to a credential-ID lookup
-    // so that the passkey button works even when the email field is empty.
-    const typedEmail = inputValue.trim();
-
     conditionalAbortRef.current?.abort();
     setLoading(true);
     try {
-      // Step 2: verify the passkey with the device authenticator.
-      const credentialIdHex = await webAuthnService.authenticateDiscoverable();
-      if (!credentialIdHex) {
+      // Full WebAuthn ceremony: server generates challenge → user touches authenticator
+      // → server verifies ECDSA signature, counter, and origin → issues a session token
+      const result = await webAuthnService.signInWithPasskey();
+
+      // Exchange the server-verified token_hash for a live Supabase session
+      const { error } = await supabase.auth.verifyOtp({
+        token_hash: result.tokenHash,
+        type: 'email',
+      });
+      if (error) throw error;
+    } catch (error: any) {
+      if (error?.name === 'NotAllowedError') {
         toast({ title: "Cancelled", description: "Passkey sign-in was cancelled" });
         return;
       }
-
-      // Step 3: resolve the email.
-      // If the user typed one, use it. Otherwise look up which account owns this
-      // credential so we know where to send the magic-link.
-      let emailToUse = typedEmail;
-      if (!emailToUse) {
-        // Query the webauthn_credentials table (public read allowed for lookup).
-        // We use the anon client — no session required — so this is safe.
-        const { data: credRow } = await supabase
-          .from("webauthn_credentials")
-          .select("user_id")
-          .eq("credential_id", credentialIdHex)
-          .maybeSingle();
-
-        if (credRow?.user_id) {
-          // Fetch the email from user_profiles (must be readable by anon for this lookup).
-          const { data: profile } = await supabase
-            .from("user_profiles")
-            .select("email")
-            .eq("id", credRow.user_id)
-            .maybeSingle();
-
-          emailToUse = profile?.email ?? "";
-        }
-      }
-
-      if (!emailToUse) {
-        toast({
-          title: "Email required",
-          description: "Please enter your email address so we know where to send your sign-in link.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Step 4: issue a magic-link OTP to the resolved email.
-      // Note: if you have a Supabase Auth Hook configured under Authentication → Hooks,
-      // make sure it handles the OTP / magic-link event type gracefully — passkey login
-      // uses signInWithOtp internally and will trigger those hooks with type = 'magiclink',
-      // not type = 'password'. Any hook that assumes a password context will fail here.
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email: emailToUse,
-        options: {
-          ...(captchaToken ? { captchaToken } : {}),
-        },
-      });
-      if (otpError) throw otpError;
-
-      toast({
-        title: "Check your email",
-        description: `Passkey verified! We sent a sign-in link to ${emailToUse}.`,
-      });
-    } catch (error) {
       toast({
         title: "Passkey sign-in failed",
         description: error instanceof Error ? error.message : "Could not sign in with passkey",
