@@ -219,60 +219,41 @@ export function SecuritySection() {
     }
     setSendingEmailCode(true);
     try {
-      const arr = new Uint32Array(1);
-      crypto.getRandomValues(arr);
-      const code = (100000 + (arr[0] % 900000)).toString();
-      const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-
-      await supabase
-        .from("user_profiles")
-        .update({ email_verification_code: code, email_code_expires_at: expiresAt })
-        .eq("id", user?.id);
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) throw new Error("No active session");
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-verification-email`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-          },
-          body: JSON.stringify({ email: user.email, type: "2fa_setup", code }),
-        }
-      );
-      if (!response.ok) throw new Error("Failed to send email");
+      // Use Supabase native reauthentication — sends a one-time code to the
+      // user's email without any custom Edge Function or stored OTP codes.
+      const { error } = await supabase.auth.reauthenticate();
+      if (error) throw error;
 
       setEmailCodeSent(true);
       toast({ title: "Code Sent", description: `Verification code sent to ${user.email}` });
-    } catch {
-      toast({ title: "Error", description: "Failed to send verification code", variant: "destructive" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message || "Failed to send verification code", variant: "destructive" });
     } finally {
       setSendingEmailCode(false);
     }
   };
 
   const handleEnableEmail2FA = async () => {
+    if (!user?.email) {
+      toast({ title: "Error", description: "No email on account", variant: "destructive" });
+      return;
+    }
     try {
-      const { data: profileData, error } = await supabase
-        .from("user_profiles")
-        .select("email_verification_code, email_code_expires_at")
-        .eq("id", user?.id)
-        .single();
-      if (error) throw error;
-      if (!profileData?.email_verification_code) throw new Error("No verification code found");
-      if (new Date(profileData.email_code_expires_at) < new Date()) throw new Error("Verification code has expired");
-      if (profileData.email_verification_code !== emailVerificationCode) {
-        toast({ title: "Invalid Code", description: "The verification code is incorrect", variant: "destructive" });
+      // Verify the reauthentication OTP sent to the user's email.
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        email: user.email,
+        token: emailVerificationCode,
+        type: 'reauthentication',
+      });
+
+      if (verifyError) {
+        toast({ title: "Invalid Code", description: verifyError.message || "The verification code is incorrect", variant: "destructive" });
         return;
       }
 
       await supabase
         .from("user_profiles")
-        .update({ email_two_factor_enabled: true, email_verification_code: null, email_code_expires_at: null })
+        .update({ email_two_factor_enabled: true })
         .eq("id", user?.id);
 
       setEmailAuth(true);
