@@ -124,7 +124,7 @@ function RewardsGuestPage() {
         {/* Faint mirror on left — desktop only */}
         <img
           aria-hidden="true"
-          src="/assets/svg-image-1-2.svg"
+          src="/assets/IMG_4863.webp"
           alt=""
           className="hidden lg:block absolute pointer-events-none select-none opacity-[0.16]"
           style={{ left: "-110px", top: "50%", transform: "scaleX(-1) translateY(-50%)", width: "360px" }}
