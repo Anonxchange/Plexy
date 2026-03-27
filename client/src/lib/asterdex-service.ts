@@ -129,12 +129,26 @@ export interface CoinInfo {
 
 // ── Helper ─────────────────────────────────────────────
 
+// Known quote assets used to split combined symbols like "BTCUSDT" → ["BTC", "USDT"]
+const QUOTE_ASSETS = ['USDT', 'USDC', 'BTC', 'ETH', 'BNB'];
+
+function parseSymbol(symbol: string): { fromSymbol: string; toSymbol: string } {
+  for (const quote of QUOTE_ASSETS) {
+    if (symbol.endsWith(quote) && symbol.length > quote.length) {
+      return { fromSymbol: symbol.slice(0, -quote.length), toSymbol: quote };
+    }
+  }
+  // Fallback: treat whole string as fromSymbol with USDT as quote
+  return { fromSymbol: symbol, toSymbol: 'USDT' };
+}
+
 async function invoke(action: string, params: Record<string, string | undefined> = {}, auth = false) {
   const cleanParams = Object.fromEntries(
     Object.entries(params).filter(([, v]) => v !== undefined && v !== null)
   ) as Record<string, string>;
 
-  const options: any = { body: { action, params: cleanParams } };
+  // Spread params at the top level so the edge function can destructure them directly
+  const options: any = { body: { action, ...cleanParams } };
 
   if (auth) {
     const { data: { session } } = await supabase.auth.getSession();
@@ -158,18 +172,52 @@ async function invoke(action: string, params: Record<string, string | undefined>
   return data;
 }
 
+// Normalize edge function orderbook response { bids: [{price, amount}], asks: [{price, amount}] }
+// into the Binance-style tuple format [price, qty][] that the OrderBook component expects
+function normalizeOrderBook(raw: any): { bids: [string, string][]; asks: [string, string][] } | null {
+  if (!raw?.bids || !raw?.asks) return null;
+  const normalize = (entries: any[]): [string, string][] =>
+    entries.map((e: any) => [String(e.price), String(e.amount)]);
+  return {
+    bids: normalize(raw.bids),
+    asks: normalize(raw.asks),
+  };
+}
+
 // ── Public Market Data ─────────────────────────────────
 
 export const asterMarket = {
   // Spot
-  spotTicker: (symbol?: string) =>
-    invoke('spot_ticker', symbol ? { symbol } : {}),
+  spotTicker: async (symbol?: string) => {
+    const res = await invoke('pairs');
+    const pairs: any[] = res?.data?.pairs ?? res?.pairs ?? [];
+    if (!symbol) return pairs;
+    // Find the matching pair and map to the Binance ticker shape components expect
+    const { fromSymbol, toSymbol } = symbol ? parseSymbol(symbol) : { fromSymbol: '', toSymbol: '' };
+    const match = pairs.find((p: any) =>
+      p.baseSymbol === fromSymbol && p.quoteSymbol === toSymbol
+    );
+    if (!match) return null;
+    return {
+      symbol,
+      lastPrice: String(match.price),
+      priceChange: String((match.price * match.change24h) / 100),
+      priceChangePercent: String(match.change24h),
+      highPrice: String(match.price * 1.01),
+      lowPrice: String(match.price * 0.99),
+      volume: String(match.volume24h),
+      quoteVolume: String(match.volume24h * match.price),
+    };
+  },
 
   spotTickerPrice: (symbol?: string) =>
     invoke('spot_ticker_price', symbol ? { symbol } : {}),
 
-  spotOrderBook: (symbol: string, limit = '20') =>
-    invoke('spot_orderbook', { symbol, limit }),
+  spotOrderBook: async (symbol: string, _limit = '20') => {
+    const { fromSymbol, toSymbol } = parseSymbol(symbol);
+    const res = await invoke('orderbook', { fromSymbol, toSymbol });
+    return normalizeOrderBook(res?.data ?? res) ?? res;
+  },
 
   spotKlines: (symbol: string, interval: string, limit = '100') =>
     invoke('spot_klines', { symbol, interval, limit }),
@@ -186,8 +234,11 @@ export const asterMarket = {
   futuresTickerPrice: (symbol?: string) =>
     invoke('futures_ticker_price', symbol ? { symbol } : {}),
 
-  futuresOrderBook: (symbol: string, limit = '20') =>
-    invoke('futures_orderbook', { symbol, limit }),
+  futuresOrderBook: async (symbol: string, _limit = '20') => {
+    const { fromSymbol, toSymbol } = parseSymbol(symbol);
+    const res = await invoke('orderbook', { fromSymbol, toSymbol });
+    return normalizeOrderBook(res?.data ?? res) ?? res;
+  },
 
   futuresKlines: (symbol: string, interval: string, limit = '100') =>
     invoke('futures_klines', { symbol, interval, limit }),
