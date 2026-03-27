@@ -114,7 +114,7 @@ function RewardsGuestPage() {
 
       {/* Header */}
       <div className="border-b border-border bg-background">
-        <div className="max-w-2xl mx-auto px-4 py-3.5 flex items-center justify-between">
+        <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-3.5 flex items-center justify-between">
           <div>
             <h1 className="text-base font-bold text-foreground">Rewards</h1>
             <p className="text-xs text-muted-foreground mt-0.5">Earn points, unlock more</p>
@@ -128,53 +128,42 @@ function RewardsGuestPage() {
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto w-full px-4 py-5 space-y-5 pb-16">
+      {/* ── MOBILE layout (< lg) ─────────────────────────────────────────────── */}
+      <div className="lg:hidden max-w-2xl mx-auto w-full px-4 py-5 space-y-5 pb-16">
 
-        {/* ── Hero card ───────────────────────────────────────── */}
+        {/* Hero card */}
         <div className="relative rounded-3xl overflow-hidden border border-border bg-card shadow-sm">
           <div className="absolute -top-16 -right-16 w-60 h-60 bg-primary/8 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
-
           <div className="relative p-6">
             <div className="inline-flex items-center gap-1.5 bg-primary/10 border border-primary/20 rounded-full px-3 py-1 mb-5">
               <Zap className="w-3.5 h-3.5 text-primary" />
               <span className="text-xs font-bold text-primary">Pexly Rewards</span>
             </div>
-
             <div className="flex items-start justify-between gap-4 mb-6">
               <div className="flex-1">
                 <h2 className="text-3xl font-black text-foreground leading-tight tracking-tight">
-                  Trade more.<br />
-                  <span className="text-primary">Earn more.</span>
+                  Trade more.<br /><span className="text-primary">Earn more.</span>
                 </h2>
                 <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
                   Every trade, referral, and login earns you points. Climb five tiers, unlock fee discounts, and redeem points for real-world rewards.
                 </p>
               </div>
-
-              {/* Tier stack preview */}
               <div className="flex-shrink-0 flex flex-col items-center gap-1.5">
                 {["Diamond", "Gold", "Silver"].map((name, i) => (
-                  <div
-                    key={name}
-                    className="flex items-center gap-1.5 bg-muted border border-border rounded-full pl-2 pr-3 py-1.5"
-                    style={{ opacity: 1 - i * 0.2, transform: `scale(${1 - i * 0.06})` }}
-                  >
+                  <div key={name} className="flex items-center gap-1.5 bg-muted border border-border rounded-full pl-2 pr-3 py-1.5"
+                    style={{ opacity: 1 - i * 0.2, transform: `scale(${1 - i * 0.06})` }}>
                     {TIERS.find(t => t.name === name)?.icon}
-                    <span className={cn("text-xs font-bold", TIERS.find(t => t.name === name)?.textColor)}>
-                      {name}
-                    </span>
+                    <span className={cn("text-xs font-bold", TIERS.find(t => t.name === name)?.textColor)}>{name}</span>
                   </div>
                 ))}
               </div>
             </div>
-
-            {/* Key numbers */}
             <div className="grid grid-cols-3 gap-2 mb-6">
               {[
-                { value: "5",    unit: "tiers",     label: "to climb",   bg: "bg-primary/8 border-primary/15", val: "text-primary"    },
-                { value: "28%",  unit: "fee off",   label: "at Diamond", bg: "bg-muted border-border",         val: "text-foreground" },
-                { value: "3×",   unit: "pts boost", label: "top tier",   bg: "bg-muted border-border",         val: "text-foreground" },
+                { value: "5",   unit: "tiers",     label: "to climb",   bg: "bg-primary/8 border-primary/15", val: "text-primary"    },
+                { value: "28%", unit: "fee off",   label: "at Diamond", bg: "bg-muted border-border",         val: "text-foreground" },
+                { value: "3×",  unit: "pts boost", label: "top tier",   bg: "bg-muted border-border",         val: "text-foreground" },
               ].map((m) => (
                 <div key={m.label} className={cn("rounded-2xl border px-3 py-3.5 text-center", m.bg)}>
                   <p className={cn("text-2xl font-black tabular-nums leading-none", m.val)}>
@@ -184,66 +173,48 @@ function RewardsGuestPage() {
                 </div>
               ))}
             </div>
-
-            <button
-              onClick={() => navigate("/signup")}
-              className="w-full h-13 py-3.5 rounded-2xl bg-primary text-primary-foreground font-bold text-base flex items-center justify-center gap-2 hover:opacity-90 transition-opacity active:scale-[0.98]"
-            >
-              Start earning — it's free
-              <ArrowRight className="w-4 h-4" />
+            <button onClick={() => navigate("/signup")}
+              className="w-full h-13 py-3.5 rounded-2xl bg-primary text-primary-foreground font-bold text-base flex items-center justify-center gap-2 hover:opacity-90 transition-opacity active:scale-[0.98]">
+              Start earning — it's free <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* ── Tier cards ──────────────────────────────────────── */}
+        {/* Tier cards */}
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 px-1">
-            5 tiers to unlock
-          </p>
-
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 px-1">5 tiers to unlock</p>
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4">
             {TIERS.map((tier) => (
-              <div
-                key={tier.name}
-                className="flex-shrink-0 w-[160px] rounded-2xl border border-border bg-card overflow-hidden"
-              >
+              <div key={tier.name} className="flex-shrink-0 w-[160px] rounded-2xl border border-border bg-card overflow-hidden">
                 <div className={cn("h-1.5 w-full bg-gradient-to-r", tier.gradient)} />
-
                 <div className="p-4 flex flex-col items-center text-center">
                   <div className="relative mb-3">
                     <div className={cn("absolute inset-0 rounded-full blur-xl opacity-40 bg-gradient-to-br", tier.gradient)} />
                     <TierCrystal name={tier.name} size={68} />
                   </div>
-
                   <p className={cn("text-base font-black", tier.textColor)}>{tier.name}</p>
                   <p className="text-xs text-muted-foreground mt-1 leading-snug">{tier.tagline}</p>
-
                   <div className="mt-3 w-full bg-muted rounded-lg px-2 py-2">
                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">From</p>
                     <p className="text-sm font-black text-foreground tabular-nums">
                       {tier.minPts === 0 ? "0" : tier.minPts.toLocaleString()} pts
                     </p>
                   </div>
-
-                  <p className="text-xs text-muted-foreground mt-2.5 leading-snug px-1">
-                    {TIER_HERO_PERK[tier.name]}
-                  </p>
+                  <p className="text-xs text-muted-foreground mt-2.5 leading-snug px-1">{TIER_HERO_PERK[tier.name]}</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* ── Ways to earn ────────────────────────────────────── */}
+        {/* Ways to earn */}
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 px-1">
-            How to earn points
-          </p>
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 px-1">How to earn points</p>
           <div className="rounded-2xl border border-border bg-card overflow-hidden divide-y divide-border">
             {EARN_WAYS.map((w) => (
               <div key={w.label} className="flex items-center gap-4 px-5 py-4">
                 <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0", w.color)}>
-                  <w.icon className="w-4.5 h-4.5 w-[18px] h-[18px]" />
+                  <w.icon className="w-[18px] h-[18px]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[15px] font-semibold text-foreground">{w.label}</p>
@@ -255,11 +226,9 @@ function RewardsGuestPage() {
           </div>
         </div>
 
-        {/* ── Redeem preview ──────────────────────────────────── */}
+        {/* Redeem preview */}
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 px-1">
-            Redeem your points
-          </p>
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 px-1">Redeem your points</p>
           <div className="grid grid-cols-3 gap-3">
             {REDEEM_PREVIEW.map((r) => (
               <div key={r.name} className="rounded-2xl border border-border bg-card p-4 flex flex-col items-center text-center gap-3">
@@ -271,22 +240,18 @@ function RewardsGuestPage() {
               </div>
             ))}
           </div>
-          <p className="text-center text-xs text-muted-foreground mt-3">
-            + data bundles, Apple, Uber, Netflix &amp; more
-          </p>
+          <p className="text-center text-xs text-muted-foreground mt-3">+ data bundles, Apple, Uber, Netflix &amp; more</p>
         </div>
 
-        {/* ── FAQ ─────────────────────────────────────────────── */}
+        {/* FAQ */}
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 px-1">
-            Frequently asked
-          </p>
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 px-1">Frequently asked</p>
           <div className="rounded-2xl border border-border bg-card px-5 divide-y divide-border">
             {FAQS.map((f) => <FaqItem key={f.q} q={f.q} a={f.a} />)}
           </div>
         </div>
 
-        {/* ── Bottom CTA ──────────────────────────────────────── */}
+        {/* Bottom CTA */}
         <div className="relative rounded-3xl overflow-hidden border border-border bg-card p-6 text-center">
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/8 rounded-full blur-3xl pointer-events-none" />
           <div className="relative">
@@ -297,22 +262,196 @@ function RewardsGuestPage() {
             <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
               Join Pexly free. Your first points are waiting — log in daily, make a trade, or refer a friend.
             </p>
-            <button
-              onClick={() => navigate("/signup")}
-              className="w-full py-3.5 rounded-2xl bg-primary text-primary-foreground font-bold text-base flex items-center justify-center gap-2 hover:opacity-90 transition-opacity active:scale-[0.98]"
-            >
-              Create free account
-              <ArrowRight className="w-4 h-4" />
+            <button onClick={() => navigate("/signup")}
+              className="w-full py-3.5 rounded-2xl bg-primary text-primary-foreground font-bold text-base flex items-center justify-center gap-2 hover:opacity-90 transition-opacity active:scale-[0.98]">
+              Create free account <ArrowRight className="w-4 h-4" />
             </button>
-            <button
-              onClick={() => navigate("/signin")}
-              className="w-full mt-3 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
-            >
+            <button onClick={() => navigate("/signin")}
+              className="w-full mt-3 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">
               Already have an account? Sign in
             </button>
           </div>
         </div>
+      </div>
 
+      {/* ── DESKTOP layout (≥ lg) ─────────────────────────────────────────────── */}
+      <div className="hidden lg:block flex-1">
+        <div className="max-w-6xl mx-auto px-8 py-10 pb-20 space-y-6">
+
+          {/* ── HERO: full-width two-column ──────────────────────────────────── */}
+          <div className="relative rounded-3xl overflow-hidden border border-border bg-card shadow-sm">
+            <div className="absolute -top-24 -right-24 w-96 h-96 bg-primary/6 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-primary/3 to-transparent pointer-events-none" />
+
+            <div className="relative flex items-center gap-16 p-12">
+              {/* Left: text + CTA */}
+              <div className="flex-1 min-w-0">
+                <div className="inline-flex items-center gap-1.5 bg-primary/10 border border-primary/20 rounded-full px-3 py-1 mb-6">
+                  <Zap className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-xs font-bold text-primary">Pexly Rewards</span>
+                </div>
+                <h2 className="text-5xl font-black text-foreground leading-tight tracking-tight mb-4">
+                  Trade more.<br /><span className="text-primary">Earn more.</span>
+                </h2>
+                <p className="text-base text-muted-foreground leading-relaxed max-w-md mb-8">
+                  Every trade, referral, and login earns you points. Climb five tiers, unlock fee discounts up to 28%, and redeem for real-world rewards.
+                </p>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => navigate("/signup")}
+                    className="px-8 py-3.5 rounded-2xl bg-primary text-primary-foreground font-bold text-base flex items-center gap-2 hover:opacity-90 transition-opacity active:scale-[0.98]">
+                    Start earning — it's free <ArrowRight className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => navigate("/signin")}
+                    className="px-6 py-3.5 rounded-2xl border border-border text-sm font-semibold text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors">
+                    Sign in
+                  </button>
+                </div>
+              </div>
+
+              {/* Right: bento stats + tier stack */}
+              <div className="flex-shrink-0 flex flex-col gap-4 w-[340px]">
+                {/* Stat bento grid */}
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { value: "5",   unit: "tiers",     label: "to climb",   bg: "bg-primary/8 border-primary/20", val: "text-primary"    },
+                    { value: "28%", unit: "fee off",   label: "at Diamond", bg: "bg-muted border-border",         val: "text-foreground" },
+                    { value: "3×",  unit: "pts boost", label: "top tier",   bg: "bg-muted border-border",         val: "text-foreground" },
+                  ].map((m) => (
+                    <div key={m.label} className={cn("rounded-2xl border px-3 py-4 text-center", m.bg)}>
+                      <p className={cn("text-2xl font-black tabular-nums leading-none", m.val)}>
+                        {m.value}<span className="text-[10px] font-bold ml-0.5 opacity-70">{m.unit}</span>
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mt-1.5">{m.label}</p>
+                    </div>
+                  ))}
+                </div>
+                {/* Tier pill stack */}
+                <div className="flex flex-col gap-2">
+                  {["Diamond", "Gold", "Silver", "Bronze"].map((name, i) => (
+                    <div key={name} className="flex items-center gap-2.5 bg-muted/60 border border-border rounded-xl px-3 py-2.5"
+                      style={{ opacity: 1 - i * 0.18 }}>
+                      {TIERS.find(t => t.name === name)?.icon}
+                      <div className="flex-1 min-w-0">
+                        <span className={cn("text-sm font-bold", TIERS.find(t => t.name === name)?.textColor)}>{name}</span>
+                        <span className="text-xs text-muted-foreground ml-2">{TIER_HERO_PERK[name]}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── TIERS: 5-column grid ─────────────────────────────────────────── */}
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">5 tiers to unlock</p>
+            <div className="grid grid-cols-5 gap-4">
+              {TIERS.map((tier) => (
+                <div key={tier.name} className="rounded-2xl border border-border bg-card overflow-hidden hover:border-border/80 hover:shadow-md transition-all">
+                  <div className={cn("h-1.5 w-full bg-gradient-to-r", tier.gradient)} />
+                  <div className="p-5 flex flex-col items-center text-center">
+                    <div className="relative mb-4">
+                      <div className={cn("absolute inset-0 rounded-full blur-xl opacity-40 bg-gradient-to-br", tier.gradient)} />
+                      <TierCrystal name={tier.name} size={72} />
+                    </div>
+                    <p className={cn("text-base font-black mb-1", tier.textColor)}>{tier.name}</p>
+                    <p className="text-xs text-muted-foreground leading-snug mb-3">{tier.tagline}</p>
+                    <div className="w-full bg-muted rounded-xl px-3 py-2.5 mb-2.5">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">From</p>
+                      <p className="text-sm font-black text-foreground tabular-nums">
+                        {tier.minPts === 0 ? "0" : tier.minPts.toLocaleString()} pts
+                      </p>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-snug px-1">{TIER_HERO_PERK[tier.name]}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── EARN + REDEEM: side by side ──────────────────────────────────── */}
+          <div className="grid grid-cols-2 gap-6">
+            {/* Ways to earn */}
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">How to earn points</p>
+              <div className="rounded-2xl border border-border bg-card overflow-hidden divide-y divide-border h-full">
+                {EARN_WAYS.map((w) => (
+                  <div key={w.label} className="flex items-center gap-4 px-5 py-4 hover:bg-muted/30 transition-colors">
+                    <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0", w.color)}>
+                      <w.icon className="w-[18px] h-[18px]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground">{w.label}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{w.pts}</p>
+                    </div>
+                    <CheckCircle2 className="w-4 h-4 text-muted-foreground/25 flex-shrink-0" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Redeem preview */}
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">Redeem your points</p>
+              <div className="grid grid-cols-3 gap-3">
+                {REDEEM_PREVIEW.map((r) => (
+                  <div key={r.name} className="rounded-2xl border border-border bg-card p-5 flex flex-col items-center text-center gap-3 hover:border-primary/30 hover:shadow-sm transition-all">
+                    <div className="rounded-xl overflow-hidden">{r.icon}</div>
+                    <p className="text-xs font-bold text-foreground leading-snug">{r.name}</p>
+                    <div className="bg-primary/10 border border-primary/20 rounded-full px-2.5 py-1">
+                      <p className="text-xs font-bold text-primary">from {r.from}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* More rewards bento */}
+              <div className="mt-3 rounded-2xl border border-border bg-muted/40 px-5 py-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-bold text-foreground">+ 20 more rewards</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Apple, Uber, Netflix, Google Play &amp; more</p>
+                </div>
+                <div className="flex items-center gap-1 text-xs font-bold text-primary">
+                  Browse all <ArrowRight className="w-3.5 h-3.5" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── FAQ + CTA: side by side ──────────────────────────────────────── */}
+          <div className="grid grid-cols-[1fr_320px] gap-6">
+            {/* FAQ */}
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">Frequently asked</p>
+              <div className="rounded-2xl border border-border bg-card px-6 divide-y divide-border">
+                {FAQS.map((f) => <FaqItem key={f.q} q={f.q} a={f.a} />)}
+              </div>
+            </div>
+
+            {/* CTA card */}
+            <div className="relative rounded-3xl overflow-hidden border border-border bg-card p-7 flex flex-col justify-center self-start sticky top-8">
+              <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/8 rounded-full blur-3xl pointer-events-none" />
+              <div className="relative">
+                <div className="w-14 h-14 rounded-2xl bg-primary mb-5 flex items-center justify-center shadow-lg shadow-primary/30">
+                  <Coins className="w-6 h-6 text-primary-foreground" />
+                </div>
+                <h3 className="text-xl font-black text-foreground mb-2">Ready to start earning?</h3>
+                <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+                  Join Pexly free. Your first points are waiting — log in daily, make a trade, or refer a friend.
+                </p>
+                <button onClick={() => navigate("/signup")}
+                  className="w-full py-3.5 rounded-2xl bg-primary text-primary-foreground font-bold text-base flex items-center justify-center gap-2 hover:opacity-90 transition-opacity active:scale-[0.98]">
+                  Create free account <ArrowRight className="w-4 h-4" />
+                </button>
+                <button onClick={() => navigate("/signin")}
+                  className="w-full mt-3 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">
+                  Already have an account? Sign in
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
       </div>
 
       <PexlyFooter />
