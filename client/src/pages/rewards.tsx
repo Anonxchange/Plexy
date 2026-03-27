@@ -330,14 +330,15 @@ function RewardsLoggedInPage() {
   const redeemReward   = useRedeemReward();
   const applyPromo     = useApplyPromo();
 
-  const balance  = profile?.balance        ?? 0;
-  const streak   = profile?.currentStreak  ?? 0;
-  const weeklyPts = profile?.weeklyPts     ?? 0;
-  const rank     = profile?.rank           ?? 1;
-  const dailyIds     = completions?.daily     ?? [];
-  const permanentIds = completions?.permanent ?? [];
-  const todayUTC = new Date().toISOString().split("T")[0];
-  const loginClaimed = profile?.lastLoginDate === todayUTC;
+  const balance      = profile?.balance        ?? 0;
+  const streak       = profile?.currentStreak  ?? 0;
+  const weeklyPts    = profile?.weeklyPts      ?? 0;
+  const rank         = profile?.rank           ?? 1;
+  const referralCode = profile?.referralCode   ?? "";
+  const dailyIds     = completions?.daily      ?? [];
+  const permanentIds = completions?.permanent  ?? [];
+  const todayUTC     = new Date().toISOString().split("T")[0];
+  const loginClaimed = profile?.lastLoginDate  === todayUTC;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -370,7 +371,7 @@ function RewardsLoggedInPage() {
           balance={balance}
           completedDailyIds={dailyIds}
           completedPermanentIds={permanentIds}
-          referralCode="PEXLY-X7Q2"
+          referralCode={referralCode}
           onCompleteTask={(id) => completeTask.mutate(id)}
           onRedeem={(id) => redeemReward.mutate(id)}
           onApplyPromo={(code) => applyPromo.mutate(code)}
