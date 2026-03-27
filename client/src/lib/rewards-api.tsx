@@ -38,6 +38,7 @@ export interface RewardsProfile {
   weeklyPts: number;
   rank: number;
   lastLoginDate: string | null;
+  referralCode?: string;
 }
 
 export function fetchRewardsProfile(): Promise<RewardsProfile> {
