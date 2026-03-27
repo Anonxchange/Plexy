@@ -6,7 +6,7 @@
  * exists purely to establish seller trust and unlock shop posting,
  * modelled after real marketplaces (Etsy, Amazon, eBay).
  *
- * Level 0  – Visitor       : Browse only
+ * Level 0  – Buyer         : Browse + purchase — no KYC needed to buy
  * Level 1  – Buyer         : Email + Phone + DOB (18+) — can purchase
  * Level 2  – Verified Seller: Gov ID + Liveness check — can post listings (up to 10)
  * Level 3  – Pro Seller    : Address proof — unlimited listings + Pro badge
@@ -15,8 +15,8 @@
 export const VERIFICATION_LEVELS = {
   LEVEL_0: {
     level: 0,
-    name: "Visitor",
-    description: "Browse and purchase — no KYC required to buy",
+    name: "Buyer",
+    description: "Browse and purchase freely — no KYC required to buy",
     requirements: ["Email verification"],
     permissions: [
       "Browse all listings",
