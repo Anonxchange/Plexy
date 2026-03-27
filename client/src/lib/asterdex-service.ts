@@ -127,27 +127,36 @@ export interface CoinInfo {
   }[];
 }
 
-// ── Helper ─────────────────────────────────────────────
+// ── AsterDEX public REST API base URLs ─────────────────
+// Spot:    https://sapi.asterdex.com/api/v1/...
+// Futures: https://fapi.asterdex.com/fapi/v1/...
+// All market data endpoints are public — no API key needed.
 
-// Known quote assets used to split combined symbols like "BTCUSDT" → ["BTC", "USDT"]
-const QUOTE_ASSETS = ['USDT', 'USDC', 'BTC', 'ETH', 'BNB'];
+const SPOT_BASE    = 'https://sapi.asterdex.com';
+const FUTURES_BASE = 'https://fapi.asterdex.com';
 
-function parseSymbol(symbol: string): { fromSymbol: string; toSymbol: string } {
-  for (const quote of QUOTE_ASSETS) {
-    if (symbol.endsWith(quote) && symbol.length > quote.length) {
-      return { fromSymbol: symbol.slice(0, -quote.length), toSymbol: quote };
-    }
-  }
-  // Fallback: treat whole string as fromSymbol with USDT as quote
-  return { fromSymbol: symbol, toSymbol: 'USDT' };
+async function spotFetch(path: string, params: Record<string, string> = {}) {
+  const qs = new URLSearchParams(params).toString();
+  const url = `${SPOT_BASE}${path}${qs ? '?' + qs : ''}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`AsterDEX spot API ${res.status}`);
+  return res.json();
 }
 
+async function futuresFetch(path: string, params: Record<string, string> = {}) {
+  const qs = new URLSearchParams(params).toString();
+  const url = `${FUTURES_BASE}${path}${qs ? '?' + qs : ''}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`AsterDEX futures API ${res.status}`);
+  return res.json();
+}
+
+// ── Supabase edge function proxy (authenticated trading only) ──
 async function invoke(action: string, params: Record<string, string | undefined> = {}, auth = false) {
   const cleanParams = Object.fromEntries(
     Object.entries(params).filter(([, v]) => v !== undefined && v !== null)
   ) as Record<string, string>;
 
-  // Spread params at the top level so the edge function can destructure them directly
   const options: any = { body: { action, ...cleanParams } };
 
   if (auth) {
@@ -172,87 +181,50 @@ async function invoke(action: string, params: Record<string, string | undefined>
   return data;
 }
 
-// Normalize edge function orderbook response { bids: [{price, amount}], asks: [{price, amount}] }
-// into the Binance-style tuple format [price, qty][] that the OrderBook component expects
-function normalizeOrderBook(raw: any): { bids: [string, string][]; asks: [string, string][] } | null {
-  if (!raw?.bids || !raw?.asks) return null;
-  const normalize = (entries: any[]): [string, string][] =>
-    entries.map((e: any) => [String(e.price), String(e.amount)]);
-  return {
-    bids: normalize(raw.bids),
-    asks: normalize(raw.asks),
-  };
-}
-
-// ── Public Market Data ─────────────────────────────────
+// ── Public Market Data — calls AsterDEX REST API directly ──────
 
 export const asterMarket = {
   // Spot
-  spotTicker: async (symbol?: string) => {
-    const res = await invoke('pairs');
-    const pairs: any[] = res?.data?.pairs ?? res?.pairs ?? [];
-    if (!symbol) return pairs;
-    // Find the matching pair and map to the Binance ticker shape components expect
-    const { fromSymbol, toSymbol } = symbol ? parseSymbol(symbol) : { fromSymbol: '', toSymbol: '' };
-    const match = pairs.find((p: any) =>
-      p.baseSymbol === fromSymbol && p.quoteSymbol === toSymbol
-    );
-    if (!match) return null;
-    return {
-      symbol,
-      lastPrice: String(match.price),
-      priceChange: String((match.price * match.change24h) / 100),
-      priceChangePercent: String(match.change24h),
-      highPrice: String(match.price * 1.01),
-      lowPrice: String(match.price * 0.99),
-      volume: String(match.volume24h),
-      quoteVolume: String(match.volume24h * match.price),
-    };
-  },
+  spotTicker: (symbol?: string) =>
+    spotFetch('/api/v1/ticker/24hr', symbol ? { symbol } : {}),
 
   spotTickerPrice: (symbol?: string) =>
-    invoke('spot_ticker_price', symbol ? { symbol } : {}),
+    spotFetch('/api/v1/ticker/price', symbol ? { symbol } : {}),
 
-  spotOrderBook: async (symbol: string, _limit = '20') => {
-    const { fromSymbol, toSymbol } = parseSymbol(symbol);
-    const res = await invoke('orderbook', { fromSymbol, toSymbol });
-    return normalizeOrderBook(res?.data ?? res) ?? res;
-  },
+  spotOrderBook: (symbol: string, limit = '20') =>
+    spotFetch('/api/v1/depth', { symbol, limit }),
 
   spotKlines: (symbol: string, interval: string, limit = '100') =>
-    invoke('spot_klines', { symbol, interval, limit }),
+    spotFetch('/api/v1/klines', { symbol, interval, limit }),
 
   spotTrades: (symbol: string, limit = '20') =>
-    invoke('spot_trades', { symbol, limit }),
+    spotFetch('/api/v1/trades', { symbol, limit }),
 
-  spotExchangeInfo: () => invoke('spot_exchange_info'),
+  spotExchangeInfo: () => spotFetch('/api/v1/exchangeInfo'),
 
-  // Futures
+  // Futures / Perpetual
   futuresTicker: (symbol?: string) =>
-    invoke('futures_ticker', symbol ? { symbol } : {}),
+    futuresFetch('/fapi/v1/ticker/24hr', symbol ? { symbol } : {}),
 
   futuresTickerPrice: (symbol?: string) =>
-    invoke('futures_ticker_price', symbol ? { symbol } : {}),
+    futuresFetch('/fapi/v1/ticker/price', symbol ? { symbol } : {}),
 
-  futuresOrderBook: async (symbol: string, _limit = '20') => {
-    const { fromSymbol, toSymbol } = parseSymbol(symbol);
-    const res = await invoke('orderbook', { fromSymbol, toSymbol });
-    return normalizeOrderBook(res?.data ?? res) ?? res;
-  },
+  futuresOrderBook: (symbol: string, limit = '20') =>
+    futuresFetch('/fapi/v1/depth', { symbol, limit }),
 
   futuresKlines: (symbol: string, interval: string, limit = '100') =>
-    invoke('futures_klines', { symbol, interval, limit }),
+    futuresFetch('/fapi/v1/klines', { symbol, interval, limit }),
 
   futuresTrades: (symbol: string, limit = '20') =>
-    invoke('futures_trades', { symbol, limit }),
+    futuresFetch('/fapi/v1/trades', { symbol, limit }),
 
-  futuresExchangeInfo: () => invoke('futures_exchange_info'),
+  futuresExchangeInfo: () => futuresFetch('/fapi/v1/exchangeInfo'),
 
   futuresFundingRate: (symbol?: string) =>
-    invoke('futures_funding_rate', symbol ? { symbol } : {}),
+    futuresFetch('/fapi/v1/fundingRate', symbol ? { symbol } : {}),
 
   futuresMarkPrice: (symbol?: string) =>
-    invoke('futures_mark_price', symbol ? { symbol } : {}),
+    futuresFetch('/fapi/v1/premiumIndex', symbol ? { symbol } : {}),
 };
 
 // ── Authenticated Trading ──────────────────────────────
