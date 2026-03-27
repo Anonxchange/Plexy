@@ -70,13 +70,14 @@ export default function DevicesPage() {
   const supabase = createClient();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"trusted" | "active" | "untrusted">("trusted");
+  const [activeTab, setActiveTab] = useState<"trusted" | "untrusted">("trusted");
   const [trustedDevices, setTrustedDevices] = useState<DeviceFingerprint[]>([]);
   const [loadingDevices, setLoadingDevices] = useState(true);
   const [currentFingerprint, setCurrentFingerprint] = useState<string>("");
   const [processingDeviceId, setProcessingDeviceId] = useState<string | null>(null);
   const [removingAll, setRemovingAll] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [activePage, setActivePage] = useState(1);
   const ITEMS_PER_PAGE = 10;
 
   const [selectedDevice, setSelectedDevice] = useState<DeviceFingerprint | null>(null);
@@ -301,8 +302,6 @@ export default function DevicesPage() {
     return device.fingerprint_hash === currentFingerprint;
   };
 
-  const currentDevice = trustedDevices.find(d => d.fingerprint_hash === currentFingerprint) ?? null;
-
   const filteredDevices = trustedDevices.filter(device =>
     activeTab === "trusted" ? device.trusted : !device.trusted
   );
@@ -313,9 +312,40 @@ export default function DevicesPage() {
     currentPage * ITEMS_PER_PAGE
   );
 
-  const handleTabChange = (tab: "trusted" | "active" | "untrusted") => {
+  const allDevicesSorted = [...trustedDevices].sort(
+    (a, b) => new Date(b.last_seen_at).getTime() - new Date(a.last_seen_at).getTime()
+  );
+  const activeTotalPages = Math.ceil(allDevicesSorted.length / ITEMS_PER_PAGE);
+  const paginatedActiveDevices = allDevicesSorted.slice(
+    (activePage - 1) * ITEMS_PER_PAGE,
+    activePage * ITEMS_PER_PAGE
+  );
+
+  const handleTabChange = (tab: "trusted" | "untrusted") => {
     setActiveTab(tab);
     setCurrentPage(1);
+  };
+
+  const handleSignOutAllOthers = async () => {
+    if (!user?.id) return;
+    setRemovingAll(true);
+    try {
+      const devicesToRemove = trustedDevices.filter(d => d.fingerprint_hash !== currentFingerprint);
+      for (const device of devicesToRemove) {
+        await deviceFingerprint.revokeDevice(user.id, device.id);
+      }
+      toast({
+        title: "Signed out",
+        description: "All other devices have been signed out.",
+      });
+      setActivePage(1);
+      fetchDevices();
+    } catch (error) {
+      console.error("Error signing out all devices:", error);
+      toast({ title: "Error", description: "Failed to sign out all devices", variant: "destructive" });
+    } finally {
+      setRemovingAll(false);
+    }
   };
 
   const handleSectionClick = (sectionId: string) => {
@@ -368,10 +398,11 @@ export default function DevicesPage() {
                 <div className="mb-6">
                   <h2 className="text-2xl font-bold mb-2">Devices</h2>
                   <p className="text-sm text-muted-foreground">
-                    Manage your trusted and untrusted devices list
+                    All devices that have signed in to your account
                   </p>
                 </div>
 
+                {/* Trusted / Untrusted tabs */}
                 <div className="flex gap-3 mb-6">
                   <Button
                     variant={activeTab === "trusted" ? "default" : "outline"}
@@ -381,16 +412,9 @@ export default function DevicesPage() {
                     Trusted
                   </Button>
                   <Button
-                    variant={activeTab === "active" ? "default" : "outline"}
-                    onClick={() => handleTabChange("active")}
-                    className={`flex-1 ${activeTab === "active" ? "bg-primary text-primary-foreground" : ""}`}
-                  >
-                    Active
-                  </Button>
-                  <Button
-                    variant={activeTab === "untrusted" ? "secondary" : "outline"}
+                    variant={activeTab === "untrusted" ? "default" : "outline"}
                     onClick={() => handleTabChange("untrusted")}
-                    className="flex-1"
+                    className={`flex-1 ${activeTab === "untrusted" ? "bg-primary text-primary-foreground" : ""}`}
                   >
                     Untrusted
                   </Button>
@@ -400,95 +424,6 @@ export default function DevicesPage() {
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
-                ) : activeTab === "active" ? (
-                  currentDevice ? (() => {
-                    const DeviceIcon = getDeviceIcon(currentDevice.device_info);
-                    const deviceName = getDeviceName(currentDevice.device_info);
-                    const osName = getOSName(currentDevice.device_info);
-                    return (
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-4 p-5 rounded-xl bg-primary/5 border border-primary/20">
-                          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                            <DeviceIcon className="h-7 w-7 text-primary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-semibold text-base">{deviceName}</p>
-                              <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20 text-xs">
-                                This device
-                              </Badge>
-                              {currentDevice.trusted ? (
-                                <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20 text-xs">
-                                  Trusted
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20 text-xs">
-                                  Untrusted
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-0.5">{osName}</p>
-                          </div>
-                        </div>
-
-                        <div className="divide-y divide-border rounded-lg border">
-                          <div className="flex justify-between items-center px-4 py-3">
-                            <span className="text-sm text-muted-foreground">IP Address</span>
-                            <span className="text-sm font-medium">{currentDevice.ip_address || 'Unknown'}</span>
-                          </div>
-                          <div className="flex justify-between items-center px-4 py-3">
-                            <span className="text-sm text-muted-foreground">Timezone</span>
-                            <span className="text-sm font-medium">{currentDevice.device_info?.timezone || 'Unknown'}</span>
-                          </div>
-                          <div className="flex justify-between items-center px-4 py-3">
-                            <span className="text-sm text-muted-foreground">Language</span>
-                            <span className="text-sm font-medium">{currentDevice.device_info?.language || 'Unknown'}</span>
-                          </div>
-                          <div className="flex justify-between items-center px-4 py-3">
-                            <span className="text-sm text-muted-foreground">Screen</span>
-                            <span className="text-sm font-medium">{currentDevice.device_info?.screen || 'Unknown'}</span>
-                          </div>
-                          <div className="flex justify-between items-center px-4 py-3">
-                            <span className="text-sm text-muted-foreground">First seen</span>
-                            <span className="text-sm font-medium">{format(new Date(currentDevice.created_at), "MMM d, yyyy")}</span>
-                          </div>
-                          <div className="flex justify-between items-center px-4 py-3">
-                            <span className="text-sm text-muted-foreground">Last active</span>
-                            <span className="text-sm font-medium">{format(new Date(currentDevice.last_seen_at), "MMM d, yyyy • h:mm a")}</span>
-                          </div>
-                        </div>
-
-                        <div className="flex gap-2 pt-1">
-                          {currentDevice.trusted ? (
-                            <Button
-                              variant="outline"
-                              className="flex-1"
-                              onClick={() => handleUntrustDevice(currentDevice.id)}
-                              disabled={processingDeviceId === currentDevice.id}
-                            >
-                              {processingDeviceId === currentDevice.id && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                              Mark as untrusted
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="outline"
-                              className="flex-1"
-                              onClick={() => handleTrustDevice(currentDevice.id)}
-                              disabled={processingDeviceId === currentDevice.id}
-                            >
-                              {processingDeviceId === currentDevice.id && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                              Mark as trusted
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })() : (
-                    <div className="text-center py-12">
-                      <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                      <p className="text-muted-foreground">Current device not recognized</p>
-                    </div>
-                  )
                 ) : filteredDevices.length === 0 ? (
                   <div className="text-center py-12">
                     <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
@@ -501,25 +436,18 @@ export default function DevicesPage() {
                       const isCurrent = isCurrentDevice(device);
                       const deviceName = getDeviceName(device.device_info);
                       const loginDate = new Date(device.created_at);
-
                       return (
                         <button
                           key={device.id}
                           onClick={() => handleDeviceClick(device)}
-                          className={`w-full flex items-center justify-between p-4 rounded-lg hover:bg-muted/50 transition-colors text-left ${
-                            isCurrent ? "bg-primary/5" : ""
-                          }`}
+                          className={`w-full flex items-center justify-between p-4 rounded-lg hover:bg-muted/50 transition-colors text-left ${isCurrent ? "bg-primary/5" : ""}`}
                         >
                           <div className="flex items-center gap-3">
                             <DeviceIcon className="h-5 w-5 text-muted-foreground" />
                             <div>
-                              <p className="font-medium">
+                              <p className="font-medium flex items-center flex-wrap gap-1.5">
                                 {deviceName}
-                                {isCurrent && (
-                                  <Badge variant="secondary" className="ml-2 text-xs">
-                                    Current
-                                  </Badge>
-                                )}
+                                {isCurrent && <Badge variant="secondary" className="text-xs">Current</Badge>}
                               </p>
                               <p className="text-sm text-muted-foreground">
                                 {format(loginDate, "M/d/yyyy")} • {format(loginDate, "h:mm:ss a")} ({device.device_info?.timezone || 'UTC'})
@@ -533,70 +461,136 @@ export default function DevicesPage() {
                   </div>
                 )}
 
-                {activeTab !== "active" && totalPages > 1 && (
+                {totalPages > 1 && (
                   <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
                     <p className="text-sm text-muted-foreground">
                       Page {currentPage} of {totalPages} &middot; {filteredDevices.length} devices
                     </p>
                     <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                        disabled={currentPage === 1}
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                        Prev
+                      <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                        <ChevronLeft className="h-4 w-4" />Prev
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                        disabled={currentPage === totalPages}
-                      >
-                        Next
-                        <ChevronRight className="h-4 w-4" />
+                      <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+                        Next<ChevronRight className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
                 )}
 
-                {activeTab !== "active" && filteredDevices.length > 0 && (
+                {filteredDevices.length > 0 && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full mt-6"
-                        disabled={removingAll}
-                      >
-                        {removingAll ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Removing...
-                          </>
-                        ) : (
-                          `Remove all ${activeTab} devices`
-                        )}
+                      <Button variant="outline" className="w-full mt-6" disabled={removingAll}>
+                        {removingAll ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Removing...</> : `Remove all ${activeTab} devices`}
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
                         <AlertDialogTitle>Remove all {activeTab} devices?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will remove all {activeTab} devices from your account
-                          {activeTab === "trusted" && " (except your current device)"}.
-                          {" "}This action cannot be undone.
+                          This will remove all {activeTab} devices from your account{activeTab === "trusted" ? " (except your current device)" : ""}. This action cannot be undone.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleRemoveAllDevices}>
-                          Remove All
-                        </AlertDialogAction>
+                        <AlertDialogAction onClick={handleRemoveAllDevices}>Remove All</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
                 )}
+
+                {/* Active section — all signed-in devices */}
+                <div className="mt-8 pt-6 border-t border-border">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-base font-semibold">Active</h3>
+                      <p className="text-sm text-muted-foreground">All devices that have signed in to your account</p>
+                    </div>
+                  </div>
+
+                  {loadingDevices ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : allDevicesSorted.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Shield className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-50" />
+                      <p className="text-sm text-muted-foreground">No devices found</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {paginatedActiveDevices.map((device) => {
+                        const DeviceIcon = getDeviceIcon(device.device_info);
+                        const isCurrent = isCurrentDevice(device);
+                        const deviceName = getDeviceName(device.device_info);
+                        const lastSeen = new Date(device.last_seen_at);
+                        return (
+                          <button
+                            key={device.id}
+                            onClick={() => handleDeviceClick(device)}
+                            className={`w-full flex items-center justify-between p-4 rounded-lg hover:bg-muted/50 transition-colors text-left ${isCurrent ? "bg-primary/5" : ""}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <DeviceIcon className="h-5 w-5 text-muted-foreground" />
+                              <div>
+                                <p className="font-medium flex items-center flex-wrap gap-1.5">
+                                  {deviceName}
+                                  {isCurrent && <Badge variant="secondary" className="text-xs">Current</Badge>}
+                                  {device.trusted
+                                    ? <Badge variant="outline" className="text-xs bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">Trusted</Badge>
+                                    : <Badge variant="outline" className="text-xs bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20">Untrusted</Badge>
+                                  }
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  Last seen: {format(lastSeen, "M/d/yyyy")} • {format(lastSeen, "h:mm:ss a")} ({device.device_info?.timezone || 'UTC'})
+                                </p>
+                              </div>
+                            </div>
+                            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {activeTotalPages > 1 && (
+                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+                      <p className="text-sm text-muted-foreground">
+                        Page {activePage} of {activeTotalPages} &middot; {allDevicesSorted.length} devices
+                      </p>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setActivePage(p => Math.max(1, p - 1))} disabled={activePage === 1}>
+                          <ChevronLeft className="h-4 w-4" />Prev
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => setActivePage(p => Math.min(activeTotalPages, p + 1))} disabled={activePage === activeTotalPages}>
+                          Next<ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {allDevicesSorted.length > 1 && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" className="w-full mt-6" disabled={removingAll}>
+                          {removingAll ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Signing out...</> : "Sign out all other devices"}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Sign out all other devices?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will remove all other signed-in devices from your account. Your current device will not be affected. This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleSignOutAllOthers}>Sign out all others</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
