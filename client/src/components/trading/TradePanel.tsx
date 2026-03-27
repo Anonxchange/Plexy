@@ -5,6 +5,8 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { asterTrading } from "@/lib/asterdex-service";
 import { useToast } from "@/hooks/use-toast";
+import { completeTask } from "@/lib/rewards-api";
+import { getSubscribedTaskIds } from "@/hooks/use-task-subscriptions";
 
 const orderTypes = ["Market", "Limit", "Stop Limit", "Stop Market", "Maker Only"];
 
@@ -126,6 +128,9 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
         description: `${side === "buy" ? "Buy" : "Sell"} ${amount} ${baseCoin} submitted (ID: ${data?.orderId ?? "—"})`,
       });
       setAmount(""); setTotalValue(""); setSliderPct(0);
+      const subs = getSubscribedTaskIds();
+      if (subs.includes("daily-spot"))   completeTask("daily-spot").catch(() => {});
+      if (subs.includes("first-trade"))  completeTask("first-trade").catch(() => {});
     },
     onError: (err: Error) => {
       toast({ title: "Order failed", description: err.message, variant: "destructive" });
