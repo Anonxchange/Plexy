@@ -542,7 +542,7 @@ export default function ReferralPage() {
     meta: [{ name: "description", content: `Invite friends to Pexly and earn ${PTS_PER_REFERRAL} points for every friend who joins and trades.` }],
   });
 
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
@@ -566,6 +566,11 @@ export default function ReferralPage() {
     }
   };
 
+  if (loading) return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>
+  );
   if (!user) return <GuestView onSignup={() => navigate("/signup")} />;
   return <LoggedInView code={code} link={link} onCopy={onCopy} onShare={onShare} />;
 }
