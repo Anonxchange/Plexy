@@ -114,12 +114,12 @@ function RewardsGuestPage() {
 
       {/* Header */}
       <div className="relative border-b border-border bg-background overflow-hidden">
-        {/* Gift card illustration — desktop only, right edge */}
+        {/* Gift card illustration — right edge, mobile + desktop */}
         <img
           aria-hidden="true"
           src="/assets/IMG_4863.webp"
           alt=""
-          className="hidden lg:block absolute right-[-24px] top-1/2 -translate-y-1/2 w-[460px] h-auto pointer-events-none select-none"
+          className="absolute right-[-8px] lg:right-[-24px] top-1/2 -translate-y-1/2 w-[120px] lg:w-[460px] h-auto pointer-events-none select-none opacity-80 lg:opacity-100"
         />
         {/* Faint mirror on left — desktop only */}
         <img
@@ -522,17 +522,17 @@ function RewardsLoggedInPage() {
 
       {/* ── Header (illustrated, matches guest page) ──────────────────────────── */}
       <div className="relative border-b border-border bg-background overflow-hidden">
-        {/* Gift card illustration — desktop only, right edge */}
+        {/* Gift card illustration — right edge, mobile + desktop */}
         <img
           aria-hidden="true"
-          src="/assets/svg-image-1-2.svg"
+          src="/assets/IMG_4863.webp"
           alt=""
-          className="hidden lg:block absolute right-[-24px] top-1/2 -translate-y-1/2 w-[460px] h-auto pointer-events-none select-none"
+          className="absolute right-[-8px] lg:right-[-24px] top-1/2 -translate-y-1/2 w-[120px] lg:w-[460px] h-auto pointer-events-none select-none opacity-80 lg:opacity-100"
         />
         {/* Faint mirror on left — desktop only */}
         <img
           aria-hidden="true"
-          src="/assets/svg-image-1-2.svg"
+          src="/assets/IMG_4863.webp"
           alt=""
           className="hidden lg:block absolute pointer-events-none select-none opacity-[0.16]"
           style={{ left: "-110px", top: "50%", transform: "scaleX(-1) translateY(-50%)", width: "360px" }}
