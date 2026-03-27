@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Coins, Flame, CheckCircle2 } from "lucide-react";
-import { TIERS, USER_PTS, STREAK } from "./rewards-data";
+import { TIERS } from "./rewards-data";
 
 // ─── XP Ring ─────────────────────────────────────────────────────────────────
 
@@ -37,7 +37,7 @@ function XPRing({ progress, size = 120 }: { progress: number; size?: number }) {
 
 // ─── Streak Days ──────────────────────────────────────────────────────────────
 
-function StreakDays() {
+function StreakDays({ streak }: { streak: number }) {
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const todayIndex = new Date().getDay();
   const adjustedToday = todayIndex === 0 ? 6 : todayIndex - 1;
@@ -63,15 +63,33 @@ function StreakDays() {
   );
 }
 
+// ─── Props ────────────────────────────────────────────────────────────────────
+
+interface RewardsHeroSectionProps {
+  balance: number;
+  streak: number;
+  weeklyPts: number;
+  rank: number;
+  onClaimLogin?: () => void;
+  loginClaimed?: boolean;
+}
+
 // ─── Rewards Hero Section ─────────────────────────────────────────────────────
 
-export function RewardsHeroSection() {
-  const currentTierIndex = TIERS.reduce((acc, t, i) => (USER_PTS >= t.minPts ? i : acc), 0);
+export function RewardsHeroSection({
+  balance,
+  streak,
+  weeklyPts,
+  rank,
+  onClaimLogin,
+  loginClaimed,
+}: RewardsHeroSectionProps) {
+  const currentTierIndex = TIERS.reduce((acc, t, i) => (balance >= t.minPts ? i : acc), 0);
   const CURRENT_TIER = TIERS[currentTierIndex];
   const NEXT_TIER = TIERS[currentTierIndex + 1] ?? CURRENT_TIER;
-  const progressInTier = USER_PTS - CURRENT_TIER.minPts;
+  const progressInTier = balance - CURRENT_TIER.minPts;
   const tierRange = NEXT_TIER.minPts - CURRENT_TIER.minPts || 1;
-  const ptsToNext = NEXT_TIER.minPts - USER_PTS;
+  const ptsToNext = NEXT_TIER.minPts - balance;
 
   return (
     <>
@@ -89,12 +107,18 @@ export function RewardsHeroSection() {
                 <span className={cn("text-sm font-bold", CURRENT_TIER.textColor)}>{CURRENT_TIER.name}</span>
               </div>
               <p className="text-3xl font-bold text-foreground tabular-nums leading-none">
-                {USER_PTS.toLocaleString()}
+                {balance.toLocaleString()}
                 <span className="text-lg font-medium text-muted-foreground ml-1.5">pts</span>
               </p>
               <p className="text-[11px] text-muted-foreground mt-1.5">
-                <span className="text-primary font-semibold tabular-nums">{ptsToNext.toLocaleString()} pts</span>
-                {" "}until {NEXT_TIER.name}
+                {currentTierIndex < TIERS.length - 1 ? (
+                  <>
+                    <span className="text-primary font-semibold tabular-nums">{ptsToNext.toLocaleString()} pts</span>
+                    {" "}until {NEXT_TIER.name}
+                  </>
+                ) : (
+                  <span className="text-primary font-semibold">Diamond — Elite tier</span>
+                )}
               </p>
             </div>
             <XPRing progress={progressInTier / tierRange} size={110} />
@@ -111,15 +135,15 @@ export function RewardsHeroSection() {
             </div>
             <div className="flex justify-between text-[10px] text-muted-foreground tabular-nums">
               <span>{CURRENT_TIER.minPts.toLocaleString()} pts</span>
-              <span>{NEXT_TIER.minPts.toLocaleString()} pts</span>
+              <span>{currentTierIndex < TIERS.length - 1 ? `${NEXT_TIER.minPts.toLocaleString()} pts` : "Max"}</span>
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-3 mt-5 pt-5 border-t border-border">
             {[
-              { label: "This week", value: "+30 pts", color: "text-primary" },
-              { label: "Streak",     value: `${STREAK}d 🔥`,  color: "text-orange-500" },
-              { label: "Rank",       value: "#4,821",          color: "text-foreground" },
+              { label: "This week", value: `+${weeklyPts} pts`, color: "text-primary" },
+              { label: "Streak",    value: `${streak}d 🔥`,     color: "text-orange-500" },
+              { label: "Rank",      value: `#${rank.toLocaleString()}`, color: "text-foreground" },
             ].map((stat) => (
               <div key={stat.label} className="text-center">
                 <p className={cn("text-sm font-bold tabular-nums", stat.color)}>{stat.value}</p>
@@ -143,15 +167,26 @@ export function RewardsHeroSection() {
             </div>
           </div>
           <div className="text-right">
-            <p className="text-xl font-bold text-orange-500 tabular-nums">{STREAK}</p>
+            <p className="text-xl font-bold text-orange-500 tabular-nums">{streak}</p>
             <p className="text-[10px] text-muted-foreground">days</p>
           </div>
         </div>
-        <StreakDays />
-        <div className="mt-4 flex items-center justify-between bg-muted rounded-xl px-4 py-2.5">
+        <StreakDays streak={streak} />
+        <button
+          onClick={onClaimLogin}
+          disabled={loginClaimed}
+          className={cn(
+            "mt-4 w-full flex items-center justify-between rounded-xl px-4 py-2.5 transition-all",
+            loginClaimed
+              ? "bg-muted text-muted-foreground cursor-default"
+              : "bg-primary/10 hover:bg-primary/15 cursor-pointer"
+          )}
+        >
           <p className="text-[11px] text-muted-foreground">Today's login reward</p>
-          <p className="text-[11px] font-bold text-primary">+5 pts · Claim now</p>
-        </div>
+          <p className={cn("text-[11px] font-bold", loginClaimed ? "text-muted-foreground" : "text-primary")}>
+            {loginClaimed ? "Claimed ✓" : "+3 pts · Claim now"}
+          </p>
+        </button>
       </div>
     </>
   );
