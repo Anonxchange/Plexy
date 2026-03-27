@@ -9,10 +9,75 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  Shield, CheckCircle, Clock, XCircle, Upload, 
-  ArrowRight, QrCode, Users, DollarSign 
-} from "lucide-react";
+// ─── Custom SVG Icon Components ──────────────────────────────────────────────
+function IcoShield({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2.5L4 6.25V11.5C4 16.15 7.55 20.5 12 21.75C16.45 20.5 20 16.15 20 11.5V6.25L12 2.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M9.25 12L11.25 14L15 9.75" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+function IcoCheckCircle({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6"/>
+      <path d="M8.5 12.5L10.75 14.75L15.5 9.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+function IcoClock({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6"/>
+      <path d="M12 7.5V12.5L15.25 14.75" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+function IcoXCircle({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6"/>
+      <path d="M9.5 9.5L14.5 14.5M14.5 9.5L9.5 14.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  );
+}
+function IcoUpload({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 15.5V4.5M12 4.5L8.25 8.5M12 4.5L15.75 8.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M4 17V19C4 19.55 4.45 20 5 20H19C19.55 20 20 19.55 20 19V17" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+function IcoArrowRight({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M5 12H19M13 6L19 12L13 18" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+function IcoStore({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M3 9H21L19 14H5L3 9Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+      <path d="M3 9L5 4H19L21 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M5 14V20H19V14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <rect x="9.5" y="15.5" width="5" height="4.5" rx="0.75" stroke="currentColor" strokeWidth="1.4"/>
+    </svg>
+  );
+}
+function IcoPackage({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2.5L20.5 7.25V16.75L12 21.5L3.5 16.75V7.25L12 2.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M12 2.5V21.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+      <path d="M3.5 7.25L12 12L20.5 7.25" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M7.75 4.75L16.25 9.75" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+    </svg>
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
 import { VERIFICATION_LEVELS, getVerificationLevel, getNextLevel } from "@shared/verification-levels";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
@@ -566,7 +631,7 @@ export default function VerificationPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Account Verification</h1>
         <p className="text-muted-foreground">
-          Unlock trading limits and features by verifying your account
+          Verify your account to unlock seller access and start posting listings
         </p>
         {user && userProfile && (
           <p className="text-sm text-muted-foreground mt-2">
@@ -609,7 +674,7 @@ export default function VerificationPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
+              <IcoShield className="h-5 w-5" />
               Current Level
             </CardTitle>
           </CardHeader>
@@ -620,24 +685,19 @@ export default function VerificationPage() {
             </div>
 
             <div>
-              <h4 className="font-semibold mb-2">Trading Limits</h4>
+              <h4 className="font-semibold mb-2">Seller Access</h4>
               <div className="space-y-1 text-sm">
-                {currentLevel === 0 ? (
-                  <p className="text-muted-foreground">Trading Disabled</p>
-                ) : (
-                  <>
-                    {currentLevelConfig.dailyLimit !== null ? (
-                      <p>Daily Limit: ${currentLevelConfig.dailyLimit.toLocaleString()}</p>
-                    ) : (
-                      <p>Daily Limit: Unlimited</p>
-                    )}
-                    {currentLevelConfig.perTradeLimit !== null && currentLevelConfig.perTradeLimit > 0 && (
-                      <p>Per Trade: ${currentLevelConfig.perTradeLimit.toLocaleString()}</p>
-                    )}
-                    {currentLevelConfig.lifetimeTradeLimit !== null && currentLevelConfig.lifetimeTradeLimit > 0 && (
-                      <p>Lifetime Trade: ${currentLevelConfig.lifetimeTradeLimit.toLocaleString()}</p>
-                    )}
-                  </>
+                {currentLevel === 0 && (
+                  <p className="text-muted-foreground flex items-center gap-2"><IcoPackage className="h-4 w-4" /> Buy & browse freely — cannot post listings</p>
+                )}
+                {currentLevel === 1 && (
+                  <p className="text-muted-foreground flex items-center gap-2"><IcoPackage className="h-4 w-4" /> Buyer access — cannot post listings yet</p>
+                )}
+                {currentLevel === 2 && (
+                  <p className="text-green-600 flex items-center gap-2"><IcoStore className="h-4 w-4" /> Verified Seller — up to 10 active listings</p>
+                )}
+                {currentLevel === 3 && (
+                  <p className="text-green-600 flex items-center gap-2"><IcoStore className="h-4 w-4" /> Pro Seller — unlimited listings</p>
                 )}
               </div>
             </div>
@@ -647,7 +707,7 @@ export default function VerificationPage() {
               <ul className="space-y-1 text-sm">
                 {currentLevelConfig.permissions.map((perm, i) => (
                   <li key={i} className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <IcoCheckCircle className="h-4 w-4 text-green-500" />
                     {perm}
                   </li>
                 ))}
@@ -660,7 +720,7 @@ export default function VerificationPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <ArrowRight className="h-5 w-5" />
+                <IcoArrowRight className="h-5 w-5" />
                 Next Level
               </CardTitle>
             </CardHeader>
@@ -675,7 +735,7 @@ export default function VerificationPage() {
                 <ul className="space-y-1 text-sm">
                   {nextLevelConfig.requirements.map((req, i) => (
                     <li key={i} className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-orange-500" />
+                      <IcoClock className="h-4 w-4 text-orange-500" />
                       {req}
                     </li>
                   ))}
@@ -687,7 +747,7 @@ export default function VerificationPage() {
                 <ul className="space-y-1 text-sm">
                   {nextLevelConfig.permissions.slice(0, 3).map((perm, i) => (
                     <li key={i} className="flex items-center gap-2 text-green-600">
-                      <CheckCircle className="h-4 w-4" />
+                      <IcoCheckCircle className="h-4 w-4" />
                       {perm}
                     </li>
                   ))}
@@ -703,13 +763,13 @@ export default function VerificationPage() {
         <CardHeader>
           <CardTitle>Upgrade Your Account</CardTitle>
           <CardDescription>
-            Complete verification to unlock trading features and increase your limits
+            Complete verification steps to unlock seller access and post listings in the shop
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {pendingVerification && (
             <Alert className="border-blue-500/50 bg-blue-500/10">
-              <Clock className="h-4 w-4 text-blue-600" />
+              <IcoClock className="h-4 w-4 text-blue-600" />
               <AlertDescription className="text-blue-800 dark:text-blue-200">
                 You have a pending verification request for Level {pendingVerification.requested_level}. 
                 Our team is reviewing your documents. This usually takes 1-2 business days.
@@ -719,7 +779,7 @@ export default function VerificationPage() {
 
           {needsResubmitForCurrentLevel && (
             <Alert variant="destructive" className="border-red-500/50 bg-red-500/10">
-              <XCircle className="h-4 w-4 text-red-600" />
+              <IcoXCircle className="h-4 w-4 text-red-600" />
               <AlertDescription className="text-red-800 dark:text-red-200">
                 <p className="font-semibold mb-1">
                   Your Level {latestRejection.requested_level} verification was rejected
@@ -736,7 +796,7 @@ export default function VerificationPage() {
 
           {needsResubmitForLevel2 && (
             <Alert variant="destructive" className="border-red-500/50 bg-red-500/10">
-              <XCircle className="h-4 w-4 text-red-600" />
+              <IcoXCircle className="h-4 w-4 text-red-600" />
               <AlertDescription className="text-red-800 dark:text-red-200">
                 <p className="font-semibold mb-1">
                   Your Level 2 verification was rejected
@@ -753,7 +813,7 @@ export default function VerificationPage() {
 
           {shouldShowRejection && (
             <Alert variant="destructive" className="border-orange-500/50 bg-orange-500/10">
-              <XCircle className="h-4 w-4 text-orange-600" />
+              <IcoXCircle className="h-4 w-4 text-orange-600" />
               <AlertDescription className="text-orange-800 dark:text-orange-200">
                 <p className="font-semibold mb-1">
                   Your previous Level {latestRejection.requested_level} verification was rejected
@@ -772,10 +832,9 @@ export default function VerificationPage() {
           {(currentLevel === 0 || (currentLevel === 1 && needsResubmitForCurrentLevel)) && !pendingVerification && (
             <div className="space-y-4">
               <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-lg mb-4">
-                <h4 className="font-semibold text-orange-800 dark:text-orange-200 mb-2">Level 0 - Limited Access</h4>
+                <h4 className="font-semibold text-orange-800 dark:text-orange-200 mb-2">Level 0 — Buyer</h4>
                 <p className="text-sm text-orange-700 dark:text-orange-300">
-                  You can invite friends with your ID QR code and earn rewards, but you cannot trade yet. 
-                  Complete Level 1 verification to start trading.
+                  You can browse and purchase any listing without KYC. To post listings and sell, complete seller verification below.
                 </p>
               </div>
 
@@ -783,7 +842,7 @@ export default function VerificationPage() {
                 {needsResubmitForCurrentLevel && currentLevel === 1 ? "Resubmit Level 1 Verification" : "Step 1: Verify Your Identity (Level 1)"}
               </h3>
               <p className="text-sm text-muted-foreground">
-                Provide your full name, confirm your age, and verify both email and phone number to unlock basic trading features.
+                Provide your full name, confirm your age, and verify both email and phone number to unlock buyer features and the ability to leave verified reviews.
               </p>
 
               <div className="space-y-2">
@@ -846,12 +905,12 @@ export default function VerificationPage() {
                   </div>
                   {user?.email ? (
                     <Badge variant="default" className="text-xs">
-                      <CheckCircle className="h-3 w-3 mr-1" />
+                      <IcoCheckCircle className="h-3 w-3 mr-1" />
                       Verified
                     </Badge>
                   ) : (
                     <Badge variant="secondary" className="text-xs">
-                      <Clock className="h-3 w-3 mr-1" />
+                      <IcoClock className="h-3 w-3 mr-1" />
                       Not Set
                     </Badge>
                   )}
@@ -869,12 +928,12 @@ export default function VerificationPage() {
                   </div>
                   {user?.phone ? (
                     <Badge variant="default" className="text-xs">
-                      <CheckCircle className="h-3 w-3 mr-1" />
+                      <IcoCheckCircle className="h-3 w-3 mr-1" />
                       Verified
                     </Badge>
                   ) : (
                     <Badge variant="secondary" className="text-xs">
-                      <Clock className="h-3 w-3 mr-1" />
+                      <IcoClock className="h-3 w-3 mr-1" />
                       Not Set
                     </Badge>
                   )}
@@ -956,23 +1015,23 @@ export default function VerificationPage() {
                 {(needsResubmitForCurrentLevel && currentLevel === 2) || needsResubmitForLevel2 ? "Resubmit Level 2 Verification" : "Step 2: Full Verification (Level 2)"}
               </h3>
               <p className="text-sm text-muted-foreground">
-                Complete identity verification to unlock unlimited daily/lifetime trading. You'll be redirected to our secure verification partner.
+                Complete identity verification to become a Verified Seller and start posting listings. You'll be redirected to our secure verification partner.
               </p>
 
               <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
                 <p className="text-sm font-semibold text-purple-800 dark:text-purple-200 mb-1">
-                  Level 2 Benefits:
+                  Level 2 — Verified Seller Benefits:
                 </p>
                 <ul className="text-xs text-purple-700 dark:text-purple-300 space-y-1">
-                  <li>✓ Remove daily limits</li>
-                  <li>✓ Remove lifetime limits</li>
-                  <li>✓ Per Trade Limit: $100,000</li>
-                  <li>✓ Access to more payment methods</li>
+                  <li>✓ Post up to 10 active listings in the shop</li>
+                  <li>✓ Accept crypto payments from buyers</li>
+                  <li>✓ Verified Seller badge on your profile</li>
+                  <li>✓ Access to seller dashboard</li>
                 </ul>
               </div>
 
               <Alert className="bg-blue-500/10 border-blue-500/20">
-                <Shield className="h-4 w-4" />
+                <IcoShield className="h-4 w-4" />
                 <AlertDescription className="text-sm">
                   <strong>What to expect:</strong>
                   <ul className="mt-2 space-y-1 text-xs ml-4">
@@ -990,7 +1049,7 @@ export default function VerificationPage() {
                 className="w-full"
                 size="lg"
               >
-                <Shield className="h-4 w-4 mr-2" />
+                <IcoShield className="h-4 w-4 mr-2" />
                 {startingKYC ? "Starting Verification..." : "Start Identity Verification"}
               </Button>
             </div>
@@ -1003,18 +1062,19 @@ export default function VerificationPage() {
                 {needsResubmitForCurrentLevel && currentLevel === 3 ? "Resubmit Level 3 Verification" : "Step 3: Enhanced Due Diligence (Level 3)"}
               </h3>
               <p className="text-sm text-muted-foreground">
-                Complete address verification to unlock maximum trading power with $1,000,000 per-trade limit.
+                Complete address verification to become a Pro Seller with unlimited listings and priority placement in search results.
               </p>
 
               <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
                 <p className="text-sm font-semibold text-purple-800 dark:text-purple-200 mb-1">
-                  Level 3 Benefits:
+                  Level 3 — Pro Seller Benefits:
                 </p>
                 <ul className="text-xs text-purple-700 dark:text-purple-300 space-y-1">
-                  <li>✓ Maximum per-trade limit: $1,000,000</li>
+                  <li>✓ Unlimited active listings</li>
+                  <li>✓ Priority placement in search results</li>
+                  <li>✓ Pro Seller badge on your profile</li>
                   <li>✓ Priority customer support</li>
-                  <li>✓ Enhanced security features</li>
-                  <li>✓ VIP status badge</li>
+                  <li>✓ Access to promotional features</li>
                 </ul>
               </div>
 
@@ -1054,17 +1114,17 @@ export default function VerificationPage() {
                 disabled={!addressFile || submitVerification.isPending}
                 className="w-full"
               >
-                <Upload className="h-4 w-4 mr-2" />
+                <IcoUpload className="h-4 w-4 mr-2" />
                 {submitVerification.isPending ? "Submitting..." : "Submit for Level 3 Verification"}
               </Button>
             </div>
           )}
 
           {currentLevel === 3 && !needsResubmitForCurrentLevel && !pendingVerification && !latestRejection && (
-            <Alert>
-              <CheckCircle className="h-4 w-4 text-green-500" />
-              <AlertDescription>
-                Congratulations! You've reached the highest verification level.
+            <Alert className="border-green-500/30 bg-green-500/10">
+              <IcoCheckCircle className="h-4 w-4 text-green-500" />
+              <AlertDescription className="text-green-800 dark:text-green-200">
+                Congratulations! You're a Pro Seller — you can post unlimited listings with priority placement in the shop.
               </AlertDescription>
             </Alert>
           )}
