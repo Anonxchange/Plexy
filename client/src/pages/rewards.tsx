@@ -113,12 +113,84 @@ function RewardsGuestPage() {
     <div className="min-h-screen bg-background flex flex-col">
 
       {/* Header */}
-      <div className="border-b border-border bg-background">
-        <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-8 py-3.5 flex items-center justify-between">
+      <div className="relative border-b border-border bg-background overflow-hidden">
+        {/* Reward illustration — desktop only */}
+        <svg
+          aria-hidden="true"
+          className="hidden lg:block absolute inset-0 w-full h-full pointer-events-none select-none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {/* Coin large left */}
+          <circle cx="68" cy="50%" r="28" fill="none" stroke="#B4F22E" strokeWidth="2.5" opacity="0.18" />
+          <circle cx="68" cy="50%" r="19" fill="none" stroke="#B4F22E" strokeWidth="1.5" opacity="0.12" />
+          <text x="68" y="50%" dominantBaseline="middle" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#B4F22E" opacity="0.20">₿</text>
+
+          {/* Coin mid-left */}
+          <circle cx="170" cy="35%" r="18" fill="none" stroke="#B4F22E" strokeWidth="2" opacity="0.14" />
+          <circle cx="170" cy="35%" r="11" fill="none" stroke="#B4F22E" strokeWidth="1" opacity="0.10" />
+          <text x="170" y="35%" dominantBaseline="middle" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#B4F22E" opacity="0.18">✦</text>
+
+          {/* Star sparkle cluster left */}
+          <text x="130" y="72%" fontSize="10" fill="#B4F22E" opacity="0.22">✦</text>
+          <text x="105" y="38%" fontSize="7" fill="#B4F22E" opacity="0.16">✦</text>
+          <text x="210" y="68%" fontSize="6" fill="#B4F22E" opacity="0.14">★</text>
+
+          {/* Dots row */}
+          <circle cx="240" cy="50%" r="3" fill="#B4F22E" opacity="0.10" />
+          <circle cx="254" cy="44%" r="2" fill="#B4F22E" opacity="0.08" />
+          <circle cx="262" cy="58%" r="2.5" fill="#B4F22E" opacity="0.09" />
+
+          {/* Right side — trophy shape (using % positions for SVG compat) */}
+          <rect x="93%" y="18%" width="28" height="22" rx="4" fill="none" stroke="#B4F22E" strokeWidth="1.8" opacity="0.14" />
+          <line x1="94%" y1="40%" x2="94%" y2="58%" stroke="#B4F22E" strokeWidth="1.8" opacity="0.14" />
+          <line x1="93%" y1="58%" x2="95.2%" y2="58%" stroke="#B4F22E" strokeWidth="1.8" opacity="0.14" />
+
+          {/* Gift box right */}
+          <rect x="86%" y="22%" width="26" height="21" rx="3" fill="none" stroke="#B4F22E" strokeWidth="1.6" opacity="0.13" />
+          <line x1="87%" y1="22%" x2="87%" y2="43%" stroke="#B4F22E" strokeWidth="1.6" opacity="0.13" />
+          <line x1="86%" y1="30%" x2="88.2%" y2="30%" stroke="#B4F22E" strokeWidth="1.6" opacity="0.13" />
+
+          {/* Coin large right */}
+          <circle cx="96%" cy="50%" r="26" fill="none" stroke="#B4F22E" strokeWidth="2.5" opacity="0.16" />
+          <circle cx="96%" cy="50%" r="17" fill="none" stroke="#B4F22E" strokeWidth="1.5" opacity="0.11" />
+          <text x="96%" y="50%" dominantBaseline="middle" textAnchor="middle" fontSize="12" fontWeight="bold" fill="#B4F22E" opacity="0.19">⬡</text>
+
+          {/* Stars right cluster */}
+          <text x="89%" y="70%" fontSize="9" fill="#B4F22E" opacity="0.18">✦</text>
+          <text x="91%" y="32%" fontSize="7" fill="#B4F22E" opacity="0.15">✦</text>
+          <text x="83%" y="62%" fontSize="6" fill="#B4F22E" opacity="0.13">★</text>
+
+          {/* Lightning bolt mid-right — zigzag lines */}
+          <line x1="81%" y1="10%" x2="79%" y2="52%" stroke="#B4F22E" strokeWidth="2" opacity="0.13" strokeLinecap="round" />
+          <line x1="79%" y1="52%" x2="81.5%" y2="52%" stroke="#B4F22E" strokeWidth="2" opacity="0.13" strokeLinecap="round" />
+          <line x1="81.5%" y1="52%" x2="79.5%" y2="90%" stroke="#B4F22E" strokeWidth="2" opacity="0.13" strokeLinecap="round" />
+
+          {/* Subtle grid dots center */}
+          <circle cx="50%" cy="30%" r="2" fill="#B4F22E" opacity="0.07" />
+          <circle cx="48%" cy="70%" r="1.5" fill="#B4F22E" opacity="0.06" />
+          <circle cx="52%" cy="55%" r="2" fill="#B4F22E" opacity="0.06" />
+        </svg>
+
+        <div className="relative max-w-2xl lg:max-w-7xl mx-auto px-4 lg:px-8 py-3.5 lg:py-5 flex items-center justify-between">
           <div>
             <h1 className="text-base font-bold text-foreground">Rewards</h1>
             <p className="text-xs text-muted-foreground mt-0.5">Earn points, unlock more</p>
           </div>
+
+          {/* Center tagline — desktop only */}
+          <div className="hidden lg:flex flex-col items-center gap-1 absolute left-1/2 -translate-x-1/2">
+            <p className="text-sm font-black text-foreground tracking-tight">
+              Trade more. <span className="text-primary">Earn more. Redeem anything.</span>
+            </p>
+            <div className="flex items-center gap-3 text-[11px] text-muted-foreground font-medium">
+              <span className="flex items-center gap-1"><Coins className="w-3 h-3 text-primary" /> Points for every trade</span>
+              <span className="w-px h-3 bg-border" />
+              <span className="flex items-center gap-1"><Star className="w-3 h-3 text-primary" /> 5 tiers to unlock</span>
+              <span className="w-px h-3 bg-border" />
+              <span className="flex items-center gap-1"><Gift className="w-3 h-3 text-primary" /> 20+ real rewards</span>
+            </div>
+          </div>
+
           <button
             onClick={() => navigate("/signup")}
             className="text-xs font-bold text-primary bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full hover:bg-primary/15 transition-colors"
@@ -276,7 +348,7 @@ function RewardsGuestPage() {
 
       {/* ── DESKTOP layout (≥ lg) ─────────────────────────────────────────────── */}
       <div className="hidden lg:block flex-1">
-        <div className="max-w-6xl mx-auto px-8 py-10 pb-20 space-y-6">
+        <div className="max-w-7xl mx-auto px-8 py-10 pb-20 space-y-6">
 
           {/* ── HERO: full-width two-column ──────────────────────────────────── */}
           <div className="relative rounded-3xl overflow-hidden border border-border bg-card shadow-sm">
