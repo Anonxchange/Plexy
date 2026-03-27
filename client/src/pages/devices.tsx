@@ -32,16 +32,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
-  User,
-  Globe,
-  Bell,
-  Shield,
-  Smartphone,
-  Building2,
-  Code,
-  CheckCircle2,
-  Link2,
-  Info,
   Monitor,
   Laptop,
   Tablet,
@@ -54,6 +44,7 @@ import {
   Wifi,
 } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
+import { SettingsSidebar } from "@/components/settings/SettingsSidebar";
 import { deviceFingerprint, DeviceFingerprint } from "@/lib/security/device-fingerprint";
 
 const format = (date: Date, _formatStr: string) => {
@@ -67,18 +58,6 @@ interface DeviceLocationInfo {
   isp?: string;
 }
 
-const settingsSections = [
-  { id: "profile", label: "Profile", icon: User },
-  { id: "localization", label: "Localization", icon: Globe },
-  { id: "notifications", label: "Notifications", icon: Bell },
-  { id: "security", label: "Security", icon: Shield },
-  { id: "devices", label: "Devices", icon: Smartphone },
-  { id: "payment", label: "Payment Accounts", icon: Building2 },
-  { id: "developer", label: "Developer", icon: Code },
-  { id: "verification", label: "Verification", icon: CheckCircle2 },
-  { id: "connected", label: "Connected Apps & Websites", icon: Link2 },
-  { id: "security-questions", label: "Security Questions", icon: Info },
-];
 
 export default function DevicesPage() {
   useHead({ title: "Trusted Devices | Pexly", meta: [{ name: "description", content: "Review and manage trusted devices that have access to your Pexly account." }] });
@@ -94,6 +73,8 @@ export default function DevicesPage() {
   const [currentFingerprint, setCurrentFingerprint] = useState<string>("");
   const [processingDeviceId, setProcessingDeviceId] = useState<string | null>(null);
   const [removingAll, setRemovingAll] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   const [selectedDevice, setSelectedDevice] = useState<DeviceFingerprint | null>(null);
   const [deviceDetailsOpen, setDeviceDetailsOpen] = useState(false);
@@ -325,34 +306,10 @@ export default function DevicesPage() {
     setSidebarOpen(false);
     if (sectionId === "devices") {
       return;
-    } else if (sectionId === "developer") {
-      setLocation("/developer");
     } else {
       setLocation(`/account-settings?section=${sectionId}`);
     }
   };
-
-  const SidebarContent = () => (
-    <div className="p-4 space-y-2">
-      {settingsSections.map((section) => {
-        const Icon = section.icon;
-        return (
-          <button
-            key={section.id}
-            onClick={() => handleSectionClick(section.id)}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-              section.id === "devices"
-                ? "bg-primary text-primary-foreground"
-                : "hover:bg-muted"
-            }`}
-          >
-            <Icon className="h-5 w-5" />
-            <span>{section.label}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
 
   if (loading) {
     return (
@@ -377,7 +334,7 @@ export default function DevicesPage() {
               <SheetHeader className="p-4 border-b">
                 <SheetTitle>Settings</SheetTitle>
               </SheetHeader>
-              <SidebarContent />
+              <SettingsSidebar activeSection="devices" onSectionChange={handleSectionClick} />
             </SheetContent>
           </Sheet>
         </div>
@@ -385,7 +342,7 @@ export default function DevicesPage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="hidden lg:block">
             <Card className="sticky top-20">
-              <SidebarContent />
+              <SettingsSidebar activeSection="devices" onSectionChange={handleSectionClick} />
             </Card>
           </div>
 
