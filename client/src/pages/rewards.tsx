@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { PexlyFooter } from "@/components/pexly-footer";
-import { USER_PTS, TIERS } from "@/components/rewards/rewards-data";
+import { TIERS } from "@/components/rewards/rewards-data";
 import { RewardsHeroSection } from "@/components/rewards/rewards-hero-section";
 import { RewardsTiersSection } from "@/components/rewards/rewards-tiers-section";
 import { RewardsEngagementSection } from "@/components/rewards/rewards-engagement-section";
@@ -14,6 +14,10 @@ import {
   TierCrystalGold, TierCrystalDiamond,
 } from "@/components/reward-icons";
 import { PhoneIcon, AmazonIcon, SpotifyIcon } from "@/components/rewards/reward-brand-icons";
+import {
+  useRewardsProfile, useTaskCompletions,
+  useCompleteTask, useClaimDailyLogin, useRedeemReward, useApplyPromo,
+} from "@/hooks/use-rewards";
 
 // ─── Tier crystal lookup ──────────────────────────────────────────────────────
 
@@ -51,9 +55,9 @@ const EARN_WAYS = [
 // ─── Redeem preview ───────────────────────────────────────────────────────────
 
 const REDEEM_PREVIEW = [
-  { icon: <PhoneIcon   size={44} />, name: "Mobile Airtime",   from: "280 pts"    },
-  { icon: <AmazonIcon  size={44} />, name: "Amazon Gift Card", from: "1,400 pts"  },
-  { icon: <SpotifyIcon size={44} />, name: "Spotify Premium",  from: "2,600 pts"  },
+  { icon: <PhoneIcon   size={44} />, name: "Mobile Airtime",   from: "800 pts"    },
+  { icon: <AmazonIcon  size={44} />, name: "Amazon Gift Card", from: "4,500 pts"  },
+  { icon: <SpotifyIcon size={44} />, name: "Spotify Premium",  from: "8,500 pts"  },
 ];
 
 // ─── FAQ ──────────────────────────────────────────────────────────────────────
@@ -319,6 +323,22 @@ function RewardsGuestPage() {
 // ─── Logged-in view ───────────────────────────────────────────────────────────
 
 function RewardsLoggedInPage() {
+  const { data: profile } = useRewardsProfile();
+  const { data: completions } = useTaskCompletions();
+  const completeTask   = useCompleteTask();
+  const claimLogin     = useClaimDailyLogin();
+  const redeemReward   = useRedeemReward();
+  const applyPromo     = useApplyPromo();
+
+  const balance  = profile?.balance        ?? 0;
+  const streak   = profile?.currentStreak  ?? 0;
+  const weeklyPts = profile?.weeklyPts     ?? 0;
+  const rank     = profile?.rank           ?? 1;
+  const dailyIds     = completions?.daily     ?? [];
+  const permanentIds = completions?.permanent ?? [];
+  const todayUTC = new Date().toISOString().split("T")[0];
+  const loginClaimed = profile?.lastLoginDate === todayUTC;
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
 
@@ -330,16 +350,34 @@ function RewardsLoggedInPage() {
           </div>
           <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full">
             <Coins className="w-3.5 h-3.5 text-primary" />
-            <span className="text-sm font-bold tabular-nums text-foreground">{USER_PTS.toLocaleString()}</span>
+            <span className="text-sm font-bold tabular-nums text-foreground">{balance.toLocaleString()}</span>
             <span className="text-[10px] text-muted-foreground">pts</span>
           </div>
         </div>
       </div>
 
       <div className="flex-1 max-w-2xl mx-auto w-full px-4 pb-8 space-y-5 pt-5">
-        <RewardsHeroSection />
-        <RewardsTiersSection userPts={USER_PTS} />
-        <RewardsEngagementSection />
+        <RewardsHeroSection
+          balance={balance}
+          streak={streak}
+          weeklyPts={weeklyPts}
+          rank={rank}
+          onClaimLogin={() => claimLogin.mutate()}
+          loginClaimed={loginClaimed}
+        />
+        <RewardsTiersSection userPts={balance} />
+        <RewardsEngagementSection
+          balance={balance}
+          completedDailyIds={dailyIds}
+          completedPermanentIds={permanentIds}
+          referralCode="PEXLY-X7Q2"
+          onCompleteTask={(id) => completeTask.mutate(id)}
+          onRedeem={(id) => redeemReward.mutate(id)}
+          onApplyPromo={(code) => applyPromo.mutate(code)}
+          isCompletingTask={completeTask.isPending}
+          isRedeeming={redeemReward.isPending}
+          isApplyingPromo={applyPromo.isPending}
+        />
       </div>
 
       <PexlyFooter />
