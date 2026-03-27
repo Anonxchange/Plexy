@@ -1,83 +1,97 @@
+/**
+ * Pexly Marketplace — Seller Verification Tiers
+ *
+ * This is a non-custodial marketplace. Pexly does not hold or control
+ * user funds, so there are no imposed financial limits. Verification
+ * exists purely to establish seller trust and unlock shop posting,
+ * modelled after real marketplaces (Etsy, Amazon, eBay).
+ *
+ * Level 0  – Visitor       : Browse only
+ * Level 1  – Buyer         : Email + Phone + DOB (18+) — can purchase
+ * Level 2  – Verified Seller: Gov ID + Liveness check — can post listings (up to 10)
+ * Level 3  – Pro Seller    : Address proof — unlimited listings + Pro badge
+ */
+
 export const VERIFICATION_LEVELS = {
   LEVEL_0: {
     level: 0,
-    name: "Level 0 - Email Verified",
-    description: "Sign up with email and get your unique referral ID",
+    name: "Visitor",
+    description: "Browse and purchase — no KYC required to buy",
     requirements: ["Email verification"],
-    permissions: ["Invite friends with QR code", "Earn referral rewards"],
-    restrictions: ["Cannot trade", "Cannot deposit or withdraw"],
-    dailyLimit: 0,
-    lifetimeTradeLimit: 0,
-    lifetimeSendLimit: 0,
-    perTradeLimit: 0,
+    permissions: [
+      "Browse all listings",
+      "Purchase any listing",
+      "Message sellers",
+    ],
+    restrictions: [
+      "Cannot post listings",
+    ],
+    maxListings: 0,
+    sellerBadge: null,
   },
   LEVEL_1: {
     level: 1,
-    name: "Level 1 - Basic",
-    description: "Verify your identity to start trading",
+    name: "Verified Buyer",
+    description: "Enhanced buyer account — leave reviews and receive crypto",
     requirements: [
-      "Full name",
-      "Date of birth verification (must be 18+)",
-      "Email AND phone verification (both required)"
+      "Email verified",
+      "Phone number verified",
+      "Date of birth (must be 18+)",
     ],
     permissions: [
-      "Receive crypto",
-      "Deposit funds",
-      "Convert crypto",
-      "Buy crypto",
-      "Sell crypto",
+      "Everything in Level 0",
+      "Leave verified reviews",
+      "Receive crypto payments",
     ],
-    restrictions: ["Cannot create offers"],
-    dailyLimit: 1000,
-    lifetimeTradeLimit: 10000,
-    lifetimeSendLimit: 5000,
-    perTradeLimit: 1000,
+    restrictions: [
+      "Cannot post listings",
+    ],
+    maxListings: 0,
+    sellerBadge: null,
   },
   LEVEL_2: {
     level: 2,
-    name: "Level 2 - Full Verification",
-    description: "Complete ID and live video verification for unlimited trading",
+    name: "Verified Seller",
+    description: "Post listings in the shop and start selling",
     requirements: [
-      "Government-issued photo ID",
-      "Live video verification (nod your head, turn head for liveness detection)"
+      "All Level 1 requirements",
+      "Government-issued photo ID (front + back)",
+      "Liveness check (selfie / face match)",
     ],
     permissions: [
-      "Remove daily limits",
-      "Remove lifetime limits",
-      "Access more payment methods",
-      "Create and publish offers",
+      "Post up to 10 active listings",
+      "Accept crypto payments",
+      "Verified Seller badge on profile",
+      "Access seller dashboard",
     ],
     restrictions: [],
-    dailyLimit: null,
-    lifetimeTradeLimit: null,
-    lifetimeSendLimit: null,
-    perTradeLimit: 100000,
+    maxListings: 10,
+    sellerBadge: "Verified Seller",
   },
   LEVEL_3: {
     level: 3,
-    name: "Level 3 - Enhanced Due Diligence",
-    description: "Verify your address for maximum trading power",
+    name: "Pro Seller",
+    description: "Unlimited listings, priority placement, and Pro badge",
     requirements: [
       "All Level 2 requirements",
-      "Address verification (utility bill, bank statement)",
+      "Proof of address (utility bill or bank statement, dated within 90 days)",
     ],
     permissions: [
-      "All Level 2 permissions",
-      "Highest per-trade limit",
-      "Priority support",
+      "Unlimited active listings",
+      "Priority placement in search results",
+      "Pro Seller badge on profile",
+      "Priority customer support",
+      "Access to promotional features",
     ],
     restrictions: [],
-    dailyLimit: null,
-    lifetimeTradeLimit: null,
-    lifetimeSendLimit: null,
-    perTradeLimit: 1000000,
+    maxListings: null,
+    sellerBadge: "Pro Seller",
   },
 } as const;
 
 export type VerificationLevel = 0 | 1 | 2 | 3;
 
 export function getVerificationLevel(level: number) {
-  if (level === 0) return VERIFICATION_LEVELS.LEVEL_0;
   if (level === 1) return VERIFICATION_LEVELS.LEVEL_1;
   if (level === 2) return VERIFICATION_LEVELS.LEVEL_2;
   if (level === 3) return VERIFICATION_LEVELS.LEVEL_3;
@@ -91,92 +105,101 @@ export function getNextLevel(currentLevel: number) {
   return null;
 }
 
-export function canTrade(level: number, amount: number, lifetimeVolume: number = 0) {
-  const levelConfig = getVerificationLevel(level);
-
-  if (level === 0) return { allowed: false, reason: "Level 0 users cannot trade" };
-
-  if (levelConfig.dailyLimit && amount > levelConfig.dailyLimit) {
-    return { allowed: false, reason: `Daily limit is $${levelConfig.dailyLimit}` };
-  }
-
-  if (levelConfig.lifetimeTradeLimit && lifetimeVolume >= levelConfig.lifetimeTradeLimit) {
-    return { allowed: false, reason: `Lifetime trade limit of $${levelConfig.lifetimeTradeLimit} reached` };
-  }
-
-  if (levelConfig.perTradeLimit && amount > levelConfig.perTradeLimit) {
-    return { allowed: false, reason: `Per-trade limit is $${levelConfig.perTradeLimit}` };
-  }
-
+/**
+ * Check if a user can purchase listings.
+ * Purchasing is open to all signed-in users — no KYC required to buy.
+ * KYC is only required to post listings (see canCreateOffer).
+ */
+export function canTrade(_level: number) {
   return { allowed: true };
 }
 
-export function canCreateOffer(level: number, merchantStatus?: string) {
-  // Only Level 2+ can create offers (Level 0 and Level 1 cannot)
+/**
+ * Check if a user can post listings in the shop.
+ * Requires Level 2 (Verified Seller) or above.
+ */
+export function canCreateOffer(level: number, merchantStatus?: string): {
+  allowed: boolean;
+  maxListings: number | null;
+  reason?: string;
+} {
   if (level < 2) {
     return {
       allowed: false,
-      maxOffers: 0,
-      feePercentage: 1.0,
-      reason: "You must complete Level 2 verification (ID + liveness check) to create offers"
+      maxListings: 0,
+      reason: "You must complete Level 2 verification (Gov ID + liveness check) to post listings in the shop.",
     };
   }
 
-  // Level 2+ users can create offers (merchant status determines limits)
   if (merchantStatus === "block_merchant") {
     return {
-      allowed: true,
-      maxOffers: null,
-      feePercentage: 0,
+      allowed: false,
+      maxListings: 0,
+      reason: "Your selling privileges have been suspended. Please contact support.",
     };
   }
 
-  if (merchantStatus === "verified_merchant") {
+  if (level >= 3) {
     return {
       allowed: true,
-      maxOffers: 50,
-      feePercentage: 0.5,
+      maxListings: null,
     };
   }
 
-  // Regular Level 2+ users
+  // Level 2 — Verified Seller
   return {
     allowed: true,
-    maxOffers: 5,
-    feePercentage: 1.0,
+    maxListings: 10,
   };
 }
 
+/**
+ * Returns what the user needs to do to reach the next level,
+ * phrased around marketplace seller benefits.
+ */
 export function getVerificationRequirements(currentLevel: number) {
   if (currentLevel === 0) {
     return {
       nextLevel: 1,
-      description: "Verify your identity to start trading",
+      description: "Verify your phone and age to leave reviews and receive crypto",
       requirements: [
-        "Full name",
-        "Date of birth confirmation (must be 18+)",
-        "Email AND phone verification (both required)"
+        "Verify your phone number",
+        "Confirm your date of birth (must be 18+)",
       ],
-      benefits: ["Open trades on existing offers", "$1,000 daily limit", "$10,000 lifetime trade limit"]
+      benefits: [
+        "Leave verified reviews on purchases",
+        "Receive crypto payments",
+      ],
     };
   }
   if (currentLevel === 1) {
     return {
       nextLevel: 2,
-      description: "Complete ID and live video verification for unlimited trading",
+      description: "Become a Verified Seller and start posting listings",
       requirements: [
-        "Government-issued photo ID",
-        "Live video verification (nod your head, turn head)"
+        "Government-issued photo ID (front + back)",
+        "Liveness check (selfie to match your ID)",
       ],
-      benefits: ["Remove daily/lifetime limits", "$100,000 per-trade limit", "More payment methods"]
+      benefits: [
+        "Post up to 10 listings in the shop",
+        "Accept crypto payments",
+        "Verified Seller badge on your profile",
+      ],
     };
   }
   if (currentLevel === 2) {
     return {
       nextLevel: 3,
-      description: "Enhanced due diligence for maximum trading power",
-      requirements: ["Address verification", "Utility bill or bank statement"],
-      benefits: ["$1,000,000 per-trade limit", "Priority support", "VIP status"]
+      description: "Upgrade to Pro Seller for unlimited listings and priority placement",
+      requirements: [
+        "Proof of address (utility bill or bank statement dated within 90 days)",
+      ],
+      benefits: [
+        "Unlimited active listings",
+        "Priority placement in search results",
+        "Pro Seller badge",
+        "Priority support",
+      ],
     };
   }
   return null;
