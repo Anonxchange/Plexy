@@ -71,8 +71,6 @@ export function SecuritySection() {
   const [mnemonic, setMnemonic] = useState("");
   const [isVerifyingBackupPassword, setIsVerifyingBackupPassword] = useState(false);
 
-  const [loginNotifications, setLoginNotifications] = useState(true);
-  const [suspiciousActivity, setSuspiciousActivity] = useState(true);
   const [whitelistEnabled, setWhitelistEnabled] = useState(false);
   const [loadingWhitelist, setLoadingWhitelist] = useState(false);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
@@ -846,29 +844,6 @@ export function SecuritySection() {
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Security Alerts */}
-      <div>
-        <h4 className="text-lg font-semibold mb-4">Security Alerts</h4>
-        <Card>
-          <CardContent className="p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <p className="font-medium">Login Notifications</p>
-                <p className="text-sm text-muted-foreground">Get notified when someone logs into your account</p>
-              </div>
-              <Switch checked={loginNotifications} onCheckedChange={setLoginNotifications} />
-            </div>
-            <div className="flex items-center justify-between pt-4 border-t">
-              <div className="flex-1">
-                <p className="font-medium">Suspicious Activity Alerts</p>
-                <p className="text-sm text-muted-foreground">Receive alerts about unusual account activity</p>
-              </div>
-              <Switch checked={suspiciousActivity} onCheckedChange={setSuspiciousActivity} />
-            </div>
           </CardContent>
         </Card>
       </div>
