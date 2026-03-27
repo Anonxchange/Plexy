@@ -11,13 +11,13 @@ import {
 } from "./reward-brand-icons";
 import {
   DAILY_TASKS, ONE_TIME_TASKS, MILESTONE_TASKS,
-  BADGES, REDEEM_ITEMS, USER_PTS,
+  BADGES, REDEEM_ITEMS,
   type Task, type Badge, type RedeemItem,
 } from "./rewards-data";
 
 // ─── Task Card ────────────────────────────────────────────────────────────────
 
-function TaskCard({ task }: { task: Task }) {
+function TaskCard({ task, onAction }: { task: Task; onAction?: (id: string) => void }) {
   return (
     <div className={cn(
       "flex items-center gap-4 p-4 rounded-2xl border transition-all",
@@ -50,7 +50,10 @@ function TaskCard({ task }: { task: Task }) {
           </span>
         )}
         {!task.done && (
-          <button className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-0.5 transition-colors mt-0.5">
+          <button
+            onClick={() => onAction?.(task.id)}
+            className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-0.5 transition-colors mt-0.5"
+          >
             {task.cta} <ChevronRight className="w-3 h-3" />
           </button>
         )}
@@ -111,7 +114,7 @@ function BadgeCard({ badge, expanded, onToggle }: { badge: Badge; expanded: bool
 
 // ─── Redeem Card ──────────────────────────────────────────────────────────────
 
-function RedeemCard({ item, userPts }: { item: RedeemItem; userPts: number }) {
+function RedeemCard({ item, userPts, onRedeem }: { item: RedeemItem; userPts: number; onRedeem?: (id: string) => void }) {
   const canAfford = userPts >= item.cost;
   return (
     <div className={cn(
@@ -139,10 +142,13 @@ function RedeemCard({ item, userPts }: { item: RedeemItem; userPts: number }) {
           <span className="text-xs font-bold tabular-nums text-foreground">{item.cost.toLocaleString()}</span>
           <span className="text-[10px] text-muted-foreground">pts</span>
         </div>
-        <button className={cn(
-          "text-[10px] font-bold px-3 py-1.5 rounded-lg transition-all",
-          canAfford ? "bg-primary text-primary-foreground hover:opacity-90" : "bg-muted text-muted-foreground cursor-not-allowed"
-        )}>
+        <button
+          onClick={() => canAfford && onRedeem?.(item.id)}
+          className={cn(
+            "text-[10px] font-bold px-3 py-1.5 rounded-lg transition-all",
+            canAfford ? "bg-primary text-primary-foreground hover:opacity-90" : "bg-muted text-muted-foreground cursor-not-allowed"
+          )}
+        >
           {canAfford ? "Redeem" : `Need ${(item.cost - userPts).toLocaleString()} more`}
         </button>
       </div>
@@ -150,16 +156,41 @@ function RedeemCard({ item, userPts }: { item: RedeemItem; userPts: number }) {
   );
 }
 
+// ─── Props ────────────────────────────────────────────────────────────────────
+
+interface RewardsEngagementSectionProps {
+  balance: number;
+  completedDailyIds: string[];
+  completedPermanentIds: string[];
+  referralCode: string;
+  onCompleteTask: (task_id: string) => void;
+  onRedeem: (reward_id: string) => void;
+  onApplyPromo: (code: string) => void;
+  isCompletingTask?: boolean;
+  isRedeeming?: boolean;
+  isApplyingPromo?: boolean;
+}
+
 // ─── Rewards Engagement Section ───────────────────────────────────────────────
 
-export function RewardsEngagementSection() {
+export function RewardsEngagementSection({
+  balance,
+  completedDailyIds,
+  completedPermanentIds,
+  referralCode,
+  onCompleteTask,
+  onRedeem,
+  onApplyPromo,
+  isCompletingTask,
+  isRedeeming,
+  isApplyingPromo,
+}: RewardsEngagementSectionProps) {
   const [promoCode, setPromoCode] = useState("");
   const [tab, setTab] = useState<"earn" | "redeem" | "badges">("earn");
   const [redeemFilter, setRedeemFilter] = useState<"all" | "gift-card" | "airtime" | "data">("all");
   const [earnSection, setEarnSection] = useState<"daily" | "one-time" | "milestone">("daily");
   const [expandedBadge, setExpandedBadge] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const referralCode = "PEXLY-X7Q2";
 
   const handleCopy = () => {
     navigator.clipboard.writeText(referralCode).catch(() => {});
@@ -167,9 +198,14 @@ export function RewardsEngagementSection() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const dailyDone = DAILY_TASKS.filter(t => t.done).length;
+  // Merge real completion state into task definitions
+  const dailyTasks = DAILY_TASKS.map(t => ({ ...t, done: completedDailyIds.includes(t.id) }));
+  const oneTimeTasks = ONE_TIME_TASKS.map(t => ({ ...t, done: completedPermanentIds.includes(t.id) }));
+  const milestoneTasks = MILESTONE_TASKS.map(t => ({ ...t, done: completedPermanentIds.includes(t.id) }));
+
+  const dailyDone = dailyTasks.filter(t => t.done).length;
   const filteredRedeem = redeemFilter === "all" ? REDEEM_ITEMS : REDEEM_ITEMS.filter(i => i.category === redeemFilter);
-  const currentTasks = earnSection === "daily" ? DAILY_TASKS : earnSection === "one-time" ? ONE_TIME_TASKS : MILESTONE_TASKS;
+  const currentTasks = earnSection === "daily" ? dailyTasks : earnSection === "one-time" ? oneTimeTasks : milestoneTasks;
 
   return (
     <>
@@ -211,7 +247,7 @@ export function RewardsEngagementSection() {
                   <div>
                     <p className="text-xs font-bold text-foreground">Daily tasks reset at midnight UTC</p>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                      Complete all 5 for <span className="text-primary font-semibold">50 pts/day</span>. Each activity earns <span className="text-primary font-semibold">10 pts</span>.
+                      Complete all 5 for <span className="text-primary font-semibold">25 pts/day</span>. Each activity earns <span className="text-primary font-semibold">5 pts</span>.
                     </p>
                   </div>
                 </div>
@@ -228,7 +264,7 @@ export function RewardsEngagementSection() {
             </div>
 
             <div className="space-y-2">
-              {currentTasks.map((task) => <TaskCard key={task.id} task={task} />)}
+              {currentTasks.map((task) => <TaskCard key={task.id} task={task} onAction={onCompleteTask} />)}
             </div>
           </div>
         )}
@@ -239,7 +275,7 @@ export function RewardsEngagementSection() {
             <div className="flex items-center justify-between bg-muted/60 rounded-xl px-4 py-3 border border-border">
               <div className="flex items-center gap-2">
                 <Coins className="w-4 h-4 text-primary" />
-                <span className="text-sm font-bold tabular-nums text-foreground">{USER_PTS.toLocaleString()} pts</span>
+                <span className="text-sm font-bold tabular-nums text-foreground">{balance.toLocaleString()} pts</span>
                 <span className="text-[11px] text-muted-foreground">available</span>
               </div>
               <button className="text-[11px] text-primary font-semibold flex items-center gap-0.5">
@@ -274,7 +310,7 @@ export function RewardsEngagementSection() {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              {filteredRedeem.map((item) => <RedeemCard key={item.id} item={item} userPts={USER_PTS} />)}
+              {filteredRedeem.map((item) => <RedeemCard key={item.id} item={item} userPts={balance} onRedeem={onRedeem} />)}
             </div>
           </div>
         )}
@@ -334,8 +370,12 @@ export function RewardsEngagementSection() {
         <div className="flex gap-2">
           <Input value={promoCode} onChange={(e) => setPromoCode(e.target.value)}
             placeholder="Enter code e.g. PEXLY2025" className="flex-1 rounded-xl h-10 text-sm" />
-          <Button disabled={!promoCode.trim()} className="bg-primary text-primary-foreground hover:opacity-90 font-bold rounded-xl h-10 px-5 disabled:opacity-30">
-            Apply
+          <Button
+            disabled={!promoCode.trim() || isApplyingPromo}
+            onClick={() => { if (promoCode.trim()) { onApplyPromo(promoCode.trim()); setPromoCode(""); } }}
+            className="bg-primary text-primary-foreground hover:opacity-90 font-bold rounded-xl h-10 px-5 disabled:opacity-30"
+          >
+            {isApplyingPromo ? "Applying..." : "Apply"}
           </Button>
         </div>
       </div>
