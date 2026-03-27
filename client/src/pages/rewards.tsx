@@ -551,15 +551,83 @@ function RewardsLoggedInPage() {
   const todayUTC     = new Date().toISOString().split("T")[0];
   const loginClaimed = profile?.lastLoginDate  === todayUTC;
 
+  const currentTierIndex = TIERS.reduce((acc, t, i) => (balance >= t.minPts ? i : acc), 0);
+  const currentTier = TIERS[currentTierIndex];
+  const nextTier    = TIERS[currentTierIndex + 1] ?? currentTier;
+  const progressPct = currentTierIndex < TIERS.length - 1
+    ? Math.min(100, ((balance - currentTier.minPts) / (nextTier.minPts - currentTier.minPts)) * 100)
+    : 100;
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
 
-      <div className="border-b border-border bg-background">
-        <div className="max-w-2xl mx-auto px-4 py-3.5 flex items-center justify-between">
+      {/* ── Header (illustrated, matches guest page) ──────────────────────────── */}
+      <div className="relative border-b border-border bg-background overflow-hidden">
+        <svg aria-hidden="true"
+          className="hidden lg:block absolute inset-0 w-full h-full pointer-events-none select-none"
+          xmlns="http://www.w3.org/2000/svg">
+          <circle cx="68" cy="50%" r="28" fill="none" stroke="#B4F22E" strokeWidth="2.5" opacity="0.18" />
+          <circle cx="68" cy="50%" r="19" fill="none" stroke="#B4F22E" strokeWidth="1.5" opacity="0.12" />
+          <text x="68" y="50%" dominantBaseline="middle" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#B4F22E" opacity="0.20">₿</text>
+          <circle cx="170" cy="35%" r="18" fill="none" stroke="#B4F22E" strokeWidth="2" opacity="0.14" />
+          <circle cx="170" cy="35%" r="11" fill="none" stroke="#B4F22E" strokeWidth="1" opacity="0.10" />
+          <text x="130" y="72%" fontSize="10" fill="#B4F22E" opacity="0.22">✦</text>
+          <text x="105" y="38%" fontSize="7" fill="#B4F22E" opacity="0.16">✦</text>
+          <text x="210" y="68%" fontSize="6" fill="#B4F22E" opacity="0.14">★</text>
+          <circle cx="240" cy="50%" r="3" fill="#B4F22E" opacity="0.10" />
+          <circle cx="254" cy="44%" r="2" fill="#B4F22E" opacity="0.08" />
+          <circle cx="262" cy="58%" r="2.5" fill="#B4F22E" opacity="0.09" />
+          <rect x="93%" y="18%" width="28" height="22" rx="4" fill="none" stroke="#B4F22E" strokeWidth="1.8" opacity="0.14" />
+          <line x1="94%" y1="40%" x2="94%" y2="58%" stroke="#B4F22E" strokeWidth="1.8" opacity="0.14" />
+          <line x1="93%" y1="58%" x2="95.2%" y2="58%" stroke="#B4F22E" strokeWidth="1.8" opacity="0.14" />
+          <rect x="86%" y="22%" width="26" height="21" rx="3" fill="none" stroke="#B4F22E" strokeWidth="1.6" opacity="0.13" />
+          <line x1="87%" y1="22%" x2="87%" y2="43%" stroke="#B4F22E" strokeWidth="1.6" opacity="0.13" />
+          <line x1="86%" y1="30%" x2="88.2%" y2="30%" stroke="#B4F22E" strokeWidth="1.6" opacity="0.13" />
+          <circle cx="96%" cy="50%" r="26" fill="none" stroke="#B4F22E" strokeWidth="2.5" opacity="0.16" />
+          <circle cx="96%" cy="50%" r="17" fill="none" stroke="#B4F22E" strokeWidth="1.5" opacity="0.11" />
+          <text x="96%" y="50%" dominantBaseline="middle" textAnchor="middle" fontSize="12" fontWeight="bold" fill="#B4F22E" opacity="0.19">⬡</text>
+          <text x="89%" y="70%" fontSize="9" fill="#B4F22E" opacity="0.18">✦</text>
+          <text x="91%" y="32%" fontSize="7" fill="#B4F22E" opacity="0.15">✦</text>
+          <text x="83%" y="62%" fontSize="6" fill="#B4F22E" opacity="0.13">★</text>
+          <line x1="81%" y1="10%" x2="79%" y2="52%" stroke="#B4F22E" strokeWidth="2" opacity="0.13" strokeLinecap="round" />
+          <line x1="79%" y1="52%" x2="81.5%" y2="52%" stroke="#B4F22E" strokeWidth="2" opacity="0.13" strokeLinecap="round" />
+          <line x1="81.5%" y1="52%" x2="79.5%" y2="90%" stroke="#B4F22E" strokeWidth="2" opacity="0.13" strokeLinecap="round" />
+          <circle cx="50%" cy="30%" r="2" fill="#B4F22E" opacity="0.07" />
+          <circle cx="48%" cy="70%" r="1.5" fill="#B4F22E" opacity="0.06" />
+          <circle cx="52%" cy="55%" r="2" fill="#B4F22E" opacity="0.06" />
+        </svg>
+
+        <div className="relative max-w-2xl lg:max-w-7xl mx-auto px-4 lg:px-8 py-3.5 lg:py-5 flex items-center justify-between">
           <div>
             <h1 className="text-base font-bold text-foreground">Rewards</h1>
             <p className="text-[11px] text-muted-foreground mt-0.5">Earn points, redeem rewards</p>
           </div>
+
+          {/* Center: tier progress — desktop only */}
+          <div className="hidden lg:flex flex-col items-center gap-1.5 absolute left-1/2 -translate-x-1/2">
+            <div className="flex items-center gap-2">
+              <div className={cn("w-5 h-5 rounded-md flex items-center justify-center bg-gradient-to-br text-white text-xs", currentTier.gradient)}>
+                {currentTier.emoji}
+              </div>
+              <span className={cn("text-sm font-black", currentTier.textColor)}>{currentTier.name}</span>
+              <span className="text-sm text-muted-foreground">·</span>
+              <span className="text-sm font-black text-foreground tabular-nums">{balance.toLocaleString()} pts</span>
+              {currentTierIndex < TIERS.length - 1 && (
+                <span className="text-xs text-muted-foreground">
+                  · <span className="text-primary font-semibold">{(nextTier.minPts - balance).toLocaleString()} pts</span> to {nextTier.name}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 w-56">
+              <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                <div className="h-full rounded-full bg-gradient-to-r from-primary to-[#7ECB0C]"
+                  style={{ width: `${progressPct}%` }} />
+              </div>
+              <span className="text-[10px] text-muted-foreground tabular-nums">{Math.round(progressPct)}%</span>
+            </div>
+          </div>
+
+          {/* Right: points badge */}
           <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full">
             <Coins className="w-3.5 h-3.5 text-primary" />
             <span className="text-sm font-bold tabular-nums text-foreground">{balance.toLocaleString()}</span>
@@ -568,28 +636,96 @@ function RewardsLoggedInPage() {
         </div>
       </div>
 
-      <div className="flex-1 max-w-2xl mx-auto w-full px-4 pb-8 space-y-5 pt-5">
+      {/* ── MOBILE layout (< lg) ──────────────────────────────────────────────── */}
+      <div className="lg:hidden flex-1 max-w-2xl mx-auto w-full px-4 pb-8 space-y-5 pt-5">
         <RewardsHeroSection
-          balance={balance}
-          streak={streak}
-          weeklyPts={weeklyPts}
-          rank={rank}
-          onClaimLogin={() => claimLogin.mutate()}
-          loginClaimed={loginClaimed}
+          balance={balance} streak={streak} weeklyPts={weeklyPts} rank={rank}
+          onClaimLogin={() => claimLogin.mutate()} loginClaimed={loginClaimed}
         />
         <RewardsTiersSection userPts={balance} />
         <RewardsEngagementSection
-          balance={balance}
-          completedDailyIds={dailyIds}
-          completedPermanentIds={permanentIds}
-          referralCode={referralCode}
-          onCompleteTask={(id) => completeTask.mutate(id)}
-          onRedeem={(id) => redeemReward.mutate(id)}
-          onApplyPromo={(code) => applyPromo.mutate(code)}
-          isCompletingTask={completeTask.isPending}
-          isRedeeming={redeemReward.isPending}
+          balance={balance} completedDailyIds={dailyIds} completedPermanentIds={permanentIds}
+          referralCode={referralCode} onCompleteTask={(id) => completeTask.mutate(id)}
+          onRedeem={(id) => redeemReward.mutate(id)} onApplyPromo={(code) => applyPromo.mutate(code)}
+          isCompletingTask={completeTask.isPending} isRedeeming={redeemReward.isPending}
           isApplyingPromo={applyPromo.isPending}
         />
+      </div>
+
+      {/* ── DESKTOP layout (≥ lg) ─────────────────────────────────────────────── */}
+      <div className="hidden lg:block flex-1">
+        <div className="max-w-7xl mx-auto px-8 py-8 pb-20">
+
+          {/* ── Top stats bento row ──────────────────────────────────────────── */}
+          <div className="grid grid-cols-4 gap-4 mb-8">
+            {/* Balance */}
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 px-5 py-4">
+              <p className="text-[11px] font-bold text-primary uppercase tracking-wider mb-1.5">Total Points</p>
+              <p className="text-3xl font-black tabular-nums text-foreground leading-none">
+                {balance.toLocaleString()}
+                <span className="text-sm font-medium text-muted-foreground ml-1">pts</span>
+              </p>
+            </div>
+
+            {/* Current tier */}
+            <div className="rounded-2xl border border-border bg-card px-5 py-4">
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Current Tier</p>
+              <div className="flex items-center gap-2">
+                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br text-white flex-shrink-0", currentTier.gradient)}>
+                  {currentTier.emoji}
+                </div>
+                <div>
+                  <p className={cn("text-lg font-black leading-none", currentTier.textColor)}>{currentTier.name}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{currentTier.tagline}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Streak */}
+            <div className="rounded-2xl border border-border bg-card px-5 py-4">
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Login Streak</p>
+              <div className="flex items-end gap-2">
+                <p className="text-3xl font-black tabular-nums text-orange-500 leading-none">{streak}</p>
+                <p className="text-sm text-muted-foreground mb-0.5">days 🔥</p>
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1">+{weeklyPts} pts this week</p>
+            </div>
+
+            {/* Rank */}
+            <div className="rounded-2xl border border-border bg-card px-5 py-4">
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Global Rank</p>
+              <p className="text-3xl font-black tabular-nums text-foreground leading-none">
+                #{rank.toLocaleString()}
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-1">{TIER_HERO_PERK[currentTier.name]}</p>
+            </div>
+          </div>
+
+          {/* ── Two-column main area ──────────────────────────────────────────── */}
+          <div className="grid grid-cols-[1fr_380px] gap-6 items-start">
+
+            {/* LEFT: engagement (tasks / redeem / badges) */}
+            <div>
+              <RewardsEngagementSection
+                balance={balance} completedDailyIds={dailyIds} completedPermanentIds={permanentIds}
+                referralCode={referralCode} onCompleteTask={(id) => completeTask.mutate(id)}
+                onRedeem={(id) => redeemReward.mutate(id)} onApplyPromo={(code) => applyPromo.mutate(code)}
+                isCompletingTask={completeTask.isPending} isRedeeming={redeemReward.isPending}
+                isApplyingPromo={applyPromo.isPending}
+              />
+            </div>
+
+            {/* RIGHT sidebar: hero stats + tiers */}
+            <div className="space-y-5 sticky top-6">
+              <RewardsHeroSection
+                balance={balance} streak={streak} weeklyPts={weeklyPts} rank={rank}
+                onClaimLogin={() => claimLogin.mutate()} loginClaimed={loginClaimed}
+              />
+              <RewardsTiersSection userPts={balance} />
+            </div>
+
+          </div>
+        </div>
       </div>
 
       <PexlyFooter />
