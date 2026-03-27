@@ -72,8 +72,7 @@ export interface RedeemItem {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const USER_PTS = 72;
-export const STREAK = 5;
+// Hardcoded constants removed — live data comes from useRewardsProfile() hook
 
 // ─── Tier Data ────────────────────────────────────────────────────────────────
 
@@ -81,7 +80,7 @@ export const TIERS: Tier[] = [
   {
     name: "Newcomer",
     minPts: 0,
-    maxPts: 249,
+    maxPts: 599,
     emoji: "🌱",
     textColor: "text-slate-500",
     gradient: "from-slate-500 to-slate-600",
@@ -99,8 +98,8 @@ export const TIERS: Tier[] = [
   },
   {
     name: "Bronze",
-    minPts: 250,
-    maxPts: 999,
+    minPts: 600,
+    maxPts: 2_499,
     emoji: "🥉",
     textColor: "text-amber-600 dark:text-amber-500",
     gradient: "from-amber-600 to-orange-500",
@@ -120,8 +119,8 @@ export const TIERS: Tier[] = [
   },
   {
     name: "Silver",
-    minPts: 1000,
-    maxPts: 4999,
+    minPts: 2_500,
+    maxPts: 9_999,
     emoji: "🥈",
     textColor: "text-slate-500 dark:text-slate-300",
     gradient: "from-slate-400 to-slate-500",
@@ -141,8 +140,8 @@ export const TIERS: Tier[] = [
   },
   {
     name: "Gold",
-    minPts: 5000,
-    maxPts: 19999,
+    minPts: 10_000,
+    maxPts: 44_999,
     emoji: "🥇",
     textColor: "text-yellow-600 dark:text-yellow-400",
     gradient: "from-yellow-400 to-amber-500",
@@ -163,7 +162,7 @@ export const TIERS: Tier[] = [
   },
   {
     name: "Diamond",
-    minPts: 20000,
+    minPts: 45_000,
     maxPts: Infinity,
     emoji: "💎",
     textColor: "text-cyan-600 dark:text-cyan-400",
@@ -194,35 +193,35 @@ export const DAILY_TASKS: Task[] = [
     icon: <Activity className="w-5 h-5 text-purple-500" />,
     title: "Make a price prediction",
     description: "Predict BTC, ETH or XRP price for today",
-    pts: 10, done: false, cta: "Predict now", daily: true, category: "daily",
+    pts: 5, done: false, cta: "Predict now", daily: true, category: "daily",
   },
   {
     id: "daily-swap",
     icon: <Repeat2 className="w-5 h-5 text-blue-500" />,
     title: "Complete a swap",
     description: "Swap any crypto pair on Pexly",
-    pts: 10, done: false, cta: "Swap now", daily: true, category: "daily",
+    pts: 5, done: false, cta: "Swap now", daily: true, category: "daily",
   },
   {
     id: "daily-spot",
     icon: <TrendingUp className="w-5 h-5 text-emerald-500" />,
     title: "Spot trade",
     description: "Place a spot buy or sell order",
-    pts: 10, done: true, cta: "Trade", daily: true, category: "daily",
+    pts: 5, done: false, cta: "Trade", daily: true, category: "daily",
   },
   {
     id: "daily-perpetual",
     icon: <BarChart2 className="w-5 h-5 text-orange-500" />,
     title: "Perpetual trade",
     description: "Open or close a perpetual position",
-    pts: 10, done: false, cta: "Trade perps", daily: true, category: "daily",
+    pts: 5, done: false, cta: "Trade perps", daily: true, category: "daily",
   },
   {
     id: "daily-giftcard",
     icon: <Gift className="w-5 h-5 text-pink-500" />,
     title: "Purchase a gift card",
     description: "Buy any gift card from the Pexly store",
-    pts: 10, done: false, cta: "Buy gift card", daily: true, category: "daily",
+    pts: 5, done: false, cta: "Buy gift card", daily: true, category: "daily",
   },
 ];
 
@@ -263,20 +262,20 @@ export const BADGES: Badge[] = [
 ];
 
 export const REDEEM_ITEMS: RedeemItem[] = [
-  { id: "airtime-1",      icon: <PhoneIcon />,      name: "$1 Mobile Airtime",        description: "Any network, any country",    cost: 280,  category: "airtime",    badge: "Best value" },
-  { id: "airtime-2",      icon: <PhoneIcon />,      name: "$2 Mobile Airtime",        description: "Any network, any country",    cost: 520,  category: "airtime" },
-  { id: "airtime-5",      icon: <PhoneIcon />,      name: "$5 Mobile Airtime",        description: "Any network, any country",    cost: 1200, category: "airtime" },
-  { id: "airtime-10",     icon: <PhoneIcon />,      name: "$10 Mobile Airtime",       description: "Any network, any country",    cost: 2200, category: "airtime" },
-  { id: "data-1gb",       icon: <WifiIcon />,       name: "1 GB Data Bundle",         description: "Mobile data, any carrier",    cost: 400,  category: "data" },
-  { id: "data-3gb",       icon: <WifiIcon />,       name: "3 GB Data Bundle",         description: "Mobile data, any carrier",    cost: 1050, category: "data" },
-  { id: "data-10gb",      icon: <WifiIcon />,       name: "10 GB Data Bundle",        description: "Mobile data, any carrier",    cost: 3000, category: "data" },
-  { id: "data-unlimited", icon: <WifiIcon />,       name: "Unlimited Data (7 days)",  description: "Truly unlimited mobile data", cost: 6500, category: "data",     badge: "Popular" },
-  { id: "amazon-5",       icon: <AmazonIcon />,     name: "Amazon $5 Gift Card",      description: "Shop anything on Amazon",     cost: 1400, category: "gift-card" },
-  { id: "amazon-10",      icon: <AmazonIcon />,     name: "Amazon $10 Gift Card",     description: "Shop anything on Amazon",     cost: 2600, category: "gift-card", badge: "Hot" },
-  { id: "google-5",       icon: <GooglePlayIcon />, name: "Google Play $5",           description: "Apps, games & content",       cost: 1400, category: "gift-card" },
-  { id: "apple-10",       icon: <AppleIcon />,      name: "Apple $10 Gift Card",      description: "App Store & iTunes",          cost: 2600, category: "gift-card" },
-  { id: "uber-5",         icon: <UberIcon />,       name: "Uber $5 Credit",           description: "Rides and Uber Eats",         cost: 1400, category: "gift-card" },
-  { id: "spotify-1m",     icon: <SpotifyIcon />,    name: "Spotify Premium 1 Month",  description: "Ad-free music streaming",     cost: 2600, category: "gift-card" },
-  { id: "steam-10",       icon: <SteamIcon />,      name: "Steam $10 Gift Card",      description: "PC games & DLC",              cost: 2600, category: "gift-card" },
-  { id: "netflix-1m",     icon: <NetflixIcon />,    name: "Netflix 1 Month",          description: "Stream unlimited movies",     cost: 4200, category: "gift-card", badge: "Most popular" },
+  { id: "airtime-1",      icon: <PhoneIcon />,      name: "$1 Mobile Airtime",        description: "Any network, any country",    cost: 800,    category: "airtime",    badge: "Best value" },
+  { id: "airtime-2",      icon: <PhoneIcon />,      name: "$2 Mobile Airtime",        description: "Any network, any country",    cost: 1_500,  category: "airtime" },
+  { id: "airtime-5",      icon: <PhoneIcon />,      name: "$5 Mobile Airtime",        description: "Any network, any country",    cost: 3_500,  category: "airtime" },
+  { id: "airtime-10",     icon: <PhoneIcon />,      name: "$10 Mobile Airtime",       description: "Any network, any country",    cost: 6_500,  category: "airtime" },
+  { id: "data-1gb",       icon: <WifiIcon />,       name: "1 GB Data Bundle",         description: "Mobile data, any carrier",    cost: 900,    category: "data" },
+  { id: "data-3gb",       icon: <WifiIcon />,       name: "3 GB Data Bundle",         description: "Mobile data, any carrier",    cost: 2_500,  category: "data" },
+  { id: "data-10gb",      icon: <WifiIcon />,       name: "10 GB Data Bundle",        description: "Mobile data, any carrier",    cost: 7_000,  category: "data" },
+  { id: "data-unlimited", icon: <WifiIcon />,       name: "Unlimited Data (7 days)",  description: "Truly unlimited mobile data", cost: 14_000, category: "data",     badge: "Popular" },
+  { id: "amazon-5",       icon: <AmazonIcon />,     name: "Amazon $5 Gift Card",      description: "Shop anything on Amazon",     cost: 4_500,  category: "gift-card" },
+  { id: "amazon-10",      icon: <AmazonIcon />,     name: "Amazon $10 Gift Card",     description: "Shop anything on Amazon",     cost: 8_500,  category: "gift-card", badge: "Hot" },
+  { id: "google-5",       icon: <GooglePlayIcon />, name: "Google Play $5",           description: "Apps, games & content",       cost: 4_500,  category: "gift-card" },
+  { id: "apple-10",       icon: <AppleIcon />,      name: "Apple $10 Gift Card",      description: "App Store & iTunes",          cost: 8_500,  category: "gift-card" },
+  { id: "uber-5",         icon: <UberIcon />,       name: "Uber $5 Credit",           description: "Rides and Uber Eats",         cost: 4_500,  category: "gift-card" },
+  { id: "spotify-1m",     icon: <SpotifyIcon />,    name: "Spotify Premium 1 Month",  description: "Ad-free music streaming",     cost: 8_500,  category: "gift-card" },
+  { id: "steam-10",       icon: <SteamIcon />,      name: "Steam $10 Gift Card",      description: "PC games & DLC",              cost: 8_500,  category: "gift-card" },
+  { id: "netflix-1m",     icon: <NetflixIcon />,    name: "Netflix 1 Month",          description: "Stream unlimited movies",     cost: 15_000, category: "gift-card", badge: "Most popular" },
 ];
