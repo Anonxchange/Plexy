@@ -35,6 +35,8 @@ import {
   Monitor,
   Laptop,
   Tablet,
+  Smartphone,
+  Shield,
   Menu,
   Trash2,
   Loader2,
@@ -42,6 +44,7 @@ import {
   X,
   MapPin,
   Wifi,
+  ChevronLeft,
 } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { SettingsSidebar } from "@/components/settings/SettingsSidebar";
@@ -66,8 +69,10 @@ export default function DevicesPage() {
   const { toast } = useToast();
   const supabase = createClient();
 
+  const ACTIVE_THRESHOLD_DAYS = 30;
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"trusted" | "untrusted">("trusted");
+  const [activeTab, setActiveTab] = useState<"trusted" | "active" | "untrusted">("trusted");
   const [trustedDevices, setTrustedDevices] = useState<DeviceFingerprint[]>([]);
   const [loadingDevices, setLoadingDevices] = useState(true);
   const [currentFingerprint, setCurrentFingerprint] = useState<string>("");
@@ -177,8 +182,11 @@ export default function DevicesPage() {
     if (!user?.id) return;
     setRemovingAll(true);
     try {
-      const devicesToRemove = activeTab === "trusted" 
+      const cutoff = new Date(Date.now() - ACTIVE_THRESHOLD_DAYS * 24 * 60 * 60 * 1000);
+      const devicesToRemove = activeTab === "trusted"
         ? trustedDevices.filter(d => d.trusted && d.fingerprint_hash !== currentFingerprint)
+        : activeTab === "active"
+        ? trustedDevices.filter(d => new Date(d.last_seen_at) >= cutoff && d.fingerprint_hash !== currentFingerprint)
         : trustedDevices.filter(d => !d.trusted);
 
       for (const device of devicesToRemove) {
@@ -187,7 +195,7 @@ export default function DevicesPage() {
 
       toast({
         title: "Devices Removed",
-        description: `All ${activeTab} devices have been removed (except current device).`,
+        description: `All ${activeTab} devices have been removed${activeTab !== "untrusted" ? " (except current device)" : ""}.`,
       });
       fetchDevices();
     } catch (error) {
@@ -298,9 +306,27 @@ export default function DevicesPage() {
     return device.fingerprint_hash === currentFingerprint;
   };
 
-  const filteredDevices = trustedDevices.filter(device => 
-    activeTab === "trusted" ? device.trusted : !device.trusted
+  const filteredDevices = trustedDevices.filter(device => {
+    if (activeTab === "trusted") return device.trusted;
+    if (activeTab === "untrusted") return !device.trusted;
+    if (activeTab === "active") {
+      const lastSeen = new Date(device.last_seen_at);
+      const cutoff = new Date(Date.now() - ACTIVE_THRESHOLD_DAYS * 24 * 60 * 60 * 1000);
+      return lastSeen >= cutoff;
+    }
+    return false;
+  });
+
+  const totalPages = Math.ceil(filteredDevices.length / ITEMS_PER_PAGE);
+  const paginatedDevices = filteredDevices.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
   );
+
+  const handleTabChange = (tab: "trusted" | "active" | "untrusted") => {
+    setActiveTab(tab);
+    setCurrentPage(1);
+  };
 
   const handleSectionClick = (sectionId: string) => {
     setSidebarOpen(false);
@@ -359,14 +385,21 @@ export default function DevicesPage() {
                 <div className="flex gap-3 mb-6">
                   <Button
                     variant={activeTab === "trusted" ? "default" : "outline"}
-                    onClick={() => setActiveTab("trusted")}
+                    onClick={() => handleTabChange("trusted")}
                     className={`flex-1 ${activeTab === "trusted" ? "bg-primary text-primary-foreground" : ""}`}
                   >
                     Trusted
                   </Button>
                   <Button
+                    variant={activeTab === "active" ? "default" : "outline"}
+                    onClick={() => handleTabChange("active")}
+                    className={`flex-1 ${activeTab === "active" ? "bg-primary text-primary-foreground" : ""}`}
+                  >
+                    Active
+                  </Button>
+                  <Button
                     variant={activeTab === "untrusted" ? "secondary" : "outline"}
-                    onClick={() => setActiveTab("untrusted")}
+                    onClick={() => handleTabChange("untrusted")}
                     className="flex-1"
                   >
                     Untrusted
@@ -381,16 +414,19 @@ export default function DevicesPage() {
                   <div className="text-center py-12">
                     <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
                     <p className="text-muted-foreground">
-                      No {activeTab} devices found
+                      {activeTab === "active"
+                        ? `No devices active in the last ${ACTIVE_THRESHOLD_DAYS} days`
+                        : `No ${activeTab} devices found`}
                     </p>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {filteredDevices.map((device) => {
+                    {paginatedDevices.map((device) => {
                       const DeviceIcon = getDeviceIcon(device.device_info);
                       const isCurrent = isCurrentDevice(device);
                       const deviceName = getDeviceName(device.device_info);
                       const loginDate = new Date(device.created_at);
+                      const lastSeen = new Date(device.last_seen_at);
 
                       return (
                         <button
@@ -410,9 +446,16 @@ export default function DevicesPage() {
                                     Current
                                   </Badge>
                                 )}
+                                {device.trusted && activeTab === "active" && (
+                                  <Badge variant="outline" className="ml-2 text-xs bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
+                                    Trusted
+                                  </Badge>
+                                )}
                               </p>
                               <p className="text-sm text-muted-foreground">
-                                {format(loginDate, "M/d/yyyy")} • {format(loginDate, "h:mm:ss a")} ({device.device_info?.timezone || 'UTC'})
+                                {activeTab === "active"
+                                  ? `Last active: ${format(lastSeen, "M/d/yyyy")} • ${format(lastSeen, "h:mm:ss a")}`
+                                  : `${format(loginDate, "M/d/yyyy")} • ${format(loginDate, "h:mm:ss a")} (${device.device_info?.timezone || 'UTC'})`}
                               </p>
                             </div>
                           </div>
@@ -420,6 +463,34 @@ export default function DevicesPage() {
                         </button>
                       );
                     })}
+                  </div>
+                )}
+
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+                    <p className="text-sm text-muted-foreground">
+                      Page {currentPage} of {totalPages} &middot; {filteredDevices.length} devices
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Prev
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 )}
 
@@ -437,7 +508,7 @@ export default function DevicesPage() {
                             Removing...
                           </>
                         ) : (
-                          `Remove all ${activeTab} devices`
+                          `Remove all ${activeTab} devices${activeTab === "active" ? ` (last ${ACTIVE_THRESHOLD_DAYS} days)` : ""}`
                         )}
                       </Button>
                     </AlertDialogTrigger>
@@ -446,8 +517,9 @@ export default function DevicesPage() {
                         <AlertDialogTitle>Remove all {activeTab} devices?</AlertDialogTitle>
                         <AlertDialogDescription>
                           This will remove all {activeTab} devices from your account
-                          {activeTab === "trusted" && " (except your current device)"}.
-                          This action cannot be undone.
+                          {(activeTab === "trusted" || activeTab === "active") && " (except your current device)"}.
+                          {activeTab === "active" && ` Only devices active in the last ${ACTIVE_THRESHOLD_DAYS} days will be affected.`}
+                          {" "}This action cannot be undone.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
