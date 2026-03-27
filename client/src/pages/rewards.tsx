@@ -117,7 +117,7 @@ function RewardsGuestPage() {
         {/* Gift card illustration — desktop only, right edge */}
         <img
           aria-hidden="true"
-          src="/assets/svg-image-1-2.svg"
+          src="/assets/IMG_4863.webp"
           alt=""
           className="hidden lg:block absolute right-[-24px] top-1/2 -translate-y-1/2 w-[460px] h-auto pointer-events-none select-none"
         />
