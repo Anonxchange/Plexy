@@ -69,8 +69,6 @@ export default function DevicesPage() {
   const { toast } = useToast();
   const supabase = createClient();
 
-  const ACTIVE_THRESHOLD_DAYS = 30;
-
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"trusted" | "active" | "untrusted">("trusted");
   const [trustedDevices, setTrustedDevices] = useState<DeviceFingerprint[]>([]);
@@ -182,11 +180,8 @@ export default function DevicesPage() {
     if (!user?.id) return;
     setRemovingAll(true);
     try {
-      const cutoff = new Date(Date.now() - ACTIVE_THRESHOLD_DAYS * 24 * 60 * 60 * 1000);
       const devicesToRemove = activeTab === "trusted"
         ? trustedDevices.filter(d => d.trusted && d.fingerprint_hash !== currentFingerprint)
-        : activeTab === "active"
-        ? trustedDevices.filter(d => new Date(d.last_seen_at) >= cutoff && d.fingerprint_hash !== currentFingerprint)
         : trustedDevices.filter(d => !d.trusted);
 
       for (const device of devicesToRemove) {
@@ -306,16 +301,11 @@ export default function DevicesPage() {
     return device.fingerprint_hash === currentFingerprint;
   };
 
-  const filteredDevices = trustedDevices.filter(device => {
-    if (activeTab === "trusted") return device.trusted;
-    if (activeTab === "untrusted") return !device.trusted;
-    if (activeTab === "active") {
-      const lastSeen = new Date(device.last_seen_at);
-      const cutoff = new Date(Date.now() - ACTIVE_THRESHOLD_DAYS * 24 * 60 * 60 * 1000);
-      return lastSeen >= cutoff;
-    }
-    return false;
-  });
+  const currentDevice = trustedDevices.find(d => d.fingerprint_hash === currentFingerprint) ?? null;
+
+  const filteredDevices = trustedDevices.filter(device =>
+    activeTab === "trusted" ? device.trusted : !device.trusted
+  );
 
   const totalPages = Math.ceil(filteredDevices.length / ITEMS_PER_PAGE);
   const paginatedDevices = filteredDevices.slice(
@@ -410,14 +400,99 @@ export default function DevicesPage() {
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
+                ) : activeTab === "active" ? (
+                  currentDevice ? (() => {
+                    const DeviceIcon = getDeviceIcon(currentDevice.device_info);
+                    const deviceName = getDeviceName(currentDevice.device_info);
+                    const osName = getOSName(currentDevice.device_info);
+                    return (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-4 p-5 rounded-xl bg-primary/5 border border-primary/20">
+                          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                            <DeviceIcon className="h-7 w-7 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-semibold text-base">{deviceName}</p>
+                              <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20 text-xs">
+                                This device
+                              </Badge>
+                              {currentDevice.trusted ? (
+                                <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20 text-xs">
+                                  Trusted
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20 text-xs">
+                                  Untrusted
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-0.5">{osName}</p>
+                          </div>
+                        </div>
+
+                        <div className="divide-y divide-border rounded-lg border">
+                          <div className="flex justify-between items-center px-4 py-3">
+                            <span className="text-sm text-muted-foreground">IP Address</span>
+                            <span className="text-sm font-medium">{currentDevice.ip_address || 'Unknown'}</span>
+                          </div>
+                          <div className="flex justify-between items-center px-4 py-3">
+                            <span className="text-sm text-muted-foreground">Timezone</span>
+                            <span className="text-sm font-medium">{currentDevice.device_info?.timezone || 'Unknown'}</span>
+                          </div>
+                          <div className="flex justify-between items-center px-4 py-3">
+                            <span className="text-sm text-muted-foreground">Language</span>
+                            <span className="text-sm font-medium">{currentDevice.device_info?.language || 'Unknown'}</span>
+                          </div>
+                          <div className="flex justify-between items-center px-4 py-3">
+                            <span className="text-sm text-muted-foreground">Screen</span>
+                            <span className="text-sm font-medium">{currentDevice.device_info?.screen || 'Unknown'}</span>
+                          </div>
+                          <div className="flex justify-between items-center px-4 py-3">
+                            <span className="text-sm text-muted-foreground">First seen</span>
+                            <span className="text-sm font-medium">{format(new Date(currentDevice.created_at), "MMM d, yyyy")}</span>
+                          </div>
+                          <div className="flex justify-between items-center px-4 py-3">
+                            <span className="text-sm text-muted-foreground">Last active</span>
+                            <span className="text-sm font-medium">{format(new Date(currentDevice.last_seen_at), "MMM d, yyyy • h:mm a")}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 pt-1">
+                          {currentDevice.trusted ? (
+                            <Button
+                              variant="outline"
+                              className="flex-1"
+                              onClick={() => handleUntrustDevice(currentDevice.id)}
+                              disabled={processingDeviceId === currentDevice.id}
+                            >
+                              {processingDeviceId === currentDevice.id && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                              Mark as untrusted
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              className="flex-1"
+                              onClick={() => handleTrustDevice(currentDevice.id)}
+                              disabled={processingDeviceId === currentDevice.id}
+                            >
+                              {processingDeviceId === currentDevice.id && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                              Mark as trusted
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })() : (
+                    <div className="text-center py-12">
+                      <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                      <p className="text-muted-foreground">Current device not recognized</p>
+                    </div>
+                  )
                 ) : filteredDevices.length === 0 ? (
                   <div className="text-center py-12">
                     <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                    <p className="text-muted-foreground">
-                      {activeTab === "active"
-                        ? `No devices active in the last ${ACTIVE_THRESHOLD_DAYS} days`
-                        : `No ${activeTab} devices found`}
-                    </p>
+                    <p className="text-muted-foreground">No {activeTab} devices found</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -426,7 +501,6 @@ export default function DevicesPage() {
                       const isCurrent = isCurrentDevice(device);
                       const deviceName = getDeviceName(device.device_info);
                       const loginDate = new Date(device.created_at);
-                      const lastSeen = new Date(device.last_seen_at);
 
                       return (
                         <button
@@ -446,16 +520,9 @@ export default function DevicesPage() {
                                     Current
                                   </Badge>
                                 )}
-                                {device.trusted && activeTab === "active" && (
-                                  <Badge variant="outline" className="ml-2 text-xs bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
-                                    Trusted
-                                  </Badge>
-                                )}
                               </p>
                               <p className="text-sm text-muted-foreground">
-                                {activeTab === "active"
-                                  ? `Last active: ${format(lastSeen, "M/d/yyyy")} • ${format(lastSeen, "h:mm:ss a")}`
-                                  : `${format(loginDate, "M/d/yyyy")} • ${format(loginDate, "h:mm:ss a")} (${device.device_info?.timezone || 'UTC'})`}
+                                {format(loginDate, "M/d/yyyy")} • {format(loginDate, "h:mm:ss a")} ({device.device_info?.timezone || 'UTC'})
                               </p>
                             </div>
                           </div>
@@ -466,7 +533,7 @@ export default function DevicesPage() {
                   </div>
                 )}
 
-                {totalPages > 1 && (
+                {activeTab !== "active" && totalPages > 1 && (
                   <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
                     <p className="text-sm text-muted-foreground">
                       Page {currentPage} of {totalPages} &middot; {filteredDevices.length} devices
@@ -494,7 +561,7 @@ export default function DevicesPage() {
                   </div>
                 )}
 
-                {filteredDevices.length > 0 && (
+                {activeTab !== "active" && filteredDevices.length > 0 && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button
@@ -508,7 +575,7 @@ export default function DevicesPage() {
                             Removing...
                           </>
                         ) : (
-                          `Remove all ${activeTab} devices${activeTab === "active" ? ` (last ${ACTIVE_THRESHOLD_DAYS} days)` : ""}`
+                          `Remove all ${activeTab} devices`
                         )}
                       </Button>
                     </AlertDialogTrigger>
@@ -517,8 +584,7 @@ export default function DevicesPage() {
                         <AlertDialogTitle>Remove all {activeTab} devices?</AlertDialogTitle>
                         <AlertDialogDescription>
                           This will remove all {activeTab} devices from your account
-                          {(activeTab === "trusted" || activeTab === "active") && " (except your current device)"}.
-                          {activeTab === "active" && ` Only devices active in the last ${ACTIVE_THRESHOLD_DAYS} days will be affected.`}
+                          {activeTab === "trusted" && " (except your current device)"}.
                           {" "}This action cannot be undone.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
@@ -531,47 +597,6 @@ export default function DevicesPage() {
                     </AlertDialogContent>
                   </AlertDialog>
                 )}
-
-                {(() => {
-                  const currentDevice = trustedDevices.find(d => d.fingerprint_hash === currentFingerprint);
-                  if (!currentDevice) return null;
-                  
-                  const DeviceIcon = getDeviceIcon(currentDevice.device_info);
-                  const deviceName = getDeviceName(currentDevice.device_info);
-                  const osName = getOSName(currentDevice.device_info);
-                  
-                  return (
-                    <div className="mt-8 pt-6 border-t border-border">
-                      <h3 className="text-sm font-medium text-muted-foreground mb-4">Active Session</h3>
-                      <div className="flex items-center gap-4 p-4 rounded-xl bg-primary/5 border border-primary/20">
-                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                          <DeviceIcon className="h-6 w-6 text-primary" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium">{deviceName}</p>
-                            <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20 text-xs">
-                              Current
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">{osName}</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {currentDevice.ip_address || 'Unknown IP'} • Last active: {format(new Date(currentDevice.last_seen_at), "MMM d, h:mm a")}
-                          </p>
-                        </div>
-                        {currentDevice.trusted ? (
-                          <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
-                            Trusted
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20">
-                            Untrusted
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })()}
               </CardContent>
             </Card>
           </div>
