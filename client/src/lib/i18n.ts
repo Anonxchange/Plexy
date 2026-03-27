@@ -31,7 +31,7 @@ i18n.use(initReactI18next).init({
     vi: { translation: vi },
     ja: { translation: ja },
   },
-  lng: "en",
+  lng: localStorage.getItem("pexly-lang") || "en",
   fallbackLng: "en",
   interpolation: { escapeValue: false },
 });
