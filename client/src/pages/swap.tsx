@@ -399,9 +399,7 @@ export function Swap() {
 
     try {
       // STEP 1: Get wallet addresses
-      console.log("Fetching non-custodial wallets for user:", user!.id);
       const wallets = await nonCustodialWalletManager.getNonCustodialWallets(user!.id);
-      console.log("Found wallets:", wallets.map(w => ({ chainId: w.chainId, address: w.address, walletType: w.walletType })));
 
       const findCorrectWallet = (targetNetwork: string, _targetSymbol: string) => {
         const net = targetNetwork.toLowerCase();
@@ -422,11 +420,8 @@ export function Swap() {
       const fromWallet = findCorrectWallet(fromNetwork, fromCurrency);
       const toWallet = findCorrectWallet(toNetwork, toCurrency);
 
-      console.log("Selected fromWallet:", fromWallet?.address, "for target:", fromNetwork);
-      console.log("Selected toWallet:", toWallet?.address, "for target:", toNetwork);
 
       if (!fromWallet?.address || !toWallet?.address) {
-        console.error("Wallet missing. From:", fromWallet?.address, "To:", toWallet?.address);
         const missing = !fromWallet?.address ? fromCurrency : toCurrency;
         throw new Error(`Please generate a ${missing} wallet first. Go to the Assets page to create it.`);
       }
