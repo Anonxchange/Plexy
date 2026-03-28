@@ -26,6 +26,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
+import { sanitizeImageUrl } from "@/lib/sanitize";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { useGiftCardProduct, useCreateGiftCardOrder } from "@/hooks/use-reloadly";
 import { toast } from "sonner";
@@ -157,7 +158,7 @@ export function GiftCardDetail() {
       title: card.productName,
       price: finalPrice,
       currency: card.recipientCurrencyCode,
-      image: card.logoUrls?.[0]
+      image: sanitizeImageUrl(card.logoUrls?.[0])
     });
     setCartOpen(true);
   };
@@ -190,7 +191,7 @@ export function GiftCardDetail() {
           <div className="lg:order-1">
             <div className="h-80 bg-secondary/30 border border-border rounded-2xl overflow-hidden flex items-center justify-center p-8 shadow-lg mb-4">
               <img
-                src={card.logoUrls?.[0] || ""}
+                src={sanitizeImageUrl(card.logoUrls?.[0])}
                 alt={card.productName}
                 className="max-w-full max-h-full object-contain"
               />
