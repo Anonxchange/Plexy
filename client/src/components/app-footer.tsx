@@ -93,18 +93,18 @@ export function AppFooter() {
           <div className="flex items-center gap-2">
             <a
               href="#"
-              aria-label="Download on the App Store"
+              aria-label="iOS – Download on the App Store"
               className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg border border-white/10 text-sm text-white/60 hover:text-white hover:border-white/20 transition-all duration-200"
             >
-              <SiApple className="h-[15px] w-[15px]" />
+              <SiApple className="h-[15px] w-[15px]" aria-hidden="true" />
               <span>iOS</span>
             </a>
             <a
               href="#"
-              aria-label="Get it on Google Play"
+              aria-label="Android – Get it on Google Play"
               className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg border border-white/10 text-sm text-white/60 hover:text-white hover:border-white/20 transition-all duration-200"
             >
-              <SiGoogleplay className="h-[14px] w-[14px]" />
+              <SiGoogleplay className="h-[14px] w-[14px]" aria-hidden="true" />
               <span>Android</span>
             </a>
           </div>
