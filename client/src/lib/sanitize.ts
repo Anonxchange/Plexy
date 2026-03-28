@@ -15,6 +15,15 @@ export function sanitizeRichText(
   });
 }
 
+export function sanitizeBlogHtml(html: string): string {
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ["p", "br", "strong", "em", "a", "ul", "ol", "li", "code", "h2", "h3", "img"],
+    ALLOWED_ATTR: ["href", "src", "alt"],
+    ALLOW_DATA_ATTR: false,
+    FORCE_BODY: false,
+  });
+}
+
 export function sanitizeUrl(url: string): string {
   const purified = DOMPurify.sanitize(url, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
   if (purified.startsWith("/")) return purified;
@@ -24,6 +33,27 @@ export function sanitizeUrl(url: string): string {
   } catch {
     return "";
   }
+}
+
+export function sanitizeImageUrl(url: string | null | undefined): string {
+  if (!url) return "";
+  try {
+    const parsed = new URL(url, window.location.origin);
+    if (!["http:", "https:"].includes(parsed.protocol)) return "";
+    return DOMPurify.sanitize(url, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+  } catch {
+    return "";
+  }
+}
+
+export function sanitizeCssId(id: string): string {
+  return id.replace(/[^a-zA-Z0-9\-_]/g, "");
+}
+
+export function sanitizeCssColor(color: string): string {
+  const trimmed = color.trim();
+  const safe = /^(#[0-9a-fA-F]{3,8}|rgb\([^)]{1,50}\)|rgba\([^)]{1,60}\)|hsl\([^)]{1,50}\)|hsla\([^)]{1,60}\)|[a-zA-Z]{2,30})$/.test(trimmed);
+  return safe ? trimmed : "";
 }
 
 export function safeIsoCode(code: string): string {
