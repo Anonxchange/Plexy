@@ -10,7 +10,7 @@ import { PexlyFooter } from "@/components/pexly-footer";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import DOMPurify from "dompurify";
+import { sanitizeBlogHtml, sanitizeImageUrl } from "@/lib/sanitize";
 
 interface BlogPost {
   id: string;
@@ -64,16 +64,6 @@ function formatContent(content: string): string {
   return formatted;
 }
 
-function sanitizeImageUrl(url: string | null): string {
-  if (!url) return "";
-  try {
-    const parsed = new URL(url, window.location.origin);
-    if (!['http:', 'https:'].includes(parsed.protocol)) return "";
-    return DOMPurify.sanitize(url);
-  } catch {
-    return "";
-  }
-}
 
 export default function BlogPost() {
   useHead({ title: "Blog | Pexly", meta: [{ name: "description", content: "Read this Pexly blog post for insights on cryptocurrency, blockchain, and decentralized finance." }] });
@@ -360,7 +350,7 @@ export default function BlogPost() {
             prose-strong:text-foreground
             prose-img:rounded-xl
             prose-img:shadow-lg"
-          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formatContent(post.content)) }}
+          dangerouslySetInnerHTML={{ __html: sanitizeBlogHtml(formatContent(post.content)) }}
         />
 
         <Separator className="my-12" />
