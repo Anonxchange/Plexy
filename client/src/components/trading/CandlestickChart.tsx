@@ -796,7 +796,7 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
     script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
     script.type = "text/javascript";
     script.async = true;
-    script.innerHTML = JSON.stringify({
+    script.textContent = JSON.stringify({
       autosize: true,
       symbol: `BINANCE:${pair.replace("/", "")}`,
       interval,
