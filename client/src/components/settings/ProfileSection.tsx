@@ -179,6 +179,7 @@ export function ProfileSection() {
       const fileName = `${user?.id}-${Math.random()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
+      if (filePath.includes('..')) throw new Error('Invalid file path');
       const { error: uploadError } = await supabase.storage
         .from("profiles")
         .upload(filePath, file);
