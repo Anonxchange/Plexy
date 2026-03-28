@@ -172,7 +172,8 @@ function AuthRoute({
 
   if (user) {
     const params = new URLSearchParams(location.split("?")[1] ?? "");
-    const redirect = params.get("redirect") ?? "/dashboard";
+    const raw = params.get("redirect") ?? "/dashboard";
+    const redirect = raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
     return <Redirect to={redirect} />;
   }
 
