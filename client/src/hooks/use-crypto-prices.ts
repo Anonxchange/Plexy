@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { getCryptoPrices } from "@/lib/crypto-prices";
+import { mapCryptoPrice } from "@/lib/mappers/coin";
 
 export interface CryptoPrice {
   symbol: string;
@@ -44,5 +45,6 @@ export function useCryptoPrices() {
     refetchInterval: 30000,
     staleTime: 15000,
     retry: 2,
+    select: (data) => data.map(mapCryptoPrice),
   });
 }
