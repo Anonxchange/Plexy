@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, lazy, Suspense } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense, memo, useCallback, useTransition } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
@@ -58,8 +58,7 @@ const NotificationIcon = ({ count = 0, onClick }: NotificationIconProps) => {
   );
 };
 
-export function AppHeader() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar }: { onOpenSidebar: () => void }) {
   const [balanceVisible, setBalanceVisible] = useState(true);
   const { user, signOut } = useAuth();
   const [location, navigate] = useLocation();
@@ -218,7 +217,7 @@ export function AppHeader() {
             <Button 
               variant="outline" 
               size="icon" 
-              onClick={() => setMobileMenuOpen(true)}
+              onClick={onOpenSidebar}
               data-testid="button-sidebar-toggle"
               aria-label="Open navigation menu"
               className="border-border lg:hidden"
@@ -760,7 +759,7 @@ export function AppHeader() {
               <Button 
                 variant="outline" 
                 size="icon" 
-                onClick={() => setMobileMenuOpen(true)}
+                onClick={onOpenSidebar}
                 data-testid="button-sidebar-toggle"
                 aria-label="Open navigation menu"
                 className="border-border lg:hidden"
@@ -832,16 +831,33 @@ export function AppHeader() {
         </div>
       </div>
 
+    </header>
+  );
+});
+
+export function AppHeader() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [, startTransition] = useTransition();
+
+  const openSidebar = useCallback(() => {
+    startTransition(() => setMobileMenuOpen(true));
+  }, []);
+
+  const closeSidebar = useCallback(() => setMobileMenuOpen(false), []);
+
+  return (
+    <>
+      <AppHeaderCore onOpenSidebar={openSidebar} />
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <SheetContent side="left" className="p-0 w-[280px]">
           <SheetHeader className="sr-only">
             <SheetTitle>Navigation Menu</SheetTitle>
           </SheetHeader>
           <Suspense fallback={null}>
-            <AppSidebar onNavigate={() => setMobileMenuOpen(false)} />
+            <AppSidebar onNavigate={closeSidebar} />
           </Suspense>
         </SheetContent>
       </Sheet>
-    </header>
+    </>
   );
 }
