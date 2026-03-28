@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Package, ShoppingCart } from "lucide-react";
+import { sanitizeImageUrl } from "@/lib/sanitize";
 
 interface Listing {
   id: string;
@@ -32,7 +33,7 @@ export const ShopItemCard = ({ product, onViewDetails, onAddToCart }: ShopItemCa
       <div className="aspect-square bg-[#F5F5F5] rounded-xl overflow-hidden relative mb-3">
         {product.images && product.images.length > 0 ? (
           <img
-            src={product.images[0]}
+            src={sanitizeImageUrl(product.images[0])}
             alt={product.title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
