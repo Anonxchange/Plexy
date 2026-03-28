@@ -24,7 +24,10 @@
     <meta property="og:description" content="Pexly is your all-in-one decentralized market. Swap crypto, stake for yield, buy gift cards, pay bills, shop, and explore the blockchain — all non-custodial. Your keys, your assets." />
     <meta property="og:type" content="website" />
     
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" crossorigin="anonymous">
+    <!-- Non-blocking font load: preload downloads the CSS immediately but doesn't block rendering.
+         defer-css.js promotes this to a full stylesheet after DOMContentLoaded. -->
+    <link rel="preload" as="style" crossorigin="anonymous" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap">
+    <noscript><link rel="stylesheet" crossorigin="anonymous" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap"></noscript>
     <script src="/defer-css.js" defer></script>
     
     <!-- Global JSON-LD Schema -->
