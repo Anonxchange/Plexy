@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
+import { devLog } from "@/lib/dev-logger";
 
 export function Checkout() {
   const { user, loading } = useAuth();
@@ -301,10 +302,10 @@ export function Checkout() {
                     items: items.length,
                   }}
                   onPaymentSuccess={(paymentData) => {
-                    console.log("Payment successful:", paymentData);
+                    devLog.info("Payment successful");
                   }}
                   onPaymentClose={() => {
-                    console.log("Payment cancelled");
+                    devLog.info("Payment cancelled");
                   }}
                 />
               </TabsContent>
