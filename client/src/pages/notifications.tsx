@@ -31,23 +31,11 @@ import {
 } from "@/lib/notifications-api";
 import { useAuth } from "@/lib/auth-context";
 import { notificationSounds } from "@/lib/notification-sounds";
-import DOMPurify from "dompurify";
-
-function sanitizeImageUrl(url: string | null): string {
-  if (!url) return "";
-
-  try {
-    const parsed = new URL(url, window.location.origin);
-    if (!["http:", "https:"].includes(parsed.protocol)) return "";
-    return DOMPurify.sanitize(url);
-  } catch {
-    return "";
-  }
-}
+import { sanitizeImageUrl, sanitizeRichText } from "@/lib/sanitize";
 
 function sanitizeAnnouncementContent(content?: string, fallback?: string): string {
   const htmlContent = content?.replace(/\n/g, "<br />") || fallback || "";
-  return DOMPurify.sanitize(htmlContent);
+  return sanitizeRichText(htmlContent, ["p", "br", "strong", "em", "a", "ul", "ol", "li", "code"]);
 }
 
 export default function NotificationsPage() {
