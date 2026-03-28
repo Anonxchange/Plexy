@@ -7,7 +7,7 @@ import { Search, ChevronLeft, ChevronRight, Clock, User } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { createClient } from "@/lib/supabase";
 import { useSchema, blogPageSchema } from "@/hooks/use-schema";
-import DOMPurify from "dompurify";
+import { sanitizeImageUrl } from "@/lib/sanitize";
 
 function calculateReadTime(content: string): string {
   if (!content) return "1 min read";
@@ -75,17 +75,6 @@ const gradients = [
   "from-[#9FD624] via-[#B4F22E] to-[#CDDC39]",
   "from-[#7CB342] via-[#B4F22E] to-[#9FD624]"
 ];
-
-function sanitizeImageUrl(url: string | null): string {
-  if (!url) return "";
-  try {
-    const parsed = new URL(url, window.location.origin);
-    if (!['http:', 'https:'].includes(parsed.protocol)) return "";
-    return DOMPurify.sanitize(url);
-  } catch {
-    return "";
-  }
-}
 
 export default function Blog() {
   useHead({ title: "Blog | Pexly", meta: [{ name: "description", content: "Cryptocurrency news, product updates, DeFi insights, and blockchain guides from the Pexly team." }] });
