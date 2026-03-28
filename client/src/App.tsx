@@ -60,7 +60,6 @@ const RewardsPage = lazy(() => import("@/pages/rewards"));
 const ReferralPage = lazy(() => import("@/pages/referral"));
 const NotificationsPage = lazy(() => import("@/pages/notifications"));
 const NotificationSettings = lazy(() => import("@/pages/notification-settings"));
-const PexlyAcademy = lazy(() => import("@/pages/pexly-academy"));
 const About = lazy(() => import("@/pages/about"));
 const Reviews = lazy(() => import("@/pages/reviews"));
 const Support = lazy(() => import("@/pages/support"));
@@ -86,7 +85,6 @@ const BitcoinCalculator = lazy(() => import("@/pages/bitcoin-calculator").then(m
 const VerificationPage = lazy(() => import("@/pages/verification"));
 
 // More pages to lazy load
-const AcademyArticle = lazy(() => import("@/pages/academy-article").then(m => ({ default: m.AcademyArticle })));
 const BlogPost = lazy(() => import("@/pages/blog-post"));
 const careers = lazy(() => import("@/pages/careers"));
 const spot = lazy(() => import("@/pages/spot").then(m => ({ default: m.Spot })));
@@ -214,8 +212,6 @@ function AppRoutes() {
       <Route path="/shop/product/:id">{() => <LazyRoute component={ProductDetail} />}</Route>
       <Route path="/shop/post">{() => <LazyRoute component={ShopPost} />}</Route>
       <Route path="/bitcoin-calculator">{() => <LazyRoute component={BitcoinCalculator} skeleton={<ChartPageSkeleton />} />}</Route>
-      <Route path="/academy">{() => <LazyRoute component={PexlyAcademy} />}</Route>
-      <Route path="/academy/:articleId">{() => <LazyRoute component={AcademyArticle} />}</Route>
       <Route path="/careers">{() => <LazyRoute component={careers} />}</Route>
       <Route path="/blog">{() => <LazyRoute component={Blog} />}</Route>
       <Route path="/blog/:postId">{() => <LazyRoute component={BlogPost} />}</Route>
