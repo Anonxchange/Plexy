@@ -76,7 +76,7 @@ export const TrustStats = () => {
               </p>
 
               {/* Button */}
-              <button className="px-10 py-4 bg-primary text-white rounded-full font-bold text-lg order-4">
+              <button className="px-10 py-4 bg-primary text-black rounded-full font-bold text-lg order-4">
                 Get Started
               </button>
             </div>
