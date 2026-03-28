@@ -1,5 +1,7 @@
 
 import { createClient } from '../supabase';
+import { getClientIP } from '../get-client-ip';
+import { devLog } from '../dev-logger';
 
 const supabase = createClient();
 
@@ -24,14 +26,11 @@ export interface IPWhitelistSettings {
 }
 
 class IPWhitelist {
-  // Get user's current IP address (you may want to use a proper IP detection service)
   async getCurrentIP(): Promise<string> {
     try {
-      const response = await fetch('https://api.ipify.org?format=json');
-      const data = await response.json();
-      return data.ip;
-    } catch (error) {
-      console.error('Failed to get current IP:', error);
+      return await getClientIP();
+    } catch {
+      devLog.error('Failed to get current IP');
       return 'unknown';
     }
   }
