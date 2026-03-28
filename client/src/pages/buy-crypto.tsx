@@ -32,6 +32,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCdpOnramp } from "@/hooks/use-cdp-onramp";
 import { useCdpOfframp } from "@/hooks/use-cdp-offramp";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
+import { safeExternalRedirect, COINBASE_PAY_ORIGINS } from "@/lib/sanitize";
 
 const QUICK_AMOUNTS = ["100", "250", "500", "1000"];
 
@@ -447,8 +448,9 @@ const BuyCryptoPage = () => {
       } else {
         data = await cdpOfframp.mutateAsync({ address: addr, sellCurrency: crypto, sellAmount: amount, fiatCurrency: fiat, paymentMethod: "CARD" });
       }
-      const url = data.onrampUrl || data.offrampUrl || (data as any).session?.onrampUrl || (data as any).session?.offrampUrl;
-      if (url) window.location.href = url;
+      const rawUrl = data.onrampUrl || data.offrampUrl || (data as any).session?.onrampUrl || (data as any).session?.offrampUrl;
+      const safeUrl = safeExternalRedirect(rawUrl, COINBASE_PAY_ORIGINS);
+      if (safeUrl) window.location.href = safeUrl;
       else if (data.sessionToken) window.location.href = `${mode === "buy" ? "https://pay.coinbase.com/buy" : "https://pay.coinbase.com/sell"}?sessionToken=${data.sessionToken}`;
       else throw new Error("Failed to get redirect URL");
     } catch (e: any) { toast({ title: "Error", description: e.message, variant: "destructive" }); }
