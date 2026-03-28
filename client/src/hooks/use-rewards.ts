@@ -10,6 +10,7 @@ import {
   type RewardsProfile,
   type TaskCompletions,
 } from "@/lib/rewards-api";
+import { mapRewardsProfile } from "@/lib/mappers/user";
 
 // ─── Query keys ───────────────────────────────────────────────────────────────
 
@@ -25,6 +26,7 @@ export function useRewardsProfile() {
     queryKey: REWARDS_KEYS.profile,
     queryFn:  fetchRewardsProfile,
     staleTime: 30_000,
+    select: (data) => mapRewardsProfile(data),
   });
 }
 
