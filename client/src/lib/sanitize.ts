@@ -3,6 +3,19 @@ import DOMPurify from "dompurify";
 const SAFE_URL_PATTERN = /^(?:(?:https?:|mailto:|tel:)|\/(?!\/)|#)/i;
 const SAFE_IMAGE_URL_PATTERN = /^(?:(?:https?:)|\/(?!\/))/i;
 
+function withNoopenerHook<T>(fn: () => T): T {
+  DOMPurify.addHook("afterSanitizeAttributes", (node) => {
+    if (node.tagName === "A") {
+      node.setAttribute("rel", "noopener noreferrer");
+    }
+  });
+  try {
+    return fn();
+  } finally {
+    DOMPurify.removeHook("afterSanitizeAttributes");
+  }
+}
+
 export function sanitizeText(value: string): string {
   return DOMPurify.sanitize(value, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
 }
@@ -11,22 +24,26 @@ export function sanitizeRichText(
   html: string,
   allowedTags = ["p", "br", "strong", "em", "a", "ul", "ol", "li", "code"]
 ): string {
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: allowedTags,
-    ALLOWED_ATTR: ["href"],
-    ALLOW_DATA_ATTR: false,
-    ALLOWED_URI_REGEXP: SAFE_URL_PATTERN,
-  });
+  return withNoopenerHook(() =>
+    DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: allowedTags,
+      ALLOWED_ATTR: ["href", "rel"],
+      ALLOW_DATA_ATTR: false,
+      ALLOWED_URI_REGEXP: SAFE_URL_PATTERN,
+    })
+  );
 }
 
 export function sanitizeBlogHtml(html: string): string {
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ["p", "br", "strong", "em", "a", "ul", "ol", "li", "code", "h2", "h3", "img"],
-    ALLOWED_ATTR: ["href", "src", "alt"],
-    ALLOW_DATA_ATTR: false,
-    FORCE_BODY: false,
-    ALLOWED_URI_REGEXP: SAFE_IMAGE_URL_PATTERN,
-  });
+  return withNoopenerHook(() =>
+    DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: ["p", "br", "strong", "em", "a", "ul", "ol", "li", "code", "h2", "h3", "img"],
+      ALLOWED_ATTR: ["href", "src", "alt", "rel"],
+      ALLOW_DATA_ATTR: false,
+      FORCE_BODY: false,
+      ALLOWED_URI_REGEXP: SAFE_IMAGE_URL_PATTERN,
+    })
+  );
 }
 
 export function sanitizeUrl(url: string): string {
@@ -50,6 +67,25 @@ export function sanitizeImageUrl(url: string | null | undefined): string {
     return "";
   }
 }
+
+const COINBASE_PAY_ORIGINS = ["https://pay.coinbase.com", "https://buy.coinbase.com"];
+
+export function safeExternalRedirect(
+  url: string | null | undefined,
+  allowedOrigins: string[]
+): string {
+  if (!url) return "";
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:") return "";
+    const origin = `${parsed.protocol}//${parsed.host}`;
+    return allowedOrigins.includes(origin) ? url : "";
+  } catch {
+    return "";
+  }
+}
+
+export { COINBASE_PAY_ORIGINS };
 
 export function sanitizeCssId(id: string): string {
   return id.replace(/[^a-zA-Z0-9\-_]/g, "");
