@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { shopifyService } from "@/lib/shopify-service";
+import { devLog } from "@/lib/dev-logger";
 import { useCart } from "@/hooks/use-shopify-cart";
 import { toast } from "sonner";
 import { PexlyFooter } from "@/components/pexly-footer";
@@ -206,7 +207,7 @@ export function ProductDetail() {
         navigate("/shop");
       }
     } catch (error) {
-      console.error('Error fetching product:', error);
+      devLog.error('Error fetching product:', error);
       if (fetchId === id) {
         toast.error("Error loading product");
         navigate("/shop");
