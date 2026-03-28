@@ -1,4 +1,5 @@
 import { getSupabase } from '../supabase';
+import { devLog } from '../dev-logger';
 
 export type SecurityEventType = 
   | 'login_success'
@@ -72,7 +73,7 @@ class SecurityLogger {
         });
 
       if (error) {
-        console.error('Failed to log security event:', error);
+        devLog.error('Failed to log security event:', error);
         this.logToLocalStorage(fullEvent);
         return;
       }
@@ -81,7 +82,7 @@ class SecurityLogger {
       this.notifyListeners(fullEvent);
 
     } catch (error) {
-      console.error('Security logger error:', error);
+      devLog.error('Security logger error:', error);
     }
   }
 
@@ -92,8 +93,8 @@ class SecurityLogger {
       existing.push({ ...event, timestamp: Date.now() });
       if (existing.length > 100) existing.shift();
       localStorage.setItem(key, JSON.stringify(existing));
-    } catch (e) {
-      console.error('Failed to store event locally:', e);
+    } catch {
+      devLog.error('Failed to store event locally');
     }
   }
 
@@ -113,7 +114,7 @@ class SecurityLogger {
         .gte('created_at', windowStart);
 
       if (error) {
-        console.error('Failed to check threat patterns:', error);
+        devLog.error('Failed to check threat patterns:', error);
         return;
       }
 
@@ -121,7 +122,7 @@ class SecurityLogger {
         await this.triggerThreatAlert(event, pattern, count);
       }
     } catch (error) {
-      console.error('Error checking threat patterns:', error);
+      devLog.error('Error checking threat patterns:', error);
     }
   }
 
@@ -149,10 +150,10 @@ class SecurityLogger {
         });
 
       if (error) {
-        console.error('Failed to create security alert:', error);
+        devLog.error('Failed to create security alert:', error);
       }
     } catch (error) {
-      console.error('Error triggering threat alert:', error);
+      devLog.error('Error triggering threat alert:', error);
     }
   }
 
@@ -177,7 +178,7 @@ class SecurityLogger {
         .limit(limit);
 
       if (error) {
-        console.error('Failed to fetch security events:', error);
+        devLog.error('Failed to fetch security events:', error);
         return [];
       }
       return data || [];
@@ -196,7 +197,7 @@ class SecurityLogger {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Failed to fetch security alerts:', error);
+        devLog.error('Failed to fetch security alerts:', error);
         return [];
       }
       return data || [];
@@ -256,12 +257,12 @@ class SecurityLogger {
         .eq('id', alertId);
 
       if (error) {
-        console.error('Failed to resolve alert:', error);
+        devLog.error('Failed to resolve alert:', error);
         return false;
       }
       return true;
     } catch (error) {
-      console.error('Error resolving alert:', error);
+      devLog.error('Error resolving alert:', error);
       return false;
     }
   }
