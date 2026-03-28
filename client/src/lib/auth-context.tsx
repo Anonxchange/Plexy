@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useState, useCallback, useRef } f
 import type { User, Session } from "@supabase/supabase-js";
 import { useLocation } from "wouter";
 import { getSupabase } from "./supabase";
+import { getClientIP } from "./get-client-ip";
+import { devLog } from "./dev-logger";
 
 interface PendingAuth {
   userId: string;
@@ -201,14 +203,7 @@ async function trackDevice(userId: string) {
   try {
     const supabase = await getSupabase();
     const deviceInfo = getDeviceInfo();
-    let ipAddress = 'Unknown';
-    try {
-      const ipResponse = await fetch('https://api.ipify.org?format=json');
-      const ipData = await ipResponse.json();
-      ipAddress = ipData.ip;
-    } catch {
-      // IP fetch failed, proceeding with Unknown
-    }
+    const ipAddress = await getClientIP();
 
     const { data: existingDevices } = await supabase
       .from('user_devices')
@@ -396,20 +391,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     resetInactivityTimer();
   }, [resetInactivityTimer]);
 
+  const hiddenAtRef = useRef<number | null>(null);
+  const BACKGROUND_LOCK_MS = 5 * 60 * 1000; // lock wallet if tab is hidden for 5+ minutes
+
   useEffect(() => {
     const activityEvents = ['mousedown', 'keydown', 'touchstart', 'mousemove'];
     const handleActivity = () => {
       if (isWalletUnlocked) resetInactivityTimer();
-      // Stamp last activity for session expiry (throttled to 1 write/min)
       if (activeUserIdRef.current) touchLastActivity(activeUserIdRef.current);
     };
 
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        hiddenAtRef.current = Date.now();
+      } else {
+        const hiddenAt = hiddenAtRef.current;
+        hiddenAtRef.current = null;
+        if (hiddenAt && isWalletUnlockedRef.current && Date.now() - hiddenAt >= BACKGROUND_LOCK_MS) {
+          lockWalletDueToInactivity();
+        } else if (!document.hidden && isWalletUnlockedRef.current) {
+          resetInactivityTimer();
+        }
+        if (activeUserIdRef.current) touchLastActivity(activeUserIdRef.current);
+      }
+    };
+
     activityEvents.forEach(event => window.addEventListener(event, handleActivity));
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
       activityEvents.forEach(event => window.removeEventListener(event, handleActivity));
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     };
-  }, [isWalletUnlocked, resetInactivityTimer]);
+  }, [isWalletUnlocked, resetInactivityTimer, lockWalletDueToInactivity]);
   
   const checkedUsersRef = useRef<Set<string>>(new Set());
   const lastForceCheckRef = useRef<number>(0);
@@ -456,8 +470,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (supabaseWallets && supabaseWallets.length > 0) {
           wallets = supabaseWallets;
         }
-      } catch (err) {
-        console.error("Supabase wallet sync failed, falling back to IDB cache:", err);
+      } catch {
+        devLog.error("Supabase wallet sync failed, falling back to IDB cache");
         const { nonCustodialWalletManager } = await import("./non-custodial-wallet");
         wallets = await nonCustodialWalletManager.getWalletsFromStorage(userId);
       }
@@ -501,8 +515,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         expectedAddress: null 
       });
 
-    } catch (error) {
-      console.error("Wallet detection error:", error);
+    } catch {
+      devLog.error("Wallet detection error");
       checkedUsersRef.current.delete(userId);
     }
   }, []);
