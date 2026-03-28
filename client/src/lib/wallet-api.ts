@@ -76,7 +76,7 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
   try {
     // Remote sync logic removed as requested (custodial logic/duplicate calls)
     const localWallets = await (nonCustodialWalletManager as any).getWalletsFromStorage(userId);
-    console.log(`[getUserWallets] Found ${localWallets.length} local wallets for user ${userId}`);
+    if (import.meta.env.DEV) console.log(`[getUserWallets] Found ${localWallets.length} local wallets`);
     return localWallets.map((w: any) => {
       let symbol = w.chainId;
       if (w.chainId === 'Ethereum (ERC-20)' || w.chainId === 'ethereum') symbol = 'ETH';
@@ -119,7 +119,7 @@ export async function getWalletTransactions(userId: string, limit: number = 29):
 
   const addresses = (walletRows ?? []).map((w: any) => w.address).filter(Boolean) as string[];
 
-  console.log(`[getWalletTransactions] Fetching for user ${userId} and addresses:`, addresses);
+  if (import.meta.env.DEV) console.log(`[getWalletTransactions] Fetching transactions, address count: ${addresses.length}`);
 
   let query = supabase
     .from('wallet_transactions')
@@ -184,7 +184,7 @@ export async function getWalletTransactions(userId: string, limit: number = 29):
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, limit);
 
-  console.log(`[getWalletTransactions] Found ${uniqueTxs.length} total transactions for user ${userId}`);
+  if (import.meta.env.DEV) console.log(`[getWalletTransactions] Found ${uniqueTxs.length} total transactions`);
   return uniqueTxs;
 }
 
@@ -196,7 +196,6 @@ export async function sendCrypto(
   notes?: string
 ): Promise<WalletTransaction> {
   // Custodial withdrawal replaced with local placeholder or signing logic
-  console.log("[sendCrypto] Withdrawal requested for non-custodial flow", { cryptoSymbol, amount, toAddress });
   
   throw new Error("Withdrawal must be initiated via wallet signing");
 }
@@ -240,7 +239,7 @@ export async function createCDPSession(
   paymentCurrency?: string,
   options?: { network?: string }
 ): Promise<string> {
-  console.log("[createCDPSession] Calling cdp-create-session for address:", address, "assets:", assets, "amount:", paymentAmount, "network:", options?.network);
+  if (import.meta.env.DEV) console.log("[createCDPSession] Initiating cdp-create-session");
 
   const { data: { session } } = await supabase.auth.getSession();
   const access_token = session?.access_token;
@@ -282,7 +281,7 @@ export async function createCDPSession(
     throw new Error(error.message || 'Failed to create CDP session');
   }
 
-  console.log("[createCDPSession] Raw result:", JSON.stringify(data, null, 2));
+  if (import.meta.env.DEV) console.log("[createCDPSession] Session created successfully");
 
   const result = data as any;
   const token = result?.session_token || result?.sessionToken || result?.token || 
@@ -311,7 +310,7 @@ export async function createCDPOfframpSession(
   fiatCurrency?: string,
   options?: { network?: string, paymentMethod?: string }
 ): Promise<string> {
-  console.log("[createCDPOfframpSession] Calling cdp-offramp-session for address:", address, "assets:", assets, "amount:", sellAmount);
+  if (import.meta.env.DEV) console.log("[createCDPOfframpSession] Initiating cdp-offramp-session");
 
   const { data: { session } } = await supabase.auth.getSession();
   const access_token = session?.access_token;
