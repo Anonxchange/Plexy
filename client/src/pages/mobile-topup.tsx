@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { sanitizeImageUrl } from "@/lib/sanitize";
 
 // Provider Card Component
 interface ProviderCardProps {
@@ -286,7 +287,7 @@ const Index = () => {
                 <div className="flex items-center gap-6">
                   <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center p-3 border border-border shadow-sm">
                     {selectedOperator.logoUrls?.[0] ? (
-                      <img src={selectedOperator.logoUrls[0]} alt={selectedOperator.name} className="w-full h-full object-contain" />
+                      <img src={sanitizeImageUrl(selectedOperator.logoUrls[0])} alt={selectedOperator.name} className="w-full h-full object-contain" />
                     ) : (
                       <Smartphone className="w-10 h-10 text-muted-foreground" />
                     )}
