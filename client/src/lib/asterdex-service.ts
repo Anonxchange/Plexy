@@ -135,9 +135,30 @@ export interface CoinInfo {
 const SPOT_BASE    = 'https://sapi.asterdex.com';
 const FUTURES_BASE = 'https://fapi.asterdex.com';
 
+// Allowed origins for all AsterDEX fetch helpers.
+// Any constructed URL whose origin is not in this set is rejected before the request is sent.
+const ASTERDEX_ALLOWED_ORIGINS = new Set([
+  'https://sapi.asterdex.com',
+  'https://fapi.asterdex.com',
+  'https://www.asterdex.com',
+]);
+
+function assertAsterOrigin(url: string): void {
+  let origin: string;
+  try {
+    origin = new URL(url).origin;
+  } catch {
+    throw new Error('Blocked: malformed AsterDEX request URL');
+  }
+  if (!ASTERDEX_ALLOWED_ORIGINS.has(origin)) {
+    throw new Error(`Blocked: request to unexpected host "${origin}"`);
+  }
+}
+
 async function spotFetch(path: string, params: Record<string, string> = {}) {
   const qs = new URLSearchParams(params).toString();
   const url = `${SPOT_BASE}${path}${qs ? '?' + qs : ''}`;
+  assertAsterOrigin(url);
   const res = await fetch(url);
   if (!res.ok) throw new Error(`AsterDEX spot API ${res.status}`);
   return res.json();
@@ -146,6 +167,7 @@ async function spotFetch(path: string, params: Record<string, string> = {}) {
 async function futuresFetch(path: string, params: Record<string, string> = {}) {
   const qs = new URLSearchParams(params).toString();
   const url = `${FUTURES_BASE}${path}${qs ? '?' + qs : ''}`;
+  assertAsterOrigin(url);
   const res = await fetch(url);
   if (!res.ok) throw new Error(`AsterDEX futures API ${res.status}`);
   return res.json();
@@ -344,11 +366,17 @@ export interface AsterAsset {
 // Spot and Perpetual accounts list different coins per chain — always pass the correct accountType.
 // Maps them to the CoinInfo structure used throughout the modal.
 export async function asterGetChainAssets(chainId: number, accountType: 'spot' | 'perp' = 'perp'): Promise<CoinInfo[]> {
+  if (!Number.isInteger(chainId) || chainId < 0 || chainId > 2147483647) {
+    throw new Error('Invalid chainId');
+  }
+  if (accountType !== 'spot' && accountType !== 'perp') {
+    throw new Error('Invalid accountType');
+  }
   // Solana is not an EVM chain — it needs networks=SOL in the query
   const networkParam = chainId === 101 ? 'SOL' : 'EVM';
-  const res = await fetch(
-    `${ASTER_BAPI_ROOT}/aster/withdraw/assets?chainIds=${chainId}&networks=${networkParam}&accountType=${accountType}`,
-  );
+  const requestUrl = `${ASTER_BAPI_ROOT}/aster/withdraw/assets?chainIds=${chainId}&networks=${networkParam}&accountType=${accountType}`;
+  assertAsterOrigin(requestUrl);
+  const res = await fetch(requestUrl);
   const json = await res.json();
   if (!json.success) throw new Error(json.message ?? 'Failed to fetch chain assets');
 
@@ -429,12 +457,15 @@ export async function asterCreateApiKey(
 // - Solana (chainId 101): per-coin program bank address from the deposit/assets endpoint.
 //   Each SPL token has its own bank; native SOL uses the shared solVault address.
 export async function asterGetDepositAddress(chainId: number, coin?: string): Promise<string> {
+  if (!Number.isInteger(chainId) || chainId < 0 || chainId > 2147483647) {
+    throw new Error('Invalid chainId');
+  }
   if (chainId === 101) {
     // Solana: look up the coin's bank address from the deposit assets list
     const networkParam = 'SOL';
-    const res = await fetch(
-      `${ASTER_BAPI_ROOT}/aster/deposit/assets?chainIds=${chainId}&networks=${networkParam}&accountType=spot`,
-    );
+    const solUrl = `${ASTER_BAPI_ROOT}/aster/deposit/assets?chainIds=${chainId}&networks=${networkParam}&accountType=spot`;
+    assertAsterOrigin(solUrl);
+    const res = await fetch(solUrl);
     const json = await res.json();
     if (!json.success) throw new Error(json.message ?? 'Failed to get Solana deposit address');
     const assets: AsterAsset[] = json.data ?? [];
@@ -455,9 +486,9 @@ export async function asterGetDepositAddress(chainId: number, coin?: string): Pr
   }
 
   // EVM chains: shared treasury contract address
-  const res = await fetch(
-    `${ASTER_BAPI}/ae/deposit-address?chainId=${chainId}`,
-  );
+  const evmUrl = `${ASTER_BAPI}/ae/deposit-address?chainId=${chainId}`;
+  assertAsterOrigin(evmUrl);
+  const res = await fetch(evmUrl);
   const json = await res.json();
   if (!json.success) throw new Error(json.message ?? 'Failed to get deposit address');
   return String(json.data);
