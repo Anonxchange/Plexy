@@ -1,5 +1,6 @@
 
 import { createClient } from '../supabase';
+import { devLog } from '../dev-logger';
 
 const supabase = createClient();
 
@@ -19,13 +20,13 @@ export class RateLimiter {
       });
 
       if (error) {
-        console.error('Rate limit check failed:', error);
+        devLog.error('Rate limit check failed:', error);
         return true; // Allow on error to prevent blocking legitimate users
       }
 
       return data as boolean;
     } catch (error) {
-      console.error('Rate limit error:', error);
+      devLog.error('Rate limit error:', error);
       return true;
     }
   }
