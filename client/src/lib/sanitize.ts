@@ -1,5 +1,8 @@
 import DOMPurify from "dompurify";
 
+const SAFE_URL_PATTERN = /^(?:(?:https?:|mailto:|tel:)|\/(?!\/)|#)/i;
+const SAFE_IMAGE_URL_PATTERN = /^(?:(?:https?:)|\/(?!\/))/i;
+
 export function sanitizeText(value: string): string {
   return DOMPurify.sanitize(value, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
 }
@@ -12,6 +15,7 @@ export function sanitizeRichText(
     ALLOWED_TAGS: allowedTags,
     ALLOWED_ATTR: ["href"],
     ALLOW_DATA_ATTR: false,
+    ALLOWED_URI_REGEXP: SAFE_URL_PATTERN,
   });
 }
 
@@ -21,6 +25,7 @@ export function sanitizeBlogHtml(html: string): string {
     ALLOWED_ATTR: ["href", "src", "alt"],
     ALLOW_DATA_ATTR: false,
     FORCE_BODY: false,
+    ALLOWED_URI_REGEXP: SAFE_IMAGE_URL_PATTERN,
   });
 }
 
@@ -40,7 +45,7 @@ export function sanitizeImageUrl(url: string | null | undefined): string {
   try {
     const parsed = new URL(url, window.location.origin);
     if (!["http:", "https:"].includes(parsed.protocol)) return "";
-    return DOMPurify.sanitize(url, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+    return DOMPurify.sanitize(parsed.href, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
   } catch {
     return "";
   }

@@ -97,7 +97,12 @@ export default function NotificationsPage() {
     if (notification.metadata?.tradeId) {
       navigate(`/trade/${notification.metadata.tradeId}`);
     } else if (notification.metadata?.url) {
-      navigate(notification.metadata.url);
+      const destination = notification.metadata.url.trim();
+      if (destination.startsWith("/")) {
+        navigate(destination);
+      } else {
+        console.warn("Blocked external notification URL", destination);
+      }
     }
   };
 
@@ -295,7 +300,7 @@ export default function NotificationsPage() {
                         <div className="flex-shrink-0 mt-1">
                           {announcement.image_url ? (
                             <img
-                              src={announcement.image_url}
+                              src={sanitizeImageUrl(announcement.image_url)}
                               alt={announcement.title}
                               className="h-12 w-12 rounded-lg object-cover"
                             />
