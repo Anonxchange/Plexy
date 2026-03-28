@@ -300,29 +300,41 @@ export async function getStats() {
   }
 }
 
+// Permitted origins for blockchain API requests.
+// Any base URL whose origin is not in this set will be rejected before the request is sent.
+const BLOCKCHAIN_ALLOWED_ORIGINS = new Set([
+  'https://blockchain.info',
+  'https://api.etherscan.io',
+]);
+
 function buildValidatedUrl(
   baseUrl: string,
   address: string
 ): string {
+  let url: URL;
   try {
-    const url = new URL(baseUrl);
-    
-    // Validate address parameter
-    if (!/^[A-Za-z0-9_-]+$/.test(address)) {
-      throw new Error('Invalid parameter');
-    }
-    
-    // Add query parameters
-    url.searchParams.set('module', 'account');
-    url.searchParams.set('action', 'balance');
-    url.searchParams.set('address', address);
-    url.searchParams.set('tag', 'latest');
-    url.searchParams.set('apikey', 'YourApiKeyToken');
-    
-    return url.href;
+    url = new URL(baseUrl);
   } catch {
     throw new Error('Invalid URL');
   }
+
+  if (!BLOCKCHAIN_ALLOWED_ORIGINS.has(url.origin)) {
+    throw new Error(`Blocked: request to unexpected host "${url.origin}"`);
+  }
+
+  // Validate address parameter — only alphanumeric, hyphens, and underscores
+  if (!/^[A-Za-z0-9_-]+$/.test(address)) {
+    throw new Error('Invalid parameter');
+  }
+
+  // Add query parameters
+  url.searchParams.set('module', 'account');
+  url.searchParams.set('action', 'balance');
+  url.searchParams.set('address', address);
+  url.searchParams.set('tag', 'latest');
+  url.searchParams.set('apikey', 'YourApiKeyToken');
+
+  return url.href;
 }
 
 export async function getAddressBalance(address: string): Promise<number | null> {
