@@ -39,7 +39,10 @@ function SectionSkeleton({ height = 400 }: { height?: number }) {
 }
 
 /**
- * LazyMount — mounts only when near viewport
+ * LazyMount — mounts only when near viewport.
+ * minHeight is kept on the container at all times so layout shifts are
+ * prevented both before and during the transition from skeleton to content.
+ * Once the real content has rendered and committed, the constraint is lifted.
  */
 function LazyMount({
   children,
@@ -52,6 +55,7 @@ function LazyMount({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
+  const [settled, setSettled] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
@@ -71,8 +75,17 @@ function LazyMount({
     return () => observer.disconnect();
   }, []);
 
+  // After content mounts, give the browser one frame to paint before
+  // releasing the minHeight constraint. This prevents the surrounding
+  // layout from shifting mid-render.
+  useEffect(() => {
+    if (!mounted) return;
+    const id = requestAnimationFrame(() => setSettled(true));
+    return () => cancelAnimationFrame(id);
+  }, [mounted]);
+
   return (
-    <div ref={ref} style={mounted ? undefined : { minHeight: height }}>
+    <div ref={ref} style={settled ? undefined : { minHeight: height }}>
       {mounted ? (
         <Suspense fallback={fallback ?? <SectionSkeleton height={height} />}>
           {children}
