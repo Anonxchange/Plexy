@@ -26,6 +26,7 @@ import { PexlyFooter } from "@/components/pexly-footer";
 import { useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase";
+import { sanitizeImageUrl } from "@/lib/sanitize";
 
 interface GiftCardProps {
   card: any;
@@ -313,7 +314,7 @@ export function GiftCards() {
       priceRange: `${sym}${minVal} - ${sym}${maxVal}`,
       cryptoRange: currencyCode !== "USD" ? `${currencyCode} · ${card.country?.name || ""}`.trim().replace(/·\s*$/, "") : "",
       discount: `${card.discountPercentage || 0}%`,
-      image: (card.logoUrls && card.logoUrls[0]) || "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=300&fit=crop",
+      image: sanitizeImageUrl(card.logoUrls?.[0]) || "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=300&fit=crop",
       gradient: "from-gray-100 to-white",
       description: card.redeemInstruction?.concise || "",
       minValue: minVal,
