@@ -132,6 +132,7 @@
     "bufferutil": "^4.0.8"
   },
   "overrides": {
-    "serialize-javascript": "7.0.3"
+    "serialize-javascript": "7.0.5",
+    "diff": "8.0.4"
   }
 }
