@@ -36,6 +36,7 @@ import { CartSheet } from "@/components/shop/CartSheet";
 import { toast } from "sonner";
 
 import { useCart } from "@/hooks/use-shopify-cart";
+import { devLog } from "@/lib/dev-logger";
 
 const ShopItemCard = lazy(() => import("@/components/shop/ShopItemCard").then(m => ({ default: m.ShopItemCard })));
 
@@ -169,7 +170,7 @@ export function Shop() {
       setHasNextPage(result.pageInfo?.hasNextPage || false);
     } catch (error) {
       if (fetchId === shopifyFetchIdRef.current) {
-        console.error('Error fetching Shopify products:', error);
+        devLog.error('Error fetching Shopify products:', error);
       }
     } finally {
       if (fetchId === shopifyFetchIdRef.current) {
@@ -223,7 +224,7 @@ export function Shop() {
               }
             }
           } catch (e) {
-            console.error('Error parsing metadata for image fallback:', e);
+            devLog.error('Error parsing metadata for image fallback:', e);
           }
         }
         
@@ -235,7 +236,7 @@ export function Shop() {
 
       setListings(transformedData);
     } catch (error) {
-      console.error('Error fetching listings:', error);
+      devLog.error('Error fetching listings:', error);
     } finally {
       setIsMarketplaceLoading(false);
     }
