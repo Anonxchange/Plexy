@@ -300,6 +300,31 @@ export async function getStats() {
   }
 }
 
+function buildValidatedUrl(
+  baseUrl: string,
+  address: string
+): string {
+  try {
+    const url = new URL(baseUrl);
+    
+    // Validate address parameter
+    if (!/^[A-Za-z0-9_-]+$/.test(address)) {
+      throw new Error('Invalid parameter');
+    }
+    
+    // Add query parameters
+    url.searchParams.set('module', 'account');
+    url.searchParams.set('action', 'balance');
+    url.searchParams.set('address', address);
+    url.searchParams.set('tag', 'latest');
+    url.searchParams.set('apikey', 'YourApiKeyToken');
+    
+    return url.href;
+  } catch {
+    throw new Error('Invalid URL');
+  }
+}
+
 export async function getAddressBalance(address: string): Promise<number | null> {
   try {
     if (currentBlockchain === 'BTC') {
@@ -309,7 +334,7 @@ export async function getAddressBalance(address: string): Promise<number | null>
       return parseInt(satoshi, 10) / 100000000;
     } else {
       const response = await fetch(
-        `${BLOCKCHAIN_APIS.ETH}?module=account&action=balance&address=${address}&tag=latest&apikey=YourApiKeyToken`
+        buildValidatedUrl(BLOCKCHAIN_APIS.ETH, address)
       );
       if (!response.ok) throw new Error('Failed to fetch balance');
       const data = await response.json();
