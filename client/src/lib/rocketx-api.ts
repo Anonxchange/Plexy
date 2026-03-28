@@ -242,7 +242,7 @@ export async function getRocketxRate(
       return null;
     }
 
-    console.log(`RocketX Quote Request: ${from} (${fromNetId}:${fromAddr}) -> ${to ?? 'walletless'} (${toNetId ?? 'walletless'}), amount: ${formattedAmount}`);
+    if (import.meta.env.DEV) console.log(`RocketX Quote Request: ${from} -> ${to ?? 'walletless'}`);
 
     const isFromEvm = isEvmChain(fromNetwork);
     const isToEvm = toNetwork ? isEvmChain(toNetwork) : isFromEvm;
