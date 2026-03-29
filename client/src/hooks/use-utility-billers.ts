@@ -63,6 +63,43 @@ export interface BillersResponse {
   last: boolean;
 }
 
+export interface UtilityCountry {
+  isoName: string;
+  name: string;
+  currencyCode: string;
+  currencyName: string;
+  currencySymbol: string;
+  flag: string;
+  callingCodes: string[];
+}
+
+export function useUtilityCountries() {
+  return useQuery<UtilityCountry[]>({
+    queryKey: ["utility-countries"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+
+      const url = new URL(`${supabaseUrl}/functions/v1/reloadly-billers`);
+      url.searchParams.set("action", "countries");
+
+      if (!session?.access_token) throw new Error("No active session");
+      const res = await fetch(url.toString(), {
+        headers: {
+          apikey: anonKey!,
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (!res.ok) throw new Error("Failed to fetch utility countries");
+      return res.json();
+    },
+    staleTime: 1000 * 60 * 60,
+    retry: 1,
+  });
+}
+
 export function useUtilityBillers(countryCode?: string, serviceType?: string) {
   return useQuery<BillersResponse>({
     queryKey: ["utility-billers", countryCode, serviceType],
