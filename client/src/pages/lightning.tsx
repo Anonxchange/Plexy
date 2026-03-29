@@ -5,22 +5,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Copy, Check } from "lucide-react";
 import { Search } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { QRCodeSVG as QRCode } from "qrcode.react";
-
-declare global {
-  interface Window {
-    Opennode?: any;
-  }
-}
 
 export default function Lightning() {
   const { user, session } = useAuth();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<"receive" | "send">("receive");
-  const containerRef = useRef<HTMLDivElement>(null);
   const [amount, setAmount] = useState("");
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
@@ -29,20 +22,6 @@ export default function Lightning() {
   const [copied, setCopied] = useState(false);
   const [lightningBalance, setLightningBalance] = useState<string>("0.00");
   const [loadingBalance, setLoadingBalance] = useState(false);
-
-  useEffect(() => {
-    // Load OpenNode script
-    const script = document.createElement("script");
-    script.src = "https://checkout.opennode.com/checkout.js";
-    script.async = true;
-    document.head.appendChild(script);
-
-    return () => {
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
-      }
-    };
-  }, []);
 
   useEffect(() => {
     // Load Lightning balance on mount
