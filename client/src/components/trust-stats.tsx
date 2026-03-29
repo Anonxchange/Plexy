@@ -156,7 +156,7 @@ export const TrustStats = () => {
                 >
                   <Check strokeWidth={3.5} className="text-black" style={{ width: 18, height: 18 }} />
                 </div>
-                <p className="text-black/70 dark:text-muted-foreground text-sm">
+                <p className="text-black/70 dark:text-muted-foreground text-base">
                   {item.description}
                 </p>
               </div>
