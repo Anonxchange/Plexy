@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { getSupabase } from "./supabase";
 import { getClientIP } from "./get-client-ip";
 import { devLog } from "./dev-logger";
+import { sendLoginNotificationIfEnabled } from "./notifications-api";
 
 interface PendingAuth {
   userId: string;
@@ -666,10 +667,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Stamp activity at login so the 30-min inactivity clock starts now
             touchLastActivity(currentSession.user.id, true);
             // Defer async work to avoid blocking the callback
-            setTimeout(() => {
+            setTimeout(async () => {
               if (aborted) return;
-              trackDevice(currentSession.user.id);
-              checkWalletOnAuthRef.current(currentSession.user.id);
+              const userId = currentSession.user.id;
+              const deviceInfo = getDeviceInfo();
+              await trackDevice(userId);
+              checkWalletOnAuthRef.current(userId);
+              // Fire login notification if the user has it enabled
+              const ip = await getClientIP().catch(() => '');
+              sendLoginNotificationIfEnabled(userId, deviceInfo, ip);
             }, 0);
           }
         }
@@ -783,6 +789,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(pendingUser);
     
     await trackDevice(pendingUser.id);
+
+    // Fire login notification if the user has it enabled
+    const deviceInfo = getDeviceInfo();
+    const ip = await getClientIP().catch(() => '');
+    sendLoginNotificationIfEnabled(pendingUser.id, deviceInfo, ip);
     
     // Clear pending state
     setPendingOTPWithTimestamp(null);
