@@ -1,4 +1,5 @@
 import { useHead } from "@unhead/react";
+import { devLog } from "@/lib/dev-logger";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -139,7 +140,7 @@ export default function VerificationPage() {
     queryFn: async () => {
       if (!user?.id) return [];
 
-      console.log("Fetching verifications for user:", user.id, userProfile?.username);
+      devLog.info("Fetching verifications for user");
 
       const { data, error } = await supabase
         .from("verifications")
@@ -152,7 +153,7 @@ export default function VerificationPage() {
         throw error;
       }
 
-      console.log(`Found ${data?.length || 0} verifications for user ${userProfile?.username || user.id}`);
+      devLog.info(`Found ${data?.length || 0} verifications`);
       return data;
     },
     enabled: !!user?.id,
