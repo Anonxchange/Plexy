@@ -7,7 +7,11 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function PerpetualPage() {
   const [chartVisible, setChartVisible] = useState(true);
-  const [pair, setPair] = useState("ASTER/USDT");
+  const [pair, setPair] = useState(() => {
+    const stored = sessionStorage.getItem("pexly_initial_pair");
+    if (stored) { sessionStorage.removeItem("pexly_initial_pair"); return stored; }
+    return "ASTER/USDT";
+  });
   const [viewMode, setViewMode] = useState<"list" | "chart">("list");
   const isMobile = useIsMobile();
 
