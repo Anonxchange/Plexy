@@ -40,7 +40,7 @@ function Stat({ label, value, sub, up }: { label: string; value: string; sub?: s
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">{label}</span>
-      <span className={`text-sm font-bold ${up === true ? "text-green-600" : up === false ? "text-red-500" : "text-slate-900"}`}>
+      <span className={`text-sm font-bold ${up === true ? "text-green-600" : up === false ? "text-red-500" : "text-foreground"}`}>
         {value}
       </span>
       {sub && <span className="text-[11px] text-muted-foreground">{sub}</span>}
@@ -111,41 +111,41 @@ export default function CoinDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F0F2F5] pb-20">
+    <div className="min-h-screen bg-background pb-20">
       <div className="container mx-auto px-3 sm:px-4 max-w-7xl pt-4 space-y-3">
 
         {/* ── Breadcrumb / back ─────────────────────────────────────────── */}
         <button
           onClick={goBack}
-          className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-slate-800 transition-colors"
+          className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Market
         </button>
 
         {/* ── Hero header ───────────────────────────────────────────────── */}
-        <div className="bg-white rounded-xl px-5 py-5">
+        <div className="bg-card rounded-xl px-5 py-5">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             {/* Left: icon + name + price */}
             <div className="flex items-start gap-4">
               <CoinIcon symbol={base} address={address} className="w-14 h-14 flex-shrink-0" />
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-xl font-extrabold text-slate-900">{pair}</h1>
+                  <h1 className="text-xl font-extrabold text-foreground">{pair}</h1>
                   <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
                     type === "futures"
-                      ? "bg-orange-50 text-orange-500 border border-orange-100"
-                      : "bg-blue-50 text-blue-500 border border-blue-100"
+                      ? "bg-orange-500/10 text-orange-500 border border-orange-500/20"
+                      : "bg-blue-500/10 text-blue-500 border border-blue-500/20"
                   }`}>
                     {type === "futures" ? "Perpetual" : "Spot"}
                   </span>
                 </div>
                 <div className="flex items-end gap-2.5 mt-1.5 flex-wrap">
                   {isLoading || price === null ? (
-                    <div className="h-8 w-40 bg-slate-100 rounded animate-pulse" />
+                    <div className="h-8 w-40 bg-muted rounded animate-pulse" />
                   ) : (
                     <>
-                      <span className="text-3xl font-extrabold text-slate-900 tabular-nums tracking-tight">
+                      <span className="text-3xl font-extrabold text-foreground tabular-nums tracking-tight">
                         ${fmtPrice(price)}
                       </span>
                       <span className={`inline-flex items-center gap-1 text-sm font-bold tabular-nums ${isUp ? "text-green-600" : "text-red-500"}`}>
@@ -176,12 +176,12 @@ export default function CoinDetailPage() {
                 <button
                   onClick={() => setFaved(f => !f)}
                   className={`h-9 w-9 rounded-lg border flex items-center justify-center transition-colors ${
-                    faved ? "bg-primary/10 border-primary text-primary" : "border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600"
+                    faved ? "bg-primary/10 border-primary text-primary" : "border-border text-muted-foreground hover:border-border hover:text-foreground"
                   }`}
                 >
                   <Star className={`w-4 h-4 ${faved ? "fill-primary" : ""}`} />
                 </button>
-                <button className="h-9 w-9 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:border-slate-300 hover:text-slate-600 transition-colors">
+                <button className="h-9 w-9 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:border-border hover:text-foreground transition-colors">
                   <Share2 className="w-4 h-4" />
                 </button>
               </div>
@@ -217,7 +217,7 @@ export default function CoinDetailPage() {
               key={t}
               onClick={() => navigate(`/markets/${slug}?type=${t}`)}
               className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-colors capitalize ${
-                type === t ? "bg-primary text-black" : "bg-white text-muted-foreground hover:bg-slate-100"
+                type === t ? "bg-primary text-black" : "bg-card text-muted-foreground hover:bg-accent"
               }`}
             >
               {t === "futures" ? "Perpetual" : "Spot"}
@@ -229,7 +229,7 @@ export default function CoinDetailPage() {
         <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-3">
 
           {/* Chart */}
-          <div className="bg-white rounded-xl overflow-hidden" style={{ minHeight: 500 }}>
+          <div className="bg-card rounded-xl overflow-hidden" style={{ minHeight: 500 }}>
             <CandlestickChart
               pair={pair}
               mode={type}
@@ -241,8 +241,8 @@ export default function CoinDetailPage() {
           <div className="space-y-3">
 
             {/* Market info card */}
-            <div className="bg-white rounded-xl px-5 py-5 space-y-4">
-              <h3 className="font-bold text-slate-900 text-sm">Market Info</h3>
+            <div className="bg-card rounded-xl px-5 py-5 space-y-4">
+              <h3 className="font-bold text-foreground text-sm">Market Info</h3>
               <div className="space-y-3">
                 {[
                   { label: "Symbol",    value: apiSymbol },
@@ -254,15 +254,15 @@ export default function CoinDetailPage() {
                 ].map(({ label, value }) => (
                   <div key={label} className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-muted-foreground">{label}</span>
-                    <span className="text-xs font-bold text-slate-800 tabular-nums">{value}</span>
+                    <span className="text-xs font-bold text-foreground tabular-nums">{value}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* CTA */}
-            <div className="bg-white rounded-xl px-5 py-5 space-y-3">
-              <h3 className="font-bold text-slate-900 text-sm">Ready to trade?</h3>
+            <div className="bg-card rounded-xl px-5 py-5 space-y-3">
+              <h3 className="font-bold text-foreground text-sm">Ready to trade?</h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 {type === "futures"
                   ? "Trade this pair with leverage on the perpetual futures market."
@@ -282,7 +282,7 @@ export default function CoinDetailPage() {
                     navigate("/perpetual");
                   }}
                   variant="outline"
-                  className="w-full h-10 rounded-xl text-sm font-bold border-slate-200 text-slate-700"
+                  className="w-full h-10 rounded-xl text-sm font-bold border-border text-foreground/80"
                 >
                   Switch to Perpetual
                 </Button>
@@ -294,7 +294,7 @@ export default function CoinDetailPage() {
                     navigate("/spot");
                   }}
                   variant="outline"
-                  className="w-full h-10 rounded-xl text-sm font-bold border-slate-200 text-slate-700"
+                  className="w-full h-10 rounded-xl text-sm font-bold border-border text-foreground/80"
                 >
                   Switch to Spot
                 </Button>
