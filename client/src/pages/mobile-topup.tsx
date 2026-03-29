@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ChevronDown, ArrowRight, Search, Bot, Smartphone, Lock, Zap } from "lucide-react";
+import { ChevronDown, ArrowRight, Search, Bot, Smartphone, Lock } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useAirtime } from "@/hooks/user-airtime";
@@ -143,20 +143,16 @@ const Index = () => {
     <div className="min-h-screen bg-background">
 
       {/* ── Hero ── */}
-      <section className="relative bg-primary pt-10 pb-24 px-4 overflow-hidden">
+      <section className="relative bg-primary pt-8 pb-16 px-4 overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-white rounded-full blur-3xl" />
           <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-white rounded-full blur-2xl" />
         </div>
         <div className="relative max-w-2xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 bg-white/20 text-primary-foreground text-sm font-semibold px-4 py-1.5 rounded-full mb-6">
-            <Zap className="w-3.5 h-3.5" />
-            Instant worldwide top-ups
-          </div>
           <h1 className="text-3xl md:text-4xl font-bold text-primary-foreground leading-tight mb-3">
             Mobile Top-Up with Crypto
           </h1>
-          <p className="text-primary-foreground/70 text-base mb-10">
+          <p className="text-primary-foreground/70 text-base mb-6">
             Refill any prepaid phone in 140+ countries using Bitcoin, USDT, and more.
           </p>
         </div>
@@ -191,7 +187,7 @@ const Index = () => {
                 className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground text-base py-4 px-4 min-w-0"
               />
               <button
-                className="bg-primary hover:brightness-110 text-primary-foreground px-5 py-4 font-bold text-sm shrink-0 transition-all active:scale-95"
+                className="bg-red-500 hover:bg-red-600 text-white px-5 py-4 font-bold text-sm shrink-0 transition-all active:scale-95"
                 onClick={() => { if (selectedCountry) setView("operators"); else setView("countries"); }}
               >
                 <ArrowRight className="w-5 h-5" />
