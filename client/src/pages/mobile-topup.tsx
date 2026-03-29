@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ChevronDown, ArrowRight, Search, Clock, Wallet, Bot, Smartphone, Check } from "lucide-react";
+import { ChevronDown, ArrowRight, Search, Bot, Smartphone, Check, Lock } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useAirtime } from "@/hooks/user-airtime";
@@ -8,6 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { sanitizeImageUrl } from "@/lib/sanitize";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import NowPaymentsCheckout from "@/components/nowpayments-checkout";
+import { usePayPal } from "@/hooks/usePaypal";
+import { devLog } from "@/lib/dev-logger";
 
 // Provider Card Component
 interface ProviderCardProps {
@@ -19,7 +24,9 @@ interface ProviderCardProps {
   onClick?: () => void;
 }
 
-const ProviderCard = ({ name, logo, priceRange, bgColor = "bg-white", badge, onClick }: ProviderCardProps) => (
+const ProviderCard = ({ name, logo, priceRange, bgColor = "bg-white", badge, onClick }: ProviderCardProps) => {
+  const safeLogo = sanitizeImageUrl(logo);
+  return (
   <div className="group cursor-pointer" onClick={onClick}>
     <div className={`relative ${bgColor} rounded-xl aspect-[4/3] flex items-center justify-center transition-all duration-300 group-hover:-translate-y-1 overflow-hidden border border-border p-4`}>
       {badge && (
@@ -27,18 +34,26 @@ const ProviderCard = ({ name, logo, priceRange, bgColor = "bg-white", badge, onC
           <span>💰</span> {badge}
         </span>
       )}
-      {logo ? (
-        <img src={logo} alt={name} className="w-full h-full object-contain" />
-      ) : (
+      {safeLogo ? (
+        <img
+          src={safeLogo}
+          alt={name}
+          className="w-full h-full object-contain"
+          crossOrigin="anonymous"
+          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; (e.currentTarget.nextSibling as HTMLElement).style.display = "flex"; }}
+        />
+      ) : null}
+      <div className={`w-full h-full items-center justify-center ${safeLogo ? "hidden" : "flex"}`}>
         <Smartphone className="w-12 h-12 text-muted-foreground" />
-      )}
+      </div>
     </div>
     <div className="mt-3">
       <h3 className="font-semibold text-foreground truncate">{name}</h3>
       <p className="text-sm text-muted-foreground">{priceRange}</p>
     </div>
   </div>
-);
+  );
+};
 
 const Index = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -49,6 +64,7 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const { countries: countriesQuery, operators: operatorsQuery, processTopup } = useAirtime(selectedCountry);
+  const { createAndCaptureOrder, loading: paypalLoading } = usePayPal();
   const countries = countriesQuery.data || [];
   const isLoadingCountries = countriesQuery.isLoading;
   const operators = operatorsQuery.data || [];
@@ -263,7 +279,11 @@ const Index = () => {
                       <ProviderCard 
                         name={operator.name}
                         logo={operator.logoUrls?.[0]}
-                        priceRange={`${operator.minAmount || '50'} - ${operator.maxAmount || '50000'} ${operator.senderCurrencyCode}`}
+                        priceRange={
+                          operator.denominationType === 'FIXED' && operator.fixedAmounts?.length
+                            ? `${Math.min(...operator.fixedAmounts)} - ${Math.max(...operator.fixedAmounts)} ${operator.senderCurrencyCode}`
+                            : `${operator.minAmount ?? '?'} - ${operator.maxAmount ?? '?'} ${operator.senderCurrencyCode}`
+                        }
                         onClick={() => handleProviderClick(operator)}
                       />
                     </div>
@@ -372,14 +392,119 @@ const Index = () => {
                     ))}
                   </div>
 
-                  <Button 
-                    className="w-full py-8 text-xl font-bold bg-[#555a64] hover:bg-[#444952] text-white flex items-center justify-center gap-3 rounded-2xl shadow-lg mt-4 transition-transform active:scale-[0.98]" 
-                    onClick={handleTopup}
-                    disabled={processTopup.isPending}
-                  >
-                    <Check className="w-6 h-6" />
-                    {processTopup.isPending ? "Processing..." : "Send Top-up"}
-                  </Button>
+                  {/* Payment Method Tabs */}
+                  <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm mt-4">
+                    <Tabs defaultValue="crypto" className="w-full">
+                      <TabsList className="w-full h-auto p-0 bg-transparent border-b border-border rounded-none grid grid-cols-4">
+                        <TabsTrigger value="crypto" className="flex flex-col gap-2 py-4 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none">
+                          <div className="flex gap-1">
+                            <img src={cryptoIconUrls.BTC} className="h-4 w-4 rounded-full" alt="BTC" />
+                            <img src={cryptoIconUrls.ETH} className="h-4 w-4 rounded-full" alt="ETH" />
+                            <img src={cryptoIconUrls.USDT} className="h-4 w-4 rounded-full" alt="USDT" />
+                          </div>
+                          <span className="text-xs font-bold">Crypto</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="paypal" className="flex flex-col gap-2 py-4 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none">
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" className="h-4" alt="Paypal" />
+                          <span className="text-xs font-bold">PayPal</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="card" className="flex flex-col gap-2 py-4 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none">
+                          <div className="flex gap-1">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" className="h-3" alt="Visa" />
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" className="h-4" alt="Mastercard" />
+                          </div>
+                          <span className="text-xs font-bold">Card</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="oxxo" className="flex flex-col gap-2 py-4 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none">
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/6/66/Oxxo_Logo.svg" className="h-4" alt="OXXO" />
+                          <span className="text-xs font-bold">OXXO</span>
+                        </TabsTrigger>
+                      </TabsList>
+
+                      <TabsContent value="crypto" className="p-6 focus-visible:outline-none focus-visible:ring-0">
+                        <NowPaymentsCheckout
+                          amount={Number(amount) || 0}
+                          currency={selectedOperator.senderCurrencyCode?.toLowerCase() || "usd"}
+                          description={`Mobile top-up — ${selectedOperator.name}`}
+                          metadata={{
+                            service: "mobile-topup",
+                            operatorId: selectedOperator.operatorId,
+                            recipientPhone: phoneNumber,
+                            recipientCountryCode: selectedCountry,
+                          }}
+                          onPaymentSuccess={async () => {
+                            devLog.info("Topup payment successful, processing topup");
+                            await handleTopup();
+                          }}
+                          onPaymentClose={() => devLog.info("Topup payment cancelled")}
+                        />
+                      </TabsContent>
+
+                      <TabsContent value="paypal" className="p-6 text-center space-y-6 focus-visible:outline-none focus-visible:ring-0">
+                        <p className="text-muted-foreground">You will be redirected to PayPal to complete your payment.</p>
+                        <Button
+                          className="w-full h-14 bg-[#0070BA] text-white hover:bg-[#005ea6] font-bold text-lg rounded-xl gap-2"
+                          disabled={paypalLoading || processTopup.isPending}
+                          onClick={async () => {
+                            await createAndCaptureOrder(Number(amount) || 0);
+                            await handleTopup();
+                          }}
+                        >
+                          {paypalLoading || processTopup.isPending ? (
+                            <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />Processing...</>
+                          ) : (
+                            <><img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" className="h-5" alt="" />Continue to PayPal</>
+                          )}
+                        </Button>
+                      </TabsContent>
+
+                      <TabsContent value="card" className="p-6 space-y-4 focus-visible:outline-none focus-visible:ring-0">
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <label className="text-sm font-bold">Card Number</label>
+                            <Input placeholder="Card Number" className="h-12 bg-secondary/30 border-none rounded-xl" />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-sm font-bold">Exp Date</label>
+                              <Input placeholder="MM / YY" className="h-12 bg-secondary/30 border-none rounded-xl" />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-bold">CVV</label>
+                              <Input placeholder="CVV" className="h-12 bg-secondary/30 border-none rounded-xl" />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-bold">Postal Code</label>
+                            <Input placeholder="Postal Code" className="h-12 bg-secondary/30 border-none rounded-xl" />
+                          </div>
+                          <div className="flex items-center gap-2 pt-2">
+                            <Checkbox id="save-card-topup" />
+                            <label htmlFor="save-card-topup" className="text-sm font-medium leading-none">Save this payment method</label>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-center gap-2 py-2 text-muted-foreground">
+                          <Lock className="h-4 w-4" />
+                          <span className="text-xs font-medium">Secure 256-bit encrypted payment</span>
+                        </div>
+                        <Button
+                          className="w-full h-14 bg-[#FFC107] text-black hover:bg-[#FFB300] font-bold text-lg rounded-xl shadow-lg gap-2"
+                          onClick={handleTopup}
+                          disabled={processTopup.isPending}
+                        >
+                          <Lock className="h-5 w-5" />
+                          {processTopup.isPending ? "Processing..." : "Place Secure Order"}
+                        </Button>
+                      </TabsContent>
+
+                      <TabsContent value="oxxo" className="p-6 text-center space-y-6 focus-visible:outline-none focus-visible:ring-0">
+                        <p className="text-muted-foreground">Generate an OXXO voucher to pay in cash at any store.</p>
+                        <Button className="w-full h-14 bg-[#E20613] text-white hover:bg-[#c90511] font-bold text-lg rounded-xl gap-2">
+                          Generate OXXO Voucher
+                        </Button>
+                      </TabsContent>
+                    </Tabs>
+                  </div>
                 </div>
               </div>
             </div>
