@@ -19,6 +19,8 @@ import {
   Gift,
   Zap,
   Info,
+  Coins,
+  ArrowRight,
 } from "lucide-react";
 import {
   getNotifications,
@@ -31,6 +33,48 @@ import {
 } from "@/lib/notifications-api";
 import { useAuth } from "@/lib/auth-context";
 import { sanitizeImageUrl, sanitizeRichText } from "@/lib/sanitize";
+import {
+  DAILY_TASKS,
+  ONE_TIME_TASKS,
+  MILESTONE_TASKS,
+  type Task,
+} from "@/components/rewards/rewards-data";
+
+// ── Reward task helpers ────────────────────────────────────────────────────────
+
+const ALL_REWARD_TASKS = [...DAILY_TASKS, ...ONE_TIME_TASKS, ...MILESTONE_TASKS];
+
+function pickRandomTasks(n: number): Task[] {
+  return [...ALL_REWARD_TASKS].sort(() => Math.random() - 0.5).slice(0, n);
+}
+
+function RewardTaskItem({ task, onNavigate }: { task: Task; onNavigate: () => void }) {
+  return (
+    <button
+      onClick={onNavigate}
+      className="w-full flex items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-muted/50 border-b border-border last:border-0"
+    >
+      <div className="flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center bg-[#B4F22E]/15">
+        {task.icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+          {task.daily && (
+            <span className="text-[9px] font-bold uppercase tracking-wide text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-500/15 px-1.5 py-0.5 rounded-full">
+              Daily
+            </span>
+          )}
+          <p className="text-sm font-medium text-foreground leading-snug">{task.title}</p>
+        </div>
+        <p className="text-xs text-muted-foreground line-clamp-1">{task.description}</p>
+      </div>
+      <div className="flex-shrink-0 flex items-center gap-1 bg-[#B4F22E]/15 text-[#5a8a00] dark:text-[#B4F22E] px-2.5 py-1 rounded-full">
+        <Coins className="h-3 w-3" />
+        <span className="text-xs font-bold tabular-nums">+{task.pts}</span>
+      </div>
+    </button>
+  );
+}
 
 type TabId = "all" | "system" | "security" | "rewards" | "campaign";
 
@@ -67,13 +111,14 @@ function getNotificationIcon(notification: Notification) {
   const cls = "h-5 w-5";
 
   if (notification.type === "account_change") {
-    if (msg.includes("login") || msg.includes("ip")) return <LogIn className={cn(cls, "text-purple-500")} />;
-    if (msg.includes("password")) return <Shield className={cn(cls, "text-orange-500")} />;
-    if (msg.includes("2fa") || msg.includes("two-factor")) return <Shield className={cn(cls, "text-blue-500")} />;
+    const changeType = notification.metadata?.changeType as string | undefined;
+    if (changeType === "login_attempt" || msg.includes("sign-in") || msg.includes("signed in") || msg.includes("login")) return <LogIn className={cn(cls, "text-purple-500")} />;
+    if (changeType === "password_changed" || msg.includes("password")) return <Shield className={cn(cls, "text-orange-500")} />;
+    if (changeType === "2fa_enabled" || changeType === "2fa_disabled" || msg.includes("2fa") || msg.includes("two-factor")) return <Shield className={cn(cls, "text-blue-500")} />;
     return <Shield className={cn(cls, "text-orange-500")} />;
   }
   if (notification.type === "system") {
-    if (msg.includes("login")) return <LogIn className={cn(cls, "text-purple-500")} />;
+    if (msg.includes("login") || msg.includes("sign-in")) return <LogIn className={cn(cls, "text-purple-500")} />;
     if (msg.includes("verified") || msg.includes("approved")) return <Shield className={cn(cls, "text-green-500")} />;
     if (msg.includes("rejected") || msg.includes("failed")) return <AlertTriangle className={cn(cls, "text-red-500")} />;
     return <Info className={cn(cls, "text-blue-500")} />;
@@ -102,12 +147,19 @@ interface NotificationItemProps {
 }
 
 function NotificationItem({ notification, onClick }: NotificationItemProps) {
-  const isAccountChange = notification.type === "account_change";
-  const accentColor = isAccountChange ? "bg-orange-500/5 border-orange-500/10" : "bg-purple-500/5 border-purple-500/10";
-  const dotColor = isAccountChange ? "bg-orange-500" : "bg-primary";
-  const iconBg = isAccountChange
-    ? "bg-orange-100 dark:bg-orange-900/20"
-    : "bg-purple-100 dark:bg-purple-900/20";
+  const type = notification.type;
+  const accentColor =
+    type === "account_change" ? "bg-orange-500/5 border-orange-500/10" :
+    type === "payment"        ? "bg-emerald-500/5 border-emerald-500/10" :
+                                "bg-purple-500/5 border-purple-500/10";
+  const dotColor =
+    type === "account_change" ? "bg-orange-500" :
+    type === "payment"        ? "bg-emerald-500" :
+                                "bg-primary";
+  const iconBg =
+    type === "account_change" ? "bg-orange-100 dark:bg-orange-900/20" :
+    type === "payment"        ? "bg-emerald-100 dark:bg-emerald-900/20" :
+                                "bg-purple-100 dark:bg-purple-900/20";
 
   return (
     <button
@@ -215,6 +267,8 @@ export default function NotificationsPage() {
       return new Set();
     }
   });
+  // Randomised on every page mount so the Rewards tab always shows fresh tasks
+  const [randomRewardTasks] = useState<Task[]>(() => pickRandomTasks(4));
 
   const loadNotifications = useCallback(async () => {
     const data = await getNotifications();
@@ -371,16 +425,42 @@ export default function NotificationsPage() {
 
     if (activeTab === "rewards") {
       return (
-        <EmptyState
-          icon={Gift}
-          title="No rewards notifications"
-          subtitle="Complete tasks and earn rewards to see updates here"
-          action={
-            <Button onClick={() => navigate("/rewards")} size="sm" className="bg-[#B4F22E] text-black hover:bg-[#9FD624]">
-              Explore Rewards
+        <>
+          {/* Header prompt */}
+          <div className="px-4 py-3 bg-[#B4F22E]/5 border-b border-[#B4F22E]/15 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-foreground">Suggested for you</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Complete these tasks to earn points</p>
+            </div>
+            <button
+              onClick={() => navigate("/rewards")}
+              className="flex items-center gap-1 text-[11px] font-bold text-[#5a8a00] dark:text-[#B4F22E] hover:opacity-80 transition-opacity"
+            >
+              View all <ArrowRight className="h-3 w-3" />
+            </button>
+          </div>
+
+          {/* Random task list — refreshes on every page mount */}
+          {randomRewardTasks.map((task) => (
+            <RewardTaskItem
+              key={task.id}
+              task={task}
+              onNavigate={() => navigate("/rewards")}
+            />
+          ))}
+
+          {/* Footer CTA */}
+          <div className="px-4 py-5 flex justify-center">
+            <Button
+              onClick={() => navigate("/rewards")}
+              size="sm"
+              className="bg-[#B4F22E] text-black hover:bg-[#9FD624] font-bold gap-1.5"
+            >
+              <Coins className="h-3.5 w-3.5" />
+              See all tasks &amp; earn points
             </Button>
-          }
-        />
+          </div>
+        </>
       );
     }
 
