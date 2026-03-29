@@ -4,7 +4,7 @@ import type { Notification, Announcement } from "@/lib/notifications-api";
 export function mapNotification(raw: unknown): Notification {
   const r = raw as Record<string, unknown>;
   const validTypes = [
-    "trade", "price_alert", "offer", "system",
+    "trade", "price_alert", "system",
     "payment", "announcement", "account_change",
   ] as const;
 
