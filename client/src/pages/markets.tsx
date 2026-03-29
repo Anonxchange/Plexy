@@ -77,7 +77,7 @@ function ChangePill({ pct }: { pct: number }) {
   return (
     <span
       className={`inline-flex items-center gap-0.5 text-xs font-bold px-2 py-0.5 rounded-md tabular-nums ${
-        up ? "text-green-600 bg-green-50" : "text-red-500 bg-red-50"
+        up ? "text-green-600 bg-green-500/10" : "text-red-500 bg-red-500/10"
       }`}
     >
       {up ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
@@ -98,11 +98,11 @@ const STATS = [
 
 function StatsBar() {
   return (
-    <div className="bg-white rounded-xl px-5 py-4 flex flex-wrap gap-x-8 gap-y-3 overflow-x-auto">
+    <div className="bg-card rounded-xl px-5 py-4 flex flex-wrap gap-x-8 gap-y-3 overflow-x-auto">
       {STATS.map((s, i) => (
         <div key={i} className="flex flex-col min-w-[90px]">
           <span className="text-[11px] font-semibold text-muted-foreground mb-0.5">{s.label}</span>
-          <span className="text-sm font-bold text-slate-900">{s.value}</span>
+          <span className="text-sm font-bold text-foreground">{s.value}</span>
           {s.change && (
             <span className={`text-[11px] font-bold ${s.up ? "text-green-500" : "text-red-500"}`}>
               {s.change}
@@ -365,29 +365,29 @@ export default function MarketsPage() {
     return (
       <svg viewBox="0 0 100 60" className="w-full max-w-[160px]">
         <path d={`M ${start.x} ${start.y} A ${r} ${r} 0 0 1 ${end.x} ${end.y}`}
-          fill="none" stroke="#E2E8F0" strokeWidth="10" strokeLinecap="round" />
+          fill="none" stroke="hsl(var(--border))" strokeWidth="10" strokeLinecap="round" />
         <path d={`M ${start.x} ${start.y} A ${r} ${r} 0 0 1 ${ex} ${ey}`}
           fill="none" stroke="#B4F22E" strokeWidth="10" strokeLinecap="round" />
-        <text x="50" y="48" textAnchor="middle" className="font-bold" fontSize="14" fill="#1e293b">{value}</text>
-        <text x="50" y="58" textAnchor="middle" fontSize="6" fill="#94a3b8">Neutral</text>
+        <text x="50" y="48" textAnchor="middle" className="font-bold" fontSize="14" fill="hsl(var(--foreground))">{value}</text>
+        <text x="50" y="58" textAnchor="middle" fontSize="6" fill="hsl(var(--muted-foreground))">Neutral</text>
       </svg>
     );
   }
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#F0F2F5] pb-20 pt-4">
+    <div className="min-h-screen bg-background pb-20 pt-4">
       <div className="container mx-auto px-3 sm:px-4 max-w-7xl space-y-3">
 
         {/* ── Main nav tabs ─────────────────────────────────────────────── */}
-        <div className="bg-white rounded-xl overflow-hidden">
+        <div className="bg-card rounded-xl overflow-hidden">
           <div className="flex border-b px-4 sm:px-6">
             {(["overview", "key-metrics", "contract-data"] as MainTab[]).map(t => (
               <button
                 key={t}
                 onClick={() => setMainTab(t)}
                 className={`py-4 px-0 mr-6 text-sm font-bold border-b-2 transition-colors capitalize whitespace-nowrap ${
-                  mainTab === t ? "border-primary text-slate-900" : "border-transparent text-muted-foreground hover:text-slate-700"
+                  mainTab === t ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {t.replace("-", " ")}
@@ -409,35 +409,35 @@ export default function MarketsPage() {
                 { title: "Most Volume", rows: byVolume },
                 { title: "Top Losers",  rows: topLosers },
               ].map(({ title, rows }) => (
-                <div key={title} className="bg-white rounded-xl overflow-hidden">
+                <div key={title} className="bg-card rounded-xl overflow-hidden">
                   <div className="flex items-center justify-between px-4 py-3 border-b">
-                    <span className="text-sm font-bold text-slate-800">{title}</span>
+                    <span className="text-sm font-bold text-foreground">{title}</span>
                     <button className="text-xs font-semibold text-primary">View all</button>
                   </div>
                   <div className="divide-y">
                     {rows.length === 0 && isLoading
                       ? Array.from({ length: 4 }).map((_, i) => (
                           <div key={i} className="flex items-center gap-3 px-4 py-3 animate-pulse">
-                            <div className="w-8 h-8 rounded-full bg-slate-100 flex-shrink-0" />
+                            <div className="w-8 h-8 rounded-full bg-muted flex-shrink-0" />
                             <div className="flex-1 space-y-1.5">
-                              <div className="h-3 bg-slate-100 rounded w-20" />
-                              <div className="h-2.5 bg-slate-100 rounded w-14" />
+                              <div className="h-3 bg-muted rounded w-20" />
+                              <div className="h-2.5 bg-muted rounded w-14" />
                             </div>
                             <div className="space-y-1.5">
-                              <div className="h-3 bg-slate-100 rounded w-16" />
-                              <div className="h-2.5 bg-slate-100 rounded w-10 ml-auto" />
+                              <div className="h-3 bg-muted rounded w-16" />
+                              <div className="h-2.5 bg-muted rounded w-10 ml-auto" />
                             </div>
                           </div>
                         ))
                       : rows.map((r, i) => (
-                          <div key={i} className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 cursor-pointer transition-colors" onClick={() => openCoin(r)}>
+                          <div key={i} className="flex items-center gap-3 px-4 py-2.5 hover:bg-accent/50 cursor-pointer transition-colors" onClick={() => openCoin(r)}>
                             <CoinIcon symbol={r.base} address={r.address} className="w-8 h-8 flex-shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-bold text-slate-900 leading-none truncate">{r.symbol}</p>
+                              <p className="text-sm font-bold text-foreground leading-none truncate">{r.symbol}</p>
                               <p className="text-[11px] text-muted-foreground mt-0.5">{fmtVol(r.volume)}</p>
                             </div>
                             <div className="text-right flex-shrink-0">
-                              <p className="text-sm font-bold text-slate-900 tabular-nums">${fmtPrice(r.price)}</p>
+                              <p className="text-sm font-bold text-foreground tabular-nums">${fmtPrice(r.price)}</p>
                               <ChangePill pct={r.change} />
                             </div>
                           </div>
@@ -448,7 +448,7 @@ export default function MarketsPage() {
             </div>
 
             {/* ── Market table ─────────────────────────────────────────── */}
-            <div className="bg-white rounded-xl overflow-hidden">
+            <div className="bg-card rounded-xl overflow-hidden">
 
               {/* Toolbar */}
               <div className="px-4 sm:px-6 pt-4 pb-3 border-b space-y-3">
@@ -459,7 +459,7 @@ export default function MarketsPage() {
                       key={t}
                       onClick={() => changeMarketTab(t)}
                       className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${
-                        marketTab === t ? "bg-primary text-black" : "text-muted-foreground hover:bg-slate-100"
+                        marketTab === t ? "bg-primary text-black" : "text-muted-foreground hover:bg-accent"
                       }`}
                     >
                       {t}
@@ -477,7 +477,7 @@ export default function MarketsPage() {
                         className={`px-3 py-1 rounded-md text-xs font-semibold whitespace-nowrap border transition-colors flex-shrink-0 ${
                           filter === f
                             ? "bg-primary/10 border-primary text-primary"
-                            : "border-transparent text-muted-foreground hover:bg-slate-100"
+                            : "border-transparent text-muted-foreground hover:bg-accent"
                         }`}
                       >
                         {f}
@@ -490,7 +490,7 @@ export default function MarketsPage() {
                       placeholder="Search pair or coin…"
                       value={search}
                       onChange={e => { setSearch(e.target.value); setPage(1); }}
-                      className="pl-9 h-9 bg-[#F9FAFB] border-none text-sm"
+                      className="pl-9 h-9 bg-muted border-none text-sm"
                     />
                   </div>
                 </div>
@@ -500,7 +500,7 @@ export default function MarketsPage() {
               <div className="overflow-x-auto hidden sm:block">
                 <table className="w-full text-left">
                   <thead>
-                    <tr className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider bg-[#FAFAFA] border-b">
+                    <tr className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/30 border-b">
                       <th className="px-4 py-3 w-10">#</th>
                       <th className="px-2 py-3 w-8"></th>
                       <th className="px-3 py-3">Coin</th>
@@ -533,29 +533,29 @@ export default function MarketsPage() {
                       <th className="px-4 py-3 text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody className="divide-y divide-border/30">
                     {isLoading && pageRows.length === 0
                       ? Array.from({ length: 12 }).map((_, i) => (
                           <tr key={i} className="animate-pulse">
-                            <td className="px-4 py-4"><div className="h-3 bg-slate-100 rounded w-4" /></td>
-                            <td className="px-2 py-4"><div className="h-4 w-4 bg-slate-100 rounded" /></td>
+                            <td className="px-4 py-4"><div className="h-3 bg-muted rounded w-4" /></td>
+                            <td className="px-2 py-4"><div className="h-4 w-4 bg-muted rounded" /></td>
                             <td className="px-3 py-4">
                               <div className="flex items-center gap-2">
-                                <div className="w-9 h-9 rounded-full bg-slate-100 flex-shrink-0" />
+                                <div className="w-9 h-9 rounded-full bg-muted flex-shrink-0" />
                                 <div className="space-y-1.5">
-                                  <div className="h-3 bg-slate-100 rounded w-24" />
-                                  <div className="h-2.5 bg-slate-100 rounded w-16" />
+                                  <div className="h-3 bg-muted rounded w-24" />
+                                  <div className="h-2.5 bg-muted rounded w-16" />
                                 </div>
                               </div>
                             </td>
                             {Array.from({ length: 6 }).map((_, j) => (
-                              <td key={j} className="px-3 py-4 text-right"><div className="h-3 bg-slate-100 rounded w-16 ml-auto" /></td>
+                              <td key={j} className="px-3 py-4 text-right"><div className="h-3 bg-muted rounded w-16 ml-auto" /></td>
                             ))}
-                            <td className="px-4 py-4"><div className="h-8 bg-slate-100 rounded w-16 ml-auto" /></td>
+                            <td className="px-4 py-4"><div className="h-8 bg-muted rounded w-16 ml-auto" /></td>
                           </tr>
                         ))
                       : pageRows.map((row, i) => (
-                          <tr key={row.symbol} className="group hover:bg-slate-50/70 transition-colors cursor-pointer" onClick={() => openCoin(row)}>
+                          <tr key={row.symbol} className="group hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => openCoin(row)}>
                             <td className="px-4 py-3.5 text-sm font-semibold text-muted-foreground tabular-nums">
                               {(page - 1) * PER_PAGE + i + 1}
                             </td>
@@ -565,7 +565,7 @@ export default function MarketsPage() {
                                 className="transition-colors"
                                 aria-label={favorites.has(row.symbol) ? "Remove from favorites" : "Add to favorites"}
                               >
-                                <Star className={`h-4 w-4 ${favorites.has(row.symbol) ? "fill-primary text-primary" : "text-slate-200 hover:text-slate-400"}`} />
+                                <Star className={`h-4 w-4 ${favorites.has(row.symbol) ? "fill-primary text-primary" : "text-muted-foreground/30 hover:text-muted-foreground"}`} />
                               </button>
                             </td>
                             <td className="px-3 py-3.5">
@@ -573,35 +573,35 @@ export default function MarketsPage() {
                                 <CoinIcon symbol={row.base} address={row.address} className="w-9 h-9 flex-shrink-0" />
                                 <div>
                                   <div className="flex items-center gap-1.5">
-                                    <span className="text-sm font-bold text-slate-900">{row.symbol}</span>
+                                    <span className="text-sm font-bold text-foreground">{row.symbol}</span>
                                     {row.isNew && (
-                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-500 border border-blue-100">New</span>
+                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 border border-blue-500/20">New</span>
                                     )}
                                     {Math.abs(row.change) > 5 && (
-                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-50 text-orange-500 border border-orange-100">Hot</span>
+                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-500 border border-orange-500/20">Hot</span>
                                     )}
                                   </div>
                                   <div className="flex gap-1 mt-0.5 flex-wrap">
                                     {row.subTypes.slice(0, 2).map(st => (
-                                      <span key={st} className="text-[9px] font-semibold px-1 py-0.5 rounded bg-slate-100 text-slate-500">{st}</span>
+                                      <span key={st} className="text-[9px] font-semibold px-1 py-0.5 rounded bg-muted text-muted-foreground">{st}</span>
                                     ))}
                                   </div>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-3 py-3.5 text-right font-bold text-slate-900 text-sm tabular-nums">
+                            <td className="px-3 py-3.5 text-right font-bold text-foreground text-sm tabular-nums">
                               ${fmtPrice(row.price)}
                             </td>
                             <td className="px-3 py-3.5 text-right">
                               <ChangePill pct={row.change} />
                             </td>
-                            <td className="px-3 py-3.5 text-right text-sm text-slate-600 hidden md:table-cell tabular-nums">
+                            <td className="px-3 py-3.5 text-right text-sm text-muted-foreground hidden md:table-cell tabular-nums">
                               ${fmtPrice(row.high)}
                             </td>
-                            <td className="px-3 py-3.5 text-right text-sm text-slate-600 hidden md:table-cell tabular-nums">
+                            <td className="px-3 py-3.5 text-right text-sm text-muted-foreground hidden md:table-cell tabular-nums">
                               ${fmtPrice(row.low)}
                             </td>
-                            <td className="px-3 py-3.5 text-right text-sm font-semibold text-slate-600 tabular-nums">
+                            <td className="px-3 py-3.5 text-right text-sm font-semibold text-muted-foreground tabular-nums">
                               {fmtVol(row.volume)}
                             </td>
                             <td className="px-3 py-3.5 hidden lg:table-cell">
@@ -634,31 +634,31 @@ export default function MarketsPage() {
                 {isLoading && pageRows.length === 0
                   ? Array.from({ length: 8 }).map((_, i) => (
                       <div key={i} className="flex items-center gap-3 px-4 py-3 animate-pulse">
-                        <div className="w-10 h-10 rounded-full bg-slate-100 flex-shrink-0" />
+                        <div className="w-10 h-10 rounded-full bg-muted flex-shrink-0" />
                         <div className="flex-1 space-y-2">
-                          <div className="h-3 bg-slate-100 rounded w-28" />
-                          <div className="h-2.5 bg-slate-100 rounded w-20" />
+                          <div className="h-3 bg-muted rounded w-28" />
+                          <div className="h-2.5 bg-muted rounded w-20" />
                         </div>
                         <div className="space-y-2">
-                          <div className="h-3 bg-slate-100 rounded w-20" />
-                          <div className="h-2.5 bg-slate-100 rounded w-14 ml-auto" />
+                          <div className="h-3 bg-muted rounded w-20" />
+                          <div className="h-2.5 bg-muted rounded w-14 ml-auto" />
                         </div>
                       </div>
                     ))
                   : pageRows.map((row, i) => (
-                      <div key={row.symbol} className="flex items-center gap-3 px-4 py-3.5 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => openCoin(row)}>
+                      <div key={row.symbol} className="flex items-center gap-3 px-4 py-3.5 hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => openCoin(row)}>
                         <CoinIcon symbol={row.base} address={row.address} className="w-10 h-10 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-bold text-slate-900">{row.symbol}</span>
+                            <span className="text-sm font-bold text-foreground">{row.symbol}</span>
                             {row.isNew && (
-                              <span className="text-[10px] font-bold px-1 py-0.5 rounded bg-blue-50 text-blue-500">New</span>
+                              <span className="text-[10px] font-bold px-1 py-0.5 rounded bg-blue-500/10 text-blue-500">New</span>
                             )}
                           </div>
                           <p className="text-[11px] text-muted-foreground mt-0.5">{fmtVol(row.volume)}</p>
                         </div>
                         <div className="text-right flex-shrink-0">
-                          <p className="text-sm font-bold text-slate-900 tabular-nums">${fmtPrice(row.price)}</p>
+                          <p className="text-sm font-bold text-foreground tabular-nums">${fmtPrice(row.price)}</p>
                           <ChangePill pct={row.change} />
                         </div>
                         <div className="flex-shrink-0">
@@ -714,12 +714,12 @@ export default function MarketsPage() {
                 { label: "24h Volume",   value: "$529.5B", change: "-25.65%", red: true },
                 { label: "ETH Gas",      value: "0.039 Gwei", sub: "≈ $0.003" },
               ].map((m, i) => (
-                <div key={i} className="bg-white rounded-xl p-5">
+                <div key={i} className="bg-card rounded-xl p-5">
                   <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">{m.label}</p>
                   {m.gauge
                     ? <div className="flex flex-col items-center"><Gauge value={44} /></div>
                     : <>
-                        <p className={`text-lg font-bold ${m.red ? "text-red-500" : "text-slate-900"} mb-0.5`}>{m.value}</p>
+                        <p className={`text-lg font-bold ${m.red ? "text-red-500" : "text-foreground"} mb-0.5`}>{m.value}</p>
                         {m.change && <p className="text-xs font-semibold text-red-400">{m.change}</p>}
                         {m.sub && <p className="text-xs text-muted-foreground">{m.sub}</p>}
                         {m.red && (
@@ -738,17 +738,17 @@ export default function MarketsPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
               <div className="lg:col-span-2 space-y-3">
-                <div className="bg-white rounded-xl p-5">
+                <div className="bg-card rounded-xl p-5">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-bold text-slate-800">Price Trend Distribution</h3>
+                    <h3 className="font-bold text-foreground">Price Trend Distribution</h3>
                   </div>
                   <div className="flex h-3 w-full rounded-full overflow-hidden mb-4">
                     <div className="bg-red-500 h-full" style={{ width: "85%" }} />
-                    <div className="bg-slate-200 h-full" style={{ width: "5%" }} />
+                    <div className="bg-muted h-full" style={{ width: "5%" }} />
                     <div className="bg-green-500 h-full" style={{ width: "10%" }} />
                   </div>
                   <div className="grid grid-cols-3 text-center gap-2">
-                    {[["429", "Down", "text-red-500"], ["16", "No Change", "text-slate-700"], ["45", "Up", "text-green-500"]].map(([n, l, c]) => (
+                    {[["429", "Down", "text-red-500"], ["16", "No Change", "text-foreground/70"], ["45", "Up", "text-green-500"]].map(([n, l, c]) => (
                       <div key={l}>
                         <p className={`text-xl font-bold ${c}`}>{n}</p>
                         <p className="text-xs text-muted-foreground font-semibold">{l}</p>
@@ -757,8 +757,8 @@ export default function MarketsPage() {
                   </div>
                 </div>
 
-                <div className="bg-white rounded-xl p-5">
-                  <h3 className="font-bold text-slate-800 mb-4">Trending Sectors</h3>
+                <div className="bg-card rounded-xl p-5">
+                  <h3 className="font-bold text-foreground mb-4">Trending Sectors</h3>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {[
                       { name: "Privacy Coins", change: "+15.77%", coin: "ROSE", cp: "+39.92%" },
@@ -770,8 +770,8 @@ export default function MarketsPage() {
                       { name: "DeFi",          change: "+3.66%",  coin: "RPL",  cp: "+10.16%" },
                       { name: "Liquid Staking",change: "+3.48%",  coin: "RPL",  cp: "+10.16%" },
                     ].map((s, i) => (
-                      <div key={i} className="p-3 bg-slate-50 rounded-xl hover:border-primary border border-transparent transition-colors cursor-pointer">
-                        <p className="text-xs font-bold text-slate-700 mb-1">{s.name}</p>
+                      <div key={i} className="p-3 bg-muted/50 rounded-xl hover:border-primary border border-transparent transition-colors cursor-pointer">
+                        <p className="text-xs font-bold text-foreground/80 mb-1">{s.name}</p>
                         <p className="text-green-500 font-bold text-base">{s.change}</p>
                         <div className="flex items-center justify-between mt-1">
                           <span className="text-[10px] text-muted-foreground font-semibold">{s.coin}</span>
@@ -783,17 +783,17 @@ export default function MarketsPage() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl overflow-hidden">
+              <div className="bg-card rounded-xl overflow-hidden">
                 <div className="px-5 py-4 border-b">
-                  <h3 className="font-bold text-slate-800">Top Movers</h3>
+                  <h3 className="font-bold text-foreground">Top Movers</h3>
                 </div>
                 <div className="divide-y">
                   {topGainers.map((r, i) => (
-                    <div key={i} className="flex items-center justify-between px-5 py-3 hover:bg-slate-50 cursor-pointer transition-colors" onClick={() => openCoin(r)}>
+                    <div key={i} className="flex items-center justify-between px-5 py-3 hover:bg-accent/50 cursor-pointer transition-colors" onClick={() => openCoin(r)}>
                       <div className="flex items-center gap-2.5">
                         <CoinIcon symbol={r.base} address={r.address} className="w-8 h-8" />
                         <div>
-                          <p className="text-sm font-bold text-slate-900 leading-none">{r.symbol}</p>
+                          <p className="text-sm font-bold text-foreground leading-none">{r.symbol}</p>
                           <p className="text-[11px] text-muted-foreground">{fmtVol(r.volume)}</p>
                         </div>
                       </div>
@@ -812,12 +812,12 @@ export default function MarketsPage() {
         {/* ════════════ CONTRACT DATA ════════════ */}
         {mainTab === "contract-data" && (
           <div className="space-y-3">
-            <div className="bg-white rounded-xl px-6 py-4 flex items-center gap-6">
+            <div className="bg-card rounded-xl px-6 py-4 flex items-center gap-6">
               {["Perpetual", "Futures", "Options"].map(t => (
                 <button
                   key={t}
                   className={`text-sm font-bold pb-1 border-b-2 transition-colors ${
-                    t === "Perpetual" ? "text-slate-900 border-primary" : "text-muted-foreground border-transparent hover:text-slate-700"
+                    t === "Perpetual" ? "text-foreground border-primary" : "text-muted-foreground border-transparent hover:text-foreground"
                   }`}
                 >
                   {t}
@@ -825,16 +825,16 @@ export default function MarketsPage() {
               ))}
             </div>
 
-            <div className="bg-white rounded-xl p-6 space-y-10">
+            <div className="bg-card rounded-xl p-6 space-y-10">
               {["Open Interest", "Top 100 Trader Long/Short Ratio", "Active Trading Volume"].map((title, ci) => (
                 <div key={ci}>
                   <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-base font-bold text-slate-900">{title}</h4>
-                    <select className="text-xs font-bold bg-slate-50 border-none rounded-lg px-3 py-1.5 text-slate-700">
+                    <h4 className="text-base font-bold text-foreground">{title}</h4>
+                    <select className="text-xs font-bold bg-muted border-none rounded-lg px-3 py-1.5 text-foreground">
                       {["5m", "15m", "1h"].map(v => <option key={v}>{v}</option>)}
                     </select>
                   </div>
-                  <div className="h-52 w-full bg-slate-50 rounded-xl border flex flex-col justify-end p-4 overflow-hidden">
+                  <div className="h-52 w-full bg-muted/50 rounded-xl border flex flex-col justify-end p-4 overflow-hidden">
                     {/* SVG bar chart */}
                     <svg viewBox={`0 0 ${30 * 7} 80`} preserveAspectRatio="none" className="w-full h-full">
                       {Array.from({ length: 30 }).map((_, i) => {
@@ -847,7 +847,7 @@ export default function MarketsPage() {
                             width="5"
                             height={h}
                             rx="2"
-                            fill={i % 3 === 0 ? "#B4F22E" : "#E2E8F0"}
+                            fill={i % 3 === 0 ? "#B4F22E" : "hsl(var(--border))"}
                           />
                         );
                       })}
