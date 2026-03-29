@@ -1,661 +1,867 @@
 import { useHead } from "@unhead/react";
 import { useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSchema, marketsPageSchema } from "@/hooks/use-schema";
-import { Badge } from "@/components/ui/badge";
-import { Search, Star, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useWalletData } from "@/hooks/use-wallet-data";
+import {
+  Search, Star, TrendingUp, TrendingDown,
+  ChevronUp, ChevronDown, Loader2, ArrowUpDown,
+} from "lucide-react";
+import { asterMarket, Ticker24h } from "@/lib/asterdex-service";
+import { CoinIcon } from "@/components/trading/CoinIcon";
 
-interface MarketPair {
-  id: string;
-  symbol: string;
-  pair: string;
-  icon: string;
-  price: number;
-  change24h: number;
-  leverage?: string;
-  fees?: boolean;
-  isFavorite: boolean;
-  volume?: string;
+// ─── helpers ────────────────────────────────────────────────────────────────
+
+const QUOTES = ["USDT", "USDC", "BTC", "ETH", "BNB", "BUSD", "USD1"];
+
+function toDisplayPair(symbol: string): string {
+  for (const q of QUOTES) {
+    if (symbol.endsWith(q)) return `${symbol.slice(0, -q.length)}/${q}`;
+  }
+  return symbol;
 }
 
-const ASSET_ICONS: Record<string, string> = {
-  BTC: "₿",
-  ETH: "Ξ",
-  SOL: "◎",
-  TRX: "TRX",
-  USDT: "₮",
-  USDC: "⊙",
-  BNB: "BNB",
-  XRP: "XRP",
-  MATIC: "M",
-  ARB: "A",
-  OP: "OP",
-};
+function getBase(displayPair: string) { return displayPair.split("/")[0] ?? displayPair; }
 
-export default function MarketsPage() {
-  useHead({ title: "Crypto Markets | Pexly", meta: [{ name: "description", content: "Live cryptocurrency market data including real-time prices, trading volumes, and market caps." }] });
-  useSchema(marketsPageSchema, "markets-page-schema");
-  const { data: walletData } = useWalletData();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("spot");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [mainTab, setMainTab] = useState("overview");
-  const [contractSubTab, setContractSubTab] = useState("perpetual");
+function fmtPrice(v: number): string {
+  if (v >= 1000) return v.toLocaleString("en-US", { maximumFractionDigits: 2 });
+  if (v >= 1)    return v.toFixed(4);
+  return v.toFixed(6);
+}
 
-  const marketPairs = useMemo(() => {
-    if (!walletData?.assets) return [];
-    return walletData.assets.map((asset, index) => ({
-      id: String(index + 1),
-      symbol: asset.symbol,
-      pair: `${asset.symbol}/USDT`,
-      icon: ASSET_ICONS[asset.symbol] || asset.symbol[0],
-      price: asset.value / (asset.balance || 1) || 0, // Simplified price calculation
-      change24h: asset.change24h,
-      leverage: "10X",
-      isFavorite: index < 2,
-      volume: `${(Math.random() * 500 + 100).toFixed(2)}M(USDT)`
-    }));
-  }, [walletData]);
+function fmtVol(n: number): string {
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
+  if (n >= 1e3) return `$${(n / 1e3).toFixed(1)}K`;
+  return `$${n.toFixed(2)}`;
+}
 
-  const filteredPairs = useMemo(() => marketPairs.filter(pair => {
-    return pair.pair.toLowerCase().includes(searchQuery.toLowerCase());
-  }), [marketPairs, searchQuery]);
+// ─── types ───────────────────────────────────────────────────────────────────
 
-  const topGainers = useMemo(() => [...marketPairs].sort((a, b) => b.change24h - a.change24h).slice(0, 3), [marketPairs]);
-  const newlyListed = useMemo(() => [...marketPairs].slice(-3), [marketPairs]);
-  const trending = useMemo(() => [...marketPairs].sort((a, b) => Math.abs(b.change24h) - Math.abs(a.change24h)).slice(0, 3), [marketPairs]);
+interface Row {
+  symbol:     string;
+  base:       string;
+  address?:   string;
+  price:      number;
+  change:     number;
+  volume:     number;
+  high:       number;
+  low:        number;
+  isNew:      boolean;
+  subTypes:   string[];
+}
 
+// ─── Sparkline ───────────────────────────────────────────────────────────────
+
+function Sparkline({ up }: { up: boolean }) {
+  const color   = up ? "#22C55E" : "#EF4444";
+  const fill    = up ? "rgba(34,197,94,0.10)" : "rgba(239,68,68,0.10)";
+  const lineUp  = "M0,28 L18,22 L36,24 L54,16 L72,12 L90,8 L108,4";
+  const lineDn  = "M0,4  L18,9  L36,12 L54,18 L72,22 L90,26 L108,30";
+  const d = up ? lineUp : lineDn;
+  const fd = up ? `${lineUp} L108,36 L0,36 Z` : `${lineDn} L108,36 L0,36 Z`;
   return (
-    <div className="min-h-screen bg-[#F0F2F5] pb-20 pt-4">
-      <div className="container mx-auto px-4 max-w-7xl">
-        <div className="bg-white border-b mb-4 rounded-t-xl overflow-hidden">
-          <Tabs value={mainTab} onValueChange={setMainTab} className="w-full">
-            <TabsList className="w-full justify-start h-14 bg-transparent p-0 px-6 gap-8">
-              <TabsTrigger value="overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none h-full px-0 font-bold text-base">Overview</TabsTrigger>
-              <TabsTrigger value="key-metrics" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none h-full px-0 font-bold text-base">Key Metrics</TabsTrigger>
-              <TabsTrigger value="contract-data" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none h-full px-0 font-bold text-base">Contract Data</TabsTrigger>
-            </TabsList>
-          </Tabs>
+    <svg viewBox="0 0 108 36" className="w-[72px] h-7" fill="none" aria-hidden>
+      <path d={fd} fill={fill} />
+      <path d={d} stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// ─── Change badge ─────────────────────────────────────────────────────────────
+
+function ChangePill({ pct }: { pct: number }) {
+  const up = pct >= 0;
+  return (
+    <span
+      className={`inline-flex items-center gap-0.5 text-xs font-bold px-2 py-0.5 rounded-md tabular-nums ${
+        up ? "text-green-600 bg-green-50" : "text-red-500 bg-red-50"
+      }`}
+    >
+      {up ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+      {pct >= 0 ? "+" : ""}{pct.toFixed(2)}%
+    </span>
+  );
+}
+
+// ─── Stats bar ───────────────────────────────────────────────────────────────
+
+const STATS = [
+  { label: "Total Mkt Cap",  value: "$2.71T", change: "+1.8%",  up: true  },
+  { label: "24h Volume",     value: "$217.4B",change: "-3.1%",  up: false },
+  { label: "BTC Dominance",  value: "54.3%",  change: "+0.4%",  up: true  },
+  { label: "Fear & Greed",   value: "68 — Greed", change: "", up: true },
+  { label: "ETH Gas",        value: "0.035 Gwei",  change: "", up: true },
+];
+
+function StatsBar() {
+  return (
+    <div className="bg-white rounded-xl px-5 py-4 flex flex-wrap gap-x-8 gap-y-3 overflow-x-auto">
+      {STATS.map((s, i) => (
+        <div key={i} className="flex flex-col min-w-[90px]">
+          <span className="text-[11px] font-semibold text-muted-foreground mb-0.5">{s.label}</span>
+          <span className="text-sm font-bold text-slate-900">{s.value}</span>
+          {s.change && (
+            <span className={`text-[11px] font-bold ${s.up ? "text-green-500" : "text-red-500"}`}>
+              {s.change}
+            </span>
+          )}
         </div>
-
-        {mainTab === "overview" && (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <Card className="bg-white border-none shadow-sm rounded-xl">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-lg font-bold text-slate-700">Market Sentiment</CardTitle>
-                  <Button variant="link" className="text-primary font-bold p-0 flex items-center gap-1">View More <ChevronRight className="h-4 w-4" /></Button>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center py-6">
-                  <div className="relative w-48 h-24 mb-4">
-                    <svg viewBox="0 0 100 50" className="w-full h-full">
-                      <path d="M10,50 A40,40 0 0,1 90,50" fill="none" stroke="#E2E8F0" strokeWidth="8" strokeLinecap="round" />
-                      <path d="M10,50 A40,40 0 0,1 50,10" fill="none" stroke="#22C55E" strokeWidth="8" strokeLinecap="round" />
-                      <path d="M50,10 A40,40 0 0,1 90,50" fill="none" stroke="#EF4444" strokeWidth="8" strokeLinecap="round" />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-end pb-2">
-                      <span className="text-3xl font-bold text-primary">44</span>
-                      <span className="text-xs font-bold text-muted-foreground">Neutral</span>
-                    </div>
-                  </div>
-                  <div className="w-full flex justify-between text-[10px] font-bold text-muted-foreground mt-2 px-4">
-                    <div className="flex flex-col items-start"><span className="text-green-500">25</span><span>Long</span></div>
-                    <div className="flex flex-col items-end"><span className="text-red-500">75</span><span>Short</span></div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white border-none shadow-sm rounded-xl">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-lg font-bold text-slate-700">Market Data</CardTitle>
-                  <Button variant="link" className="text-primary font-bold p-0 flex items-center gap-1">View More <ChevronRight className="h-4 w-4" /></Button>
-                </CardHeader>
-                <CardContent className="space-y-6 pt-4">
-                  <div>
-                    <p className="text-xs font-bold text-muted-foreground mb-1 uppercase tracking-wider">Current ETH Gas Price</p>
-                    <p className="text-sm font-bold text-slate-900">0.034972676 Gwei ≈ <span className="text-muted-foreground">0.002 USD</span></p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-muted-foreground mb-1 uppercase tracking-wider">Trading Vol.</p>
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg font-bold text-red-500">-25.65%</span>
-                      <span className="text-lg font-bold text-slate-900">529.48 B USD</span>
-                    </div>
-                    <div className="h-8 mt-2 w-full bg-red-50/30 rounded overflow-hidden">
-                      <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="w-full h-full opacity-50">
-                        <path d="M0,40 L20,35 L40,38 L60,25 L80,30 L100,20 L100,40 Z" fill="#FEE2E2" />
-                        <path d="M0,40 L20,35 L40,38 L60,25 L80,30 L100,20" fill="none" stroke="#EF4444" strokeWidth="2" />
-                      </svg>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white border-none shadow-sm rounded-xl">
-                <CardHeader><CardTitle className="text-lg font-bold text-slate-700">Trending Sectors</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                  {[
-                    { name: "Privacy Coins", change: "16.55%", coin: "ROSE", coinPrice: "44.26%" },
-                    { name: "AI", change: "12.80%", coin: "ROSE", coinPrice: "44.26%" },
-                    { name: "Pantera Portfolio", change: "7.79%", coin: "ROSE", coinPrice: "44.26%" },
-                    { name: "Polychain Portfolio", change: "7.37%", coin: "ROSE", coinPrice: "44.26%" }
-                  ].map((sector, i) => (
-                    <div key={i} className="flex items-center justify-between group cursor-pointer">
-                      <span className="text-sm font-bold text-slate-700 group-hover:text-primary transition-colors">{sector.name}</span>
-                      <div className="flex items-center gap-4">
-                        <span className="text-sm font-bold text-green-500">{sector.change}</span>
-                        <span className="text-[10px] font-bold text-muted-foreground bg-muted/30 px-2 py-0.5 rounded uppercase tracking-tighter w-24 text-right">
-                          {sector.coin} <span className="text-green-500">{sector.coinPrice}</span>
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden mb-20">
-              <div className="p-6">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                  <h2 className="text-2xl font-bold">Markets</h2>
-                  <div className="relative w-full sm:w-80">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10 h-11 bg-[#F9FAFB] border-none font-medium" />
-                  </div>
-                </div>
-
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <TabsList className="w-full justify-start h-12 bg-transparent p-0 border-none gap-6 mb-6">
-                    {["Favorites", "Spot", "Derivatives", "TradFi", "Newly Listed"].map((tab) => (
-                      <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 h-full font-bold text-sm text-muted-foreground">{tab}</TabsTrigger>
-                    ))}
-                  </TabsList>
-                  
-                  <TabsContent value="spot" className="mt-0 space-y-8">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pb-6 border-b">
-                      <div>
-                        <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">Top Gainers</h4>
-                        <div className="space-y-3">
-                          {topGainers.map((item, i) => (
-                            <div key={i} className="flex items-center justify-between text-sm font-bold">
-                              <span className="text-slate-700">{item.pair}</span>
-                              <div className="flex gap-4"><span>{item.price.toFixed(2)}</span><span className="text-green-500">{item.change24h > 0 ? "+" : ""}{item.change24h.toFixed(2)}%</span></div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">Newly Listed</h4>
-                        <div className="space-y-3">
-                          {newlyListed.map((item, i) => (
-                            <div key={i} className="flex items-center justify-between text-sm font-bold">
-                              <span className="text-slate-700">{item.pair}</span>
-                              <div className="flex gap-4"><span>{item.price.toFixed(2)}</span><span className={`${item.change24h < 0 ? 'text-red-500' : 'text-green-500'}`}>{item.change24h > 0 ? "+" : ""}{item.change24h.toFixed(2)}%</span></div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">Trending</h4>
-                        <div className="space-y-3">
-                          {trending.map((item, i) => (
-                            <div key={i} className="flex items-center justify-between text-sm font-bold">
-                              <span className="text-slate-700">{item.pair}</span>
-                              <div className="flex gap-4"><span>{item.price.toFixed(2)}</span><span className={`${item.change24h < 0 ? 'text-red-500' : 'text-green-500'}`}>{item.change24h > 0 ? "+" : ""}{item.change24h.toFixed(2)}%</span></div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    <MarketList pairs={filteredPairs} />
-                    
-                    <div className="flex items-center justify-center gap-2 mt-8 py-4 border-t">
-                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg" disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /></Button>
-                      {[1, 2, 3, 4].map((page) => (
-                        <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`h-9 w-9 rounded-lg font-bold ${currentPage === page ? 'bg-primary' : ''}`} onClick={() => setCurrentPage(page)}>{page}</Button>
-                      ))}
-                      <span className="text-sm font-bold text-muted-foreground">...</span>
-                      <Button variant="ghost" size="sm" className="h-9 font-bold" onClick={() => setCurrentPage(34)}>34</Button>
-                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg"><ChevronRight className="h-4 w-4" /></Button>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </div>
-            </div>
-          </>
-        )}
-
-        {mainTab === "key-metrics" && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card className="bg-white border-none shadow-sm rounded-xl">
-                <CardHeader className="pb-2">
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Market Sentiment</span>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center py-4">
-                  <div className="relative w-40 h-20">
-                    <svg viewBox="0 0 100 50" className="w-full h-full">
-                      <path d="M10,50 A40,40 0 0,1 90,50" fill="none" stroke="#E2E8F0" strokeWidth="8" strokeLinecap="round" />
-                      <path d="M10,50 A40,40 0 0,1 50,10" fill="none" stroke="#22C55E" strokeWidth="8" strokeLinecap="round" />
-                      <path d="M50,10 A40,40 0 0,1 90,50" fill="none" stroke="#EF4444" strokeWidth="8" strokeLinecap="round" />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-end pb-1">
-                      <span className="text-2xl font-bold text-primary">44</span>
-                      <span className="text-[10px] font-bold text-muted-foreground">Neutral</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white border-none shadow-sm rounded-xl">
-                <CardHeader className="pb-2">
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">Market Cap <ExternalLink className="h-3 w-3" /></span>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-red-500 text-lg font-bold">-2.77%</div>
-                  <div className="text-slate-900 font-bold">3362.53 B USD</div>
-                  <div className="h-8 mt-2 w-full bg-red-50/50 rounded overflow-hidden">
-                    <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="w-full h-full">
-                      <path d="M0,40 L20,35 L40,38 L60,25 L80,30 L100,20 L100,40 Z" fill="#FEE2E2" />
-                      <path d="M0,40 L20,35 L40,38 L60,25 L80,30 L100,20" fill="none" stroke="#EF4444" strokeWidth="2" />
-                    </svg>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white border-none shadow-sm rounded-xl">
-                <CardHeader className="pb-2">
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">Trading Vol. <ExternalLink className="h-3 w-3" /></span>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-red-500 text-lg font-bold">-25.65%</div>
-                  <div className="text-slate-900 font-bold">529.48 B USD</div>
-                  <div className="h-8 mt-2 w-full bg-red-50/50 rounded overflow-hidden">
-                    <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="w-full h-full">
-                      <path d="M0,40 L20,38 L40,35 L60,30 L80,32 L100,28 L100,40 Z" fill="#FEE2E2" />
-                      <path d="M0,40 L20,38 L40,35 L60,30 L80,32 L100,28" fill="none" stroke="#EF4444" strokeWidth="2" />
-                    </svg>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white border-none shadow-sm rounded-xl">
-                <CardHeader className="pb-2">
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Current ETH Gas Price</span>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-lg font-bold text-slate-900">0.038831084 Gwei</div>
-                  <div className="text-xs font-bold text-muted-foreground">≈ 0.003 USD</div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
-                <Card className="bg-white border-none shadow-sm rounded-xl">
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle className="text-lg font-bold text-slate-700">Price Trend Distribution</CardTitle>
-                    <Button variant="link" className="text-xs font-bold text-muted-foreground p-0 flex items-center gap-1">View More <ChevronRight className="h-3 w-3" /></Button>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex h-5 w-full rounded-full overflow-hidden mb-6">
-                      <div className="bg-red-500 h-full" style={{ width: '85%' }}></div>
-                      <div className="bg-slate-300 h-full" style={{ width: '5%' }}></div>
-                      <div className="bg-green-500 h-full" style={{ width: '10%' }}></div>
-                    </div>
-                    <div className="grid grid-cols-3 text-center">
-                      <div className="flex flex-col">
-                        <span className="text-red-500 text-base font-bold">429</span>
-                        <span className="text-[10px] font-bold text-muted-foreground">Down</span>
-                      </div>
-                      <div className="flex flex-col border-x">
-                        <span className="text-slate-700 text-base font-bold">16</span>
-                        <span className="text-[10px] font-bold text-muted-foreground">No Change</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-green-500 text-base font-bold">45</span>
-                        <span className="text-[10px] font-bold text-muted-foreground">Up</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white border-none shadow-sm rounded-xl">
-                  <CardHeader><CardTitle className="text-lg font-bold text-slate-700">Trending Sectors</CardTitle></CardHeader>
-                  <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {[
-                      { name: "Privacy Coins", change: "15.77%", coin: "ROSE", coinPrice: "39.92%" },
-                      { name: "AI", change: "12.76%", coin: "ROSE", coinPrice: "39.92%" },
-                      { name: "Pantera Portfolio", change: "7.88%", coin: "ROSE", coinPrice: "39.92%" },
-                      { name: "Polychain Portfolio", change: "7.86%", coin: "ROSE", coinPrice: "39.92%" },
-                      { name: "a16z Portfolio", change: "7.51%", coin: "ROSE", coinPrice: "39.92%" },
-                      { name: "Rollups", change: "3.89%", coin: "MINA", coinPrice: "7.44%" },
-                      { name: "DeFi", change: "3.66%", coin: "RPL", coinPrice: "10.16%" },
-                      { name: "Liquid Staking", change: "3.48%", coin: "RPL", coinPrice: "10.16%" }
-                    ].map((sector, i) => (
-                      <div key={i} className="p-4 bg-[#F9FAFB] rounded-xl border border-transparent hover:border-primary transition-colors cursor-pointer group">
-                        <div className="text-xs font-bold text-slate-700 mb-1">{sector.name}</div>
-                        <div className="text-green-500 font-bold text-lg mb-1">{sector.change}</div>
-                        <div className="text-[10px] font-bold text-muted-foreground flex items-center justify-between">
-                          <span>{sector.coin}</span>
-                          <span className="text-green-500">{sector.coinPrice}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="space-y-6">
-                <Card className="bg-white border-none shadow-sm rounded-xl">
-                  <CardHeader><CardTitle className="text-lg font-bold text-slate-700">Top Movers</CardTitle></CardHeader>
-                  <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left">
-                        <thead className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest bg-[#F9FAFB]/50 border-b">
-                          <tr>
-                            <th className="px-4 py-3">Name</th>
-                            <th className="px-4 py-3 text-right">Type</th>
-                            <th className="px-4 py-3 text-right">24H Change</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y">
-                          {[
-                            { name: "VOOI/USDT", time: "01/20 00:30", type: "15m Gainers", change: "+15.55%" },
-                            { name: "VOOI/USDT", time: "01/20 00:28", type: "15m Gainers", change: "+15.55%" },
-                            { name: "RESOLV/USDT", time: "01/20 00:23", type: "24h Gainers", change: "+54.29%" },
-                            { name: "NAKA/USDT", time: "01/20 00:19", type: "24h Gainers", change: "+36.35%" },
-                            { name: "BERA/USDT", time: "01/20 00:10", type: "24h Gainers", change: "+23.65%" },
-                            { name: "AXS/USDT", time: "01/20 00:07", type: "15m Gainers", change: "+6.59%" }
-                          ].map((mover, i) => (
-                            <tr key={i} className="text-xs hover:bg-[#F9FAFB] transition-colors cursor-pointer group">
-                              <td className="px-4 py-4">
-                                <div className="font-bold text-slate-900">{mover.name}</div>
-                                <div className="text-[10px] text-muted-foreground">{mover.time}</div>
-                              </td>
-                              <td className="px-4 py-4 text-right font-medium text-muted-foreground">{mover.type}</td>
-                              <td className="px-4 py-4 text-right font-bold text-green-500">{mover.change}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    <div className="p-4 border-t">
-                      <Button className="w-full bg-orange-400 hover:bg-orange-500 text-white font-bold rounded-lg h-12 shadow-sm">Trade</Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
-              {[
-                { title: "Most Traded", data: [...marketPairs].sort((a, b) => parseFloat(b.volume || "0") - parseFloat(a.volume || "0")).slice(0, 5) },
-                { title: "Trending", data: trending.slice(0, 5) },
-                { title: "Newly Listed", data: newlyListed.slice(0, 5) }
-              ].map((list, i) => (
-                <Card key={i} className="bg-white border-none shadow-sm rounded-xl overflow-hidden">
-                  <CardHeader className="flex flex-row items-center justify-between pb-3 bg-[#F9FAFB]/50 border-b">
-                    <CardTitle className="text-base font-bold">{list.title}</CardTitle>
-                    <Select defaultValue="spot">
-                      <SelectTrigger className="w-[80px] h-7 bg-white border-none text-[10px] font-bold">
-                        <SelectValue placeholder="Spot" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="spot">Spot</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <table className="w-full text-left">
-                      <thead className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest border-b">
-                        <tr><th className="px-4 py-2">Market</th><th className="px-4 py-2 text-right">Price</th><th className="px-4 py-2 text-right">24H Change</th></tr>
-                      </thead>
-                      <tbody className="divide-y">
-                        {list.data.map((item, j) => (
-                          <tr key={j} className="text-xs hover:bg-[#F9FAFB] transition-colors cursor-pointer">
-                            <td className="px-4 py-3 font-bold text-slate-700 flex items-center gap-2">
-                              <span className="text-muted-foreground/50 w-3">{j + 1}</span>
-                              {item.pair}
-                            </td>
-                            <td className="px-4 py-3 text-right font-bold text-slate-900">{item.price.toFixed(2)}</td>
-                            <td className={`px-4 py-3 text-right font-bold ${item.change24h < 0 ? 'text-red-500' : 'text-green-500'}`}>{item.change24h > 0 ? "+" : ""}{item.change24h.toFixed(2)}%</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {mainTab === "contract-data" && (
-          <div className="space-y-6">
-            <div className="flex items-center gap-8 mb-6">
-              {["Perpetual", "Futures", "Options"].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setContractSubTab(tab.toLowerCase())}
-                  className={`text-xl font-bold transition-colors ${contractSubTab === tab.toLowerCase() ? "text-slate-900" : "text-muted-foreground"}`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex flex-col space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col space-y-2">
-                    <h3 className="text-sm font-bold text-primary border-b-2 border-primary w-fit pb-1">Trading Data</h3>
-                    <div className="flex items-center gap-3">
-                      <Select defaultValue="usdt-based">
-                        <SelectTrigger className="w-[140px] h-9 bg-[#F9FAFB] border-none font-bold text-xs">
-                          <SelectValue placeholder="USDT-based" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="usdt-based">USDT-based</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Select defaultValue="btcusdt">
-                        <SelectTrigger className="w-[140px] h-9 bg-[#F9FAFB] border-none font-bold text-xs">
-                          <SelectValue placeholder="BTCUSDT" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="btcusdt">BTCUSDT</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg px-6">Trade Now</Button>
-                </div>
-
-                <div className="pt-8">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-lg font-bold">Open Interest</h4>
-                      <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <Select defaultValue="5m">
-                      <SelectTrigger className="w-[80px] h-8 bg-[#F9FAFB] border-none font-bold text-xs">
-                        <SelectValue placeholder="5m" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="5m">5m</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="h-[300px] w-full bg-slate-50/30 rounded-lg flex flex-col justify-end p-4 border relative">
-                    <div className="absolute top-4 left-4 text-[10px] font-bold text-muted-foreground space-y-8">
-                      <div>49.91K</div><div>45.70K</div><div>41.49K</div><div>37.27K</div><div>33.06K</div><div>28.85K</div><div>24.64K</div>
-                    </div>
-                    <div className="flex items-end justify-between h-48 px-12">
-                      {Array.from({ length: 30 }).map((_, i) => (
-                        <div key={i} className="w-1.5 bg-slate-400 rounded-t h-20"></div>
-                      ))}
-                    </div>
-                    <div className="w-full h-[1px] bg-slate-300 relative my-2">
-                      <div className="absolute top-[-40px] w-full h-[1px] bg-slate-400/30"></div>
-                    </div>
-                    <div className="flex justify-between text-[10px] font-bold text-muted-foreground px-12">
-                      <span>14:10</span><span>14:40</span><span>15:10</span><span>15:40</span><span>16:05</span><span>16:35</span>
-                    </div>
-                    <div className="flex items-center justify-center gap-4 mt-4 text-[10px] font-bold text-muted-foreground">
-                      <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-slate-400"></div> Open Interest</div>
-                      <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-slate-300"></div> Notional Value of Open Interest</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-12">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-lg font-bold">Top 100 Trader Long/Short Ratio</h4>
-                      <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <Select defaultValue="5m">
-                      <SelectTrigger className="w-[80px] h-8 bg-[#F9FAFB] border-none font-bold text-xs">
-                        <SelectValue placeholder="5m" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="5m">5m</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="h-[300px] w-full bg-slate-50/30 rounded-lg flex flex-col justify-end p-4 border">
-                    <div className="flex items-end justify-between h-48 px-12">
-                      {Array.from({ length: 30 }).map((_, i) => (
-                        <div key={i} className="w-2 flex flex-col h-full justify-end">
-                          <div className="bg-green-500 w-full h-24 rounded-t"></div>
-                          <div className="bg-red-500 w-full h-20"></div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex justify-between text-[10px] font-bold text-muted-foreground px-12 mt-2">
-                      <span>14:10</span><span>14:40</span><span>15:10</span><span>15:40</span><span>16:05</span><span>16:35</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-12">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-lg font-bold">Active Trading Volume</h4>
-                      <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Select defaultValue="5m">
-                        <SelectTrigger className="w-[80px] h-8 bg-[#F9FAFB] border-none font-bold text-xs">
-                          <SelectValue placeholder="5m" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="5m">5m</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <div className="flex bg-[#F9FAFB] rounded-lg p-0.5">
-                        <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold bg-white shadow-sm">Notional</Button>
-                        <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold text-muted-foreground">Contract</Button>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="h-[300px] w-full bg-slate-50/30 rounded-lg flex flex-col justify-end p-4 border relative">
-                    <div className="absolute inset-0 flex items-center px-12">
-                      <div className="w-full h-[1px] bg-slate-300"></div>
-                    </div>
-                    <div className="flex items-center justify-between px-12 h-48 relative">
-                      {Array.from({ length: 30 }).map((_, i) => {
-                        const h = Math.random() * 40 + 10;
-                        const isPos = Math.random() > 0.4;
-                        return (
-                          <div key={i} className="w-1.5 flex flex-col items-center">
-                            {isPos ? <div className="bg-green-500 w-full rounded-t" style={{ height: `${h}px` }}></div> : <div className="h-[1px]"></div>}
-                            <div className="h-[1px]"></div>
-                            {!isPos ? <div className="bg-red-500 w-full rounded-b" style={{ height: `${h}px` }}></div> : <div className="h-[1px]"></div>}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="flex justify-between text-[10px] font-bold text-muted-foreground px-12 mt-2">
-                      <span>14:10</span><span>14:40</span><span>15:10</span><span>15:40</span><span>16:05</span><span>16:35</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      ))}
     </div>
   );
 }
 
-function MarketList({ pairs }: { pairs: MarketPair[] }) {
+// ─── Sort helper ──────────────────────────────────────────────────────────────
+
+type SortKey = "price" | "change" | "volume" | "high" | "low";
+
+function SortBtn({ col, active, dir, onClick }: {
+  col: SortKey; active: SortKey; dir: "asc"|"desc"; onClick: () => void;
+}) {
+  const isActive = col === active;
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-left">
-        <thead>
-          <tr className="text-xs font-bold text-muted-foreground uppercase tracking-widest border-b bg-[#F9FAFB]/50">
-            <th className="p-4">Trading Pairs</th>
-            <th className="p-4">Last Traded Price</th>
-            <th className="p-4">24H Change %</th>
-            <th className="p-4 hidden md:table-cell">24H High</th>
-            <th className="p-4 hidden md:table-cell">24H Low</th>
-            <th className="p-4 hidden lg:table-cell">24H Trading Volume</th>
-            <th className="p-4">Charts</th>
-            <th className="p-4 text-right">Trade</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y">
-          {pairs.map((pair) => (
-            <tr key={pair.id} className="group hover:bg-[#F9FAFB] transition-colors">
-              <td className="p-4">
-                <div className="flex items-center gap-3">
-                  <Star className={`h-4 w-4 cursor-pointer ${pair.isFavorite ? "fill-primary text-primary" : "text-muted-foreground/30"}`} />
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center font-bold text-lg">{pair.icon}</div>
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900">{pair.pair}</span>
-                        {pair.leverage && <Badge className="bg-orange-100 text-orange-600 border-none font-bold text-[10px] h-4 py-0">{pair.leverage}</Badge>}
-                        {pair.fees && <Badge className="bg-primary/10 text-primary border-none font-bold text-[10px] h-4 py-0">0 fees</Badge>}
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center gap-0.5 transition-colors ${
+        isActive ? "text-primary" : "text-muted-foreground/50 hover:text-muted-foreground"
+      }`}
+    >
+      {isActive
+        ? (dir === "asc" ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />)
+        : <ArrowUpDown className="w-3 h-3" />}
+    </button>
+  );
+}
+
+// ─── Category filter labels (futures) ────────────────────────────────────────
+
+const FUTURES_FILTER_ORDER  = ["All", "Top", "New", "Meme", "AI", "STOCK", "RWA", "pre-launch"];
+const FUTURES_FILTER_LABELS: Record<string, string> = {
+  "All":         "All",
+  Top:           "Top",
+  New:           "New",
+  Meme:          "Meme",
+  AI:            "AI",
+  STOCK:         "Stocks",
+  RWA:           "RWA",
+  "pre-launch":  "Pre-launch",
+};
+const SPOT_FILTERS = ["All", "Rocket Launch", "Meme"];
+
+const NEW_LISTING_DAYS = 60;
+const cutoff = Date.now() - NEW_LISTING_DAYS * 24 * 60 * 60 * 1000;
+
+// ─── Page ────────────────────────────────────────────────────────────────────
+
+type MarketTab = "Spot" | "Futures";
+type MainTab   = "overview" | "key-metrics" | "contract-data";
+
+export default function MarketsPage() {
+  useHead({
+    title: "Crypto Markets | Pexly",
+    meta: [{ name: "description", content: "Live spot and futures market data from AsterDEX." }],
+  });
+  useSchema(marketsPageSchema, "markets-page-schema");
+
+  const [, navigate] = useLocation();
+
+  const [mainTab,      setMainTab]      = useState<MainTab>("overview");
+  const [marketTab,    setMarketTab]    = useState<MarketTab>("Spot");
+  const [filter,       setFilter]       = useState("All");
+  const [search,       setSearch]       = useState("");
+  const [sortKey,      setSortKey]      = useState<SortKey>("volume");
+  const [sortDir,      setSortDir]      = useState<"asc"|"desc">("desc");
+  const [favorites,    setFavorites]    = useState<Set<string>>(new Set());
+  const [page,         setPage]         = useState(1);
+
+  const PER_PAGE = 20;
+
+  // Navigate to coin detail page
+  function openCoin(row: Row) {
+    const slug = row.symbol.replace("/", "-");
+    navigate(`/markets/${slug}?type=${marketTab.toLowerCase()}`);
+  }
+
+  // ── data fetching (same query keys as SymbolSelector → shared cache) ──────
+  const { data: spotTickers,   isLoading: spotLoading } = useQuery<Ticker24h[]>({
+    queryKey:       ["spot-tickers-all"],
+    queryFn:        () => asterMarket.spotTicker(),
+    staleTime:      15_000,
+    refetchInterval: 30_000,
+  });
+
+  const { data: futuresTickers, isLoading: futuresLoading } = useQuery<Ticker24h[]>({
+    queryKey:       ["futures-tickers-all"],
+    queryFn:        () => asterMarket.futuresTicker(),
+    staleTime:      15_000,
+    refetchInterval: 30_000,
+  });
+
+  const { data: spotExInfo } = useQuery({
+    queryKey:  ["spot-exchange-info"],
+    queryFn:   () => asterMarket.spotExchangeInfo(),
+    staleTime: 300_000,
+  });
+
+  const { data: futuresExInfo } = useQuery({
+    queryKey:  ["futures-exchange-info"],
+    queryFn:   () => asterMarket.futuresExchangeInfo(),
+    staleTime: 300_000,
+  });
+
+  // ── build helper maps from exchange info ──────────────────────────────────
+  const spotAddressMap = useMemo<Record<string, string>>(() => {
+    const m: Record<string, string> = {};
+    (spotExInfo?.symbols ?? []).forEach((s: any) => {
+      if (s.baseAssetAddress) m[s.baseAsset] = s.baseAssetAddress;
+    });
+    return m;
+  }, [spotExInfo]);
+
+  const futuresAddressMap = useMemo<Record<string, string>>(() => {
+    const m: Record<string, string> = {};
+    (futuresExInfo?.symbols ?? []).forEach((s: any) => {
+      if (s.baseAssetAddress) m[s.baseAsset] = s.baseAssetAddress;
+    });
+    return m;
+  }, [futuresExInfo]);
+
+  const futuresSubTypeMap = useMemo<Record<string, string[]>>(() => {
+    const m: Record<string, string[]> = {};
+    (futuresExInfo?.symbols ?? []).forEach((s: any) => {
+      const sub: string[] = (s.underlyingSubType ?? []).filter((t: string) => t !== "Commodities");
+      if (sub.length) m[s.baseAsset] = sub;
+    });
+    return m;
+  }, [futuresExInfo]);
+
+  const futuresMemeSet = useMemo<Set<string>>(() => {
+    const s = new Set<string>();
+    Object.entries(futuresSubTypeMap).forEach(([base, types]) => {
+      if (types.includes("Meme")) s.add(base);
+    });
+    return s;
+  }, [futuresSubTypeMap]);
+
+  const futuresNewSet = useMemo<Set<string>>(() => {
+    const s = new Set<string>();
+    (futuresExInfo?.symbols ?? []).forEach((sym: any) => {
+      if (sym.onboardDate && sym.onboardDate >= cutoff) s.add(sym.symbol);
+    });
+    return s;
+  }, [futuresExInfo]);
+
+  const spotNewSet = useMemo<Set<string>>(() => {
+    const s = new Set<string>();
+    (spotExInfo?.symbols ?? []).forEach((sym: any) => {
+      if (sym.listingTime && sym.listingTime >= cutoff) s.add(sym.symbol);
+    });
+    return s;
+  }, [spotExInfo]);
+
+  // ── build rows ────────────────────────────────────────────────────────────
+  function buildRows(
+    tickers: Ticker24h[] | undefined,
+    addrMap: Record<string, string>,
+    subTypeMap: Record<string, string[]>,
+    newSet: Set<string>,
+  ): Row[] {
+    if (!Array.isArray(tickers)) return [];
+    return tickers
+      .filter(t => !t.symbol.startsWith("TEST"))
+      .map(t => {
+        const dp   = toDisplayPair(t.symbol);
+        const base = getBase(dp);
+        return {
+          symbol:   dp,
+          base,
+          address:  addrMap[base],
+          price:    parseFloat(t.lastPrice),
+          change:   parseFloat(t.priceChangePercent),
+          volume:   parseFloat(t.quoteVolume),
+          high:     parseFloat(t.highPrice),
+          low:      parseFloat(t.lowPrice),
+          isNew:    newSet.has(t.symbol),
+          subTypes: subTypeMap[base] ?? [],
+        };
+      });
+  }
+
+  const spotRows    = useMemo(() => buildRows(spotTickers,    spotAddressMap,    {},                 spotNewSet),    [spotTickers, spotAddressMap, spotNewSet]);
+  const futuresRows = useMemo(() => buildRows(futuresTickers, futuresAddressMap, futuresSubTypeMap,  futuresNewSet), [futuresTickers, futuresAddressMap, futuresSubTypeMap, futuresNewSet]);
+
+  // ── available filters ─────────────────────────────────────────────────────
+  const availableFilters: string[] = useMemo(() => {
+    if (marketTab === "Spot") return SPOT_FILTERS;
+    const subTypes = new Set<string>();
+    Object.values(futuresSubTypeMap).forEach(arr => arr.forEach(s => subTypes.add(s)));
+    return FUTURES_FILTER_ORDER.filter(f => {
+      if (f === "All") return true;
+      if (f === "New") return futuresNewSet.size > 0;
+      return subTypes.has(f);
+    }).map(f => FUTURES_FILTER_LABELS[f] ?? f);
+  }, [marketTab, futuresSubTypeMap, futuresNewSet]);
+
+  // ── filter + sort ─────────────────────────────────────────────────────────
+  const allRows = marketTab === "Spot" ? spotRows : futuresRows;
+  const isLoading = marketTab === "Spot" ? spotLoading : futuresLoading;
+
+  const filteredRows: Row[] = useMemo(() => {
+    let rows = allRows;
+    if (search) rows = rows.filter(r =>
+      r.symbol.toLowerCase().includes(search.toLowerCase()) ||
+      r.base.toLowerCase().includes(search.toLowerCase())
+    );
+    if (filter !== "All") {
+      if (filter === "Rocket Launch" || filter === "New") rows = rows.filter(r => r.isNew);
+      else if (filter === "Meme") rows = rows.filter(r => r.subTypes.includes("Meme"));
+      else {
+        const raw = Object.entries(FUTURES_FILTER_LABELS).find(([, v]) => v === filter)?.[0] ?? filter;
+        rows = rows.filter(r => r.subTypes.includes(raw));
+      }
+    }
+    const dir = sortDir === "asc" ? 1 : -1;
+    return [...rows].sort((a, b) => (a[sortKey] - b[sortKey]) * dir);
+  }, [allRows, search, filter, sortKey, sortDir]);
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) setSortDir(d => d === "desc" ? "asc" : "desc");
+    else { setSortKey(key); setSortDir("desc"); }
+  }
+
+  const totalPages = Math.ceil(filteredRows.length / PER_PAGE);
+  const pageRows   = filteredRows.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+
+  function toggleFav(symbol: string) {
+    setFavorites(prev => {
+      const next = new Set(prev);
+      next.has(symbol) ? next.delete(symbol) : next.add(symbol);
+      return next;
+    });
+    setPage(1);
+  }
+
+  function changeFilter(f: string) { setFilter(f); setPage(1); }
+  function changeMarketTab(t: MarketTab) { setMarketTab(t); setFilter("All"); setSearch(""); setPage(1); }
+
+  // ── top movers (top gainers / trending / new) ─────────────────────────────
+  const topGainers  = useMemo(() => [...allRows].sort((a, b) => b.change - a.change).slice(0, 5), [allRows]);
+  const topLosers   = useMemo(() => [...allRows].sort((a, b) => a.change - b.change).slice(0, 5), [allRows]);
+  const byVolume    = useMemo(() => [...allRows].sort((a, b) => b.volume - a.volume).slice(0, 5), [allRows]);
+
+  // ── SVG gauge (for Key Metrics sentiment) ─────────────────────────────────
+  function Gauge({ value }: { value: number }) {
+    const pct = value / 100;
+    const r = 40, cx = 50, cy = 50;
+    const start = { x: cx - r, y: cy };
+    const end   = { x: cx + r, y: cy };
+    const angle = Math.PI * pct;
+    const ex = cx + r * Math.cos(Math.PI - angle);
+    const ey = cy - r * Math.sin(angle);
+    const largeArc = pct > 0.5 ? 1 : 0;
+    return (
+      <svg viewBox="0 0 100 60" className="w-full max-w-[160px]">
+        <path d={`M ${start.x} ${start.y} A ${r} ${r} 0 0 1 ${end.x} ${end.y}`}
+          fill="none" stroke="#E2E8F0" strokeWidth="10" strokeLinecap="round" />
+        <path d={`M ${start.x} ${start.y} A ${r} ${r} 0 0 1 ${ex} ${ey}`}
+          fill="none" stroke="#B4F22E" strokeWidth="10" strokeLinecap="round" />
+        <text x="50" y="48" textAnchor="middle" className="font-bold" fontSize="14" fill="#1e293b">{value}</text>
+        <text x="50" y="58" textAnchor="middle" fontSize="6" fill="#94a3b8">Neutral</text>
+      </svg>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  return (
+    <div className="min-h-screen bg-[#F0F2F5] pb-20 pt-4">
+      <div className="container mx-auto px-3 sm:px-4 max-w-7xl space-y-3">
+
+        {/* ── Main nav tabs ─────────────────────────────────────────────── */}
+        <div className="bg-white rounded-xl overflow-hidden">
+          <div className="flex border-b px-4 sm:px-6">
+            {(["overview", "key-metrics", "contract-data"] as MainTab[]).map(t => (
+              <button
+                key={t}
+                onClick={() => setMainTab(t)}
+                className={`py-4 px-0 mr-6 text-sm font-bold border-b-2 transition-colors capitalize whitespace-nowrap ${
+                  mainTab === t ? "border-primary text-slate-900" : "border-transparent text-muted-foreground hover:text-slate-700"
+                }`}
+              >
+                {t.replace("-", " ")}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ════════════ OVERVIEW ════════════ */}
+        {mainTab === "overview" && (
+          <>
+            {/* Stats bar */}
+            <StatsBar />
+
+            {/* Top movers panels */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[
+                { title: "Top Gainers", rows: topGainers },
+                { title: "Most Volume", rows: byVolume },
+                { title: "Top Losers",  rows: topLosers },
+              ].map(({ title, rows }) => (
+                <div key={title} className="bg-white rounded-xl overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b">
+                    <span className="text-sm font-bold text-slate-800">{title}</span>
+                    <button className="text-xs font-semibold text-primary">View all</button>
+                  </div>
+                  <div className="divide-y">
+                    {rows.length === 0 && isLoading
+                      ? Array.from({ length: 4 }).map((_, i) => (
+                          <div key={i} className="flex items-center gap-3 px-4 py-3 animate-pulse">
+                            <div className="w-8 h-8 rounded-full bg-slate-100 flex-shrink-0" />
+                            <div className="flex-1 space-y-1.5">
+                              <div className="h-3 bg-slate-100 rounded w-20" />
+                              <div className="h-2.5 bg-slate-100 rounded w-14" />
+                            </div>
+                            <div className="space-y-1.5">
+                              <div className="h-3 bg-slate-100 rounded w-16" />
+                              <div className="h-2.5 bg-slate-100 rounded w-10 ml-auto" />
+                            </div>
+                          </div>
+                        ))
+                      : rows.map((r, i) => (
+                          <div key={i} className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 cursor-pointer transition-colors" onClick={() => openCoin(r)}>
+                            <CoinIcon symbol={r.base} address={r.address} className="w-8 h-8 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-slate-900 leading-none truncate">{r.symbol}</p>
+                              <p className="text-[11px] text-muted-foreground mt-0.5">{fmtVol(r.volume)}</p>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-sm font-bold text-slate-900 tabular-nums">${fmtPrice(r.price)}</p>
+                              <ChangePill pct={r.change} />
+                            </div>
+                          </div>
+                        ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* ── Market table ─────────────────────────────────────────── */}
+            <div className="bg-white rounded-xl overflow-hidden">
+
+              {/* Toolbar */}
+              <div className="px-4 sm:px-6 pt-4 pb-3 border-b space-y-3">
+                {/* Market type tabs */}
+                <div className="flex items-center gap-1">
+                  {(["Spot", "Futures"] as MarketTab[]).map(t => (
+                    <button
+                      key={t}
+                      onClick={() => changeMarketTab(t)}
+                      className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${
+                        marketTab === t ? "bg-primary text-black" : "text-muted-foreground hover:bg-slate-100"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Category filters + search */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5 sm:pb-0">
+                    {availableFilters.map(f => (
+                      <button
+                        key={f}
+                        onClick={() => changeFilter(f)}
+                        className={`px-3 py-1 rounded-md text-xs font-semibold whitespace-nowrap border transition-colors flex-shrink-0 ${
+                          filter === f
+                            ? "bg-primary/10 border-primary text-primary"
+                            : "border-transparent text-muted-foreground hover:bg-slate-100"
+                        }`}
+                      >
+                        {f}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="relative w-full sm:w-60 flex-shrink-0">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search pair or coin…"
+                      value={search}
+                      onChange={e => { setSearch(e.target.value); setPage(1); }}
+                      className="pl-9 h-9 bg-[#F9FAFB] border-none text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Table — desktop */}
+              <div className="overflow-x-auto hidden sm:block">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider bg-[#FAFAFA] border-b">
+                      <th className="px-4 py-3 w-10">#</th>
+                      <th className="px-2 py-3 w-8"></th>
+                      <th className="px-3 py-3">Coin</th>
+                      <th className="px-3 py-3 text-right">
+                        <span className="inline-flex items-center gap-1 cursor-pointer" onClick={() => toggleSort("price")}>
+                          Price <SortBtn col="price" active={sortKey} dir={sortDir} onClick={() => toggleSort("price")} />
+                        </span>
+                      </th>
+                      <th className="px-3 py-3 text-right">
+                        <span className="inline-flex items-center gap-1 cursor-pointer" onClick={() => toggleSort("change")}>
+                          24h % <SortBtn col="change" active={sortKey} dir={sortDir} onClick={() => toggleSort("change")} />
+                        </span>
+                      </th>
+                      <th className="px-3 py-3 text-right hidden md:table-cell">
+                        <span className="inline-flex items-center gap-1 cursor-pointer" onClick={() => toggleSort("high")}>
+                          24h High <SortBtn col="high" active={sortKey} dir={sortDir} onClick={() => toggleSort("high")} />
+                        </span>
+                      </th>
+                      <th className="px-3 py-3 text-right hidden md:table-cell">
+                        <span className="inline-flex items-center gap-1 cursor-pointer" onClick={() => toggleSort("low")}>
+                          24h Low <SortBtn col="low" active={sortKey} dir={sortDir} onClick={() => toggleSort("low")} />
+                        </span>
+                      </th>
+                      <th className="px-3 py-3 text-right">
+                        <span className="inline-flex items-center gap-1 cursor-pointer" onClick={() => toggleSort("volume")}>
+                          Volume <SortBtn col="volume" active={sortKey} dir={sortDir} onClick={() => toggleSort("volume")} />
+                        </span>
+                      </th>
+                      <th className="px-3 py-3 hidden lg:table-cell">7d</th>
+                      <th className="px-4 py-3 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {isLoading && pageRows.length === 0
+                      ? Array.from({ length: 12 }).map((_, i) => (
+                          <tr key={i} className="animate-pulse">
+                            <td className="px-4 py-4"><div className="h-3 bg-slate-100 rounded w-4" /></td>
+                            <td className="px-2 py-4"><div className="h-4 w-4 bg-slate-100 rounded" /></td>
+                            <td className="px-3 py-4">
+                              <div className="flex items-center gap-2">
+                                <div className="w-9 h-9 rounded-full bg-slate-100 flex-shrink-0" />
+                                <div className="space-y-1.5">
+                                  <div className="h-3 bg-slate-100 rounded w-24" />
+                                  <div className="h-2.5 bg-slate-100 rounded w-16" />
+                                </div>
+                              </div>
+                            </td>
+                            {Array.from({ length: 6 }).map((_, j) => (
+                              <td key={j} className="px-3 py-4 text-right"><div className="h-3 bg-slate-100 rounded w-16 ml-auto" /></td>
+                            ))}
+                            <td className="px-4 py-4"><div className="h-8 bg-slate-100 rounded w-16 ml-auto" /></td>
+                          </tr>
+                        ))
+                      : pageRows.map((row, i) => (
+                          <tr key={row.symbol} className="group hover:bg-slate-50/70 transition-colors cursor-pointer" onClick={() => openCoin(row)}>
+                            <td className="px-4 py-3.5 text-sm font-semibold text-muted-foreground tabular-nums">
+                              {(page - 1) * PER_PAGE + i + 1}
+                            </td>
+                            <td className="px-2 py-3.5">
+                              <button
+                                onClick={e => { e.stopPropagation(); toggleFav(row.symbol); }}
+                                className="transition-colors"
+                                aria-label={favorites.has(row.symbol) ? "Remove from favorites" : "Add to favorites"}
+                              >
+                                <Star className={`h-4 w-4 ${favorites.has(row.symbol) ? "fill-primary text-primary" : "text-slate-200 hover:text-slate-400"}`} />
+                              </button>
+                            </td>
+                            <td className="px-3 py-3.5">
+                              <div className="flex items-center gap-2.5">
+                                <CoinIcon symbol={row.base} address={row.address} className="w-9 h-9 flex-shrink-0" />
+                                <div>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-sm font-bold text-slate-900">{row.symbol}</span>
+                                    {row.isNew && (
+                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-500 border border-blue-100">New</span>
+                                    )}
+                                    {Math.abs(row.change) > 5 && (
+                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-50 text-orange-500 border border-orange-100">Hot</span>
+                                    )}
+                                  </div>
+                                  <div className="flex gap-1 mt-0.5 flex-wrap">
+                                    {row.subTypes.slice(0, 2).map(st => (
+                                      <span key={st} className="text-[9px] font-semibold px-1 py-0.5 rounded bg-slate-100 text-slate-500">{st}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-3 py-3.5 text-right font-bold text-slate-900 text-sm tabular-nums">
+                              ${fmtPrice(row.price)}
+                            </td>
+                            <td className="px-3 py-3.5 text-right">
+                              <ChangePill pct={row.change} />
+                            </td>
+                            <td className="px-3 py-3.5 text-right text-sm text-slate-600 hidden md:table-cell tabular-nums">
+                              ${fmtPrice(row.high)}
+                            </td>
+                            <td className="px-3 py-3.5 text-right text-sm text-slate-600 hidden md:table-cell tabular-nums">
+                              ${fmtPrice(row.low)}
+                            </td>
+                            <td className="px-3 py-3.5 text-right text-sm font-semibold text-slate-600 tabular-nums">
+                              {fmtVol(row.volume)}
+                            </td>
+                            <td className="px-3 py-3.5 hidden lg:table-cell">
+                              <Sparkline up={row.change >= 0} />
+                            </td>
+                            <td className="px-4 py-3.5 text-right">
+                              <Button
+                                size="sm"
+                                className="bg-primary hover:bg-primary/90 text-black font-bold text-xs h-8 px-4 rounded-lg"
+                                onClick={e => { e.stopPropagation(); openCoin(row); }}
+                              >
+                                Trade
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                    {!isLoading && pageRows.length === 0 && (
+                      <tr>
+                        <td colSpan={10} className="py-20 text-center text-muted-foreground font-medium">
+                          No markets match your search.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Table — mobile cards */}
+              <div className="sm:hidden divide-y">
+                {isLoading && pageRows.length === 0
+                  ? Array.from({ length: 8 }).map((_, i) => (
+                      <div key={i} className="flex items-center gap-3 px-4 py-3 animate-pulse">
+                        <div className="w-10 h-10 rounded-full bg-slate-100 flex-shrink-0" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-3 bg-slate-100 rounded w-28" />
+                          <div className="h-2.5 bg-slate-100 rounded w-20" />
+                        </div>
+                        <div className="space-y-2">
+                          <div className="h-3 bg-slate-100 rounded w-20" />
+                          <div className="h-2.5 bg-slate-100 rounded w-14 ml-auto" />
+                        </div>
                       </div>
+                    ))
+                  : pageRows.map((row, i) => (
+                      <div key={row.symbol} className="flex items-center gap-3 px-4 py-3.5 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => openCoin(row)}>
+                        <CoinIcon symbol={row.base} address={row.address} className="w-10 h-10 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-bold text-slate-900">{row.symbol}</span>
+                            {row.isNew && (
+                              <span className="text-[10px] font-bold px-1 py-0.5 rounded bg-blue-50 text-blue-500">New</span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">{fmtVol(row.volume)}</p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-sm font-bold text-slate-900 tabular-nums">${fmtPrice(row.price)}</p>
+                          <ChangePill pct={row.change} />
+                        </div>
+                        <div className="flex-shrink-0">
+                          <Sparkline up={row.change >= 0} />
+                        </div>
+                      </div>
+                    ))}
+                {!isLoading && pageRows.length === 0 && (
+                  <p className="py-16 text-center text-muted-foreground font-medium text-sm">
+                    No markets match your search.
+                  </p>
+                )}
+              </div>
+
+              {/* Pagination */}
+              {filteredRows.length > PER_PAGE && (
+                <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-t">
+                  <span className="text-xs text-muted-foreground font-medium">
+                    {filteredRows.length} markets · page {page} of {totalPages}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
+                      <ChevronDown className="h-4 w-4 rotate-90" />
+                    </Button>
+                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(p => (
+                      <Button
+                        key={p}
+                        variant={page === p ? "default" : "ghost"}
+                        size="sm"
+                        className={`h-8 w-8 rounded-lg font-bold text-xs ${page === p ? "bg-primary text-black hover:bg-primary/90" : ""}`}
+                        onClick={() => setPage(p)}
+                      >
+                        {p}
+                      </Button>
+                    ))}
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>
+                      <ChevronDown className="h-4 w-4 -rotate-90" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* ════════════ KEY METRICS ════════════ */}
+        {mainTab === "key-metrics" && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: "Market Sentiment", gauge: true },
+                { label: "Market Cap",   value: "$3.36T", change: "-2.77%", red: true },
+                { label: "24h Volume",   value: "$529.5B", change: "-25.65%", red: true },
+                { label: "ETH Gas",      value: "0.039 Gwei", sub: "≈ $0.003" },
+              ].map((m, i) => (
+                <div key={i} className="bg-white rounded-xl p-5">
+                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">{m.label}</p>
+                  {m.gauge
+                    ? <div className="flex flex-col items-center"><Gauge value={44} /></div>
+                    : <>
+                        <p className={`text-lg font-bold ${m.red ? "text-red-500" : "text-slate-900"} mb-0.5`}>{m.value}</p>
+                        {m.change && <p className="text-xs font-semibold text-red-400">{m.change}</p>}
+                        {m.sub && <p className="text-xs text-muted-foreground">{m.sub}</p>}
+                        {m.red && (
+                          <div className="h-6 mt-3 w-full rounded overflow-hidden">
+                            <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="w-full h-full">
+                              <path d="M0,40 L20,35 L40,38 L60,25 L80,30 L100,20 L100,40 Z" fill="#FEE2E2" />
+                              <path d="M0,40 L20,35 L40,38 L60,25 L80,30 L100,20" fill="none" stroke="#EF4444" strokeWidth="2" />
+                            </svg>
+                          </div>
+                        )}
+                      </>
+                  }
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+              <div className="lg:col-span-2 space-y-3">
+                <div className="bg-white rounded-xl p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-bold text-slate-800">Price Trend Distribution</h3>
+                  </div>
+                  <div className="flex h-3 w-full rounded-full overflow-hidden mb-4">
+                    <div className="bg-red-500 h-full" style={{ width: "85%" }} />
+                    <div className="bg-slate-200 h-full" style={{ width: "5%" }} />
+                    <div className="bg-green-500 h-full" style={{ width: "10%" }} />
+                  </div>
+                  <div className="grid grid-cols-3 text-center gap-2">
+                    {[["429", "Down", "text-red-500"], ["16", "No Change", "text-slate-700"], ["45", "Up", "text-green-500"]].map(([n, l, c]) => (
+                      <div key={l}>
+                        <p className={`text-xl font-bold ${c}`}>{n}</p>
+                        <p className="text-xs text-muted-foreground font-semibold">{l}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl p-5">
+                  <h3 className="font-bold text-slate-800 mb-4">Trending Sectors</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { name: "Privacy Coins", change: "+15.77%", coin: "ROSE", cp: "+39.92%" },
+                      { name: "AI Tokens",     change: "+12.76%", coin: "ROSE", cp: "+39.92%" },
+                      { name: "Pantera",       change: "+7.88%",  coin: "ROSE", cp: "+39.92%" },
+                      { name: "Polychain",     change: "+7.86%",  coin: "ROSE", cp: "+39.92%" },
+                      { name: "a16z",          change: "+7.51%",  coin: "ROSE", cp: "+39.92%" },
+                      { name: "Rollups",       change: "+3.89%",  coin: "MINA", cp: "+7.44%" },
+                      { name: "DeFi",          change: "+3.66%",  coin: "RPL",  cp: "+10.16%" },
+                      { name: "Liquid Staking",change: "+3.48%",  coin: "RPL",  cp: "+10.16%" },
+                    ].map((s, i) => (
+                      <div key={i} className="p-3 bg-slate-50 rounded-xl hover:border-primary border border-transparent transition-colors cursor-pointer">
+                        <p className="text-xs font-bold text-slate-700 mb-1">{s.name}</p>
+                        <p className="text-green-500 font-bold text-base">{s.change}</p>
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-[10px] text-muted-foreground font-semibold">{s.coin}</span>
+                          <span className="text-[10px] text-green-500 font-bold">{s.cp}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl overflow-hidden">
+                <div className="px-5 py-4 border-b">
+                  <h3 className="font-bold text-slate-800">Top Movers</h3>
+                </div>
+                <div className="divide-y">
+                  {topGainers.map((r, i) => (
+                    <div key={i} className="flex items-center justify-between px-5 py-3 hover:bg-slate-50 cursor-pointer transition-colors" onClick={() => openCoin(r)}>
+                      <div className="flex items-center gap-2.5">
+                        <CoinIcon symbol={r.base} address={r.address} className="w-8 h-8" />
+                        <div>
+                          <p className="text-sm font-bold text-slate-900 leading-none">{r.symbol}</p>
+                          <p className="text-[11px] text-muted-foreground">{fmtVol(r.volume)}</p>
+                        </div>
+                      </div>
+                      <ChangePill pct={r.change} />
+                    </div>
+                  ))}
+                </div>
+                <div className="px-5 py-3 border-t">
+                  <Button className="w-full bg-primary text-black font-bold rounded-lg h-10">Trade Now</Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ════════════ CONTRACT DATA ════════════ */}
+        {mainTab === "contract-data" && (
+          <div className="space-y-3">
+            <div className="bg-white rounded-xl px-6 py-4 flex items-center gap-6">
+              {["Perpetual", "Futures", "Options"].map(t => (
+                <button
+                  key={t}
+                  className={`text-sm font-bold pb-1 border-b-2 transition-colors ${
+                    t === "Perpetual" ? "text-slate-900 border-primary" : "text-muted-foreground border-transparent hover:text-slate-700"
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+
+            <div className="bg-white rounded-xl p-6 space-y-10">
+              {["Open Interest", "Top 100 Trader Long/Short Ratio", "Active Trading Volume"].map((title, ci) => (
+                <div key={ci}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-base font-bold text-slate-900">{title}</h4>
+                    <select className="text-xs font-bold bg-slate-50 border-none rounded-lg px-3 py-1.5 text-slate-700">
+                      {["5m", "15m", "1h"].map(v => <option key={v}>{v}</option>)}
+                    </select>
+                  </div>
+                  <div className="h-52 w-full bg-slate-50 rounded-xl border flex flex-col justify-end p-4 overflow-hidden">
+                    {/* SVG bar chart */}
+                    <svg viewBox={`0 0 ${30 * 7} 80`} preserveAspectRatio="none" className="w-full h-full">
+                      {Array.from({ length: 30 }).map((_, i) => {
+                        const h = 20 + Math.sin(i * 0.6) * 15 + Math.random() * 20;
+                        return (
+                          <rect
+                            key={i}
+                            x={i * 7 + 1}
+                            y={80 - h}
+                            width="5"
+                            height={h}
+                            rx="2"
+                            fill={i % 3 === 0 ? "#B4F22E" : "#E2E8F0"}
+                          />
+                        );
+                      })}
+                    </svg>
+                    <div className="flex justify-between text-[10px] font-semibold text-muted-foreground px-2 mt-2">
+                      {["14:10", "14:40", "15:10", "15:40", "16:05"].map(t => <span key={t}>{t}</span>)}
                     </div>
                   </div>
                 </div>
-              </td>
-              <td className="p-4 font-bold text-slate-900">{pair.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-              <td className={`p-4 font-bold ${pair.change24h >= 0 ? "text-green-500" : "text-red-500"}`}>
-                {pair.change24h >= 0 ? "+" : ""}{pair.change24h.toFixed(2)}%
-              </td>
-              <td className="p-4 font-bold text-slate-700 hidden md:table-cell">{(pair.price * 1.05).toFixed(2)}</td>
-              <td className="p-4 font-bold text-slate-700 hidden md:table-cell">{(pair.price * 0.95).toFixed(2)}</td>
-              <td className="p-4 font-bold text-slate-500 hidden lg:table-cell">{pair.volume || "585.59M(USDT)"}</td>
-              <td className="p-4">
-                <div className="w-16 h-8 rounded overflow-hidden">
-                  <svg viewBox="0 0 100 40" className="w-full h-full">
-                    <path d="M0,40 L10,35 L20,38 L30,25 L40,30 L50,10 L60,15 L70,5 L80,12 L90,8 L100,2" fill="none" stroke={pair.change24h >= 0 ? "#22C55E" : "#EF4444"} strokeWidth="2" />
-                  </svg>
-                </div>
-              </td>
-              <td className="p-4 text-right">
-                <div className="flex items-center justify-end gap-3">
-                  <Button variant="link" className="text-xs font-bold text-muted-foreground p-0 h-auto">Details</Button>
-                  <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-5 h-9 rounded-lg">Trade</Button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
