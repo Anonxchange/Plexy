@@ -89,6 +89,7 @@ const BlogPost = lazy(() => import("@/pages/blog-post"));
 const careers = lazy(() => import("@/pages/careers"));
 const spot = lazy(() => import("@/pages/spot").then(m => ({ default: m.Spot })));
 const marketsPage = lazy(() => import("@/pages/markets"));
+const coinDetailPage = lazy(() => import("@/pages/coin-detail"));
 const adminPage = lazy(() => import("@/pages/admin"));
 const adminVerificationsPage = lazy(() => import("@/pages/admin-verifications"));
 const adminGiftCards = lazy(() => import("@/pages/admin-gift-cards"));
@@ -202,6 +203,7 @@ function AppRoutes() {
       <Route path="/explorer/transaction/:hash">{() => <LazyRoute component={TransactionDetail} skeleton={<PageSkeleton />} />}</Route>
       <Route path="/explorer/block/:hash">{() => <LazyRoute component={BlockDetail} />}</Route>
       <Route path="/explorer/asset/:symbol">{() => <LazyRoute component={ExplorerAsset} skeleton={<ChartPageSkeleton />} />}</Route>
+      <Route path="/markets/:symbol">{() => <LazyRoute component={coinDetailPage} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/markets">{() => <LazyRoute component={marketsPage} />}</Route>
       <Route path="/submit-idea">{() => <LazyRoute component={SubmitIdea} />}</Route>
       <Route path="/spot">{() => <LazyRoute component={spot} skeleton={<ChartPageSkeleton />} />}</Route>
