@@ -5,7 +5,7 @@ export interface Notification {
   user_id: string;
   title: string;
   message: string;
-  type: 'trade' | 'price_alert' | 'offer' | 'system' | 'payment' | 'announcement' | 'account_change';
+  type: 'trade' | 'price_alert' | 'system' | 'payment' | 'announcement' | 'account_change';
   read: boolean;
   created_at: string;
   metadata?: Record<string, any>;
@@ -260,8 +260,8 @@ export async function createAccountChangeNotification(
       message: 'Your account phone number has been updated.'
     },
     login_attempt: {
-      title: 'Login Attempt From New IP',
-      message: 'Your account was logged in from an unfamiliar IP address.'
+      title: 'New Sign-In Detected',
+      message: 'Your account was accessed from a new location or device.'
     }
   };
 
@@ -287,6 +287,124 @@ export async function createAccountChangeNotification(
   }
 
   return true;
+}
+
+/**
+ * Sends a "coin received" notification only if the user has transaction_updates enabled.
+ * Covers deposits, swap outputs, and escrow releases.
+ */
+export async function sendCoinReceivedNotification(
+  userId: string,
+  tx: {
+    id: string;
+    crypto_symbol: string;
+    amount: number;
+    type: string;
+    tx_hash?: string | null;
+    from_address?: string | null;
+  }
+): Promise<void> {
+  try {
+    const supabase = createClient();
+
+    const { data } = await supabase
+      .from('user_profiles')
+      .select('notification_preferences')
+      .eq('id', userId)
+      .single();
+
+    const prefs = data?.notification_preferences as Record<string, boolean> | null;
+    const enabled = prefs ? (prefs.transaction_updates ?? true) : true;
+    if (!enabled) return;
+
+    const amount = Number(tx.amount);
+    const symbol = tx.crypto_symbol?.toUpperCase() ?? '';
+    const formattedAmount = amount < 0.0001
+      ? amount.toExponential(4)
+      : amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 8 });
+
+    const sourceLabel: Record<string, string> = {
+      deposit: 'external transfer',
+      swap: 'swap',
+      escrow_release: 'completed trade',
+    };
+    const source = sourceLabel[tx.type] ?? 'transfer';
+
+    const message = tx.from_address
+      ? `${formattedAmount} ${symbol} received from ${tx.from_address.slice(0, 6)}…${tx.from_address.slice(-4)} via ${source}.`
+      : `${formattedAmount} ${symbol} received via ${source}.`;
+
+    await supabase.from('notifications').insert({
+      user_id: userId,
+      title: `${formattedAmount} ${symbol} Received`,
+      message,
+      type: 'payment',
+      read: false,
+      metadata: {
+        transactionId: tx.id,
+        crypto_symbol: symbol,
+        amount,
+        txType: tx.type,
+        tx_hash: tx.tx_hash ?? null,
+        from_address: tx.from_address ?? null,
+        url: '/wallet',
+      },
+    });
+  } catch {
+    // Never block the calling flow
+  }
+}
+
+/**
+ * Sends a login notification only if the user has login_notifications enabled.
+ * Reads the preference from user_profiles — defaults to true if not set.
+ */
+export async function sendLoginNotificationIfEnabled(
+  userId: string,
+  deviceInfo: { browser: string; os: string; deviceName: string },
+  ipAddress: string
+): Promise<void> {
+  try {
+    const supabase = createClient();
+
+    // Read the preference — single lightweight column fetch
+    const { data } = await supabase
+      .from('user_profiles')
+      .select('notification_preferences')
+      .eq('id', userId)
+      .single();
+
+    const prefs = data?.notification_preferences as Record<string, boolean> | null;
+    // Default is true: notify unless explicitly disabled
+    const enabled = prefs ? (prefs.login_notifications ?? true) : true;
+    if (!enabled) return;
+
+    const now = new Date();
+    const timeStr = now.toLocaleString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: true,
+    });
+
+    const message = `Signed in on ${deviceInfo.deviceName} via ${deviceInfo.browser} (${deviceInfo.os})${ipAddress ? ` from ${ipAddress}` : ''}. ${timeStr}`;
+
+    await supabase.from('notifications').insert({
+      user_id: userId,
+      title: 'New Sign-In to Your Account',
+      message,
+      type: 'account_change',
+      read: false,
+      metadata: {
+        changeType: 'login_attempt',
+        browser: deviceInfo.browser,
+        os: deviceInfo.os,
+        deviceName: deviceInfo.deviceName,
+        ipAddress,
+        signedInAt: now.toISOString(),
+      },
+    });
+  } catch {
+    // Never block the auth flow
+  }
 }
 
 export async function getAnnouncements(): Promise<Announcement[]> {
