@@ -143,8 +143,8 @@ const Index = () => {
     <div className="min-h-screen bg-background">
 
       {/* ── Hero ── */}
-      <section className="relative bg-primary pt-8 pb-16 px-4 overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
+      <section className="relative bg-primary pt-8 pb-16 px-4">
+        <div className="absolute inset-0 overflow-hidden opacity-10 pointer-events-none">
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-white rounded-full blur-3xl" />
           <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-white rounded-full blur-2xl" />
         </div>
@@ -158,7 +158,7 @@ const Index = () => {
         </div>
 
         {/* Floating phone input */}
-        <div className="absolute left-4 right-4 -bottom-6 z-10">
+        <div className="absolute left-4 right-4 -bottom-6 z-20">
           <div className="max-w-lg mx-auto">
             <div className="flex items-center bg-card border border-border rounded-2xl shadow-xl overflow-hidden">
               <button
