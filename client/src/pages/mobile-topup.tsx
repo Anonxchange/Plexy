@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import NowPaymentsCheckout from "@/components/nowpayments-checkout";
 import { usePayPal } from "@/hooks/usePaypal";
 import { devLog } from "@/lib/dev-logger";
+import { useProxiedImage } from "@/lib/image-proxy";
 
 const ProviderCard = ({
   name,
@@ -26,18 +27,18 @@ const ProviderCard = ({
   onClick?: () => void;
 }) => {
   const safeLogo = sanitizeImageUrl(logo);
+  const proxiedLogo = useProxiedImage(safeLogo);
   return (
     <div
       className="group cursor-pointer"
       onClick={onClick}
     >
       <div className="relative bg-card rounded-3xl aspect-[4/3] flex items-center justify-center transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lg overflow-hidden border border-border p-4">
-        {safeLogo ? (
+        {proxiedLogo ? (
           <img
-            src={safeLogo}
+            src={proxiedLogo}
             alt={name}
             className="w-full h-full object-contain"
-            crossOrigin="anonymous"
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).style.display = "none";
               (e.currentTarget.nextSibling as HTMLElement).style.display = "flex";
@@ -85,6 +86,10 @@ const Index = () => {
   const currentCountry = useMemo(() =>
     countries.find(c => (c as any).isoName === selectedCountry),
     [countries, selectedCountry]);
+
+  const proxiedOperatorLogo = useProxiedImage(
+    sanitizeImageUrl(selectedOperator?.logoUrls?.[0])
+  );
 
   const suggestedAmounts = useMemo(() => {
     if (!selectedOperator) return [];
@@ -331,12 +336,11 @@ const Index = () => {
               <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
                 <div className="flex items-center gap-5">
                   <div className="w-16 h-16 bg-background rounded-2xl flex items-center justify-center p-2.5 border border-border shrink-0">
-                    {selectedOperator.logoUrls?.[0] ? (
+                    {proxiedOperatorLogo ? (
                       <img
-                        src={sanitizeImageUrl(selectedOperator.logoUrls[0])}
+                        src={proxiedOperatorLogo}
                         alt={selectedOperator.name}
                         className="w-full h-full object-contain"
-                        crossOrigin="anonymous"
                         onError={(e) => {
                           (e.currentTarget as HTMLImageElement).style.display = "none";
                           (e.currentTarget.nextSibling as HTMLElement).style.display = "flex";
