@@ -67,7 +67,7 @@ export function GlobalNotificationListener() {
             if (lastProcessedIds.current.has(notification.id)) return;
             lastProcessedIds.current.add(notification.id);
             
-            if (notification.type === 'trade' && notification.metadata?.messageType === 'chat') {
+            if (notification.type === 'system' || notification.type === 'account_change') {
               notificationSounds.play('message_received');
             }
           }
