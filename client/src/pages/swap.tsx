@@ -1018,9 +1018,10 @@ export function Swap() {
                       <span className="text-muted-foreground font-medium">Provider</span>
                       <div className="flex items-center gap-2">
                         <img 
-                          src="https://cdn.rocketx.exchange/pd135zq/images/exchange/rocketx_pool_10.png" 
+                          src="/logos/IMG_4589.webp" 
                           alt="RocketX" 
-                          className="h-4 w-4 rounded-full" 
+                          className="h-4 w-4 rounded-full object-contain"
+                          draggable="false"
                         />
                         <span className="text-foreground font-bold">RocketX</span>
                       </div>
