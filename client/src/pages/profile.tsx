@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useLocation, useRoute, Link } from "wouter";
 import { useAuth } from "@/lib/auth-context";
+import { useRewardsProfile } from "@/hooks/use-rewards";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PexlyFooter } from "@/components/pexly-footer";
@@ -302,11 +303,11 @@ function IconPrediction({ size = 16 }: { size?: number }) {
 // ─── Shared UI ─────────────────────────────────────────────────────────────────
 
 function Card({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <div className={cn("bg-white rounded-2xl border border-slate-200 shadow-sm", className)}>{children}</div>;
+  return <div className={cn("bg-white dark:bg-card rounded-2xl border border-slate-200 dark:border-border shadow-sm", className)}>{children}</div>;
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3">{children}</p>;
+  return <p className="text-[11px] font-semibold text-slate-400 dark:text-muted-foreground uppercase tracking-widest mb-3">{children}</p>;
 }
 
 const TABS = ["Overview", "Predictions", "Shop", "Activity"] as const;
@@ -392,6 +393,9 @@ export function Profile() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState({ username: "", bio: "", languages: [] as string[], avatar_type: "default" as string, avatar_url: null as string | null });
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  // ── Rewards ──
+  const { data: rewardsProfile } = useRewardsProfile();
 
   // ── Live data ──
   const { data: predictionMarkets } = useMarkets({ limit: 10 });
@@ -544,7 +548,20 @@ export function Profile() {
   const totalFeedback = (profileData?.positive_feedback || 0) + (profileData?.negative_feedback || 0);
   const winRate = totalFeedback > 0 ? Math.round(((profileData?.positive_feedback || 0) / totalFeedback) * 100) : 0;
   const rank = getRank(profileData?.total_trades || 0);
-  const xp = Math.min((profileData?.total_trades || 0) * 20, 10000);
+  const pts = rewardsProfile?.lifetimeEarned ?? 0;
+  const PTS_TIERS = [
+    { label: "Newcomer", threshold: 0 },
+    { label: "Bronze",   threshold: 1_000 },
+    { label: "Silver",   threshold: 5_000 },
+    { label: "Gold",     threshold: 15_000 },
+    { label: "Diamond",  threshold: 50_000 },
+  ];
+  const currentTierIdx = PTS_TIERS.findLastIndex(t => pts >= t.threshold);
+  const nextTier = PTS_TIERS[currentTierIdx + 1] ?? PTS_TIERS[PTS_TIERS.length - 1];
+  const prevTier = PTS_TIERS[currentTierIdx];
+  const ptsProgress = nextTier.threshold > prevTier.threshold
+    ? Math.min(((pts - prevTier.threshold) / (nextTier.threshold - prevTier.threshold)) * 100, 100)
+    : 100;
   const pexlyId = profileData?.pexly_pay_id || `PEXLY-${(user?.id || "").substring(0, 8).toUpperCase()}`;
   const memberSince = profileData?.created_at ? new Date(profileData.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" }) : "recently";
   const kycLevel = profileData?.is_verified ? "Advanced" : profileData?.email_verified ? "Basic" : "None";
@@ -557,18 +574,18 @@ export function Profile() {
   const avatarSrc = profileData?.avatar_url || avatarTypes.find(a => a.id === profileData?.avatar_type)?.image || avatarTypes[0].image;
 
   return (
-    <div className="min-h-screen bg-slate-50 relative overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-background relative overflow-x-hidden">
 
       {/* ── Canvas header ── */}
       <div className="relative h-56 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#e8f5d0] via-[#f0fce8] to-[#dff0f8]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#e8f5d0] via-[#f0fce8] to-[#dff0f8] dark:from-[#1a2410] dark:via-[#111a0d] dark:to-[#0d1a1f]" />
         <BlockchainCanvas dark={false} />
-        <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-slate-50/70 to-transparent pointer-events-none" />
+        <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-slate-50/70 dark:from-background/70 to-transparent pointer-events-none" />
         <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
-          <Link href="/" className="text-xs text-slate-600 hover:text-slate-900 font-medium bg-white/85 border border-slate-200 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm transition-colors">
+          <Link href="/" className="text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-medium bg-white/85 dark:bg-card/80 border border-slate-200 dark:border-border px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm transition-colors">
             ← Pexly
           </Link>
-          <button onClick={handleShareProfile} className="text-xs text-slate-700 font-medium bg-white/85 border border-slate-200 px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm hover:bg-white transition-all">
+          <button onClick={handleShareProfile} className="text-xs text-slate-700 dark:text-slate-300 font-medium bg-white/85 dark:bg-card/80 border border-slate-200 dark:border-border px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm hover:bg-white dark:hover:bg-card transition-all">
             Share profile
           </button>
         </div>
@@ -609,19 +626,19 @@ export function Profile() {
               {/* Info */}
               <div className="flex-1 min-w-0 mt-1">
                 <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <h1 className="text-xl font-bold text-slate-900">{username}</h1>
-                  <span className="text-sm text-slate-400 font-mono">@{username.toLowerCase()}</span>
+                  <h1 className="text-xl font-bold text-slate-900 dark:text-foreground">{username}</h1>
+                  <span className="text-sm text-slate-400 dark:text-muted-foreground font-mono">@{username.toLowerCase()}</span>
                   {profileData?.is_verified && (
-                    <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100 font-medium">
+                    <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800 font-medium">
                       <IconShield size={12} /> {kycLevel} KYC
                     </span>
                   )}
                   <span className="text-lg">{getCountryFlag(profileData?.country)}</span>
                 </div>
-                <p className="text-sm text-slate-500 leading-relaxed max-w-lg mb-2.5">
+                <p className="text-sm text-slate-500 dark:text-muted-foreground leading-relaxed max-w-lg mb-2.5">
                   {profileData?.bio || (isOwnProfile ? "No bio yet — click Edit Profile to add one." : "No bio set.")}
                 </p>
-                <div className="flex flex-wrap items-center gap-3 text-[12px] text-slate-400">
+                <div className="flex flex-wrap items-center gap-3 text-[12px] text-slate-400 dark:text-muted-foreground">
                   {profileData?.country && <span className="flex items-center gap-1"><IconMapPin size={12} />{profileData.country}</span>}
                   <span className="flex items-center gap-1"><IconCalendar size={12} />Joined {memberSince}</span>
                   <span className="flex items-center gap-1"><IconUsers size={12} />{profileData?.trade_partners || 0} trading partners</span>
@@ -632,7 +649,7 @@ export function Profile() {
               <div className="flex items-center gap-2 flex-wrap mt-1">
                 <button
                   onClick={handleCopyId}
-                  className="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-slate-700 transition-colors font-mono border border-slate-200 px-2.5 py-1.5 rounded-lg"
+                  className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground transition-colors font-mono border border-slate-200 dark:border-border px-2.5 py-1.5 rounded-lg dark:bg-card"
                 >
                   <IconCopy size={12} />
                   {copied ? "Copied!" : pexlyId}
@@ -641,7 +658,7 @@ export function Profile() {
                 {isOwnProfile && (
                   <button
                     onClick={handleEditProfile}
-                    className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-all"
+                    className="w-8 h-8 rounded-lg border border-slate-200 dark:border-border flex items-center justify-center text-slate-500 dark:text-muted-foreground hover:bg-slate-50 dark:hover:bg-muted transition-all"
                     title="Edit profile"
                   >
                     <IconPencil size={14} />
@@ -656,9 +673,9 @@ export function Profile() {
 
             {/* Badges */}
             {badges.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-5 pt-4 border-t border-slate-100">
+              <div className="flex flex-wrap gap-1.5 mt-5 pt-4 border-t border-slate-100 dark:border-border">
                 {badges.map(b => (
-                  <span key={b} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                  <span key={b} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-muted text-slate-600 dark:text-muted-foreground border border-slate-200 dark:border-border">
                     <IconAward size={12} /> {b}
                   </span>
                 ))}
@@ -670,16 +687,16 @@ export function Profile() {
         {/* ── Stats Grid ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
           {[
-            { label: "Portfolio", value: "Multi-Asset", sub: "BTC · ETH · SOL", subColor: "text-emerald-600", icon: <IconPortfolio size={20} />, bg: "bg-lime-50" },
-            { label: "Win Rate", value: `${winRate}%`, sub: `${profileData?.positive_feedback || 0}W · ${profileData?.negative_feedback || 0}L`, subColor: "text-slate-400", icon: <IconWinRate size={20} />, bg: "bg-emerald-50" },
-            { label: "Rank", value: rank, sub: `${profileData?.total_trades || 0} trades`, subColor: "text-slate-400", icon: <IconRank size={20} />, bg: "bg-amber-50" },
-            { label: "Network", value: "Multi-Chain", sub: "BTC · ETH · SOL", subColor: "text-slate-400", icon: <IconNetwork size={20} />, bg: "bg-indigo-50" },
+            { label: "Portfolio", value: "Multi-Asset", sub: "BTC · ETH · SOL", subColor: "text-emerald-600", icon: <IconPortfolio size={20} />, bg: "bg-lime-50 dark:bg-lime-950/40" },
+            { label: "Win Rate", value: `${winRate}%`, sub: `${profileData?.positive_feedback || 0}W · ${profileData?.negative_feedback || 0}L`, subColor: "text-slate-400 dark:text-muted-foreground", icon: <IconWinRate size={20} />, bg: "bg-emerald-50 dark:bg-emerald-950/40" },
+            { label: "Rank", value: rank, sub: `${profileData?.total_trades || 0} trades`, subColor: "text-slate-400 dark:text-muted-foreground", icon: <IconRank size={20} />, bg: "bg-amber-50 dark:bg-amber-950/40" },
+            { label: "Network", value: "Multi-Chain", sub: "BTC · ETH · SOL", subColor: "text-slate-400 dark:text-muted-foreground", icon: <IconNetwork size={20} />, bg: "bg-indigo-50 dark:bg-indigo-950/40" },
           ].map(({ label, value, sub, subColor, icon, bg }) => (
             <Card key={label} className="p-4 flex items-center gap-3">
               <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0", bg)}>{icon}</div>
               <div className="min-w-0">
-                <div className="text-[11px] text-slate-400 mb-0.5">{label}</div>
-                <div className="text-base font-bold text-slate-900 tabular-nums leading-tight">{value}</div>
+                <div className="text-[11px] text-slate-400 dark:text-muted-foreground mb-0.5">{label}</div>
+                <div className="text-base font-bold text-slate-900 dark:text-foreground tabular-nums leading-tight">{value}</div>
                 <div className={cn("text-[11px] truncate", subColor)}>{sub}</div>
               </div>
             </Card>
@@ -689,16 +706,16 @@ export function Profile() {
         {/* ── Wallet + XP ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
           <Card className="p-4 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-muted flex items-center justify-center flex-shrink-0">
               <IconWallet size={18} />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-[11px] text-slate-400">Pexly ID</div>
-              <div className="text-sm font-mono font-semibold text-slate-800 truncate">{pexlyId}</div>
+              <div className="text-[11px] text-slate-400 dark:text-muted-foreground">Pexly ID</div>
+              <div className="text-sm font-mono font-semibold text-slate-800 dark:text-foreground truncate">{pexlyId}</div>
             </div>
             <div className="flex items-center gap-1.5">
               {["BTC", "ETH", "SOL"].map(t => (
-                <span key={t} className="flex items-center gap-1 text-[10px] px-2 py-0.5 bg-slate-100 rounded-full border border-slate-200 text-slate-500 font-medium">
+                <span key={t} className="flex items-center gap-1 text-[10px] px-2 py-0.5 bg-slate-100 dark:bg-muted rounded-full border border-slate-200 dark:border-border text-slate-500 dark:text-muted-foreground font-medium">
                   <img src={cryptoIconUrls[t]} alt={t} className="w-3 h-3 rounded-full object-cover" />
                   {t}
                 </span>
@@ -708,29 +725,31 @@ export function Profile() {
 
           <Card className="p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
-                <IconAward size={16} accent /> {rank}
+              <span className="text-sm font-semibold text-slate-800 dark:text-foreground flex items-center gap-1.5">
+                <IconAward size={16} accent /> {prevTier.label}
               </span>
-              <span className="text-xs text-slate-400 tabular-nums">{xp.toLocaleString()} / 10,000 XP</span>
+              <span className="text-xs text-slate-400 dark:text-muted-foreground tabular-nums">
+                {pts.toLocaleString()} / {nextTier.threshold.toLocaleString()} pts
+              </span>
             </div>
-            <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-              <div className="h-full rounded-full bg-gradient-to-r from-primary to-lime-400" style={{ width: `${Math.min((xp / 10000) * 100, 100)}%` }} />
+            <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-muted overflow-hidden">
+              <div className="h-full rounded-full bg-gradient-to-r from-primary to-lime-400" style={{ width: `${ptsProgress}%` }} />
             </div>
-            <div className="flex justify-between text-[10px] text-slate-400 mt-1.5">
+            <div className="flex justify-between text-[10px] text-slate-400 dark:text-muted-foreground mt-1.5">
               <span>Newcomer</span><span>Diamond</span>
             </div>
           </Card>
         </div>
 
         {/* ── Tabs ── */}
-        <div className="flex gap-0.5 p-1 bg-white border border-slate-200 rounded-xl mb-5 overflow-x-auto scrollbar-hide shadow-sm">
+        <div className="flex gap-0.5 p-1 bg-white dark:bg-card border border-slate-200 dark:border-border rounded-xl mb-5 overflow-x-auto scrollbar-hide shadow-sm">
           {TABS.map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
               className={cn(
                 "flex-1 min-w-[90px] px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 whitespace-nowrap",
-                tab === t ? "bg-primary text-black shadow-sm" : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                tab === t ? "bg-primary text-black shadow-sm" : "text-slate-500 dark:text-muted-foreground hover:text-slate-800 dark:hover:text-foreground hover:bg-slate-50 dark:hover:bg-muted"
               )}
             >
               {t}
@@ -758,14 +777,14 @@ export function Profile() {
                     const prices = JSON.parse(m.outcomePrices || "[]");
                     const yesOdds = prices[0] ? Math.round(parseFloat(prices[0]) * 100) : 0;
                     return (
-                      <div key={m.conditionId} className={cn("flex items-center gap-3 py-3", i < arr.length - 1 ? "border-b border-slate-100" : "")}>
+                      <div key={m.conditionId} className={cn("flex items-center gap-3 py-3", i < arr.length - 1 ? "border-b border-slate-100 dark:border-border" : "")}>
                         <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center text-[10px] font-bold flex-shrink-0",
-                          yesOdds >= 50 ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-600 border border-red-200")}>
+                          yesOdds >= 50 ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800" : "bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800")}>
                           {yesOdds}%
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-slate-700 truncate">{m.question}</p>
-                          <p className="text-[10px] text-slate-400 mt-0.5">Vol: {m.volume || "—"}</p>
+                          <p className="text-xs font-medium text-slate-700 dark:text-foreground truncate">{m.question}</p>
+                          <p className="text-[10px] text-slate-400 dark:text-muted-foreground mt-0.5">Vol: {m.volume || "—"}</p>
                         </div>
                       </div>
                     );
@@ -785,15 +804,15 @@ export function Profile() {
                   <p className="text-sm text-slate-400 text-center py-4">Loading products…</p>
                 ) : (
                   shopProducts.slice(0, 3).map((p, i) => (
-                    <div key={p.id} className={cn("flex items-center gap-3 py-3", i < 2 ? "border-b border-slate-100" : "")}>
-                      <div className="w-9 h-9 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    <div key={p.id} className={cn("flex items-center gap-3 py-3", i < 2 ? "border-b border-slate-100 dark:border-border" : "")}>
+                      <div className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-100 dark:border-indigo-800 flex items-center justify-center flex-shrink-0 overflow-hidden">
                         {p.images[0] ? <img src={p.images[0]} alt={p.title} className="w-full h-full object-cover rounded-lg" /> : <IconShoppingBag size={15} />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-slate-700 truncate">{p.title}</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">{p.currency}</p>
+                        <p className="text-xs font-medium text-slate-700 dark:text-foreground truncate">{p.title}</p>
+                        <p className="text-[10px] text-slate-400 dark:text-muted-foreground mt-0.5">{p.currency}</p>
                       </div>
-                      <span className="text-xs font-semibold text-slate-700 tabular-nums">${p.price.toFixed(2)}</span>
+                      <span className="text-xs font-semibold text-slate-700 dark:text-foreground tabular-nums">${p.price.toFixed(2)}</span>
                     </div>
                   ))
                 )}
@@ -807,7 +826,7 @@ export function Profile() {
         {tab === "Predictions" && (
           <div className="space-y-4 animate-in fade-in-0 duration-200">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-slate-900">Prediction Markets</h2>
+              <h2 className="text-base font-bold text-slate-900 dark:text-foreground">Prediction Markets</h2>
               <Link href="/prediction" className="text-xs text-primary font-medium hover:underline flex items-center gap-1">
                 Browse all <IconExternalLink size={12} />
               </Link>
@@ -825,7 +844,7 @@ export function Profile() {
                   <Card key={m.conditionId} className="p-5 hover:border-primary/50 hover:shadow-md transition-all duration-150 cursor-default">
                     <div className="flex items-start gap-4">
                       <div className={cn("w-13 h-12 rounded-xl flex flex-col items-center justify-center flex-shrink-0 border px-3",
-                        yesOdds >= 65 ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-amber-50 border-amber-200 text-amber-700")}>
+                        yesOdds >= 65 ? "bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400" : "bg-amber-50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400")}>
                         <span className="text-sm font-bold tabular-nums leading-none">{yesOdds}%</span>
                         <span className="text-[9px] uppercase tracking-wide opacity-60">YES</span>
                       </div>
@@ -833,29 +852,29 @@ export function Profile() {
                         <div className="flex items-start gap-3 mb-2">
                           <div className="flex-1 min-w-0">
                             <div className="flex flex-wrap gap-1.5 mb-1.5">
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200 font-medium">Crypto</span>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-muted text-slate-500 dark:text-muted-foreground border border-slate-200 dark:border-border font-medium">Crypto</span>
                               {(m.volumeNum || 0) > 500000 && (
-                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-lime-50 text-lime-700 border border-lime-200 font-medium flex items-center gap-1">
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-lime-50 dark:bg-lime-950/50 text-lime-700 dark:text-lime-400 border border-lime-200 dark:border-lime-800 font-medium flex items-center gap-1">
                                   <IconTrending size={10} /> Trending
                                 </span>
                               )}
                             </div>
-                            <h3 className="text-sm font-semibold text-slate-800 leading-snug">{m.question}</h3>
+                            <h3 className="text-sm font-semibold text-slate-800 dark:text-foreground leading-snug">{m.question}</h3>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 mb-2.5">
                           <span className="text-[10px] text-emerald-600 font-medium w-7">YES</span>
-                          <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                          <div className="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-muted overflow-hidden">
                             <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400" style={{ width: `${yesOdds}%` }} />
                           </div>
                           <span className="text-[10px] text-red-500 font-medium w-7 text-right">NO</span>
                         </div>
-                        <div className="flex gap-4 text-[11px] text-slate-400">
+                        <div className="flex gap-4 text-[11px] text-slate-400 dark:text-muted-foreground">
                           <span>Vol {m.volume || "—"}</span>
                         </div>
                       </div>
                     </div>
-                    <div className="mt-4 pt-3 border-t border-slate-100 flex gap-2">
+                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-border flex gap-2">
                       <Button size="sm" className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium border-0"
                         onClick={() => setLocation(`/prediction/${m.conditionId}`)}>
                         Buy YES
@@ -864,7 +883,7 @@ export function Profile() {
                         onClick={() => setLocation(`/prediction/${m.conditionId}`)}>
                         Buy NO
                       </Button>
-                      <Button size="sm" variant="ghost" className="h-7 text-xs text-slate-400 hover:text-slate-700 ml-auto"
+                      <Button size="sm" variant="ghost" className="h-7 text-xs text-slate-400 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground ml-auto"
                         onClick={() => setLocation(`/prediction/${m.conditionId}`)}>
                         Details <IconChevronRight size={11} className="ml-0.5 inline" />
                       </Button>
@@ -880,7 +899,7 @@ export function Profile() {
         {tab === "Shop" && (
           <div className="animate-in fade-in-0 duration-200">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-bold text-slate-900">Pexly Store</h2>
+              <h2 className="text-base font-bold text-slate-900 dark:text-foreground">Pexly Store</h2>
               <Link href="/shop" className="text-xs text-primary font-medium hover:underline flex items-center gap-1">
                 Full store <IconExternalLink size={12} />
               </Link>
@@ -890,29 +909,29 @@ export function Profile() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {shopProducts.map(p => (
-                  <Card key={p.id} className="overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-150 group cursor-pointer"
+                  <Card key={p.id} className="overflow-hidden hover:shadow-md hover:border-slate-300 dark:hover:border-border transition-all duration-150 group cursor-pointer"
                     onClick={() => p.inStock && setLocation(`/shop/product/${encodeURIComponent(p.id)}`)}>
-                    <div className="h-40 flex items-center justify-center relative bg-slate-100 overflow-hidden">
+                    <div className="h-40 flex items-center justify-center relative bg-slate-100 dark:bg-muted overflow-hidden">
                       {p.images[0]
                         ? <img src={p.images[0]} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                         : <IconShoppingBag size={42} gradient />}
                       {!p.inStock && (
-                        <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
-                          <span className="text-xs font-semibold text-slate-500 bg-white border border-slate-200 px-3 py-1 rounded-full shadow-sm">Out of Stock</span>
+                        <div className="absolute inset-0 bg-white/70 dark:bg-card/70 flex items-center justify-center">
+                          <span className="text-xs font-semibold text-slate-500 dark:text-muted-foreground bg-white dark:bg-card border border-slate-200 dark:border-border px-3 py-1 rounded-full shadow-sm">Out of Stock</span>
                         </div>
                       )}
                     </div>
                     <div className="p-4">
-                      {p.productType && <div className="text-[10px] text-slate-400 uppercase tracking-widest font-medium mb-1">{p.productType}</div>}
-                      <h3 className="text-sm font-semibold text-slate-900 mb-2 leading-snug group-hover:text-primary transition-colors">{p.title}</h3>
+                      {p.productType && <div className="text-[10px] text-slate-400 dark:text-muted-foreground uppercase tracking-widest font-medium mb-1">{p.productType}</div>}
+                      <h3 className="text-sm font-semibold text-slate-900 dark:text-foreground mb-2 leading-snug group-hover:text-primary transition-colors">{p.title}</h3>
                       <div className="flex items-center gap-0.5 mb-3">
                         {Array.from({ length: 5 }).map((_, i) => <IconStar key={i} size={12} filled={i < 4} />)}
-                        <span className="text-[11px] text-slate-400 ml-1">{p.currency}</span>
+                        <span className="text-[11px] text-slate-400 dark:text-muted-foreground ml-1">{p.currency}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <div className="text-base font-bold text-slate-900">${p.price.toFixed(2)}</div>
+                        <div className="text-base font-bold text-slate-900 dark:text-foreground">${p.price.toFixed(2)}</div>
                         <Button size="sm" disabled={!p.inStock}
-                          className={cn("h-8 text-xs font-semibold", p.inStock ? "bg-primary text-black hover:bg-primary/90" : "opacity-40 bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed")}>
+                          className={cn("h-8 text-xs font-semibold", p.inStock ? "bg-primary text-black hover:bg-primary/90" : "opacity-40 bg-slate-100 dark:bg-muted text-slate-400 dark:text-muted-foreground border border-slate-200 dark:border-border cursor-not-allowed")}>
                           {p.inStock ? "Add to Cart" : "Sold Out"}
                         </Button>
                       </div>
@@ -930,38 +949,38 @@ export function Profile() {
 
             {/* Spot / Perp Trade History */}
             <div className="flex items-center justify-between mt-2">
-              <h2 className="text-base font-bold text-slate-900">Trade History</h2>
-              <div className="flex gap-1 p-0.5 bg-slate-100 rounded-lg">
+              <h2 className="text-base font-bold text-slate-900 dark:text-foreground">Trade History</h2>
+              <div className="flex gap-1 p-0.5 bg-slate-100 dark:bg-muted rounded-lg">
                 {(["spot", "perp"] as const).map(t => (
                   <button key={t} onClick={() => setTradeTypeFilter(t)}
                     className={cn("px-3 py-1 text-xs font-medium rounded-md transition-all",
-                      tradeTypeFilter === t ? "bg-white text-slate-800 shadow-sm" : "text-slate-400 hover:text-slate-600")}>
+                      tradeTypeFilter === t ? "bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm" : "text-slate-400 dark:text-muted-foreground hover:text-slate-600 dark:hover:text-foreground")}>
                     {t === "spot" ? "Spot" : "Perpetual"}
                   </button>
                 ))}
               </div>
             </div>
 
-            <Card className="divide-y divide-slate-100">
+            <Card className="divide-y divide-slate-100 dark:divide-border">
               {loadingTrades ? (
-                <div className="px-5 py-6 text-sm text-slate-400 flex items-center gap-2"><LoadingSpinner size="sm" /> Loading trades…</div>
+                <div className="px-5 py-6 text-sm text-slate-400 dark:text-muted-foreground flex items-center gap-2"><LoadingSpinner size="sm" /> Loading trades…</div>
               ) : tradeTypeFilter === "spot" ? (
                 spotTrades.length === 0 ? (
-                  <div className="px-5 py-6 text-sm text-slate-400">No spot trade history</div>
+                  <div className="px-5 py-6 text-sm text-slate-400 dark:text-muted-foreground">No spot trade history</div>
                 ) : (
                   spotTrades.map((trade, i) => (
-                    <div key={trade.id || i} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors">
+                    <div key={trade.id || i} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-muted/50 transition-colors">
                       <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center text-[10px] font-bold flex-shrink-0",
-                        trade.side === "BUY" ? "bg-emerald-50 border border-emerald-200 text-emerald-700" : "bg-red-50 border border-red-200 text-red-600")}>
+                        trade.side === "BUY" ? "bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400" : "bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400")}>
                         {trade.side === "BUY" ? "BUY" : "SELL"}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-slate-700 font-medium">{trade.symbol}</p>
-                        <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5"><IconClock size={10} />{trade.time ? new Date(trade.time).toLocaleDateString() : "—"}</p>
+                        <p className="text-sm text-slate-700 dark:text-foreground font-medium">{trade.symbol}</p>
+                        <p className="text-[11px] text-slate-400 dark:text-muted-foreground flex items-center gap-1 mt-0.5"><IconClock size={10} />{trade.time ? new Date(trade.time).toLocaleDateString() : "—"}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-semibold text-slate-800">{parseFloat(trade.qty || "0").toFixed(6)}</p>
-                        <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium", trade.status === "FILLED" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500")}>
+                        <p className="text-sm font-semibold text-slate-800 dark:text-foreground">{parseFloat(trade.qty || "0").toFixed(6)}</p>
+                        <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium", trade.status === "FILLED" ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400" : "bg-slate-100 dark:bg-muted text-slate-500 dark:text-muted-foreground")}>
                           {trade.status || "—"}
                         </span>
                       </div>
@@ -970,22 +989,22 @@ export function Profile() {
                 )
               ) : (
                 perpTrades.length === 0 ? (
-                  <div className="px-5 py-6 text-sm text-slate-400">No perpetual positions</div>
+                  <div className="px-5 py-6 text-sm text-slate-400 dark:text-muted-foreground">No perpetual positions</div>
                 ) : (
                   perpTrades.map((pos, i) => {
                     const pnl = parseFloat(pos.unrealizedProfit || "0");
                     return (
-                      <div key={pos.id || i} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors">
+                      <div key={pos.id || i} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-muted/50 transition-colors">
                         <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center text-[10px] font-bold flex-shrink-0",
-                          pos.side === "LONG" ? "bg-emerald-50 border border-emerald-200 text-emerald-700" : "bg-red-50 border border-red-200 text-red-600")}>
+                          pos.side === "LONG" ? "bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400" : "bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400")}>
                           {pos.side === "LONG" ? "LONG" : "SHORT"}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-slate-700 font-medium">{pos.symbol}{pos.leverage ? ` ${pos.leverage}×` : ""}</p>
-                          <p className="text-[11px] text-slate-400 mt-0.5">Entry: {parseFloat(pos.entryPrice || "0").toFixed(2)}</p>
+                          <p className="text-sm text-slate-700 dark:text-foreground font-medium">{pos.symbol}{pos.leverage ? ` ${pos.leverage}×` : ""}</p>
+                          <p className="text-[11px] text-slate-400 dark:text-muted-foreground mt-0.5">Entry: {parseFloat(pos.entryPrice || "0").toFixed(2)}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-semibold text-slate-800">{parseFloat(pos.positionAmt || "0").toFixed(4)}</p>
+                          <p className="text-sm font-semibold text-slate-800 dark:text-foreground">{parseFloat(pos.positionAmt || "0").toFixed(4)}</p>
                           <span className={cn("text-[10px] font-semibold", pnl >= 0 ? "text-emerald-600" : "text-red-500")}>
                             {pnl >= 0 ? "+" : ""}{pnl.toFixed(2)} USD
                           </span>
