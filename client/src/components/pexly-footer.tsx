@@ -20,7 +20,13 @@ import { Link } from "wouter";
 const footerSections = [
   {
     title: "For You",
-    links: ["Trade Cryptocurrency", "Buy Cryptocurrency", "Sell Cryptocurrency", "Wallet", "Converter"]
+    links: [
+      { text: "Trade Cryptocurrency", href: "/buy-crypto" },
+      { text: "Buy Cryptocurrency", href: "/buy-crypto" },
+      { text: "Sell Cryptocurrency", href: "/buy-crypto?mode=sell" },
+      "Wallet",
+      "Converter"
+    ]
   },
   {
     title: "For Your Business",
@@ -32,7 +38,12 @@ const footerSections = [
   },
   {
     title: "Buy Anywhere",
-    links: ["Buy Bitcoin", "Buy Ethereum", "Buy USDT", "Buy USDC"]
+    links: [
+      { text: "Buy Bitcoin", href: "/buy-crypto?crypto=BTC" },
+      { text: "Buy Ethereum", href: "/buy-crypto?crypto=ETH" },
+      { text: "Buy USDT", href: "/buy-crypto?crypto=USDT" },
+      { text: "Buy USDC", href: "/buy-crypto?crypto=USDC" }
+    ]
   },
   {
     title: "Useful Links",
