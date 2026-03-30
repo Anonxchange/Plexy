@@ -6,19 +6,19 @@ const footerColumns = [
   {
     heading: "Buy Crypto",
     links: [
-      { label: "Buy Bitcoin", href: "/p2p?tab=buy&crypto=BTC" },
-      { label: "Buy Ethereum", href: "/p2p?tab=buy&crypto=ETH" },
-      { label: "Buy Tether", href: "/p2p?tab=buy&crypto=USDT" },
-      { label: "Buy USDC", href: "/p2p?tab=buy&crypto=USDC" },
+      { label: "Buy Bitcoin", href: "/buy-crypto?crypto=BTC" },
+      { label: "Buy Ethereum", href: "/buy-crypto?crypto=ETH" },
+      { label: "Buy Tether", href: "/buy-crypto?crypto=USDT" },
+      { label: "Buy USDC", href: "/buy-crypto?crypto=USDC" },
     ],
   },
   {
     heading: "Sell Crypto",
     links: [
-      { label: "Sell Bitcoin", href: "/p2p?tab=sell&crypto=BTC" },
-      { label: "Sell Ethereum", href: "/p2p?tab=sell&crypto=ETH" },
-      { label: "Sell Tether", href: "/p2p?tab=sell&crypto=USDT" },
-      { label: "Sell USDC", href: "/p2p?tab=sell&crypto=USDC" },
+      { label: "Sell Bitcoin", href: "/buy-crypto?mode=sell&crypto=BTC" },
+      { label: "Sell Ethereum", href: "/buy-crypto?mode=sell&crypto=ETH" },
+      { label: "Sell Tether", href: "/buy-crypto?mode=sell&crypto=USDT" },
+      { label: "Sell USDC", href: "/buy-crypto?mode=sell&crypto=USDC" },
     ],
   },
   {
