@@ -1,5 +1,6 @@
 import { toast } from "sonner";
 import { supabase } from "./supabase";
+import { devLog } from "./dev-logger";
 
 export interface ShopifyProduct {
   node: {
@@ -69,7 +70,7 @@ export async function storefrontApiRequest(queryName: string, variables: Record<
         return;
       }
       const errorMessage = error.message || "Failed to process request";
-      console.error('Supabase function error:', error);
+      devLog.error('Supabase function error:', error);
       throw new Error(errorMessage);
     }
 
@@ -79,10 +80,7 @@ export async function storefrontApiRequest(queryName: string, variables: Record<
 
     return data;
   } catch (err: any) {
-    console.error('Storefront API error:', err);
-    toast.error("Shopify Error", {
-      description: err.message || "Failed to connect to Shopify store",
-    });
+    devLog.error('Storefront API error:', err);
     throw err;
   }
 }
@@ -158,7 +156,7 @@ export const shopifyService = {
     });
 
     if (data?.data?.cartCreate?.userErrors?.length > 0) {
-      console.error('Cart creation failed:', data.data.cartCreate.userErrors);
+      devLog.error('Cart creation failed:', data.data.cartCreate.userErrors);
       return null;
     }
 
@@ -167,7 +165,7 @@ export const shopifyService = {
 
     const lineId = cart.lines?.edges?.[0]?.node?.id;
     if (!lineId) {
-      console.warn('Cart created but no line ID found in response');
+      devLog.warn('Cart created but no line ID found in response');
     }
 
     return { 
