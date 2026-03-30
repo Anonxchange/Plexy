@@ -35,6 +35,11 @@ export interface PolymarketMarket {
   lastTradePrice: number;
 }
 
+export interface PricePoint {
+  t: number;
+  p: number;
+}
+
 export function useMarkets(params?: { limit?: number; offset?: number; tag?: string; closed?: string }) {
   return useQuery({
     queryKey: ['polymarket', 'markets', params],
@@ -68,11 +73,30 @@ export function useOrderbook(tokenId: string | undefined) {
   });
 }
 
+export function usePriceHistory(conditionId: string | undefined, interval: string) {
+  return useQuery({
+    queryKey: ['polymarket', 'priceHistory', conditionId, interval],
+    queryFn: () => polymarketRequest('getPriceHistory', { conditionId, interval }),
+    enabled: !!conditionId,
+    staleTime: 60000,
+  });
+}
+
+export function useBalance() {
+  return useQuery({
+    queryKey: ['polymarket', 'balance'],
+    queryFn: () => polymarketRequest('getBalance'),
+    staleTime: 15000,
+    retry: false,
+  });
+}
+
 export function useOpenOrders() {
   return useQuery({
     queryKey: ['polymarket', 'openOrders'],
     queryFn: () => polymarketRequest('getOpenOrders'),
     refetchInterval: 15000,
+    retry: false,
   });
 }
 
@@ -83,6 +107,7 @@ export function usePlaceOrder() {
       polymarketRequest('postOrder', { order }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['polymarket', 'openOrders'] });
+      queryClient.invalidateQueries({ queryKey: ['polymarket', 'balance'] });
     },
   });
 }
