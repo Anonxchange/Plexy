@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/lib/supabase";
@@ -396,6 +396,15 @@ const BuyCryptoPage = () => {
   const [crypto, setCrypto] = useState("BTC");
   const [showAllAssets, setShowAllAssets] = useState(false);
   const [activeCrypto, setActiveCrypto] = useState("BTC");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const modeParam = params.get("mode");
+    const cryptoParam = params.get("crypto")?.toUpperCase();
+    if (modeParam === "sell" || modeParam === "buy") setMode(modeParam);
+    if (cryptoParam) { setCrypto(cryptoParam); setActiveCrypto(cryptoParam); }
+  }, []);
+
   const cdpOnramp = useCdpOnramp();
   const cdpOfframp = useCdpOfframp();
 
