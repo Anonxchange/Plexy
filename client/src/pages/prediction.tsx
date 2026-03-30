@@ -1,5 +1,6 @@
 import { useHead } from "@unhead/react";
 import { useMarkets, PolymarketMarket } from "@/hooks/use-polymarket";
+import { PolymarketImage } from "@/components/polymarket-image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -182,7 +183,7 @@ function FeaturedCard({ market, allMarkets }: { market: PolymarketMarket; allMar
       <div className="lg:col-span-3 p-6 md:p-8 flex flex-col gap-5">
         <div className="flex items-center gap-2.5">
           {market.image && (
-            <img src={market.image} alt="" className="w-8 h-8 rounded-lg object-cover border border-border" />
+            <PolymarketImage src={market.image} className="w-8 h-8 rounded-lg object-cover border border-border" />
           )}
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
@@ -294,7 +295,7 @@ function RelatedMarketRow({ market, index }: { market: PolymarketMarket; index: 
     >
       <span className="text-xs font-bold text-muted-foreground w-4 shrink-0 pt-0.5">{index}</span>
       {market.image && (
-        <img src={market.image} alt="" className="w-7 h-7 rounded-md object-cover border border-border shrink-0" />
+        <PolymarketImage src={market.image} className="w-7 h-7 rounded-md object-cover border border-border shrink-0" />
       )}
       <div className="flex-1 min-w-0">
         <p className="text-xs font-semibold leading-snug line-clamp-2 group-hover:text-primary transition-colors">
@@ -342,7 +343,11 @@ function MarketCard({ market }: { market: PolymarketMarket }) {
         {/* Header */}
         <div className="flex items-start gap-2.5">
           {market.image ? (
-            <img src={market.image} alt="" className="w-9 h-9 rounded-lg object-cover border border-border shrink-0" />
+            <PolymarketImage src={market.image} className="w-9 h-9 rounded-lg object-cover border border-border shrink-0" fallback={
+              <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                <BarChart2 className="w-4 h-4 text-muted-foreground" />
+              </div>
+            } />
           ) : (
             <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
               <BarChart2 className="w-4 h-4 text-muted-foreground" />
