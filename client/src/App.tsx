@@ -193,7 +193,7 @@ function AppRoutes() {
       <Route path="/perpetual">{() => <LazyRoute component={Perpetual} />}</Route>
       <Route path="/swap">{() => <LazyRoute component={Swap} />}</Route>
       <Route path="/prediction">{() => <LazyRoute component={Prediction} />}</Route>
-      <Route path="/prediction/:id">{() => <LazyRoute component={PredictionDetail} />}</Route>
+      <Route path="/prediction/:id">{() => <ProtectedRoute component={PredictionDetail} />}</Route>
       <Route path="/about">{() => <LazyRoute component={About} />}</Route>
       <Route path="/explorer">{() => <LazyRoute component={Explorer} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/explorer/prices">{() => <LazyRoute component={Prices} skeleton={<ChartPageSkeleton />} />}</Route>
