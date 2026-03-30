@@ -68,7 +68,8 @@ const Terms = lazy(() => import("@/pages/terms"));
 const Privacy = lazy(() => import("@/pages/privacy"));
 const CookiePolicy = lazy(() => import("@/pages/cookie-policy"));
 const RestrictedCountries = lazy(() => import("@/pages/restricted-countries"));
-const VIPTerms = lazy(() => import("@/pages/vip-terms"));
+const RewardsProgram = lazy(() => import("@/pages/rewards-program"));
+const RiskDisclosure = lazy(() => import("@/pages/risk-disclosure"));
 const SubmitIdea = lazy(() => import("@/pages/submit-idea"));
 const MedalsPage = lazy(() => import("@/pages/medals"));
 
@@ -224,7 +225,8 @@ function AppRoutes() {
       <Route path="/privacy">{() => <LazyRoute component={Privacy} />}</Route>
       <Route path="/cookie-policy">{() => <LazyRoute component={CookiePolicy} />}</Route>
       <Route path="/restricted-countries">{() => <LazyRoute component={RestrictedCountries} />}</Route>
-      <Route path="/vip-terms">{() => <LazyRoute component={VIPTerms} />}</Route>
+      <Route path="/rewards-program">{() => <LazyRoute component={RewardsProgram} />}</Route>
+      <Route path="/risk-disclosure">{() => <LazyRoute component={RiskDisclosure} />}</Route>
       <Route path="/profile/:userId?">{() => <LazyRoute component={Profile} />}</Route>
       <Route path="/verify-email" component={VerifyEmail} />
 
@@ -269,7 +271,7 @@ function AppRoutes() {
 function AppContent() {
   const { user, walletImportState, setWalletImportState } = useAuth();
   const [location] = useLocation();
-  const hideAppFooter = ["/", "/about", "/spot", "/perpetual", "/swap", "/prediction", "/wallet", "/analysis", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/utility-bill", "/utility", "/wallet/stake", "/wallet/lightning", "/wallet/buy-crypto", "/gift-cards", "/dashboard", "/profile", "/shop", "/shop/post", "/account-settings", "/verification", "/admin", "/admin/verifications", "/admin/blog", "/admin/gift-cards", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/support", "/contact", "/referral", "/rewards", "/terms", "/privacy", "/cookie-policy", "/restricted-countries", "/vip-terms", "/submit-idea", "/explorer", "/shop/product", "/buy-crypto", "/bitcoin-calculator"].some(path => location === path || location.startsWith(path + "/")) || location.startsWith("/explorer/") || location.startsWith("/blog/") || location.startsWith("/gift-cards/");
+  const hideAppFooter = ["/", "/about", "/spot", "/perpetual", "/swap", "/prediction", "/wallet", "/analysis", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/utility-bill", "/utility", "/wallet/stake", "/wallet/lightning", "/wallet/buy-crypto", "/gift-cards", "/dashboard", "/profile", "/shop", "/shop/post", "/account-settings", "/verification", "/admin", "/admin/verifications", "/admin/blog", "/admin/gift-cards", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/support", "/contact", "/referral", "/rewards", "/terms", "/privacy", "/cookie-policy", "/restricted-countries", "/rewards-program", "/risk-disclosure", "/submit-idea", "/explorer", "/shop/product", "/buy-crypto", "/bitcoin-calculator"].some(path => location === path || location.startsWith(path + "/")) || location.startsWith("/explorer/") || location.startsWith("/blog/") || location.startsWith("/gift-cards/");
   const hideHeaderAndNav = ["/signin", "/signup", "/verify-email", "/support", "/contact", "/explorer"].includes(location) || location.startsWith("/explorer/");
   const hidePageNav = ["/terms", "/explorer"].includes(location) || location.startsWith("/explorer/");
 
