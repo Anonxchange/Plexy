@@ -1,4 +1,4 @@
-import { useMarketDetail, useOrderbook } from "@/hooks/use-polymarket";
+import { useMarketDetail, useOrderbook, usePriceHistory, useBalance, useOpenOrders, usePlaceOrder, useCancelOrder } from "@/hooks/use-polymarket";
 import { PolymarketImage } from "@/components/polymarket-image";
 import { useRoute, useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,38 +7,41 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ChevronLeft, Share2, Bookmark, TrendingUp, TrendingDown,
-  Clock, BarChart2, Droplets, ArrowUpRight, Info
+  Clock, BarChart2, Droplets, Info, X, Loader2, AlertCircle,
+  CheckCircle2, Wallet,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useState, useMemo } from "react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer
+  Tooltip, ResponsiveContainer,
 } from "recharts";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
-const QUICK_AMOUNTS = [1, 5, 10, 50, 100];
-const CHART_INTERVALS = ["1H", "6H", "1D", "1W", "1M"];
+const QUICK_AMOUNTS  = [1, 5, 10, 50, 100];
+const CHART_INTERVALS = ["1H", "6H", "1D", "1W", "1M"] as const;
+type Interval = (typeof CHART_INTERVALS)[number];
 
 export default function PredictionDetailPage() {
-  const [, params] = useRoute("/prediction/:id");
+  const [, params]    = useRoute("/prediction/:id");
   const [, setLocation] = useLocation();
 
   const { data: market, isLoading: marketLoading, error: marketError } =
     useMarketDetail(params?.id);
 
-  const [chartInterval, setChartInterval] = useState("1D");
-  const [tradeTab, setTradeTab] = useState<"buy" | "sell">("buy");
-  const [rulesTab, setRulesTab] = useState<"rules" | "context">("rules");
-  const [amount, setAmount] = useState("");
+  const [chartInterval, setChartInterval] = useState<Interval>("1D");
+  const [tradeTab,      setTradeTab]      = useState<"buy" | "sell">("buy");
+  const [rulesTab,      setRulesTab]      = useState<"rules" | "context">("rules");
+  const [amount,        setAmount]        = useState("");
 
-  /* ── Parse outcomes ── */
+  /* ── Outcomes ── */
   const outcomes = useMemo(() => {
     try {
       if (!market) return [];
       const prices = safeJsonParse<string[]>(market.outcomePrices, []);
-      const ids = safeJsonParse<string[]>(market.clobTokenIds, []);
-      const names = safeJsonParse<string[]>(market.outcomes, []);
+      const ids    = safeJsonParse<string[]>(market.clobTokenIds, []);
+      const names  = safeJsonParse<string[]>(market.outcomes, []);
       if (!names.length) return [];
       const mapped = names.map((name: string, i: number) => ({
         name,
@@ -56,26 +59,59 @@ export default function PredictionDetailPage() {
 
   const isBinary = useMemo(
     () => outcomes.length === 2 && outcomes.every(o => ["yes", "no"].includes(o.name.toLowerCase())),
-    [outcomes]
+    [outcomes],
   );
 
   const [selectedOutcomeIdx, setSelectedOutcomeIdx] = useState(0);
   const selectedOutcome = outcomes[selectedOutcomeIdx];
+
   const { data: orderbook } = useOrderbook(selectedOutcome?.tokenId);
 
-  const isYesSelected = selectedOutcome?.name?.toLowerCase() === "yes";
+  /* ── Price history ── */
+  const { data: historyData, isLoading: historyLoading } =
+    usePriceHistory(market?.conditionId, chartInterval);
 
-  const yesOutcome = outcomes.find(o => o.name.toLowerCase() === "yes");
-  const noOutcome  = outcomes.find(o => o.name.toLowerCase() === "no");
-  const yesCents   = Math.round((yesOutcome?.price ?? 0.5) * 100);
-  const noCents    = Math.round((noOutcome?.price ?? 0.5) * 100);
+  const chartPoints: { t: number; v: number }[] = useMemo(() => {
+    const raw: { t: number; p: number }[] = historyData?.history ?? [];
+    if (raw.length >= 2) {
+      return raw.map((d, i) => ({ t: i, v: Math.round(d.p * 100) }));
+    }
+    return [];
+  }, [historyData]);
 
-  const selectedCents = Math.round((selectedOutcome?.price ?? 0.5) * 100);
-  const amountNum     = Number(amount) || 0;
+  /* ── 24h change (always use 1D history price series) ── */
+  const { data: dailyHistory } = usePriceHistory(market?.conditionId, "1D");
+  const change24h = useMemo(() => {
+    const pts: { t: number; p: number }[] = dailyHistory?.history ?? [];
+    if (pts.length < 2) return null;
+    const first = pts[0].p;
+    const last  = pts[pts.length - 1].p;
+    const diff  = (last - first) * 100;
+    return { value: diff, pct: ((last - first) / (first || 1)) * 100 };
+  }, [dailyHistory]);
+
+  /* ── Balance & orders ── */
+  const { data: balanceData } = useBalance();
+  const { data: openOrders }  = useOpenOrders();
+  const placeOrder    = usePlaceOrder();
+  const cancelOrder   = useCancelOrder();
+
+  const availableUsdc: number = useMemo(() => {
+    if (!balanceData) return 0;
+    return parseFloat(balanceData.balance ?? balanceData.allowance ?? "0");
+  }, [balanceData]);
+
+  /* ── Derived trade values ── */
+  const isYesSelected   = selectedOutcome?.name?.toLowerCase() === "yes";
+  const yesOutcome      = outcomes.find(o => o.name.toLowerCase() === "yes");
+  const noOutcome       = outcomes.find(o => o.name.toLowerCase() === "no");
+  const yesCents        = Math.round((yesOutcome?.price ?? 0.5) * 100);
+  const noCents         = Math.round((noOutcome?.price  ?? 0.5) * 100);
+  const selectedCents   = Math.round((selectedOutcome?.price ?? 0.5) * 100);
+  const amountNum       = Number(amount) || 0;
   const estimatedShares = selectedOutcome?.price > 0 ? amountNum / selectedOutcome.price : 0;
   const potentialProfit = estimatedShares > amountNum ? (estimatedShares - amountNum).toFixed(2) : "0.00";
-
-  const endDate = market?.endDate ? format(new Date(market.endDate), "MMM d, yyyy") : null;
+  const endDate         = market?.endDate ? format(new Date(market.endDate), "MMM d, yyyy") : null;
 
   const volume = market?.volumeNum ?? 0;
   const formattedVolume = volume >= 1_000_000
@@ -84,23 +120,53 @@ export default function PredictionDetailPage() {
     ? `$${(volume / 1_000).toFixed(0)}K`
     : `$${volume.toFixed(0)}`;
 
-  /* ── Chart data ── */
-  const chartData = useMemo(() => {
-    const history = orderbook?.history || [];
-    if (history.length < 10) {
-      const base = selectedCents;
-      return Array.from({ length: 60 }, (_, i) => ({
-        t: i,
-        v: Math.max(2, Math.min(98, base + Math.sin(i / 6) * 4 + (Math.random() - 0.5) * 2.5)),
-      }));
-    }
-    return history.map((h: any, i: number) => ({ t: i, v: h.price * 100 }));
-  }, [orderbook, selectedCents]);
-
-  const chartColor = isYesSelected ? "#10b981" : "#f43f5e";
+  const chartColor  = isYesSelected ? "#10b981" : "#f43f5e";
   const chartGradId = isYesSelected ? "grad-yes" : "grad-no";
 
-  /* ── Loading / error states ── */
+  /* ── Place order handler ── */
+  function handlePlaceOrder() {
+    if (amountNum <= 0) {
+      toast.error("Enter an amount to trade");
+      return;
+    }
+    if (!selectedOutcome?.tokenId) {
+      toast.error("No outcome selected");
+      return;
+    }
+
+    const order = {
+      tokenID:  selectedOutcome.tokenId,
+      price:    selectedOutcome.price,
+      size:     amountNum,
+      side:     tradeTab === "buy" ? "BUY" : "SELL",
+      type:     "MARKET",
+      funderAddress: balanceData?.address ?? "",
+    };
+
+    placeOrder.mutate(order, {
+      onSuccess: (data) => {
+        if (data?.errorMsg) {
+          toast.error(`Order failed: ${data.errorMsg}`);
+        } else {
+          toast.success(`Order placed! ${tradeTab === "buy" ? "Buying" : "Selling"} ${estimatedShares.toFixed(2)} shares of ${selectedOutcome.name}`);
+          setAmount("");
+        }
+      },
+      onError: (err: Error) => {
+        toast.error(err.message || "Failed to place order");
+      },
+    });
+  }
+
+  /* ── Open order rows filtered for this market ── */
+  const marketOpenOrders = useMemo(() => {
+    if (!Array.isArray(openOrders)) return [];
+    return openOrders.filter((o: any) =>
+      outcomes.some(outcome => outcome.tokenId === o.asset_id),
+    );
+  }, [openOrders, outcomes]);
+
+  /* ── Loading / error ── */
   if (marketLoading) return <DetailSkeleton />;
 
   if (marketError || !market) return (
@@ -132,15 +198,12 @@ export default function PredictionDetailPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
 
-          {/* ════════════════════════════
-              LEFT COLUMN
-          ════════════════════════════ */}
+          {/* ════════════════ LEFT COLUMN ════════════════ */}
           <div className="space-y-4 min-w-0">
 
             {/* ── Market header ── */}
             <div className="bg-background border border-border rounded-2xl p-5 md:p-6">
               <div className="flex items-start gap-4">
-                {/* Image */}
                 {market.image ? (
                   <PolymarketImage
                     src={market.image}
@@ -168,6 +231,11 @@ export default function PredictionDetailPage() {
                         Live
                       </span>
                     )}
+                    {market.closed && (
+                      <span className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                        Closed
+                      </span>
+                    )}
                   </div>
                   <h1 className="text-lg md:text-2xl font-bold leading-snug tracking-tight">
                     {market.question}
@@ -192,23 +260,18 @@ export default function PredictionDetailPage() {
 
               {/* Stats row */}
               <div className="grid grid-cols-3 gap-3 mt-5 pt-5 border-t border-border">
-                <Stat label="Volume" value={formattedVolume} icon={<BarChart2 className="w-3.5 h-3.5" />} />
+                <Stat label="Volume"    value={formattedVolume} icon={<BarChart2 className="w-3.5 h-3.5" />} />
                 <Stat
                   label="Liquidity"
                   value={market.liquidityNum ? `$${(market.liquidityNum / 1000).toFixed(0)}K` : "—"}
                   icon={<Droplets className="w-3.5 h-3.5" />}
                 />
-                <Stat
-                  label="Ends"
-                  value={endDate ?? "—"}
-                  icon={<Clock className="w-3.5 h-3.5" />}
-                />
+                <Stat label="Ends"  value={endDate ?? "—"} icon={<Clock className="w-3.5 h-3.5" />} />
               </div>
             </div>
 
             {/* ── Chart card ── */}
             <div className="bg-background border border-border rounded-2xl p-5 md:p-6">
-              {/* Chart header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
                 <div>
                   <div className="flex items-end gap-2">
@@ -217,12 +280,25 @@ export default function PredictionDetailPage() {
                     </span>
                     <span className="text-base text-muted-foreground font-medium mb-1">chance</span>
                   </div>
+                  {/* Real 24h change */}
                   <div className="flex items-center gap-1.5 mt-1">
-                    <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                      <TrendingUp className="w-3.5 h-3.5" />
-                      +2.4%
-                    </span>
-                    <span className="text-xs text-muted-foreground">24h change</span>
+                    {change24h === null ? (
+                      <span className="text-xs text-muted-foreground">Loading 24h change…</span>
+                    ) : (
+                      <>
+                        <span className={cn(
+                          "flex items-center gap-1 text-xs font-semibold",
+                          change24h.value >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400",
+                        )}>
+                          {change24h.value >= 0
+                            ? <TrendingUp className="w-3.5 h-3.5" />
+                            : <TrendingDown className="w-3.5 h-3.5" />
+                          }
+                          {change24h.value >= 0 ? "+" : ""}{change24h.pct.toFixed(1)}%
+                        </span>
+                        <span className="text-xs text-muted-foreground">24h change</span>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -236,7 +312,7 @@ export default function PredictionDetailPage() {
                         "px-3 py-1.5 rounded-md text-xs font-semibold transition-all",
                         chartInterval === iv
                           ? "bg-foreground text-background"
-                          : "text-muted-foreground hover:text-foreground"
+                          : "text-muted-foreground hover:text-foreground",
                       )}
                     >
                       {iv}
@@ -245,7 +321,7 @@ export default function PredictionDetailPage() {
                 </div>
               </div>
 
-              {/* Binary Yes/No toggle on chart */}
+              {/* Binary Yes/No toggle */}
               {isBinary && (
                 <div className="flex gap-2 mb-4">
                   <button
@@ -254,7 +330,7 @@ export default function PredictionDetailPage() {
                       "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all",
                       selectedOutcomeIdx === 0
                         ? "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                        : "border-border text-muted-foreground hover:text-foreground"
+                        : "border-border text-muted-foreground hover:text-foreground",
                     )}
                   >
                     <span className="w-2 h-2 rounded-full bg-emerald-500" />
@@ -266,7 +342,7 @@ export default function PredictionDetailPage() {
                       "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all",
                       selectedOutcomeIdx === 1
                         ? "border-red-500 bg-red-500/10 text-red-600 dark:text-red-400"
-                        : "border-border text-muted-foreground hover:text-foreground"
+                        : "border-border text-muted-foreground hover:text-foreground",
                     )}
                   >
                     <span className="w-2 h-2 rounded-full bg-red-400" />
@@ -277,53 +353,59 @@ export default function PredictionDetailPage() {
 
               {/* Chart */}
               <div className="h-[260px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-                    <defs>
-                      <linearGradient id={chartGradId} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={chartColor} stopOpacity={0.18} />
-                        <stop offset="100%" stopColor={chartColor} stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      vertical={false}
-                      stroke="currentColor"
-                      opacity={0.06}
-                    />
-                    <XAxis dataKey="t" hide />
-                    <YAxis
-                      domain={[0, 100]}
-                      orientation="right"
-                      tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                      axisLine={false}
-                      tickLine={false}
-                      tickFormatter={v => `${v}%`}
-                      width={36}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--background))",
-                        borderColor: "hsl(var(--border))",
-                        borderRadius: "12px",
-                        boxShadow: "0 4px 24px rgba(0,0,0,0.12)",
-                        fontSize: 13,
-                        fontWeight: 600,
-                      }}
-                      formatter={(v: any) => [`${Math.round(v)}%`, "Chance"]}
-                      labelStyle={{ display: "none" }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="v"
-                      stroke={chartColor}
-                      strokeWidth={2.5}
-                      fill={`url(#${chartGradId})`}
-                      dot={false}
-                      activeDot={{ r: 4, fill: chartColor, stroke: "white", strokeWidth: 2 }}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+                {historyLoading ? (
+                  <div className="h-full flex items-center justify-center">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : chartPoints.length < 2 ? (
+                  <div className="h-full flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                    <BarChart2 className="w-8 h-8 opacity-30" />
+                    <p className="text-xs">No price history available for this interval</p>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartPoints} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                      <defs>
+                        <linearGradient id={chartGradId} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%"   stopColor={chartColor} stopOpacity={0.18} />
+                          <stop offset="100%" stopColor={chartColor} stopOpacity={0}    />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" opacity={0.06} />
+                      <XAxis dataKey="t" hide />
+                      <YAxis
+                        domain={[0, 100]}
+                        orientation="right"
+                        tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={v => `${v}%`}
+                        width={36}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--background))",
+                          borderColor:     "hsl(var(--border))",
+                          borderRadius:    "12px",
+                          boxShadow:       "0 4px 24px rgba(0,0,0,0.12)",
+                          fontSize: 13,
+                          fontWeight: 600,
+                        }}
+                        formatter={(v: any) => [`${Math.round(v)}%`, "Chance"]}
+                        labelStyle={{ display: "none" }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="v"
+                        stroke={chartColor}
+                        strokeWidth={2.5}
+                        fill={`url(#${chartGradId})`}
+                        dot={false}
+                        activeDot={{ r: 4, fill: chartColor, stroke: "white", strokeWidth: 2 }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </div>
 
@@ -341,24 +423,16 @@ export default function PredictionDetailPage() {
                     {/* Bids */}
                     <div>
                       <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3">
-                        <span>Bid price</span>
-                        <span>Size</span>
+                        <span>Bid price</span><span>Size</span>
                       </div>
                       <div className="space-y-2">
                         {(orderbook.bids || []).slice(0, 8).map((bid: any, i: number) => {
                           const pct = Number(bid.price) * 100;
                           return (
                             <div key={i} className="relative flex justify-between items-center text-sm">
-                              <div
-                                className="absolute inset-0 rounded bg-emerald-500/6"
-                                style={{ width: `${pct}%` }}
-                              />
-                              <span className="relative font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
-                                {pct.toFixed(1)}¢
-                              </span>
-                              <span className="relative text-muted-foreground tabular-nums">
-                                {Number(bid.size).toLocaleString()}
-                              </span>
+                              <div className="absolute inset-0 rounded bg-emerald-500/6" style={{ width: `${pct}%` }} />
+                              <span className="relative font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">{pct.toFixed(1)}¢</span>
+                              <span className="relative text-muted-foreground tabular-nums">{Number(bid.size).toLocaleString()}</span>
                             </div>
                           );
                         })}
@@ -367,28 +441,19 @@ export default function PredictionDetailPage() {
                         )}
                       </div>
                     </div>
-
                     {/* Asks */}
                     <div>
                       <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3">
-                        <span>Ask price</span>
-                        <span>Size</span>
+                        <span>Ask price</span><span>Size</span>
                       </div>
                       <div className="space-y-2">
                         {(orderbook.asks || []).slice(0, 8).map((ask: any, i: number) => {
                           const pct = Number(ask.price) * 100;
                           return (
                             <div key={i} className="relative flex justify-between items-center text-sm">
-                              <div
-                                className="absolute inset-0 rounded bg-red-500/6"
-                                style={{ width: `${pct}%` }}
-                              />
-                              <span className="relative font-semibold text-red-500 tabular-nums">
-                                {pct.toFixed(1)}¢
-                              </span>
-                              <span className="relative text-muted-foreground tabular-nums">
-                                {Number(ask.size).toLocaleString()}
-                              </span>
+                              <div className="absolute inset-0 rounded bg-red-500/6" style={{ width: `${pct}%` }} />
+                              <span className="relative font-semibold text-red-500 tabular-nums">{pct.toFixed(1)}¢</span>
+                              <span className="relative text-muted-foreground tabular-nums">{Number(ask.size).toLocaleString()}</span>
                             </div>
                           );
                         })}
@@ -402,9 +467,7 @@ export default function PredictionDetailPage() {
                   <div className="grid grid-cols-2 gap-6">
                     {[0, 1].map(col => (
                       <div key={col} className="space-y-2">
-                        {[...Array(6)].map((_, i) => (
-                          <Skeleton key={i} className="h-5 w-full rounded" />
-                        ))}
+                        {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-5 w-full rounded" />)}
                       </div>
                     ))}
                   </div>
@@ -420,27 +483,23 @@ export default function PredictionDetailPage() {
                   {[...outcomes]
                     .sort((a, b) => b.price - a.price)
                     .map((o, i) => {
-                      const pct = Math.round(o.price * 100);
+                      const pct     = Math.round(o.price * 100);
                       const realIdx = outcomes.indexOf(o);
-                      const isSelected = realIdx === selectedOutcomeIdx;
                       return (
                         <button
                           key={i}
                           onClick={() => setSelectedOutcomeIdx(realIdx)}
                           className={cn(
                             "w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all text-left",
-                            isSelected
+                            realIdx === selectedOutcomeIdx
                               ? "border-primary bg-primary/5"
-                              : "border-border hover:border-foreground/20"
+                              : "border-border hover:border-foreground/20",
                           )}
                         >
                           <span className="text-sm font-semibold">{o.name}</span>
                           <div className="flex items-center gap-3">
                             <div className="w-20 h-1.5 rounded-full bg-muted overflow-hidden">
-                              <div
-                                className="h-full rounded-full bg-primary transition-all"
-                                style={{ width: `${pct}%` }}
-                              />
+                              <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
                             </div>
                             <span className="text-sm font-bold tabular-nums w-8 text-right">{pct}%</span>
                           </div>
@@ -462,26 +521,81 @@ export default function PredictionDetailPage() {
                       "px-5 py-3.5 text-sm font-semibold capitalize transition-colors border-b-2 -mb-px",
                       rulesTab === tab
                         ? "border-foreground text-foreground"
-                        : "border-transparent text-muted-foreground hover:text-foreground"
+                        : "border-transparent text-muted-foreground hover:text-foreground",
                     )}
                   >
                     {tab === "rules" ? "Rules" : "Context"}
                   </button>
                 ))}
               </div>
-              <div className="p-5">
-                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                  {rulesTab === "rules"
-                    ? market.description || "No resolution rules specified for this market."
-                    : "This market tracks the probability of the stated outcome based on community trading. Prices reflect aggregate market sentiment."}
-                </p>
+              <div className="p-5 space-y-4">
+                {rulesTab === "rules" ? (
+                  <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                    {market.description || "No resolution rules specified for this market."}
+                  </p>
+                ) : (
+                  <div className="space-y-3 text-sm">
+                    <InfoRow label="Condition ID" value={
+                      <span className="font-mono text-xs break-all">{market.conditionId}</span>
+                    } />
+                    <InfoRow label="Market ID"    value={market.id} />
+                    <InfoRow label="Start date"   value={market.startDate ? format(new Date(market.startDate), "MMM d, yyyy") : "—"} />
+                    <InfoRow label="End date"     value={endDate ?? "—"} />
+                    <InfoRow label="Status"       value={
+                      <span className={cn(
+                        "font-semibold",
+                        market.active ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground",
+                      )}>
+                        {market.closed ? "Closed" : market.active ? "Active" : "Inactive"}
+                      </span>
+                    } />
+                    <InfoRow label="Tags"         value={market.tags?.join(", ") || "—"} />
+                  </div>
+                )}
               </div>
             </div>
+
+            {/* ── Open orders for this market ── */}
+            {marketOpenOrders.length > 0 && (
+              <div className="bg-background border border-border rounded-2xl overflow-hidden">
+                <div className="px-5 py-4 border-b border-border">
+                  <span className="text-sm font-semibold">Your Open Orders</span>
+                </div>
+                <div className="divide-y divide-border">
+                  {marketOpenOrders.map((o: any) => (
+                    <div key={o.id} className="flex items-center justify-between px-5 py-3">
+                      <div>
+                        <span className={cn(
+                          "text-xs font-bold mr-2 px-2 py-0.5 rounded-full",
+                          o.side === "BUY"
+                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                            : "bg-red-500/10 text-red-500",
+                        )}>
+                          {o.side}
+                        </span>
+                        <span className="text-sm font-semibold">
+                          {Number(o.size_matched || o.original_size).toFixed(2)} shares
+                        </span>
+                        <span className="text-xs text-muted-foreground ml-2">@ {(Number(o.price) * 100).toFixed(1)}¢</span>
+                      </div>
+                      <button
+                        onClick={() => cancelOrder.mutate(o.id, {
+                          onSuccess: () => toast.success("Order cancelled"),
+                          onError:   () => toast.error("Failed to cancel order"),
+                        })}
+                        disabled={cancelOrder.isPending}
+                        className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                      >
+                        {cancelOrder.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* ════════════════════════════
-              RIGHT COLUMN — Trade Panel
-          ════════════════════════════ */}
+          {/* ════════════════ RIGHT COLUMN — Trade Panel ════════════════ */}
           <div>
             <div className="sticky top-20 bg-background border border-border rounded-2xl overflow-hidden shadow-sm">
 
@@ -495,7 +609,7 @@ export default function PredictionDetailPage() {
                       "flex-1 py-3.5 text-sm font-semibold capitalize transition-colors border-b-2 -mb-px",
                       tradeTab === tab
                         ? "border-foreground text-foreground"
-                        : "border-transparent text-muted-foreground hover:text-foreground"
+                        : "border-transparent text-muted-foreground hover:text-foreground",
                     )}
                   >
                     {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -504,6 +618,19 @@ export default function PredictionDetailPage() {
               </div>
 
               <div className="p-4 space-y-4">
+
+                {/* Balance row */}
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <Wallet className="w-3.5 h-3.5" />
+                    <span className="text-xs font-medium">Available</span>
+                  </div>
+                  {balanceData ? (
+                    <span className="font-bold tabular-nums">${availableUsdc.toFixed(2)} USDC</span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Not connected</span>
+                  )}
+                </div>
 
                 {/* Outcome selector */}
                 {isBinary && (
@@ -514,7 +641,7 @@ export default function PredictionDetailPage() {
                         "py-3 rounded-xl text-sm font-bold transition-all border",
                         selectedOutcomeIdx === 0
                           ? "bg-emerald-500 text-white border-emerald-500 shadow-sm shadow-emerald-500/20"
-                          : "bg-emerald-500/8 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/15"
+                          : "bg-emerald-500/8 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/15",
                       )}
                     >
                       Yes · {yesCents}¢
@@ -525,7 +652,7 @@ export default function PredictionDetailPage() {
                         "py-3 rounded-xl text-sm font-bold transition-all border",
                         selectedOutcomeIdx === 1
                           ? "bg-red-500 text-white border-red-500 shadow-sm shadow-red-500/20"
-                          : "bg-red-500/8 text-red-600 dark:text-red-400 border-red-500/20 hover:bg-red-500/15"
+                          : "bg-red-500/8 text-red-600 dark:text-red-400 border-red-500/20 hover:bg-red-500/15",
                       )}
                     >
                       No · {noCents}¢
@@ -535,7 +662,7 @@ export default function PredictionDetailPage() {
 
                 {/* Amount input */}
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground">Amount (USD)</label>
+                  <label className="text-xs font-medium text-muted-foreground">Amount (USDC)</label>
                   <div className="relative">
                     <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold">$</span>
                     <Input
@@ -547,7 +674,6 @@ export default function PredictionDetailPage() {
                       className="pl-7 h-12 text-base font-semibold"
                     />
                   </div>
-
                   {/* Quick amounts */}
                   <div className="flex gap-1.5 flex-wrap">
                     {QUICK_AMOUNTS.map(amt => (
@@ -559,12 +685,14 @@ export default function PredictionDetailPage() {
                         +${amt}
                       </button>
                     ))}
-                    <button
-                      onClick={() => setAmount("1000")}
-                      className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-border hover:border-foreground/30 hover:bg-muted transition-all text-muted-foreground"
-                    >
-                      Max
-                    </button>
+                    {availableUsdc > 0 && (
+                      <button
+                        onClick={() => setAmount(availableUsdc.toFixed(2))}
+                        className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-border hover:border-foreground/30 hover:bg-muted transition-all text-muted-foreground"
+                      >
+                        Max
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -584,7 +712,7 @@ export default function PredictionDetailPage() {
                     <span className="text-muted-foreground">Potential profit</span>
                     <span className={cn(
                       "font-semibold tabular-nums",
-                      Number(potentialProfit) > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"
+                      Number(potentialProfit) > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-foreground",
                     )}>
                       +${potentialProfit}
                     </span>
@@ -597,19 +725,58 @@ export default function PredictionDetailPage() {
                   </div>
                 </div>
 
+                {/* Insufficient balance warning */}
+                {balanceData && amountNum > availableUsdc && amountNum > 0 && (
+                  <div className="flex items-center gap-2 text-xs text-red-500 bg-red-500/8 border border-red-500/20 rounded-xl p-3">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    Insufficient balance. Available: ${availableUsdc.toFixed(2)}
+                  </div>
+                )}
+
+                {/* Market closed warning */}
+                {market.closed && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted rounded-xl p-3">
+                    <Info className="w-3.5 h-3.5 shrink-0" />
+                    This market is closed. No new orders can be placed.
+                  </div>
+                )}
+
                 {/* CTA */}
                 <button
-                  onClick={() => {}}
+                  onClick={handlePlaceOrder}
+                  disabled={
+                    placeOrder.isPending ||
+                    market.closed ||
+                    amountNum <= 0 ||
+                    (balanceData != null && amountNum > availableUsdc)
+                  }
                   className={cn(
-                    "w-full h-12 rounded-xl font-bold text-sm transition-all",
+                    "w-full h-12 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed",
                     isYesSelected
-                      ? "bg-emerald-500 hover:bg-emerald-600 text-white"
-                      : "bg-red-500 hover:bg-red-600 text-white"
+                      ? "bg-emerald-500 hover:bg-emerald-600 disabled:hover:bg-emerald-500 text-white"
+                      : "bg-red-500 hover:bg-red-600 disabled:hover:bg-red-500 text-white",
                   )}
                 >
-                  {tradeTab === "buy" ? "Buy" : "Sell"} {selectedOutcome?.name || "Yes"}
-                  {amountNum > 0 && ` · $${amountNum}`}
+                  {placeOrder.isPending ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Placing order…</>
+                  ) : (
+                    <>{tradeTab === "buy" ? "Buy" : "Sell"} {selectedOutcome?.name || "Yes"}{amountNum > 0 && ` · $${amountNum}`}</>
+                  )}
                 </button>
+
+                {/* Order result feedback */}
+                {placeOrder.isSuccess && (
+                  <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-500/8 border border-emerald-500/20 rounded-xl p-3">
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                    Order submitted successfully
+                  </div>
+                )}
+                {placeOrder.isError && (
+                  <div className="flex items-center gap-2 text-xs text-red-500 bg-red-500/8 border border-red-500/20 rounded-xl p-3">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    {(placeOrder.error as Error)?.message || "Order failed"}
+                  </div>
+                )}
 
                 <p className="text-center text-[10px] text-muted-foreground">
                   By trading you agree to the{" "}
@@ -635,10 +802,18 @@ function Stat({ label, value, icon }: { label: string; value: string; icon: Reac
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-        {icon}
-        {label}
+        {icon}{label}
       </div>
       <span className="text-sm font-bold tabular-nums">{value}</span>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <span className="text-muted-foreground shrink-0">{label}</span>
+      <span className="font-medium text-right">{value}</span>
     </div>
   );
 }
