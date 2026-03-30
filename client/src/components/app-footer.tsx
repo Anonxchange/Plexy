@@ -43,12 +43,12 @@ const footerColumns = [
     heading: "Legal",
     links: [
       { label: "Terms & Conditions", href: "/terms" },
-      { label: "Vendor Reminder", href: "/vendor-reminder" },
+      { label: "Risk Disclosure", href: "/risk-disclosure" },
       { label: "AML Policy", href: "/aml-policy" },
       { label: "Privacy Notice", href: "/privacy" },
       { label: "Cookie Policy", href: "/cookie-policy" },
       { label: "Restricted Countries", href: "/restricted-countries" },
-      { label: "VIP Program T&C", href: "/vip-terms" },
+      { label: "Rewards Program T&C", href: "/rewards-program" },
     ],
   },
 ];
