@@ -1,4 +1,5 @@
 import { useMarketDetail, useOrderbook } from "@/hooks/use-polymarket";
+import { PolymarketImage } from "@/components/polymarket-image";
 import { useRoute, useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -141,10 +142,14 @@ export default function PredictionDetailPage() {
               <div className="flex items-start gap-4">
                 {/* Image */}
                 {market.image ? (
-                  <img
+                  <PolymarketImage
                     src={market.image}
-                    alt=""
                     className="w-12 h-12 rounded-xl object-cover border border-border shrink-0"
+                    fallback={
+                      <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center shrink-0">
+                        <BarChart2 className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                    }
                   />
                 ) : (
                   <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center shrink-0">
