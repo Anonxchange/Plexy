@@ -64,7 +64,8 @@ const ROUTE_DESCRIPTIONS: Record<string, string> = {
   "/privacy": "How Pexly collects, uses, and protects your personal data.",
   "/cookie-policy": "How Pexly uses cookies and similar technologies across our platform.",
   "/restricted-countries": "Countries where Pexly services are currently unavailable.",
-  "/vip-terms": "Terms and eligibility requirements for the Pexly VIP program.",
+  "/rewards-program": "Terms and eligibility requirements for the Pexly Rewards Program.",
+  "/risk-disclosure": "Important risk disclosures for users of the Pexly non-custodial platform.",
 };
 
 const DYNAMIC_PREFIXES: [string, string][] = [
