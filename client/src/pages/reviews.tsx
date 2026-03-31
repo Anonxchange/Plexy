@@ -11,7 +11,7 @@ import {
 import { PexlyFooter } from "@/components/pexly-footer";
 
 const TRUSTPILOT_URL = "https://www.trustpilot.com/review/pexly.app";
-const TRUSTPILOT_WRITE_URL = "https://www.trustpilot.com/review/pexly.app/evaluate";
+const TRUSTPILOT_WRITE_URL = "https://www.trustpilot.com/review/pexly.app/";
 
 const ratingBreakdown = [
   { stars: 5, label: "5-star", count: 2847, percentage: 78, color: "#00b67a" },
