@@ -3,7 +3,7 @@ import { Copy, TrendingUp, TrendingDown, Clock, DollarSign, Search, Menu, X, Git
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getAddress, formatAddress, satoshiToBTC, formatTimestamp, formatHash, getLatestBlocks } from "@/lib/blockchain-api";
+import { getAddress, formatAddress, satoshiToBTC, formatTimestamp, formatHash, getLatestBlocks, getBTCPrice } from "@/lib/blockchain-api";
 import { Link } from "wouter";
 
 const navLinks = [
@@ -140,6 +140,7 @@ export default function AddressDetail() {
   const [currentPage, setCurrentPage] = useState(1);
   const [currentBlockHeight, setCurrentBlockHeight] = useState<number>(0);
   const [showBTC, setShowBTC] = useState(false);
+  const [btcPrice, setBtcPrice] = useState<number>(0);
   const itemsPerPage = 50;
 
   useEffect(() => {
@@ -147,9 +148,10 @@ export default function AddressDetail() {
       if (!address) return;
       try {
         setLoading(true);
-        const [addressDataResult, blocksData] = await Promise.all([
+        const [addressDataResult, blocksData, price] = await Promise.all([
           getAddress(address),
-          getLatestBlocks(1)
+          getLatestBlocks(1),
+          getBTCPrice(),
         ]);
         
         if (addressDataResult) {
@@ -162,6 +164,8 @@ export default function AddressDetail() {
         if (blocksData && blocksData.length > 0) {
           setCurrentBlockHeight(blocksData[0].height);
         }
+
+        if (price > 0) setBtcPrice(price);
       } catch (err: any) {
         setError(`Error loading address: ${err.message}`);
       } finally {
@@ -262,9 +266,11 @@ export default function AddressDetail() {
                   <TrendingUp className="h-5 w-5 text-success" />
                   <div>
                     <p className="text-2xl font-bold text-success">{balance.toFixed(8)} BTC</p>
-                    <p className="text-sm text-muted-foreground">
-                      ≈ ${(balance * 88696).toFixed(2)} USD
-                    </p>
+                    {btcPrice > 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        ≈ ${(balance * btcPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+                      </p>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -316,10 +322,12 @@ export default function AddressDetail() {
                   <p className="text-xs text-muted-foreground mb-2">Address</p>
                   <code className="font-mono text-xs sm:text-sm break-all text-cyan-500">{addressData.address}</code>
                 </div>
-                <div className="py-2 border-b border-border">
-                  <p className="text-xs text-muted-foreground mb-2">Hash160</p>
-                  <code className="font-mono text-xs sm:text-sm break-all text-cyan-500">{addressData.hash160}</code>
-                </div>
+                {addressData.hash160 && (
+                  <div className="py-2 border-b border-border">
+                    <p className="text-xs text-muted-foreground mb-2">Hash160</p>
+                    <code className="font-mono text-xs sm:text-sm break-all text-cyan-500">{addressData.hash160}</code>
+                  </div>
+                )}
                 <div className="py-2 flex justify-between items-center gap-4">
                   <span className="text-xs text-muted-foreground">Balance</span>
                   <span className="font-bold text-sm flex-shrink-0">{balance.toFixed(8)} BTC</span>
@@ -372,16 +380,20 @@ export default function AddressDetail() {
                           
                           return (
                             <div key={idx} className="flex items-center gap-3">
-                              <div className="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
-                                <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                              <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${isToThisAddress ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+                                <div className={`w-1.5 h-1.5 rounded-full ${isToThisAddress ? 'bg-green-500' : 'bg-red-500'}`}></div>
                               </div>
                               <div className="flex-1 min-w-0">
                                 <code className="text-xs text-cyan-500 block truncate">
                                   {isToThisAddress ? output.addr : formatAddress(output.addr, 8)}
                                 </code>
                               </div>
-                              <span className="text-xs sm:text-sm font-semibold text-foreground flex-shrink-0">
-                                ${(outputValue * 88696).toFixed(2)}
+                              <span className={`text-xs sm:text-sm font-semibold flex-shrink-0 ${isToThisAddress ? 'text-green-500' : 'text-foreground'}`}>
+                                {showBTC
+                                  ? `${outputValue.toFixed(8)} BTC`
+                                  : btcPrice > 0
+                                    ? `$${(outputValue * btcPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                    : `${outputValue.toFixed(8)} BTC`}
                               </span>
                             </div>
                           );
@@ -397,6 +409,9 @@ export default function AddressDetail() {
                       <div className="px-4 py-3 border-t border-border/50 bg-secondary/20 flex items-center justify-between gap-3">
                         <span className="text-xs text-muted-foreground">
                           {tx.size && tx.fee ? Math.round(tx.fee / tx.size) : 0} sat/vB
+                          {tx.fee != null && (
+                            <span className="ml-2 text-muted-foreground/60">· {tx.fee.toLocaleString()} sats fee</span>
+                          )}
                         </span>
                         <div className="flex items-center gap-2">
                           {confirmations > 0 ? (
@@ -410,11 +425,14 @@ export default function AddressDetail() {
                               Pending
                             </span>
                           )}
-                          <span 
+                          <span
                             onClick={() => setShowBTC(!showBTC)}
+                            title="Click to toggle BTC / USD"
                             className={`text-xs sm:text-sm font-bold cursor-pointer hover:opacity-80 transition-opacity ${isIncoming ? 'text-green-500' : 'text-red-500'}`}
                           >
-                            {isIncoming ? '+' : '-'}{showBTC ? `${Math.abs(txAmount).toFixed(8)} BTC` : `$${Math.abs(txAmount * 88696).toFixed(2)}`}
+                            {isIncoming ? '+' : '-'}{showBTC || btcPrice === 0
+                              ? `${Math.abs(txAmount).toFixed(8)} BTC`
+                              : `$${(Math.abs(txAmount) * btcPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                           </span>
                         </div>
                       </div>
