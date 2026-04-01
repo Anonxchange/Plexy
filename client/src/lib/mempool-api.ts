@@ -1,16 +1,19 @@
 // Mempool.space API integration
-// Free, open-source Bitcoin blockchain API with no rate limits
-// Documentation: https://mempool.space/api/v1/docs
-// Using pure REST API for browser compatibility (no Node.js dependencies)
+// Free, open-source Bitcoin blockchain API
+// Documentation: https://mempool.space/docs/api/rest
+// Correct base URLs (confirmed against live API):
+//   /api/v1/blocks           ✓
+//   /api/v1/fees/recommended ✓
+//   Everything else uses /api (NOT /api/v1)
 
-const MEMPOOL_API = 'https://mempool.space/api/v1';
+const MEMPOOL_BASE = 'https://mempool.space/api';
+const MEMPOOL_V1 = 'https://mempool.space/api/v1';
 
 export interface MempoolBlock {
   id: string;
   timestamp: number;
   bits: number;
   difficulty: number;
-  excess_data: string;
   extras: {
     pool: {
       id: number;
@@ -53,6 +56,7 @@ export interface MempoolTransaction {
       scriptpubkey: string;
       scriptpubkey_asm: string;
       scriptpubkey_type: string;
+      scriptpubkey_address?: string;
       value: number;
     };
     scriptsig: string;
@@ -64,12 +68,12 @@ export interface MempoolTransaction {
     scriptpubkey: string;
     scriptpubkey_asm: string;
     scriptpubkey_type: string;
+    scriptpubkey_address?: string;
     value: number;
   }>;
   size: number;
   weight: number;
   fee: number;
-  rate: number;
   status: {
     confirmed: boolean;
     block_height: number | null;
@@ -96,264 +100,6 @@ export interface MempoolAddress {
   };
 }
 
-export interface MempoolStats {
-  funded_txo_count: number;
-  funded_txo_sum: number;
-  spent_txo_count: number;
-  spent_txo_sum: number;
-  tx_count: number;
-}
-
-// ============== LATEST BLOCKS ==============
-
-export async function getLatestBlocks(limit: number = 5): Promise<MempoolBlock[]> {
-  try {
-    const response = await fetch(`${MEMPOOL_API}/blocks`, {
-      headers: { 'Accept': 'application/json' }
-    });
-    
-    if (!response.ok) throw new Error('Failed to fetch latest blocks');
-    const blocks: MempoolBlock[] = await response.json();
-    return blocks.slice(0, limit);
-  } catch (error) {
-    console.error('Error fetching latest blocks from mempool.space:', error);
-    return [];
-  }
-}
-
-// ============== BLOCK BY HEIGHT ==============
-
-export async function getBlockByHeight(height: number): Promise<MempoolBlock | null> {
-  try {
-    const response = await fetch(`${MEMPOOL_API}/block-height/${height}`, {
-      headers: { 'Accept': 'application/json' }
-    });
-    
-    if (!response.ok) throw new Error('Failed to fetch block by height');
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching block at height %d:", height, error);
-    return null;
-  }
-}
-
-// ============== BLOCK BY HASH ==============
-
-export async function getBlockByHash(blockHash: string): Promise<MempoolBlock | null> {
-  try {
-    const response = await fetch(`${MEMPOOL_API}/block/${blockHash}`, {
-      headers: { 'Accept': 'application/json' }
-    });
-    
-    if (!response.ok) throw new Error('Failed to fetch block by hash');
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching block %s:", blockHash, error);
-    return null;
-  }
-}
-
-// ============== BLOCK TRANSACTIONS ==============
-
-export async function getBlockTransactions(blockHash: string, startIndex: number = 0): Promise<MempoolTransaction[]> {
-  try {
-    const response = await fetch(`${MEMPOOL_API}/block/${blockHash}/txs/${startIndex}`, {
-      headers: { 'Accept': 'application/json' }
-    });
-    
-    if (!response.ok) throw new Error('Failed to fetch block transactions');
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching transactions for block %s:", blockHash, error);
-    return [];
-  }
-}
-
-// ============== TRANSACTION ==============
-
-export async function getTransaction(txHash: string): Promise<MempoolTransaction | null> {
-  try {
-    const response = await fetch(`${MEMPOOL_API}/tx/${txHash}`, {
-      headers: { 'Accept': 'application/json' }
-    });
-    
-    if (!response.ok) throw new Error('Failed to fetch transaction');
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching transaction %s:", txHash, error);
-    return null;
-  }
-}
-
-// ============== TRANSACTION STATUS ==============
-
-export async function getTransactionStatus(txHash: string): Promise<{ confirmed: boolean; block_height: number | null; block_hash: string | null; block_time: number | null } | null> {
-  try {
-    const response = await fetch(`${MEMPOOL_API}/tx/${txHash}/status`, {
-      headers: { 'Accept': 'application/json' }
-    });
-    
-    if (!response.ok) throw new Error('Failed to fetch transaction status');
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching status for transaction %s:", txHash, error);
-    return null;
-  }
-}
-
-// ============== ADDRESS ==============
-
-export async function getAddress(address: string): Promise<MempoolAddress | null> {
-  try {
-    const response = await fetch(`${MEMPOOL_API}/address/${address}`, {
-      headers: { 'Accept': 'application/json' }
-    });
-    
-    if (!response.ok) throw new Error('Failed to fetch address');
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching address %s:", address, error);
-    return null;
-  }
-}
-
-// ============== ADDRESS TRANSACTIONS ==============
-
-export async function getAddressTransactions(address: string, lastSeenTxid?: string): Promise<MempoolTransaction[]> {
-  try {
-    const url = lastSeenTxid 
-      ? `${MEMPOOL_API}/address/${address}/txs/chain/${lastSeenTxid}`
-      : `${MEMPOOL_API}/address/${address}/txs`;
-    
-    const response = await fetch(url, {
-      headers: { 'Accept': 'application/json' }
-    });
-    
-    if (!response.ok) throw new Error('Failed to fetch address transactions');
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching transactions for address %s:", address, error);
-    return [];
-  }
-}
-
-// ============== ADDRESS MEMPOOL (UNCONFIRMED) ==============
-
-export async function getAddressMempoolTransactions(address: string): Promise<MempoolTransaction[]> {
-  try {
-    const response = await fetch(`${MEMPOOL_API}/address/${address}/txs/mempool`, {
-      headers: { 'Accept': 'application/json' }
-    });
-    
-    if (!response.ok) throw new Error('Failed to fetch mempool transactions');
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching mempool transactions for address %s:", address, error);
-    return [];
-  }
-}
-
-// ============== UNCONFIRMED TRANSACTIONS (MEMPOOL) ==============
-
-export async function getMempool(): Promise<MempoolTransaction[]> {
-  try {
-    const response = await fetch(`${MEMPOOL_API}/mempool`, {
-      headers: { 'Accept': 'application/json' }
-    });
-    
-    if (!response.ok) throw new Error('Failed to fetch mempool');
-    const data = await response.json();
-    // Returns count of transactions, not the txs themselves
-    return [];
-  } catch (error) {
-    console.error('Error fetching mempool data:', error);
-    return [];
-  }
-}
-
-// ============== MEMPOOL TRANSACTIONS ==============
-
-export async function getMempoolTransactions(): Promise<any[]> {
-  try {
-    // Try Blockchain.com first as requested
-    try {
-      const response = await fetch('https://api.blockchain.info/hathstats/v1/unconfirmed-transactions?cors=true');
-      if (response.ok) {
-        const data = await response.json();
-        if (data && Array.isArray(data.txs)) {
-          return data.txs.slice(0, 10).map((tx: any) => ({
-            txid: tx.hash,
-            hash: tx.hash,
-            from: tx.inputs?.[0]?.prev_out?.addr ? `${tx.inputs[0].prev_out.addr.substring(0, 4)}...` : "Unknown",
-            to: tx.out?.[0]?.addr ? `${tx.out[0].addr.substring(0, 4)}...` : "Multiple",
-            amount_btc: (tx.out?.reduce((s: number, o: any) => s + (o.value || 0), 0) / 100000000).toFixed(4),
-            time: tx.time,
-            status: { confirmed: false }
-          }));
-        }
-      }
-    } catch (e) {
-      console.warn("Blockchain.info API failed:", e);
-    }
-
-    // Secondary source: mempool.space (Highly reliable)
-    const mpResponse = await fetch('https://mempool.space/api/mempool/recent');
-    if (mpResponse.ok) {
-      const recentTxns = await mpResponse.json();
-      if (Array.isArray(recentTxns)) {
-        return recentTxns.slice(0, 10).map((tx: any) => ({
-          txid: tx.txid,
-          hash: tx.txid,
-          from: "Mempool",
-          to: "Multiple",
-          amount_btc: (tx.value / 100000000).toFixed(4),
-          time: tx.time || Math.floor(Date.now() / 1000),
-          status: { confirmed: false }
-        }));
-      }
-    }
-    
-    return [];
-  } catch (error) {
-    console.error('Error in getMempoolTransactions:', error);
-    return [];
-  }
-}
-
-// ============== MEMPOOL STATS ==============
-
-export async function getMempoolStats(): Promise<any> {
-  try {
-    const response = await fetch(`${MEMPOOL_API}/mempool`, {
-      headers: { 'Accept': 'application/json' }
-    });
-    
-    if (!response.ok) throw new Error('Failed to fetch mempool stats');
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching mempool stats:', error);
-    return null;
-  }
-}
-
-// ============== BLOCKS STATS ==============
-
-export async function getBlockStats(blockHash: string): Promise<any> {
-  try {
-    const response = await fetch(`${MEMPOOL_API}/block/${blockHash}/stats`, {
-      headers: { 'Accept': 'application/json' }
-    });
-    
-    if (!response.ok) throw new Error('Failed to fetch block stats');
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching stats for block %s:", blockHash, error);
-    return null;
-  }
-}
-
-// ============== FEE ESTIMATES ==============
-
 export interface FeeEstimate {
   fastestFee: number;
   halfHourFee: number;
@@ -362,13 +108,232 @@ export interface FeeEstimate {
   minimumFee: number;
 }
 
-export async function getFeeEstimates(): Promise<FeeEstimate | null> {
+// ============== LATEST BLOCKS ==============
+// Endpoint: GET /api/v1/blocks — returns up to 10 most recent blocks
+
+export async function getLatestBlocks(limit: number = 5): Promise<MempoolBlock[]> {
   try {
-    const response = await fetch(`${MEMPOOL_API}/fees/recommended`, {
+    const response = await fetch(`${MEMPOOL_V1}/blocks`, {
       headers: { 'Accept': 'application/json' }
     });
-    
-    if (!response.ok) throw new Error('Failed to fetch fee estimates');
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const blocks: MempoolBlock[] = await response.json();
+    return blocks.slice(0, limit);
+  } catch (error) {
+    console.error('Error fetching latest blocks:', error);
+    return [];
+  }
+}
+
+// ============== CURRENT BLOCK TIP HEIGHT ==============
+// Endpoint: GET /api/blocks/tip/height — returns plain-text integer
+
+export async function getBlockTipHeight(): Promise<number> {
+  try {
+    const response = await fetch(`${MEMPOOL_BASE}/blocks/tip/height`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const text = await response.text();
+    return parseInt(text, 10);
+  } catch (error) {
+    console.error('Error fetching block tip height:', error);
+    return 0;
+  }
+}
+
+// ============== BLOCK BY HEIGHT ==============
+// Step 1: GET /api/block-height/:height → plain-text hash string
+// Step 2: GET /api/block/:hash → block object
+
+export async function getBlockByHeight(height: number): Promise<MempoolBlock | null> {
+  try {
+    const hashRes = await fetch(`${MEMPOOL_BASE}/block-height/${height}`);
+    if (!hashRes.ok) throw new Error(`Hash fetch HTTP ${hashRes.status}`);
+    const hash = (await hashRes.text()).trim();
+    return getBlockByHash(hash);
+  } catch (error) {
+    console.error(`Error fetching block at height ${height}:`, error);
+    return null;
+  }
+}
+
+// ============== BLOCK BY HASH ==============
+// Endpoint: GET /api/block/:hash
+
+export async function getBlockByHash(blockHash: string): Promise<MempoolBlock | null> {
+  try {
+    const response = await fetch(`${MEMPOOL_BASE}/block/${blockHash}`, {
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching block ${blockHash}:`, error);
+    return null;
+  }
+}
+
+// ============== BLOCK TRANSACTIONS ==============
+// Endpoint: GET /api/block/:hash/txs[/:startIndex]
+
+export async function getBlockTransactions(blockHash: string, startIndex: number = 0): Promise<MempoolTransaction[]> {
+  try {
+    const url = startIndex > 0
+      ? `${MEMPOOL_BASE}/block/${blockHash}/txs/${startIndex}`
+      : `${MEMPOOL_BASE}/block/${blockHash}/txs`;
+    const response = await fetch(url, {
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching transactions for block ${blockHash}:`, error);
+    return [];
+  }
+}
+
+// ============== TRANSACTION ==============
+// Endpoint: GET /api/tx/:txid
+
+export async function getTransaction(txHash: string): Promise<MempoolTransaction | null> {
+  try {
+    const response = await fetch(`${MEMPOOL_BASE}/tx/${txHash}`, {
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching transaction ${txHash}:`, error);
+    return null;
+  }
+}
+
+// ============== TRANSACTION STATUS ==============
+// Endpoint: GET /api/tx/:txid/status
+
+export async function getTransactionStatus(txHash: string): Promise<{
+  confirmed: boolean;
+  block_height: number | null;
+  block_hash: string | null;
+  block_time: number | null;
+} | null> {
+  try {
+    const response = await fetch(`${MEMPOOL_BASE}/tx/${txHash}/status`, {
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching status for transaction ${txHash}:`, error);
+    return null;
+  }
+}
+
+// ============== ADDRESS ==============
+// Endpoint: GET /api/address/:address
+
+export async function getAddress(address: string): Promise<MempoolAddress | null> {
+  try {
+    const response = await fetch(`${MEMPOOL_BASE}/address/${address}`, {
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching address ${address}:`, error);
+    return null;
+  }
+}
+
+// ============== ADDRESS TRANSACTIONS ==============
+// Endpoint: GET /api/address/:address/txs
+// Pagination: GET /api/address/:address/txs/chain/:lastSeenTxid
+
+export async function getAddressTransactions(address: string, lastSeenTxid?: string): Promise<MempoolTransaction[]> {
+  try {
+    const url = lastSeenTxid
+      ? `${MEMPOOL_BASE}/address/${address}/txs/chain/${lastSeenTxid}`
+      : `${MEMPOOL_BASE}/address/${address}/txs`;
+    const response = await fetch(url, {
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching transactions for address ${address}:`, error);
+    return [];
+  }
+}
+
+// ============== ADDRESS MEMPOOL (UNCONFIRMED) ==============
+// Endpoint: GET /api/address/:address/txs/mempool
+
+export async function getAddressMempoolTransactions(address: string): Promise<MempoolTransaction[]> {
+  try {
+    const response = await fetch(`${MEMPOOL_BASE}/address/${address}/txs/mempool`, {
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching mempool transactions for address ${address}:`, error);
+    return [];
+  }
+}
+
+// ============== MEMPOOL STATS ==============
+// Endpoint: GET /api/mempool
+// Returns: { count, vsize, total_fee, fee_histogram }
+
+export async function getMempoolStats(): Promise<any> {
+  try {
+    const response = await fetch(`${MEMPOOL_BASE}/mempool`, {
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching mempool stats:', error);
+    return null;
+  }
+}
+
+// ============== RECENT MEMPOOL TRANSACTIONS ==============
+// Endpoint: GET /api/mempool/recent
+// Returns last 10 txs to enter the mempool: [{ txid, fee, vsize, value }, ...]
+
+export async function getMempoolTransactions(): Promise<any[]> {
+  try {
+    const response = await fetch(`${MEMPOOL_BASE}/mempool/recent`, {
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const recentTxns: any[] = await response.json();
+    return recentTxns.slice(0, 10).map((tx: any) => ({
+      txid: tx.txid,
+      hash: tx.txid,
+      from: 'Mempool',
+      to: 'Multiple',
+      amount_btc: (tx.value / 100000000).toFixed(8),
+      fee: tx.fee,
+      vsize: tx.vsize,
+      time: Math.floor(Date.now() / 1000),
+      status: { confirmed: false }
+    }));
+  } catch (error) {
+    console.error('Error fetching recent mempool transactions:', error);
+    return [];
+  }
+}
+
+// ============== FEE ESTIMATES ==============
+// Endpoint: GET /api/v1/fees/recommended
+
+export async function getFeeEstimates(): Promise<FeeEstimate | null> {
+  try {
+    const response = await fetch(`${MEMPOOL_V1}/fees/recommended`, {
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return await response.json();
   } catch (error) {
     console.error('Error fetching fee estimates:', error);
@@ -376,7 +341,23 @@ export async function getFeeEstimates(): Promise<FeeEstimate | null> {
   }
 }
 
-// ============== FORMATTING FUNCTIONS ==============
+// ============== BLOCK STATS ==============
+// Endpoint: GET /api/block/:hash/stats
+
+export async function getBlockStats(blockHash: string): Promise<any> {
+  try {
+    const response = await fetch(`${MEMPOOL_BASE}/block/${blockHash}/stats`, {
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching stats for block ${blockHash}:`, error);
+    return null;
+  }
+}
+
+// ============== FORMATTING HELPERS ==============
 
 export function satoshiToBTC(satoshi: number): number {
   return satoshi / 100000000;
@@ -391,12 +372,12 @@ export function formatBTC(btc: number, decimals: number = 8): string {
 }
 
 export function formatHash(hash: string, chars: number = 8): string {
-  if (hash.length <= chars * 2) return hash;
+  if (!hash || hash.length <= chars * 2) return hash;
   return `${hash.substring(0, chars)}...${hash.substring(hash.length - chars)}`;
 }
 
 export function formatAddress(address: string, chars: number = 6): string {
-  if (address.length <= chars * 2) return address;
+  if (!address || address.length <= chars * 2) return address;
   return `${address.substring(0, chars)}...${address.substring(address.length - chars)}`;
 }
 
@@ -409,22 +390,16 @@ export function satsToBTC(sats: number): number {
 }
 
 export function formatSats(sats: number): string {
-  const btc = satsToBTC(sats);
-  return btc.toFixed(8);
+  return satsToBTC(sats).toFixed(8);
 }
 
-// ============== MEMPOOL BYTES PER FEE ==============
+// Calculate virtual size (vBytes) from weight
+export function weightToVsize(weight: number): number {
+  return Math.ceil(weight / 4);
+}
 
-export async function getMempoolBytesPerFee(): Promise<any> {
-  try {
-    const response = await fetch(`${MEMPOOL_API}/mempool`, {
-      headers: { 'Accept': 'application/json' }
-    });
-    
-    if (!response.ok) throw new Error('Failed to fetch mempool bytes per fee');
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching mempool bytes per fee:', error);
-    return null;
-  }
+// Calculate fee rate in sat/vB
+export function calcFeeRate(fee: number, weight: number): number {
+  const vsize = weightToVsize(weight);
+  return vsize > 0 ? Math.round(fee / vsize) : 0;
 }
