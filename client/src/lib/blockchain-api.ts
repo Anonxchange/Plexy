@@ -1,14 +1,13 @@
 // Multi-blockchain API utilities
-// Supports: Bitcoin (blockchain.info), Ethereum (Etherscan)
+// BTC: powered by mempool.space (https://mempool.space/docs/api/rest)
+// ETH: powered by Etherscan (https://docs.etherscan.io/)
 
 export type Blockchain = 'BTC' | 'ETH';
 
-const BLOCKCHAIN_APIS = {
-  BTC: 'https://blockchain.info',
-  ETH: 'https://api.etherscan.io/api'
-};
+const MEMPOOL_BASE = 'https://mempool.space/api';
+const MEMPOOL_V1 = 'https://mempool.space/api/v1';
+const ETH_API = 'https://api.etherscan.io/api';
 
-// Store current blockchain (default BTC)
 let currentBlockchain: Blockchain = 'BTC';
 
 export function setBlockchain(chain: Blockchain) {
@@ -23,7 +22,6 @@ export interface Block {
   hash: string;
   height: number;
   time: number;
-  tx_indices?: Array<{ tx_index: number; n_tx: number }>;
   n_tx: number;
   size: number;
   miner?: string;
@@ -47,16 +45,16 @@ export interface Transaction {
     n: number;
   }>;
   total?: number;
+  fee?: number;
+  size?: number;
   from?: string;
   to?: string;
   value?: string;
   gas?: string;
   gasPrice?: string;
-  gasUsed?: string;
 }
 
 export interface Address {
-  hash160?: string;
   address: string;
   n_tx: number;
   total_received: number;
@@ -66,31 +64,55 @@ export interface Address {
   txs?: any[];
 }
 
-// ============== BITCOIN FUNCTIONS ==============
+// ============== BITCOIN — mempool.space ==============
 
 async function getBTC_LatestBlocks(limit: number = 5): Promise<Block[]> {
   try {
-    const response = await fetch(`${BLOCKCHAIN_APIS.BTC}/latestblock?format=json`, {
+    const response = await fetch(`${MEMPOOL_V1}/blocks`, {
       headers: { 'Accept': 'application/json' }
     });
-    
-    if (!response.ok) throw new Error('Failed to fetch blocks');
-    const data = await response.json();
-    return [data];
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const blocks: any[] = await response.json();
+    return blocks.slice(0, limit).map(b => ({
+      hash: b.id,
+      height: b.height,
+      time: b.timestamp,
+      n_tx: b.tx_count,
+      size: b.size,
+      miner: b.extras?.pool?.name,
+      prev_block: b.previousblockhash,
+    }));
   } catch (error) {
     console.error('Error fetching BTC blocks:', error);
     return [];
   }
 }
 
-async function getBTC_Block(blockHash: string): Promise<Block | null> {
+async function getBTC_Block(blockHashOrHeight: string): Promise<Block | null> {
   try {
-    const response = await fetch(`${BLOCKCHAIN_APIS.BTC}/rawblock/${blockHash}?format=json`, {
+    let hash = blockHashOrHeight;
+
+    // If height (numeric), first resolve to hash
+    if (/^\d+$/.test(blockHashOrHeight)) {
+      const hashRes = await fetch(`${MEMPOOL_BASE}/block-height/${blockHashOrHeight}`);
+      if (!hashRes.ok) throw new Error(`Height lookup HTTP ${hashRes.status}`);
+      hash = (await hashRes.text()).trim();
+    }
+
+    const response = await fetch(`${MEMPOOL_BASE}/block/${hash}`, {
       headers: { 'Accept': 'application/json' }
     });
-    
-    if (!response.ok) throw new Error('Failed to fetch block');
-    return await response.json();
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const b = await response.json();
+    return {
+      hash: b.id,
+      height: b.height,
+      time: b.timestamp,
+      n_tx: b.tx_count,
+      size: b.size,
+      miner: b.extras?.pool?.name,
+      prev_block: b.previousblockhash,
+    };
   } catch (error) {
     console.error('Error fetching BTC block:', error);
     return null;
@@ -99,12 +121,37 @@ async function getBTC_Block(blockHash: string): Promise<Block | null> {
 
 async function getBTC_Transaction(txHash: string): Promise<Transaction | null> {
   try {
-    const response = await fetch(`${BLOCKCHAIN_APIS.BTC}/rawtx/${txHash}?format=json`, {
+    const response = await fetch(`${MEMPOOL_BASE}/tx/${txHash}`, {
       headers: { 'Accept': 'application/json' }
     });
-    
-    if (!response.ok) throw new Error('Failed to fetch transaction');
-    return await response.json();
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const tx = await response.json();
+
+    const totalOutput: number = tx.vout.reduce((sum: number, o: any) => sum + o.value, 0);
+    const vsize = Math.ceil(tx.weight / 4);
+
+    return {
+      hash: tx.txid,
+      time: tx.status.block_time ?? undefined,
+      block_height: tx.status.block_height ?? undefined,
+      inputs: tx.vin.map((v: any) => ({
+        prev_out: v.prevout
+          ? {
+              addr: v.prevout.scriptpubkey_address || '',
+              value: v.prevout.value,
+              n: 0,
+            }
+          : undefined,
+      })),
+      out: tx.vout.map((o: any, i: number) => ({
+        addr: o.scriptpubkey_address || '',
+        value: o.value,
+        n: i,
+      })),
+      total: totalOutput,
+      fee: tx.fee,
+      size: vsize,
+    };
   } catch (error) {
     console.error('Error fetching BTC transaction:', error);
     return null;
@@ -113,38 +160,102 @@ async function getBTC_Transaction(txHash: string): Promise<Transaction | null> {
 
 async function getBTC_Address(address: string): Promise<Address | null> {
   try {
-    const response = await fetch(`${BLOCKCHAIN_APIS.BTC}/address/${address}?format=json`, {
-      headers: { 'Accept': 'application/json' }
-    });
-    
-    if (!response.ok) throw new Error('Failed to fetch address');
-    return await response.json();
+    const [addrRes, txRes] = await Promise.all([
+      fetch(`${MEMPOOL_BASE}/address/${address}`, { headers: { 'Accept': 'application/json' } }),
+      fetch(`${MEMPOOL_BASE}/address/${address}/txs`, { headers: { 'Accept': 'application/json' } }),
+    ]);
+
+    if (!addrRes.ok) throw new Error(`Address HTTP ${addrRes.status}`);
+    const addrData = await addrRes.json();
+
+    let txs: any[] = [];
+    if (txRes.ok) {
+      const rawTxs: any[] = await txRes.json();
+      txs = rawTxs.map(tx => {
+        const totalOutput: number = tx.vout.reduce((sum: number, o: any) => sum + o.value, 0);
+        const outputToAddr: number = tx.vout
+          .filter((o: any) => o.scriptpubkey_address === address)
+          .reduce((sum: number, o: any) => sum + o.value, 0);
+        const inputFromAddr: number = tx.vin
+          .filter((v: any) => v.prevout?.scriptpubkey_address === address)
+          .reduce((sum: number, v: any) => sum + (v.prevout?.value ?? 0), 0);
+        const result = outputToAddr - inputFromAddr;
+        const vsize = Math.ceil(tx.weight / 4);
+
+        return {
+          hash: tx.txid,
+          time: tx.status.block_time ?? undefined,
+          block_height: tx.status.block_height ?? undefined,
+          confirmed: tx.status.confirmed,
+          inputs: tx.vin.map((v: any) => ({
+            prev_out: v.prevout
+              ? {
+                  addr: v.prevout.scriptpubkey_address || '',
+                  value: v.prevout.value,
+                  n: 0,
+                }
+              : undefined,
+          })),
+          out: tx.vout.map((o: any, i: number) => ({
+            addr: o.scriptpubkey_address || '',
+            value: o.value,
+            n: i,
+          })),
+          result,
+          fee: tx.fee,
+          size: vsize,
+          total: totalOutput,
+        };
+      });
+    }
+
+    const confirmedBalance: number =
+      addrData.chain_stats.funded_txo_sum - addrData.chain_stats.spent_txo_sum;
+    const unconfirmedDelta: number =
+      addrData.mempool_stats.funded_txo_sum - addrData.mempool_stats.spent_txo_sum;
+
+    return {
+      address: addrData.address,
+      n_tx: addrData.chain_stats.tx_count + addrData.mempool_stats.tx_count,
+      total_received: addrData.chain_stats.funded_txo_sum,
+      total_sent: addrData.chain_stats.spent_txo_sum,
+      final_balance: confirmedBalance + unconfirmedDelta,
+      txs,
+    };
   } catch (error) {
     console.error('Error fetching BTC address:', error);
     return null;
   }
 }
 
-// ============== ETHEREUM FUNCTIONS ==============
+// ============== ETHEREUM — Etherscan ==============
+
+const ETH_ALLOWED_ORIGIN = new Set(['https://api.etherscan.io']);
+
+function buildEthUrl(params: Record<string, string>): string {
+  const url = new URL(ETH_API);
+  if (!ETH_ALLOWED_ORIGIN.has(url.origin)) throw new Error('Blocked: unexpected ETH API host');
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  return url.href;
+}
 
 async function getETH_LatestBlocks(limit: number = 5): Promise<Block[]> {
   try {
-    const response = await fetch(
-      `${BLOCKCHAIN_APIS.ETH}?module=proxy&action=eth_blockNumber&apikey=YourApiKeyToken`,
-      { headers: { 'Accept': 'application/json' } }
-    );
-    
-    if (!response.ok) throw new Error('Failed to fetch block number');
+    const url = buildEthUrl({
+      module: 'proxy',
+      action: 'eth_blockNumber',
+      apikey: 'YourApiKeyToken',
+    });
+    const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     const blockNum = parseInt(data.result, 16);
-    
-    // Return a mock block for now (Etherscan free API limitations)
     return [{
-      hash: '0x' + 'a'.repeat(64),
+      hash: '0x' + '0'.repeat(64),
       height: blockNum,
       time: Math.floor(Date.now() / 1000),
       n_tx: 0,
-      size: 0
+      size: 0,
     }];
   } catch (error) {
     console.error('Error fetching ETH blocks:', error);
@@ -154,25 +265,25 @@ async function getETH_LatestBlocks(limit: number = 5): Promise<Block[]> {
 
 async function getETH_Block(blockHash: string): Promise<Block | null> {
   try {
-    const response = await fetch(
-      `${BLOCKCHAIN_APIS.ETH}?module=proxy&action=eth_getBlockByHash&blockHash=${blockHash}&boolean=true&apikey=YourApiKeyToken`,
-      { headers: { 'Accept': 'application/json' } }
-    );
-    
-    if (!response.ok) throw new Error('Failed to fetch block');
+    const url = buildEthUrl({
+      module: 'proxy',
+      action: 'eth_getBlockByHash',
+      blockHash,
+      boolean: 'true',
+      apikey: 'YourApiKeyToken',
+    });
+    const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    
-    if (data.result) {
-      return {
-        hash: data.result.hash,
-        height: parseInt(data.result.number, 16),
-        time: parseInt(data.result.timestamp, 16),
-        n_tx: data.result.transactions.length,
-        size: 0,
-        miner: data.result.miner
-      };
-    }
-    return null;
+    if (!data.result) return null;
+    return {
+      hash: data.result.hash,
+      height: parseInt(data.result.number, 16),
+      time: parseInt(data.result.timestamp, 16),
+      n_tx: data.result.transactions?.length ?? 0,
+      size: 0,
+      miner: data.result.miner,
+    };
   } catch (error) {
     console.error('Error fetching ETH block:', error);
     return null;
@@ -181,29 +292,28 @@ async function getETH_Block(blockHash: string): Promise<Block | null> {
 
 async function getETH_Transaction(txHash: string): Promise<Transaction | null> {
   try {
-    const response = await fetch(
-      `${BLOCKCHAIN_APIS.ETH}?module=proxy&action=eth_getTransactionByHash&txhash=${txHash}&apikey=YourApiKeyToken`,
-      { headers: { 'Accept': 'application/json' } }
-    );
-    
-    if (!response.ok) throw new Error('Failed to fetch transaction');
+    const url = buildEthUrl({
+      module: 'proxy',
+      action: 'eth_getTransactionByHash',
+      txhash: txHash,
+      apikey: 'YourApiKeyToken',
+    });
+    const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    
-    if (data.result) {
-      return {
-        hash: data.result.hash,
-        time: Math.floor(Date.now() / 1000),
-        block_height: parseInt(data.result.blockNumber, 16),
-        inputs: [],
-        out: [],
-        from: data.result.from,
-        to: data.result.to,
-        value: data.result.value,
-        gas: data.result.gas,
-        gasPrice: data.result.gasPrice
-      };
-    }
-    return null;
+    if (!data.result) return null;
+    return {
+      hash: data.result.hash,
+      time: Math.floor(Date.now() / 1000),
+      block_height: data.result.blockNumber ? parseInt(data.result.blockNumber, 16) : undefined,
+      inputs: [],
+      out: [],
+      from: data.result.from,
+      to: data.result.to,
+      value: data.result.value,
+      gas: data.result.gas,
+      gasPrice: data.result.gasPrice,
+    };
   } catch (error) {
     console.error('Error fetching ETH transaction:', error);
     return null;
@@ -212,44 +322,46 @@ async function getETH_Transaction(txHash: string): Promise<Transaction | null> {
 
 async function getETH_Address(address: string): Promise<Address | null> {
   try {
-    // Get balance
-    const balanceResponse = await fetch(
-      `${BLOCKCHAIN_APIS.ETH}?module=account&action=balance&address=${address}&tag=latest&apikey=YourApiKeyToken`,
-      { headers: { 'Accept': 'application/json' } }
-    );
-    
-    if (!balanceResponse.ok) throw new Error('Failed to fetch address');
-    const balanceData = await balanceResponse.json();
-    
-    // Get transactions
-    const txResponse = await fetch(
-      `${BLOCKCHAIN_APIS.ETH}?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=YourApiKeyToken`,
-      { headers: { 'Accept': 'application/json' } }
-    );
-    
-    const txData = await txResponse.json();
+    const balanceUrl = buildEthUrl({
+      module: 'account',
+      action: 'balance',
+      address,
+      tag: 'latest',
+      apikey: 'YourApiKeyToken',
+    });
+    const balanceRes = await fetch(balanceUrl, { headers: { 'Accept': 'application/json' } });
+    if (!balanceRes.ok) throw new Error(`HTTP ${balanceRes.status}`);
+    const balanceData = await balanceRes.json();
+
+    const txUrl = buildEthUrl({
+      module: 'account',
+      action: 'txlist',
+      address,
+      startblock: '0',
+      endblock: '99999999',
+      sort: 'desc',
+      apikey: 'YourApiKeyToken',
+    });
+    const txRes = await fetch(txUrl, { headers: { 'Accept': 'application/json' } });
+    const txData = txRes.ok ? await txRes.json() : { result: [] };
     const txs = Array.isArray(txData.result) ? txData.result : [];
-    
+
     let totalReceived = 0;
     let totalSent = 0;
-    
     txs.forEach((tx: any) => {
-      const value = parseInt(tx.value) || 0;
-      if (tx.from.toLowerCase() === address.toLowerCase()) {
-        totalSent += value;
-      } else if (tx.to?.toLowerCase() === address.toLowerCase()) {
-        totalReceived += value;
-      }
+      const val = parseInt(tx.value) || 0;
+      if (tx.from?.toLowerCase() === address.toLowerCase()) totalSent += val;
+      else if (tx.to?.toLowerCase() === address.toLowerCase()) totalReceived += val;
     });
-    
+
     return {
-      address: address,
+      address,
       n_tx: txs.length,
       total_received: totalReceived,
       total_sent: totalSent,
       final_balance: parseInt(balanceData.result) || 0,
       balance: balanceData.result,
-      txs: txs
+      txs,
     };
   } catch (error) {
     console.error('Error fetching ETH address:', error);
@@ -260,15 +372,15 @@ async function getETH_Address(address: string): Promise<Address | null> {
 // ============== PUBLIC INTERFACE ==============
 
 export async function getLatestBlocks(limit: number = 5): Promise<Block[]> {
-  return currentBlockchain === 'BTC' 
+  return currentBlockchain === 'BTC'
     ? getBTC_LatestBlocks(limit)
     : getETH_LatestBlocks(limit);
 }
 
-export async function getBlock(blockHash: string): Promise<Block | null> {
+export async function getBlock(blockHashOrHeight: string): Promise<Block | null> {
   return currentBlockchain === 'BTC'
-    ? getBTC_Block(blockHash)
-    : getETH_Block(blockHash);
+    ? getBTC_Block(blockHashOrHeight)
+    : getETH_Block(blockHashOrHeight);
 }
 
 export async function getTransaction(txHash: string): Promise<Transaction | null> {
@@ -285,71 +397,42 @@ export async function getAddress(address: string): Promise<Address | null> {
 
 export async function getStats() {
   try {
-    if (currentBlockchain === 'BTC') {
-      const response = await fetch(`${BLOCKCHAIN_APIS.BTC}/stats?format=json`, {
-        headers: { 'Accept': 'application/json' }
-      });
-      if (!response.ok) throw new Error('Failed to fetch stats');
-      return await response.json();
-    } else {
-      return { message: 'Ethereum stats available via Etherscan' };
-    }
+    if (currentBlockchain !== 'BTC') return { message: 'Stats available via Etherscan' };
+    const [mempoolRes, blocksRes] = await Promise.all([
+      fetch(`${MEMPOOL_BASE}/mempool`, { headers: { 'Accept': 'application/json' } }),
+      fetch(`${MEMPOOL_V1}/blocks`, { headers: { 'Accept': 'application/json' } }),
+    ]);
+    const mempool = mempoolRes.ok ? await mempoolRes.json() : {};
+    const blocks = blocksRes.ok ? await blocksRes.json() : [];
+    return { mempool, latestBlock: blocks[0] ?? null };
   } catch (error) {
     console.error('Error fetching stats:', error);
     return null;
   }
 }
 
-// Permitted origins for blockchain API requests.
-// Any base URL whose origin is not in this set will be rejected before the request is sent.
-const BLOCKCHAIN_ALLOWED_ORIGINS = new Set([
-  'https://blockchain.info',
-  'https://api.etherscan.io',
-]);
-
-function buildValidatedUrl(
-  baseUrl: string,
-  address: string
-): string {
-  let url: URL;
-  try {
-    url = new URL(baseUrl);
-  } catch {
-    throw new Error('Invalid URL');
-  }
-
-  if (!BLOCKCHAIN_ALLOWED_ORIGINS.has(url.origin)) {
-    throw new Error(`Blocked: request to unexpected host "${url.origin}"`);
-  }
-
-  // Validate address parameter — only alphanumeric, hyphens, and underscores
-  if (!/^[A-Za-z0-9_-]+$/.test(address)) {
-    throw new Error('Invalid parameter');
-  }
-
-  // Add query parameters
-  url.searchParams.set('module', 'account');
-  url.searchParams.set('action', 'balance');
-  url.searchParams.set('address', address);
-  url.searchParams.set('tag', 'latest');
-  url.searchParams.set('apikey', 'YourApiKeyToken');
-
-  return url.href;
-}
-
 export async function getAddressBalance(address: string): Promise<number | null> {
   try {
     if (currentBlockchain === 'BTC') {
-      const response = await fetch(`${BLOCKCHAIN_APIS.BTC}/q/addressbalance/${address}`);
-      if (!response.ok) throw new Error('Failed to fetch balance');
-      const satoshi = await response.text();
-      return parseInt(satoshi, 10) / 100000000;
+      const res = await fetch(`${MEMPOOL_BASE}/address/${address}`, {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const confirmed = data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum;
+      const unconfirmed = data.mempool_stats.funded_txo_sum - data.mempool_stats.spent_txo_sum;
+      return (confirmed + unconfirmed) / 100000000;
     } else {
-      const response = await fetch(
-        buildValidatedUrl(BLOCKCHAIN_APIS.ETH, address)
-      );
-      if (!response.ok) throw new Error('Failed to fetch balance');
-      const data = await response.json();
+      const url = buildEthUrl({
+        module: 'account',
+        action: 'balance',
+        address,
+        tag: 'latest',
+        apikey: 'YourApiKeyToken',
+      });
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
       return parseInt(data.result) / 1e18;
     }
   } catch (error) {
@@ -358,99 +441,31 @@ export async function getAddressBalance(address: string): Promise<number | null>
   }
 }
 
-export interface BlockStatistics {
-  date: string;
-  avgTransactionsPerBlock: number;
-  totalBlocks: number;
-  totalTransactions: number;
-}
-
-export async function getAverageTransactionsPerBlock(days: number = 7): Promise<BlockStatistics[]> {
+export async function getUnconfirmedTransactions(): Promise<any[]> {
   try {
-    if (currentBlockchain !== 'BTC') {
-      console.warn('Average transactions per block is only available for Bitcoin');
-      return [];
-    }
-
-    // Get latest block height
-    const latestBlocksResponse = await fetch(`${BLOCKCHAIN_APIS.BTC}/latestblock?format=json`, {
+    const response = await fetch(`${MEMPOOL_BASE}/mempool/recent`, {
       headers: { 'Accept': 'application/json' }
     });
-    
-    if (!latestBlocksResponse.ok) throw new Error('Failed to fetch latest block');
-    const latestBlockData = await latestBlocksResponse.json();
-    const currentHeight = latestBlockData.height;
-    
-    // Approximately 144 blocks per day for Bitcoin (10 min block time)
-    const blocksPerDay = 144;
-    const totalBlocksToFetch = Math.min(blocksPerDay * days, 1000);
-    
-    const stats: BlockStatistics[] = [];
-    const blocksSampled: { height: number; txCount: number; timestamp: number }[] = [];
-    
-    // Sample blocks from the last N days (fetch every ~10 blocks to get good distribution)
-    const sampleInterval = Math.max(1, Math.floor(totalBlocksToFetch / 20));
-    
-    for (let i = 0; i < Math.min(20, totalBlocksToFetch); i++) {
-      const blockHeight = currentHeight - (i * sampleInterval);
-      if (blockHeight <= 0) break;
-      
-      try {
-        const blockResponse = await fetch(
-          `${BLOCKCHAIN_APIS.BTC}/block-height/${blockHeight}?format=json`,
-          { headers: { 'Accept': 'application/json' } }
-        );
-        
-        if (blockResponse.ok) {
-          const blockData = await blockResponse.json();
-          if (blockData.blocks && blockData.blocks.length > 0) {
-            const block = blockData.blocks[0];
-            blocksSampled.push({
-              height: block.height,
-              txCount: block.tx.length,
-              timestamp: block.time
-            });
-          }
-        }
-      } catch (e) {
-        console.warn(`Failed to fetch block ${blockHeight}:`, e);
-      }
-    }
-    
-    // Group by day and calculate statistics
-    if (blocksSampled.length > 0) {
-      const now = Math.floor(Date.now() / 1000);
-      const dayInSeconds = 24 * 60 * 60;
-      
-      for (let d = 0; d < days; d++) {
-        const dayStart = now - (d * dayInSeconds);
-        const dayEnd = dayStart + dayInSeconds;
-        
-        const blocksInDay = blocksSampled.filter(b => b.timestamp >= dayStart && b.timestamp < dayEnd);
-        
-        if (blocksInDay.length > 0) {
-          const totalTx = blocksInDay.reduce((sum, b) => sum + b.txCount, 0);
-          const avgTx = Math.round(totalTx / blocksInDay.length);
-          
-          const date = new Date(dayStart * 1000);
-          stats.push({
-            date: `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`,
-            avgTransactionsPerBlock: avgTx,
-            totalBlocks: blocksInDay.length,
-            totalTransactions: totalTx
-          });
-        }
-      }
-    }
-    
-    return stats.reverse();
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data: any[] = await response.json();
+    return data.map(tx => ({
+      hash: tx.txid,
+      time: Math.floor(Date.now() / 1000),
+      size: tx.vsize || 0,
+      tx_index: 0,
+      inputs: [],
+      out: [],
+      fee: tx.fee,
+      vsize: tx.vsize,
+      value: tx.value,
+    }));
   } catch (error) {
-    console.error('Error fetching average transactions per block:', error);
+    console.error('Error fetching unconfirmed transactions:', error);
     return [];
   }
 }
 
-// ============== FORMATTING FUNCTIONS ==============
+// ============== FORMATTING HELPERS ==============
 
 export function satoshiToBTC(satoshi: number): number {
   return satoshi / 100000000;
@@ -469,320 +484,15 @@ export function formatETH(eth: number, decimals: number = 6): string {
 }
 
 export function formatHash(hash: string, chars: number = 8): string {
-  if (hash.length <= chars * 2) return hash;
+  if (!hash || hash.length <= chars * 2) return hash;
   return `${hash.substring(0, chars)}...${hash.substring(hash.length - chars)}`;
 }
 
 export function formatAddress(address: string, chars: number = 6): string {
-  if (address.length <= chars * 2) return address;
+  if (!address || address.length <= chars * 2) return address;
   return `${address.substring(0, chars)}...${address.substring(address.length - chars)}`;
 }
 
 export function formatTimestamp(timestamp: number): string {
   return new Date(timestamp * 1000).toLocaleString();
-}
-
-// ============== REAL-TIME FUNCTIONS ==============
-
-export interface UnconfirmedTransaction {
-  hash: string;
-  time: number;
-  size: number;
-  tx_index: number;
-  inputs: Array<{
-    prev_out?: {
-      addr: string;
-      value: number;
-    };
-  }>;
-  out: Array<{
-    addr: string;
-    value: number;
-  }>;
-  total_input?: number;
-  total_output?: number;
-}
-
-export interface ConfirmationData {
-  txHash: string;
-  currentConfirmations: number;
-  blockHeight: number | null;
-  confirmationTime: number | null;
-  firstSeenTime: number;
-  status: 'unconfirmed' | 'confirmed';
-  confirmationsPerDay: number;
-  estimatedTimeToConfirmation?: number;
-}
-
-export async function getUnconfirmedTransactions(): Promise<UnconfirmedTransaction[]> {
-  try {
-    const response = await fetch(`${BLOCKCHAIN_APIS.BTC}/unconfirmed-transactions?format=json`, {
-      headers: { 'Accept': 'application/json' }
-    });
-    
-    if (!response.ok) throw new Error('Failed to fetch unconfirmed transactions');
-    const data = await response.json();
-    return data.txs || [];
-  } catch (error) {
-    console.error('Error fetching unconfirmed transactions:', error);
-    return [];
-  }
-}
-
-export async function getTransactionConfirmationData(txHash: string): Promise<ConfirmationData | null> {
-  try {
-    const [txData, latestBlocks] = await Promise.all([
-      getBTC_Transaction(txHash),
-      getBTC_LatestBlocks(1)
-    ]);
-    
-    if (!txData || !latestBlocks || latestBlocks.length === 0) {
-      return null;
-    }
-    
-    const currentBlockHeight = latestBlocks[0].height;
-    const txBlockHeight = txData.block_height || null;
-    const txTime = txData.time || Math.floor(Date.now() / 1000);
-    const currentTime = Math.floor(Date.now() / 1000);
-    
-    // Calculate confirmations
-    const confirmations = txBlockHeight && currentBlockHeight 
-      ? Math.max(0, currentBlockHeight - txBlockHeight + 1)
-      : 0;
-    
-    // Calculate confirmations per day (blocks mined per day ~= 144 for Bitcoin)
-    const timeElapsedSeconds = currentTime - txTime;
-    const timeElapsedDays = timeElapsedSeconds / (24 * 60 * 60);
-    const confirmationsPerDay = timeElapsedDays > 0 ? Math.round(confirmations / timeElapsedDays) : 0;
-    
-    // Estimate time to confirmation (if unconfirmed)
-    let estimatedTimeToConfirmation: number | undefined;
-    if (confirmations === 0 && timeElapsedSeconds < 3600) {
-      estimatedTimeToConfirmation = Math.max(0, 600 - timeElapsedSeconds); // Typical block time is ~10 minutes
-    }
-    
-    return {
-      txHash,
-      currentConfirmations: confirmations,
-      blockHeight: txBlockHeight,
-      confirmationTime: txBlockHeight ? txTime : null,
-      firstSeenTime: txTime,
-      status: confirmations === 0 ? 'unconfirmed' : 'confirmed',
-      confirmationsPerDay: confirmationsPerDay > 0 ? confirmationsPerDay : 1,
-      estimatedTimeToConfirmation
-    };
-  } catch (error) {
-    console.error('Error fetching transaction confirmation data:', error);
-    return null;
-  }
-}
-
-export interface TransactionMetrics {
-  date: string;
-  value: number;
-}
-
-export async function getTotalTransactionsData(days: number = 7): Promise<TransactionMetrics[]> {
-  try {
-    if (currentBlockchain !== 'BTC') {
-      console.warn('Total transactions data is only available for Bitcoin');
-      return [];
-    }
-
-    const latestBlockResponse = await fetch(`${BLOCKCHAIN_APIS.BTC}/latestblock?format=json`, {
-      headers: { 'Accept': 'application/json' }
-    });
-    
-    if (!latestBlockResponse.ok) throw new Error('Failed to fetch latest block');
-    const latestBlockData = await latestBlockResponse.json();
-    const currentHeight = latestBlockData.height;
-    
-    const blocksPerDay = 144;
-    const stats: TransactionMetrics[] = [];
-    const blocksSampled: { timestamp: number; txCount: number }[] = [];
-    
-    const sampleInterval = Math.max(1, Math.floor((blocksPerDay * days) / 30));
-    
-    for (let i = 0; i < 30; i++) {
-      const blockHeight = currentHeight - (i * sampleInterval);
-      if (blockHeight <= 0) break;
-      
-      try {
-        const blockResponse = await fetch(
-          `${BLOCKCHAIN_APIS.BTC}/block-height/${blockHeight}?format=json`,
-          { headers: { 'Accept': 'application/json' } }
-        );
-        
-        if (blockResponse.ok) {
-          const blockData = await blockResponse.json();
-          if (blockData.blocks && blockData.blocks.length > 0) {
-            blocksSampled.push({
-              timestamp: blockData.blocks[0].time,
-              txCount: blockData.blocks[0].tx.length
-            });
-          }
-        }
-      } catch (e) {
-        console.warn(`Failed to fetch block ${blockHeight}`);
-      }
-    }
-    
-    if (blocksSampled.length > 0) {
-      const now = Math.floor(Date.now() / 1000);
-      const dayInSeconds = 24 * 60 * 60;
-      
-      for (let d = 0; d < days; d++) {
-        const dayStart = now - (d * dayInSeconds);
-        const dayEnd = dayStart + dayInSeconds;
-        
-        const blocksInDay = blocksSampled.filter(b => b.timestamp >= dayStart && b.timestamp < dayEnd);
-        
-        if (blocksInDay.length > 0) {
-          const totalTx = blocksInDay.reduce((sum, b) => sum + b.txCount, 0);
-          const date = new Date(dayStart * 1000);
-          stats.push({
-            date: `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`,
-            value: totalTx / 1000000 // Convert to millions for chart display
-          });
-        }
-      }
-    }
-    
-    return stats.reverse();
-  } catch (error) {
-    console.error('Error fetching total transactions:', error);
-    return [];
-  }
-}
-
-export async function getConfirmationsPerDayData(days: number = 7): Promise<TransactionMetrics[]> {
-  try {
-    if (currentBlockchain !== 'BTC') {
-      console.warn('Confirmations per day data is only available for Bitcoin');
-      return [];
-    }
-
-    const latestBlockResponse = await fetch(`${BLOCKCHAIN_APIS.BTC}/latestblock?format=json`, {
-      headers: { 'Accept': 'application/json' }
-    });
-    
-    if (!latestBlockResponse.ok) throw new Error('Failed to fetch latest block');
-    const latestBlockData = await latestBlockResponse.json();
-    const currentHeight = latestBlockData.height;
-    
-    const blocksPerDay = 144;
-    const stats: TransactionMetrics[] = [];
-    const blocksSampled: { timestamp: number; height: number }[] = [];
-    
-    const sampleInterval = Math.max(1, Math.floor((blocksPerDay * days) / 30));
-    
-    for (let i = 0; i < 30; i++) {
-      const blockHeight = currentHeight - (i * sampleInterval);
-      if (blockHeight <= 0) break;
-      
-      try {
-        const blockResponse = await fetch(
-          `${BLOCKCHAIN_APIS.BTC}/block-height/${blockHeight}?format=json`,
-          { headers: { 'Accept': 'application/json' } }
-        );
-        
-        if (blockResponse.ok) {
-          const blockData = await blockResponse.json();
-          if (blockData.blocks && blockData.blocks.length > 0) {
-            blocksSampled.push({
-              timestamp: blockData.blocks[0].time,
-              height: blockData.blocks[0].height
-            });
-          }
-        }
-      } catch (e) {
-        console.warn(`Failed to fetch block ${blockHeight}`);
-      }
-    }
-    
-    if (blocksSampled.length > 0) {
-      const now = Math.floor(Date.now() / 1000);
-      const dayInSeconds = 24 * 60 * 60;
-      
-      for (let d = 0; d < days; d++) {
-        const dayStart = now - (d * dayInSeconds);
-        const dayEnd = dayStart + dayInSeconds;
-        
-        const blocksInDay = blocksSampled.filter(b => b.timestamp >= dayStart && b.timestamp < dayEnd);
-        
-        if (blocksInDay.length > 0) {
-          // Confirmations = sum of confirmations from all blocks in that day
-          // For simplicity, use total blocks mined * average confirmations per block
-          const totalConfirmations = blocksInDay.length * (currentHeight - blocksInDay[0].height);
-          const date = new Date(dayStart * 1000);
-          stats.push({
-            date: `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`,
-            value: Math.max(100000, totalConfirmations) // Ensure visible data
-          });
-        }
-      }
-    }
-    
-    return stats.reverse();
-  } catch (error) {
-    console.error('Error fetching confirmations per day:', error);
-    return [];
-  }
-}
-
-export async function getAverageTransactionTimeData(days: number = 7): Promise<TransactionMetrics[]> {
-  try {
-    if (currentBlockchain !== 'BTC') {
-      console.warn('Average transaction time data is only available for Bitcoin');
-      return [];
-    }
-
-    const latestBlockResponse = await fetch(`${BLOCKCHAIN_APIS.BTC}/latestblock?format=json`, {
-      headers: { 'Accept': 'application/json' }
-    });
-    
-    if (!latestBlockResponse.ok) throw new Error('Failed to fetch latest block');
-    const latestBlockData = await latestBlockResponse.json();
-    const currentHeight = latestBlockData.height;
-    
-    const blocksPerDay = 144;
-    const stats: TransactionMetrics[] = [];
-    
-    // Average block time for Bitcoin is 10 minutes = 600 seconds
-    const avgBlockTime = 600;
-    
-    for (let d = 0; d < days; d++) {
-      const date = new Date();
-      date.setDate(date.getDate() - d);
-      
-      // Calculate average transaction time (simplified: avgBlockTime / 2 for mempool + block confirmation)
-      const avgTxTime = avgBlockTime / 2;
-      
-      stats.push({
-        date: `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`,
-        value: avgTxTime
-      });
-    }
-    
-    return stats.reverse();
-  } catch (error) {
-    console.error('Error fetching average transaction time data:', error);
-    return [];
-  }
-}
-
-// ============== MEMPOOL BYTES PER FEE (from mempool.space) ==============
-
-export async function getMempoolBytesPerFee(): Promise<any> {
-  try {
-    const response = await fetch('https://mempool.space/api/v1/mempool', {
-      headers: { 'Accept': 'application/json' }
-    });
-    
-    if (!response.ok) throw new Error('Failed to fetch mempool bytes per fee');
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching mempool bytes per fee:', error);
-    return null;
-  }
 }
