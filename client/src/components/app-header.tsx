@@ -366,7 +366,7 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar }: { onOpenSid
             </div>
           </DropdownMenu>
 
-          <Link href="/market" className="hidden xl:block">
+          <Link href="/markets" className="hidden xl:block">
             <Button
               variant={location.startsWith("/markets") ? "secondary" : "ghost"}
               size="sm"
