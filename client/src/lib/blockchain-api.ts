@@ -441,6 +441,20 @@ export async function getAddressBalance(address: string): Promise<number | null>
   }
 }
 
+export async function getBTCPrice(): Promise<number> {
+  try {
+    const res = await fetch(`${MEMPOOL_V1}/prices`, {
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return typeof data.USD === 'number' ? data.USD : 0;
+  } catch (error) {
+    console.error('Error fetching BTC price:', error);
+    return 0;
+  }
+}
+
 export async function getUnconfirmedTransactions(): Promise<any[]> {
   try {
     const response = await fetch(`${MEMPOOL_BASE}/mempool/recent`, {
