@@ -7,6 +7,22 @@ export type Blockchain = 'BTC' | 'ETH';
 const MEMPOOL_BASE = 'https://mempool.space/api';
 const MEMPOOL_V1 = 'https://mempool.space/api/v1';
 const ETH_API = 'https://api.etherscan.io/api';
+const COINGECKO_BASE = 'https://api.coingecko.com/api/v3';
+
+const COINGECKO_IDS: Record<string, string> = {
+  BTC: 'bitcoin', ETH: 'ethereum', USDT: 'tether', USDC: 'usd-coin',
+  SOL: 'solana', BNB: 'binancecoin', XRP: 'ripple', ADA: 'cardano', TRX: 'tron',
+};
+
+const COIN_NAMES: Record<string, string> = {
+  BTC: 'Bitcoin', ETH: 'Ethereum', USDT: 'Tether', USDC: 'USD Coin',
+  SOL: 'Solana', BNB: 'Binance Coin', XRP: 'XRP', ADA: 'Cardano', TRX: 'Tron',
+};
+
+const POOL_COLORS = [
+  '#FF69B4', '#DA70D6', '#8A2BE2', '#4169E1', '#00BFFF',
+  '#00CED1', '#3CB371', '#7FFF00', '#ADFF2F', '#FFD700', '#FF6347', '#98FB98',
+];
 
 let currentBlockchain: Blockchain = 'BTC';
 
@@ -600,5 +616,131 @@ export async function getMempoolBytesPerFee(): Promise<any[]> {
     }));
   } catch {
     return [];
+  }
+}
+
+// ============== LIVE COIN PRICES — CoinGecko (free, no auth) ==============
+
+export interface LiveCoinData {
+  symbol: string;
+  name: string;
+  price: number;
+  change24h: number;
+}
+
+export async function getLiveCoinPrices(symbols: string[]): Promise<LiveCoinData[]> {
+  try {
+    const ids = symbols.map(s => COINGECKO_IDS[s]).filter(Boolean).join(',');
+    const res = await fetch(
+      `${COINGECKO_BASE}/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`,
+      { headers: { 'Accept': 'application/json' } }
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return symbols.map(s => {
+      const id = COINGECKO_IDS[s];
+      const d = id ? data[id] : null;
+      return {
+        symbol: s,
+        name: COIN_NAMES[s] || s,
+        price: d?.usd ?? 0,
+        change24h: d?.usd_24h_change ?? 0,
+      };
+    });
+  } catch (error) {
+    console.error('Error fetching live coin prices:', error);
+    return [];
+  }
+}
+
+// ============== COIN PRICE HISTORY — CoinGecko hourly (last 24h) ==============
+
+export async function getCoinPriceHistory(symbol: string): Promise<{ value: number }[]> {
+  try {
+    const id = COINGECKO_IDS[symbol];
+    if (!id) return [];
+    const res = await fetch(
+      `${COINGECKO_BASE}/coins/${id}/market_chart?vs_currency=usd&days=1&interval=hourly`,
+      { headers: { 'Accept': 'application/json' } }
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const prices: [number, number][] = data.prices || [];
+    return prices.slice(-24).map(([, price]) => ({ value: price }));
+  } catch (error) {
+    console.error(`Error fetching price history for ${symbol}:`, error);
+    return [];
+  }
+}
+
+// ============== MINING POOL DISTRIBUTION — mempool.space (last 1 week) ==============
+
+export interface PoolEntry {
+  name: string;
+  value: number;
+  color: string;
+}
+
+export async function getMiningPoolDistribution(): Promise<PoolEntry[]> {
+  try {
+    const res = await fetch(`${MEMPOOL_V1}/mining/pools/1w`, {
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const pools: any[] = data.pools || [];
+    const total = pools.reduce((sum: number, p: any) => sum + (p.blockCount || 0), 0);
+    return pools.slice(0, 9).map((p: any, i: number) => ({
+      name: p.name,
+      value: total > 0 ? parseFloat(((p.blockCount / total) * 100).toFixed(1)) : 0,
+      color: POOL_COLORS[i % POOL_COLORS.length],
+    }));
+  } catch (error) {
+    console.error('Error fetching mining pool distribution:', error);
+    return [];
+  }
+}
+
+// ============== LIVE NETWORK STATS — mempool.space ==============
+
+export interface LiveNetworkStat {
+  label: string;
+  value: string;
+  sub: string;
+}
+
+export async function getLiveNetworkStats(): Promise<{ stats: LiveNetworkStat[]; fastestFee: number; pendingCount: number }> {
+  try {
+    const [mempoolRes, hashRes, feeRes, tipRes] = await Promise.all([
+      fetch(`${MEMPOOL_BASE}/mempool`, { headers: { 'Accept': 'application/json' } }),
+      fetch(`${MEMPOOL_V1}/mining/hashrate/3d`, { headers: { 'Accept': 'application/json' } }),
+      fetch(`${MEMPOOL_V1}/fees/recommended`, { headers: { 'Accept': 'application/json' } }),
+      fetch(`${MEMPOOL_BASE}/blocks/tip/height`),
+    ]);
+    const mempool = mempoolRes.ok ? await mempoolRes.json() : {};
+    const hashData = hashRes.ok ? await hashRes.json() : {};
+    const fees = feeRes.ok ? await feeRes.json() : {};
+    const tipHeight = tipRes.ok ? parseInt(await tipRes.text(), 10) : 0;
+
+    const hashrates: any[] = hashData.hashrates || [];
+    const latestHashrate = hashrates.length > 0 ? hashrates[hashrates.length - 1].avgHashrate : 0;
+    const hashrateEH = latestHashrate > 0 ? (latestHashrate / 1e18).toFixed(2) : '—';
+
+    const pendingCount: number = mempool.count ?? 0;
+    const fastestFee: number = fees.fastestFee ?? 0;
+
+    const stats: LiveNetworkStat[] = [
+      { label: 'Mempool Txns', value: pendingCount.toLocaleString(), sub: '' },
+      { label: 'Fastest Fee', value: fastestFee > 0 ? `${fastestFee} sat/vB` : '—', sub: '' },
+      { label: 'Block Height', value: tipHeight > 0 ? tipHeight.toLocaleString() : '—', sub: '' },
+      { label: 'Network Hashrate', value: `${hashrateEH} EH/s`, sub: '' },
+      { label: 'Mempool Size', value: mempool.vsize ? `${(mempool.vsize / 1e6).toFixed(1)} MvB` : '—', sub: '' },
+      { label: 'Economy Fee', value: fees.economyFee ? `${fees.economyFee} sat/vB` : '—', sub: '' },
+    ];
+
+    return { stats, fastestFee, pendingCount };
+  } catch (error) {
+    console.error('Error fetching live network stats:', error);
+    return { stats: [], fastestFee: 0, pendingCount: 0 };
   }
 }
