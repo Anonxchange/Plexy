@@ -396,13 +396,20 @@ export default function AddressDetail() {
                       {/* Footer - sat/vB and Confirmations + Amount */}
                       <div className="px-4 py-3 border-t border-border/50 bg-secondary/20 flex items-center justify-between gap-3">
                         <span className="text-xs text-muted-foreground">
-                          {tx.size ? Math.round((tx.fee || 0) / (tx.size / 8)) : 0} sat/vB
+                          {tx.size && tx.fee ? Math.round(tx.fee / tx.size) : 0} sat/vB
                         </span>
                         <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center gap-1.5 bg-green-500/20 text-green-500 px-2.5 py-1 rounded-full text-xs font-medium">
-                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                            {confirmations} confirmed
-                          </span>
+                          {confirmations > 0 ? (
+                            <span className="inline-flex items-center gap-1.5 bg-green-500/20 text-green-500 px-2.5 py-1 rounded-full text-xs font-medium">
+                              <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                              {confirmations} confirmed
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 bg-yellow-500/20 text-yellow-500 px-2.5 py-1 rounded-full text-xs font-medium">
+                              <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-pulse"></div>
+                              Pending
+                            </span>
+                          )}
                           <span 
                             onClick={() => setShowBTC(!showBTC)}
                             className={`text-xs sm:text-sm font-bold cursor-pointer hover:opacity-80 transition-opacity ${isIncoming ? 'text-green-500' : 'text-red-500'}`}
