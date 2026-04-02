@@ -42,6 +42,10 @@ export default defineConfig({
   envDir: "../",
   base: "/",
 
+  html: {
+    cspNonce: "CSP_NONCE_PLACEHOLDER",
+  },
+
   plugins: [react(), deferNonCriticalCss, preloadEntryScript],
 
   resolve: {
@@ -67,7 +71,7 @@ export default defineConfig({
   build: {
     outDir: "../dist",
     emptyOutDir: true,
-    assetsInlineLimit: 2048,
+    assetsInlineLimit: 0,
     sourcemap: false,
     minify: "esbuild",
     cssCodeSplit: true,
@@ -151,6 +155,7 @@ export default defineConfig({
     allowedHosts: true,
     hmr: {
       clientPort: 443,
+  
     },
   },
 
