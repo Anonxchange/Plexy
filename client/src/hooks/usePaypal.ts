@@ -17,7 +17,7 @@ export function usePayPal() {
       const orderId = createData.id;
 
       // Step 2: Open PayPal approval in popup
-      const approvalUrl = `https://www.sandbox.paypal.com/checkoutnow?token=${orderId}`;
+      const approvalUrl = `https://www.paypal.com/checkoutnow?token=${orderId}`;
       const popup = window.open(approvalUrl, "paypal", "width=500,height=700");
 
       if (!popup) {
