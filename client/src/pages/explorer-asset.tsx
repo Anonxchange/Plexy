@@ -22,7 +22,9 @@ const COIN_META: Record<string, {
   details: string;
   algorithm: string;
   genesisDate: string;
-  website: string;
+  websiteLabel: string;
+  websiteUrl: string;
+  whitepaperUrl: string;
   coingeckoId: string;
 }> = {
   btc: {
@@ -30,63 +32,81 @@ const COIN_META: Record<string, {
     description: "Bitcoin (BTC) is a decentralized currency that eliminates the need for central authorities such as banks or governments by using a peer-to-peer internet network to confirm transactions directly between users.",
     history: "Bitcoin was created in 2009 by Satoshi Nakamoto, a pseudonymous developer. Bitcoin is designed to be completely decentralized and not controlled by any single authority. With a total supply of 21 million, its scarcity and decentralized nature make it almost impossible to inflate or manipulate.",
     details: "For this reason, many consider bitcoin to be the ultimate store of value or 'Digital Gold'. Bitcoin is fully open-source and operates on a proof-of-work blockchain, a shared public ledger and history of transactions organized into \"blocks\" that are \"chained\" together to prevent tampering.",
-    algorithm: "SHA-256", genesisDate: "2009-01-03", website: "Bitcoin.org",
+    algorithm: "SHA-256", genesisDate: "2009-01-03",
+    websiteLabel: "Bitcoin.org", websiteUrl: "https://bitcoin.org",
+    whitepaperUrl: "https://bitcoin.org/bitcoin.pdf",
   },
   eth: {
     symbol: "ETH", name: "Ethereum", coingeckoId: "ethereum",
     description: "Ethereum (ETH) is a decentralized platform that runs smart contracts and decentralized applications (dApps). It enables developers to build and deploy applications on a blockchain with a native cryptocurrency.",
     history: "Ethereum was proposed in 2013 by programmer Vitalik Buterin when he was just 19 years old. It launched in 2015 and has since become the leading smart contract platform, revolutionizing how decentralized applications are built.",
     details: "The Ethereum network uses a consensus mechanism called Proof of Stake (PoS) to validate transactions and secure the network. Unlike Bitcoin, Ethereum's primary use is enabling complex smart contracts and decentralized applications.",
-    algorithm: "Proof of Stake", genesisDate: "2015-07-30", website: "Ethereum.org",
+    algorithm: "Proof of Stake", genesisDate: "2015-07-30",
+    websiteLabel: "Ethereum.org", websiteUrl: "https://ethereum.org",
+    whitepaperUrl: "https://ethereum.org/en/whitepaper",
   },
   usdt: {
     symbol: "USDT", name: "Tether", coingeckoId: "tether",
     description: "Tether (USDT) is a stablecoin that represents the US Dollar on the blockchain. Each USDT token is backed by a reserve of real US Dollars.",
     history: "Tether was launched in 2014 (originally as Realcoin) and is one of the first and most widely used stablecoins in the cryptocurrency market. It operates on multiple blockchains including Bitcoin, Ethereum, and others.",
     details: "USDT provides a way for users to transact in USD-equivalent value on blockchain networks without the volatility associated with other cryptocurrencies. It is widely used for trading, remittances, and storing value.",
-    algorithm: "Stablecoin", genesisDate: "2014-11-06", website: "Tether.to",
+    algorithm: "Stablecoin", genesisDate: "2014-11-06",
+    websiteLabel: "Tether.to", websiteUrl: "https://tether.to",
+    whitepaperUrl: "https://tether.to/en/whitepaper",
   },
   bnb: {
     symbol: "BNB", name: "BNB", coingeckoId: "binancecoin",
     description: "BNB (Binance Coin) is the native token of the Binance Smart Chain, one of the largest blockchain ecosystems. It powers transactions and smart contracts on BSC.",
     history: "BNB was created by Binance in 2017 as a utility token for the Binance exchange. It later evolved to power the Binance Smart Chain, a parallel blockchain to Ethereum with lower fees and faster transactions.",
     details: "BNB has utility across the Binance ecosystem including trading discounts, staking rewards, and fuel for decentralized applications on the Binance Smart Chain.",
-    algorithm: "Proof of Authority", genesisDate: "2017-07-25", website: "Binance.com",
+    algorithm: "Proof of Authority", genesisDate: "2017-07-25",
+    websiteLabel: "BNB Chain", websiteUrl: "https://www.bnbchain.org",
+    whitepaperUrl: "https://www.bnbchain.org/en/whitePaper",
   },
   sol: {
     symbol: "SOL", name: "Solana", coingeckoId: "solana",
     description: "Solana (SOL) is a high-performance blockchain platform designed for fast, scalable, and cost-efficient transactions and smart contracts.",
     history: "Solana was created by Anatoly Yakovenko and launched in 2020. It has gained popularity for its exceptional transaction throughput and low fees compared to other major blockchains.",
     details: "Solana uses a unique consensus mechanism called Proof of History (PoH) which allows it to process thousands of transactions per second, making it ideal for high-frequency applications and NFTs.",
-    algorithm: "Proof of History", genesisDate: "2020-03-16", website: "Solana.com",
+    algorithm: "Proof of History", genesisDate: "2020-03-16",
+    websiteLabel: "Solana.com", websiteUrl: "https://solana.com",
+    whitepaperUrl: "https://solana.com/solana-whitepaper.pdf",
   },
   xrp: {
     symbol: "XRP", name: "XRP", coingeckoId: "ripple",
     description: "XRP is a digital asset designed for efficient cross-border payments. It operates on the XRP Ledger, a decentralized platform for value exchange.",
     history: "XRP was created by Ripple Labs in 2012 and has been designed to facilitate fast and affordable international payments. It differs from Bitcoin in that it doesn't rely on traditional mining.",
     details: "The XRP Ledger uses a consensus mechanism where trusted validators vote on the state of transactions. This allows for very fast transaction settlement times, ideal for global remittances.",
-    algorithm: "XRP Ledger Consensus", genesisDate: "2012-06-02", website: "Ripple.com",
+    algorithm: "XRP Ledger Consensus", genesisDate: "2012-06-02",
+    websiteLabel: "XRPL.org", websiteUrl: "https://xrpl.org",
+    whitepaperUrl: "https://ripple.com/files/ripple_consensus_whitepaper.pdf",
   },
   trx: {
     symbol: "TRX", name: "Tron", coingeckoId: "tron",
     description: "Tron (TRX) is a blockchain platform designed for decentralized content and entertainment. It enables creators to publish and distribute digital content directly.",
     history: "Tron was founded by Justin Sun in 2017. It started as an ERC-20 token on Ethereum before launching its own mainnet in 2018, focusing on content sharing and decentralized entertainment.",
     details: "The Tron network emphasizes high scalability and low transaction costs. It uses a delegated Proof of Stake (DPoS) consensus mechanism and has become a hub for DeFi applications and content sharing.",
-    algorithm: "Delegated Proof of Stake", genesisDate: "2017-08-31", website: "Tron.network",
+    algorithm: "Delegated Proof of Stake", genesisDate: "2017-08-31",
+    websiteLabel: "Tron.network", websiteUrl: "https://tron.network",
+    whitepaperUrl: "https://tron.network/static/doc/white_paper_v_2_0.pdf",
   },
   usdc: {
     symbol: "USDC", name: "USD Coin", coingeckoId: "usd-coin",
     description: "USD Coin (USDC) is a fully collateralized US Dollar stablecoin. It is issued by the Centre consortium and provides a transparent blockchain-based representation of the US Dollar.",
     history: "USDC was launched in 2018 as a joint initiative between Coinbase and Circle. It has become a widely trusted and transparent alternative to other stablecoins.",
     details: "Unlike some other stablecoins, USDC publishes monthly attestations showing that every token is backed 1:1 with US Dollars. This transparency has made it popular with institutions.",
-    algorithm: "Stablecoin", genesisDate: "2018-09-26", website: "Circle.com",
+    algorithm: "Stablecoin", genesisDate: "2018-09-26",
+    websiteLabel: "Circle.com", websiteUrl: "https://www.circle.com/usdc",
+    whitepaperUrl: "https://www.circle.com/hubfs/USDC-Fact-Sheet.pdf",
   },
   ada: {
     symbol: "ADA", name: "Cardano", coingeckoId: "cardano",
     description: "Cardano (ADA) is a proof-of-stake blockchain platform that aims to provide a more balanced and sustainable ecosystem for cryptocurrencies.",
     history: "Cardano was founded by Charles Hoskinson, one of the co-founders of Ethereum. Development began in 2015 and the network launched in 2017 with a focus on academic research and formal verification.",
     details: "Cardano uses the Ouroboros proof-of-stake protocol, which is designed to be energy-efficient while maintaining the security and decentralization properties of blockchain networks.",
-    algorithm: "Proof of Stake (Ouroboros)", genesisDate: "2017-09-29", website: "Cardano.org",
+    algorithm: "Proof of Stake (Ouroboros)", genesisDate: "2017-09-29",
+    websiteLabel: "Cardano.org", websiteUrl: "https://cardano.org",
+    whitepaperUrl: "https://docs.cardano.org/introduction",
   },
 };
 
@@ -175,6 +195,7 @@ function useCoinRoi(coingeckoId: string) {
   return useQuery<{ period: string; usd: number; eth: number }[]>({
     queryKey: ["coin-roi", coingeckoId],
     queryFn: async () => {
+      await new Promise((r) => setTimeout(r, 2500));
       const [coinRes, ethRes] = await Promise.all([
         fetch(`https://api.coingecko.com/api/v3/coins/${coingeckoId}/market_chart?vs_currency=usd&days=365`),
         fetch(`https://api.coingecko.com/api/v3/coins/ethereum/market_chart?vs_currency=usd&days=365`),
@@ -474,7 +495,7 @@ const Index = () => {
                     tickLine={false}
                     tick={{ fill: "hsl(220, 10%, 46%)", fontSize: 12 }}
                     tickFormatter={(value) => value >= 1000 ? `$${(value / 1000).toFixed(1)}K` : `$${value}`}
-                    domain={["dataMin - 1%", "dataMax + 1%"]}
+                    domain={[(min: number) => min * 0.999, (max: number) => max * 1.001]}
                   />
                   <Tooltip
                     contentStyle={{
@@ -499,9 +520,9 @@ const Index = () => {
         {/* CTA Banner */}
         <div className="gradient-peach px-4 py-10 animate-fade-in" style={{ animationDelay: "0.2s" }}>
           <h2 className="text-2xl font-bold leading-tight text-foreground">
-            Trade <span className="text-primary">{meta.name}</span> with the world's most popular crypto wallet.
+            Trade <span className="text-primary">{meta.name}</span> on Pexly — non-custodial, peer-to-peer.
           </h2>
-          <p className="mt-3 text-sm text-muted-foreground">Over 83 million wallets created to buy, sell, and earn crypto.</p>
+          <p className="mt-3 text-sm text-muted-foreground">Buy and sell {meta.symbol} with 500+ payment methods across 140+ countries. Your keys, your assets.</p>
           <Button className="mt-6 w-full justify-between rounded-full bg-foreground px-6 py-6 text-base font-medium text-background hover:bg-foreground/90">
             Buy {meta.symbol} <ArrowRight className="h-5 w-5" />
           </Button>
@@ -568,13 +589,13 @@ const Index = () => {
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <ExternalLink className="h-4 w-4" /> Website
                 </div>
-                <a href="#" className="mt-1 block font-medium text-primary hover:underline">{meta.website}</a>
+                <a href={meta.websiteUrl} target="_blank" rel="noopener noreferrer" className="mt-1 block font-medium text-primary hover:underline">{meta.websiteLabel}</a>
               </div>
               <div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <FileText className="h-4 w-4" /> Documents
                 </div>
-                <a href="#" className="mt-1 block font-medium text-primary hover:underline">Whitepaper</a>
+                <a href={meta.whitepaperUrl} target="_blank" rel="noopener noreferrer" className="mt-1 block font-medium text-primary hover:underline">Whitepaper</a>
               </div>
             </div>
 
