@@ -48,18 +48,9 @@ export function SignIn() {
 
   // Auto-detect country from IP on mount
   useEffect(() => {
-    const detectCountry = async () => {
-      try {
-        const response = await fetch('https://ipapi.co/json/');
-        const data = await response.json();
-        if (data.country_calling_code) {
-          setCountryCode(data.country_calling_code);
-        }
-      } catch (error) {
-        console.error('Failed to detect country:', error);
-      }
-    };
-    detectCountry();
+    import("@/lib/geo").then(({ getCallingCode }) => {
+      getCallingCode().then(setCountryCode).catch(() => {});
+    });
   }, []);
 
   // Check passkey support and start conditional UI (autofill-assisted passkey)
