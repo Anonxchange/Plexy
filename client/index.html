@@ -2,6 +2,11 @@
 <html lang="en-US">
   <head>
     <meta charset="UTF-8" />
+    <!-- Cloudflare Worker stamps the per-request CSP nonce onto this tag's `nonce`
+         attribute at the edge. main.tsx reads it and calls setNonce() so that
+         react-style-singleton (used by Radix Dialog, Dropdown, Popover, etc.)
+         automatically carries the nonce on every <style> it injects at runtime. -->
+    <meta property="csp-nonce" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- Sets theme class before first paint so ThemeProvider has nothing to change,
          eliminating the full-document style recalculation on initial load. -->
