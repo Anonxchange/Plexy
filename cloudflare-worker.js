@@ -94,7 +94,7 @@ function buildCsp(nonce) {
       "api.exchangerate-api.com",
     ].join(" "),
 
-    "frame-src 'self' s.tradingview.com www.paypal.com pay.coinbase.com challenges.cloudflare.com",
+    "frame-src 'self' s.tradingview.com www.tradingview-widget.com www.paypal.com pay.coinbase.com challenges.cloudflare.com",
     "worker-src 'self' blob:",
     "object-src 'none'",
     "base-uri 'self'",
