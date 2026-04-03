@@ -18,8 +18,11 @@ function buildCsp(nonce: string): string {
     // those scripts load further scripts without individually listing them
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' challenges.cloudflare.com s3.tradingview.com static.cloudflareinsights.com`,
 
-    // nonce replaces unsafe-inline for all inline styles Vite may inject
-    `style-src 'self' 'nonce-${nonce}' fonts.googleapis.com`,
+    // unsafe-inline is required — Framer Motion and Radix UI apply inline
+    // style="" attributes at runtime that nonces cannot cover. Per the CSP
+    // spec, adding a nonce to style-src causes browsers to ignore unsafe-inline,
+    // so the nonce is omitted here. XSS protection is on script-src.
+    "style-src 'self' 'unsafe-inline' fonts.googleapis.com",
 
     "font-src 'self' fonts.gstatic.com data:",
 
