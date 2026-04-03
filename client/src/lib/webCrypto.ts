@@ -131,7 +131,28 @@ export async function decryptVaultWithRawKey(vault: PasskeyVault, rawKey: ArrayB
 }
 
 /**
+ * Returns true if the vault value is in the legacy string format.
+ * Legacy vaults used a deterministic salt (`pexly_v1_vault_${userId}`) which
+ * is a cryptographic weakness — salt must be random. Users still on the legacy
+ * format should be migrated to EncryptedVault (random salt + AES-256-GCM) as
+ * soon as their password is available. Call migrateLegacyVault() and persist
+ * the result to replace the legacy blob.
+ */
+export function isLegacyVault(vault: any): boolean {
+  return typeof vault === "string";
+}
+
+/**
  * Migration tool for legacy PBKDF2 or non-vault formats.
+ *
+ * SECURITY NOTE — deterministic salt:
+ * The legacy format derived the scrypt salt from `pexly_v1_vault_${userId}`.
+ * Because userId is not secret, a targeted attacker with access to the
+ * ciphertext can precompute a dictionary attack without the random-salt
+ * protection that modern vaults have. This function decrypts the legacy blob
+ * (using the original deterministic salt to match how it was encrypted) and
+ * immediately re-encrypts it with a random salt via encryptVault(). Call this
+ * as soon as the user's password is known and persist the upgraded vault.
  */
 export async function migrateLegacyVault(legacyData: any, password: string, userId: string): Promise<EncryptedVault> {
   let mnemonic: string;
