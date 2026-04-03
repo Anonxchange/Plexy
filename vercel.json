@@ -36,11 +36,20 @@
       ]
     },
     {
-      "source": "/(.*\\.html|index\\.html)",
+      "source": "/(.*\\.html|)",
       "headers": [
         {
           "key": "Cache-Control",
           "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'none'; script-src 'self' challenges.cloudflare.com s3.tradingview.com static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src 'self' fonts.gstatic.com data:; img-src 'self' data: blob: hvpeycnedmzrjshmvgri.supabase.co pub-1d1c072ba4084950addc61f4dd8d95a3.r2.dev assets.coingecko.com api.coingecko.com flagcdn.com cdn.shopify.com *.reloadly.com s3.amazonaws.com *.s3.amazonaws.com cdn.rocketx.exchange cdn.jsdelivr.net images.unsplash.com raw.githubusercontent.com www.pexly.app pexly.app ui-avatars.com api.dicebear.com polymarket.com *.polymarket.com; connect-src 'self' hvpeycnedmzrjshmvgri.supabase.co wss://hvpeycnedmzrjshmvgri.supabase.co pub-1d1c072ba4084950addc61f4dd8d95a3.r2.dev api.coingecko.com assets.coingecko.com api.binance.com binance.llamarpc.com eth.llamarpc.com api.blockchain.info blockchain.info blockstream.info mempool.space static.cloudflareinsights.com api.etherscan.io api.mainnet-beta.solana.com www.asterdex.com sapi.asterdex.com https://fapi.asterdex.com pay.coinbase.com www.staderlabs.com www.tradingview.com cdn.jsdelivr.net www.pexly.app pexly.app api.ipify.org ipapi.co api.exchangerate-api.com; frame-src 'self' s.tradingview.com www.paypal.com pay.coinbase.com challenges.cloudflare.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests; block-all-mixed-content"
         }
       ]
     }
