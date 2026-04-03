@@ -6,9 +6,7 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "build:server": "esbuild server/index.ts --platform=node --format=esm --bundle --outfile=dist/server.js --external:express",
-    "build:all": "npm run build && npm run build:server",
-    "start": "node dist/server.js",
+    "start": "vite preview",
     "check": "tsc"
   },
   "dependencies": {
