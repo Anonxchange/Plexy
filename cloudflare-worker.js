@@ -77,7 +77,8 @@ function buildCsp(nonce) {
     // sha256-nzTg... — react-remove-scroll scroll-lock style (react-remove-scroll v2.x).
     // sha256-CIxD... — react-remove-scroll scroll-lock style (react-remove-scroll-bar v2.3+).
     // sha256-JyHF... — TradingView advanced chart widget inline style injection.
-    `style-src-elem 'self' 'nonce-${nonce}' 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' 'sha256-nzTgYzXYDNe6BAHiiI7NNlfK8n/auuOAhh2t92YvuXo=' 'sha256-CIxDM5jnsGiKqXs2v7NKCY5MzdR9gu6TtiMJrDw29AY=' 'sha256-JyHF32z4Ou/Ujas95CX3WgBqlTt7Dxzo/fQG5/5oBo8=' fonts.googleapis.com`,
+    // sha256-YIjA... — vaul drawer component inline style injection.
+    `style-src-elem 'self' 'nonce-${nonce}' 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' 'sha256-nzTgYzXYDNe6BAHiiI7NNlfK8n/auuOAhh2t92YvuXo=' 'sha256-CIxDM5jnsGiKqXs2v7NKCY5MzdR9gu6TtiMJrDw29AY=' 'sha256-JyHF32z4Ou/Ujas95CX3WgBqlTt7Dxzo/fQG5/5oBo8=' 'sha256-YIjArHm2rkb5J7hX9lUM1bnQ3Kp61MTfluMGkuyKwDw=' fonts.googleapis.com`,
     "style-src-attr 'none'",
 
     "font-src 'self' fonts.gstatic.com data:",
@@ -177,6 +178,20 @@ class NonceInjector {
   }
 }
 
+// Writes the Cloudflare-resolved country code (ISO 3166-1 alpha-2, e.g. "US") into
+// the `content` attribute of <meta name="cf-country">. The client reads this at
+// startup so it never needs to make an external IP-geolocation API call in production.
+class CountryMetaInjector {
+  constructor(country) {
+    this.country = country;
+  }
+  element(element) {
+    if (this.country) {
+      element.setAttribute("content", this.country);
+    }
+  }
+}
+
 // Writes the nonce into the `content` attribute of <meta property="csp-nonce">.
 // Using `content` (not `nonce`) avoids Chrome's nonce-hiding behaviour, which
 // can suppress getAttribute("nonce") on non-script/style elements in some
@@ -260,6 +275,8 @@ export default {
       newHeaders.append("Vary", "Origin");
     }
 
+    const country = request.cf?.country ?? "";
+
     return new HTMLRewriter()
       .on("script", new NonceInjector(nonce))
       .on("style", new NonceInjector(nonce))
@@ -268,6 +285,7 @@ export default {
       .on('link[rel="stylesheet"]', new NonceInjector(nonce))
       .on('link[rel="modulepreload"]', new NonceInjector(nonce))
       .on('meta[property="csp-nonce"]', new NonceCspMetaInjector(nonce))
+      .on('meta[name="cf-country"]', new CountryMetaInjector(country))
       .transform(new Response(response.body, {
         status: response.status,
         statusText: response.statusText,
