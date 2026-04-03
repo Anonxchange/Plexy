@@ -42,10 +42,6 @@ export default defineConfig({
   envDir: "../",
   base: "/",
 
-  html: {
-    cspNonce: "CSP_NONCE_PLACEHOLDER",
-  },
-
   plugins: [react(), deferNonCriticalCss, preloadEntryScript],
 
   resolve: {
@@ -155,7 +151,7 @@ export default defineConfig({
     allowedHosts: true,
     hmr: {
       clientPort: 443,
-  
+
     },
   },
 
