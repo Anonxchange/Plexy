@@ -10,6 +10,16 @@
  *     onto every <script> and <link rel="modulepreload"> tag via HTMLRewriter,
  *     and sets the Content-Security-Policy header with that nonce.
  *  4. Non-HTML responses (JS, CSS, images) pass through untouched.
+ *
+ * Security notes:
+ *  - script-src uses 'nonce-{nonce}' + 'strict-dynamic'. In browsers that
+ *    support 'strict-dynamic', the 'self' token is ignored — it is kept only
+ *    for legacy browser fallback. This app hosts no JSONP endpoints and no
+ *    user-uploaded scripts, so 'self' does not introduce a bypass vector.
+ *  - img-src uses *.amazonaws.com to cover S3 regional buckets
+ *    (e.g. polymarket-static.s3.us-east-2.amazonaws.com). The pattern
+ *    *.s3.amazonaws.com does NOT match regional buckets due to extra
+ *    subdomain levels, which would silently break prediction market images.
  */
 
 function generateNonce() {
@@ -37,8 +47,10 @@ function buildCsp(nonce) {
       "flagcdn.com",
       "cdn.shopify.com",
       "*.reloadly.com",
-      "s3.amazonaws.com",
-      "*.s3.amazonaws.com",
+      // *.amazonaws.com covers all S3 regional buckets
+      // (e.g. polymarket-static.s3.us-east-2.amazonaws.com).
+      // The narrower *.s3.amazonaws.com does not match regional variants.
+      "*.amazonaws.com",
       "cdn.rocketx.exchange",
       "cdn.jsdelivr.net",
       "images.unsplash.com",
@@ -117,9 +129,20 @@ export default {
     const csp = buildCsp(nonce);
 
     const newHeaders = new Headers(response.headers);
-    newHeaders.set("Content-Security-Policy", csp);
+
+    // Remove headers that the origin (Vercel) sets so we can set them once,
+    // cleanly. Leaving duplicates causes browsers to see conflicting values
+    // and security scanners to flag them.
+    newHeaders.delete("Access-Control-Allow-Origin");
+    newHeaders.delete("X-Frame-Options");
+    newHeaders.delete("Strict-Transport-Security");
     newHeaders.delete("Cache-Control");
+
+    newHeaders.set("Content-Security-Policy", csp);
     newHeaders.set("Cache-Control", "no-store");
+    newHeaders.set("Access-Control-Allow-Origin", "https://pexly.app");
+    newHeaders.set("X-Frame-Options", "DENY");
+    newHeaders.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
 
     return new HTMLRewriter()
       .on("script", new ScriptNonceInjector(nonce))
