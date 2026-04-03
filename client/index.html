@@ -7,6 +7,10 @@
          react-style-singleton (used by Radix Dialog, Dropdown, Popover, etc.)
          automatically carries the nonce on every <style> it injects at runtime. -->
     <meta property="csp-nonce" />
+    <!-- Cloudflare Worker stamps the user's ISO country code (e.g. "US") here at the
+         edge. Client code reads this via getCountryCode() in lib/geo.ts so no external
+         IP-geolocation API call is needed in production. -->
+    <meta name="cf-country" content="" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- Sets theme class before first paint so ThemeProvider has nothing to change,
          eliminating the full-document style recalculation on initial load. -->
