@@ -166,103 +166,16 @@ export function SignUp() {
   const detectCountry = async () => {
     setDetectingCountry(true);
     try {
-      const response = await fetch('https://ipapi.co/json/');
-      const data = await response.json();
-      
-      if (data.country_code) {
-        const detectedCountry = countries.find(c => c.code === data.country_code);
-        if (detectedCountry) {
-          setCountry(data.country_code);
-          
-          // Also update phone country code based on detected country
-          const countryToPhoneCode: { [key: string]: string } = {
-            'NG': '+234',
-            'US': '+1',
-            'GB': '+44',
-            'GH': '+233',
-            'KE': '+254',
-            'ZA': '+27',
-            'EG': '+20',
-            'MA': '+212',
-            'CA': '+1',
-            'AU': '+61',
-            'IN': '+91',
-            'PH': '+63',
-            'ID': '+62',
-            'MY': '+60',
-            'SG': '+65',
-            'TH': '+66',
-            'VN': '+84',
-            'AE': '+971',
-            'SA': '+966',
-            'BR': '+55',
-            'MX': '+52',
-            'AR': '+54',
-            'CL': '+56',
-            'CO': '+57',
-            'PE': '+51',
-            'FR': '+33',
-            'DE': '+49',
-            'IT': '+39',
-            'ES': '+34',
-            'NL': '+31',
-            'BE': '+32',
-            'PT': '+351',
-            'CH': '+41',
-            'SE': '+46',
-            'NO': '+47',
-            'DK': '+45',
-            'FI': '+358',
-            'PL': '+48',
-            'CZ': '+420',
-            'HU': '+36',
-            'RO': '+40',
-            'AT': '+43',
-            'IE': '+353',
-            'GR': '+30',
-            'TR': '+90',
-            'RU': '+7',
-            'UA': '+380',
-            'CN': '+86',
-            'JP': '+81',
-            'KR': '+82',
-            'TW': '+886',
-            'HK': '+852',
-            'PK': '+92',
-            'BD': '+880',
-            'LK': '+94',
-            'NP': '+977',
-            'NZ': '+64',
-            'UG': '+256',
-            'TZ': '+255',
-            'RW': '+250',
-            'ET': '+251',
-            'CM': '+237',
-            'SN': '+221',
-            'CI': '+225',
-            'QA': '+974',
-            'KW': '+965',
-            'BH': '+973',
-            'OM': '+968',
-            'JO': '+962',
-            'IL': '+972',
-            'EC': '+593',
-            'VE': '+58',
-            'CR': '+506',
-            'PA': '+507',
-            'DO': '+1',
-            'JM': '+1',
-            'TT': '+1',
-          };
-          
-          if (countryToPhoneCode[data.country_code]) {
-            setCountryCode(countryToPhoneCode[data.country_code]);
-          }
-        }
+      const { getCountryCode, getCallingCode } = await import("@/lib/geo");
+      const iso = await getCountryCode();
+      const detectedCountry = countries.find(c => c.code === iso);
+      if (detectedCountry) {
+        setCountry(iso);
+        const calling = await getCallingCode();
+        setCountryCode(calling);
       }
     } catch (error) {
       console.error('Failed to detect country:', error);
-      // IP detection failed - user will need to select manually
     } finally {
       setDetectingCountry(false);
     }
