@@ -5,13 +5,14 @@ import { createHead, UnheadProvider } from "@unhead/react/client";
 import App from "./App";
 import "./index.css";
 
-// Propagate the CSP nonce from the edge-stamped <meta property="csp-nonce">
-// into get-nonce so react-style-singleton (used by Radix Dialog, Dropdown,
-// Popover, Tooltip, etc.) stamps the same nonce onto every <style> it injects
-// at runtime — eliminating CSP violations without needing unsafe-inline or
-// maintaining a list of content hashes.
+// The Cloudflare Worker writes the per-request CSP nonce into the `content`
+// attribute of <meta property="csp-nonce"> (`content`, not `nonce`, avoids
+// Chrome's nonce-hiding behaviour). Calling setNonce() here propagates it into
+// get-nonce so react-style-singleton (used by Radix Dialog, Dropdown, Popover,
+// Tooltip, etc.) automatically stamps the nonce onto every <style> it injects —
+// eliminating CSP violations without unsafe-inline or hash maintenance.
 const cspMeta = document.querySelector<HTMLMetaElement>('meta[property="csp-nonce"]');
-const edgeNonce = cspMeta?.getAttribute("nonce");
+const edgeNonce = cspMeta?.getAttribute("content");
 if (edgeNonce) setNonce(edgeNonce);
 
 const head = createHead();
