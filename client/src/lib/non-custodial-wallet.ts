@@ -391,6 +391,68 @@ class NonCustodialWalletManager {
     }
     return decryptVault(vault, password);
   }
+
+  /**
+   * Returns true if any wallet for this user still uses the legacy vault format
+   * (deterministic salt — a cryptographic weakness). Call this after loading
+   * wallets to decide whether to prompt migration.
+   */
+  async hasLegacyVaults(userId: string): Promise<boolean> {
+    const { isLegacyVault } = await import("./webCrypto");
+    const wallets = await this.getWalletsFromStorage(userId);
+    return wallets.some(
+      (w) => isLegacyVault(w.encryptedPrivateKey) || isLegacyVault(w.encryptedMnemonic)
+    );
+  }
+
+  /**
+   * Detects and migrates any legacy-format vaults for this user.
+   * Requires the user's plaintext password (only available when the wallet is
+   * unlocked). Upgraded vaults are persisted to both local storage and Supabase.
+   *
+   * Safe to call multiple times — wallets already in the modern format are skipped.
+   */
+  async migrateLegacyVaults(userId: string, password: string, supabase?: any): Promise<void> {
+    const { isLegacyVault, migrateLegacyVault } = await import("./webCrypto");
+    const wallets = await this.getWalletsFromStorage(userId);
+    let anyMigrated = false;
+
+    const upgraded = await Promise.all(
+      wallets.map(async (wallet) => {
+        const needsPrivKey = isLegacyVault(wallet.encryptedPrivateKey);
+        const needsMnemonic = isLegacyVault(wallet.encryptedMnemonic);
+        if (!needsPrivKey && !needsMnemonic) return wallet;
+
+        try {
+          const updatedWallet = { ...wallet };
+          if (needsPrivKey) {
+            updatedWallet.encryptedPrivateKey = await migrateLegacyVault(
+              wallet.encryptedPrivateKey, password, userId
+            );
+          }
+          if (needsMnemonic && wallet.encryptedMnemonic) {
+            updatedWallet.encryptedMnemonic = await migrateLegacyVault(
+              wallet.encryptedMnemonic, password, userId
+            );
+          }
+          anyMigrated = true;
+          return updatedWallet;
+        } catch (e) {
+          console.error(`Failed to migrate legacy vault for wallet ${wallet.id}:`, e);
+          return wallet;
+        }
+      })
+    );
+
+    if (!anyMigrated) return;
+
+    await this.saveWalletsToStorage(upgraded, userId);
+    if (supabase) {
+      await Promise.all(
+        upgraded.map((w) => this.saveWalletToSupabase(supabase, w, userId))
+      );
+    }
+  }
 }
 
 const managerInstance = new NonCustodialWalletManager();
