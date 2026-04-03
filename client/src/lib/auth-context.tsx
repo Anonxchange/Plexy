@@ -273,6 +273,16 @@ function isOTPBlockingUser(userId: string): boolean {
   }
 }
 
+// ─── Vault password — module-level store, intentionally outside React state ──
+// Keeping the wallet decryption password in useState exposes it in React
+// DevTools (browser extensions can read all component state). Storing it at
+// module scope instead means it is never visible in the component tree while
+// still being accessible through the AuthContext API. The boolean
+// isWalletUnlocked (useState) continues to drive re-renders when the lock
+// state changes, so all consumers stay correctly in sync.
+let _vaultPassword: string | null = null;
+// ────────────────────────────────────────────────────────────────────────────
+
 // ─── Custom inactivity-based session expiry (no Supabase premium required) ──
 // Supabase silently refreshes the access token, so the JWT timeout setting
 // alone never logs users out. Instead we track the last moment the user was
@@ -357,12 +367,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     expectedAddress: null 
   });
 
-  const [sessionPassword, setSessionPasswordState] = useState<string | null>(null);
+  // sessionPassword is stored in _vaultPassword (module scope), not useState.
   const [isWalletUnlocked, setIsWalletUnlocked] = useState(false);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const lockWallet = useCallback(() => {
-    setSessionPasswordState(null);
+    _vaultPassword = null;
     setIsWalletUnlocked(false);
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
@@ -370,7 +380,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const lockWalletDueToInactivity = useCallback(() => {
-    setSessionPasswordState(null);
+    _vaultPassword = null;
     setIsWalletUnlocked(false);
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
@@ -387,7 +397,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [lockWalletDueToInactivity]);
 
   const unlockWallet = useCallback((password: string) => {
-    setSessionPasswordState(password);
+    _vaultPassword = password;
     setIsWalletUnlocked(true);
     resetInactivityTimer();
   }, [resetInactivityTimer]);
@@ -567,7 +577,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [pendingOTPVerification, pendingSession]);
 
   const setSessionPassword = useCallback((password: string | null) => {
-    setSessionPasswordState(password);
+    _vaultPassword = password;
     if (password) {
       setIsWalletUnlocked(true);
       resetInactivityTimer();
@@ -853,7 +863,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isWalletUnlocked,
     unlockWallet,
     lockWallet,
-    sessionPassword,
+    sessionPassword: _vaultPassword,
     setSessionPassword,
   };
 
