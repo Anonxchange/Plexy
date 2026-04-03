@@ -75,7 +75,9 @@ function buildCsp(nonce) {
     // sha256-47DE... — SHA-256 of empty string. Vite CSS code-splitting injects
     //                   empty <style> placeholders; no exploitable content.
     // sha256-nzTg... — react-remove-scroll scroll-lock style (react-remove-scroll v2.x).
-    `style-src-elem 'self' 'nonce-${nonce}' 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' 'sha256-nzTgYzXYDNe6BAHiiI7NNlfK8n/auuOAhh2t92YvuXo=' fonts.googleapis.com`,
+    // sha256-CIxD... — react-remove-scroll scroll-lock style (react-remove-scroll-bar v2.3+).
+    // sha256-JyHF... — TradingView advanced chart widget inline style injection.
+    `style-src-elem 'self' 'nonce-${nonce}' 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' 'sha256-nzTgYzXYDNe6BAHiiI7NNlfK8n/auuOAhh2t92YvuXo=' 'sha256-CIxDM5jnsGiKqXs2v7NKCY5MzdR9gu6TtiMJrDw29AY=' 'sha256-JyHF32z4Ou/Ujas95CX3WgBqlTt7Dxzo/fQG5/5oBo8=' fonts.googleapis.com`,
     "style-src-attr 'none'",
 
     "font-src 'self' fonts.gstatic.com data:",
@@ -124,7 +126,7 @@ function buildCsp(nonce) {
       "api.mainnet-beta.solana.com",
       "www.asterdex.com",
       "sapi.asterdex.com",
-      "https://fapi.asterdex.com",
+      "fapi.asterdex.com",
       "pay.coinbase.com",
       "www.staderlabs.com",
       "www.tradingview.com",
