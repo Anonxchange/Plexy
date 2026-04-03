@@ -21,10 +21,9 @@ export function isValidLang(lang: string): lang is SupportedLang {
 
 export async function detectLanguageFromIP(): Promise<SupportedLang> {
   try {
-    const res = await fetch("https://ipapi.co/json/", { signal: AbortSignal.timeout(3000) });
-    if (!res.ok) throw new Error("non-200");
-    const data = await res.json();
-    const lang = COUNTRY_TO_LANG[data.country_code as string];
+    const { getCountryCode } = await import("@/lib/geo");
+    const countryCode = await getCountryCode();
+    const lang = COUNTRY_TO_LANG[countryCode];
     if (lang && isValidLang(lang)) return lang;
   } catch {
   }
