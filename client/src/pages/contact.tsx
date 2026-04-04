@@ -1,19 +1,22 @@
 import { useHead } from "@unhead/react";
 import {
-  Menu,
   Search,
   Globe,
   Facebook,
   Twitter,
   Sparkles,
   ChevronDown,
+  ChevronRight,
   Paperclip,
   X,
   CheckCircle,
   AlertCircle,
+  Mail,
+  Clock,
+  ShieldCheck,
+  Home as HomeIcon,
 } from "lucide-react";
 import { useState, useRef } from "react";
-import { FloatingHelpButton } from "../components/floating-help-button";
 import {
   Select,
   SelectContent,
@@ -26,6 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { Link } from "wouter";
+import { FloatingChatButton } from "@/components/floating-chat-button";
 
 const services = [
   { id: "account", label: "Account" },
@@ -121,11 +125,7 @@ const ContactPage = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
-    const valid = files.filter((f) => {
-      if (!ACCEPTED_TYPES.includes(f.type)) return false;
-      if (f.size > MAX_FILE_SIZE_MB * 1024 * 1024) return false;
-      return true;
-    });
+    const valid = files.filter((f) => ACCEPTED_TYPES.includes(f.type) && f.size <= MAX_FILE_SIZE_MB * 1024 * 1024);
     setAttachments((prev) => [...prev, ...valid].slice(0, 3));
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -168,10 +168,10 @@ const ContactPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div className="min-h-screen flex flex-col bg-background">
       <main className="flex-1">
         {/* Hero */}
-        <section className="relative min-h-[380px] overflow-hidden bg-gradient-to-br from-primary to-primary/80">
+        <section className="relative min-h-[320px] overflow-hidden bg-gradient-to-br from-primary to-primary/80">
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
             <div
               className="absolute -left-32 top-1/2 w-[500px] h-[500px] animate-curve-float"
@@ -181,32 +181,40 @@ const ContactPage = () => {
               className="absolute -right-32 top-1/2 w-[500px] h-[500px] animate-curve-float-reverse"
               style={{ background: "#4F46E5", borderRadius: "50%", transform: "translate(60%, -20%)" }}
             />
-            <Sparkles className="absolute top-20 left-[15%] w-4 h-4 text-lime animate-sparkle" />
-            <Sparkles className="absolute top-32 right-[20%] w-3 h-3 text-lime animate-sparkle-delay-1" />
-            <Sparkles className="absolute bottom-24 left-[25%] w-3 h-3 text-lime animate-sparkle-delay-2" />
-            <Sparkles className="absolute bottom-32 right-[15%] w-4 h-4 text-lime animate-sparkle" />
+            <Sparkles className="absolute top-20 left-[15%] w-4 h-4 text-white/60 animate-sparkle" />
+            <Sparkles className="absolute top-32 right-[20%] w-3 h-3 text-white/60 animate-sparkle-delay-1" />
+            <Sparkles className="absolute bottom-24 left-[25%] w-3 h-3 text-white/60 animate-sparkle-delay-2" />
+            <Sparkles className="absolute bottom-32 right-[15%] w-4 h-4 text-white/60 animate-sparkle" />
           </div>
 
-          <div className="relative z-10 container mx-auto px-4 py-8">
-            <nav className="flex items-center justify-between mb-14 pb-4">
-              <Link href="/" className="text-foreground font-bold text-2xl tracking-tight hover:opacity-80 transition-opacity">
+          <div className="relative z-10 max-w-7xl mx-auto px-6 py-8">
+            {/* Nav */}
+            <nav className="flex items-center justify-between mb-10">
+              <Link href="/" className="text-black font-bold text-2xl tracking-tight hover:opacity-80 transition-opacity">
                 Pexly
               </Link>
-              <Link href="/support" className="text-foreground/80 hover:text-foreground transition-colors text-sm font-medium">
-                Help Center
-              </Link>
+              <div className="flex items-center gap-1">
+                <Link href="/" className="flex items-center gap-2 px-4 py-2 text-black/80 hover:text-black hover:bg-black/5 rounded-lg transition-colors text-sm font-medium">
+                  <HomeIcon className="w-4 h-4" />
+                  Home
+                </Link>
+                <Link href="/support" className="flex items-center gap-2 px-4 py-2 text-black/80 hover:text-black hover:bg-black/5 rounded-lg transition-colors text-sm font-medium">
+                  Help Center
+                </Link>
+              </div>
             </nav>
 
-            <div className="mb-6 flex items-center gap-2 text-foreground/80 text-sm">
-              <Link href="/support" className="hover:text-foreground transition-colors">Help Center</Link>
-              <span>/</span>
-              <span className="font-medium text-foreground">Submit a request</span>
+            {/* Breadcrumb */}
+            <div className="mb-5 flex items-center gap-1.5 text-black/70 text-sm">
+              <Link href="/support" className="hover:text-black transition-colors">Help Center</Link>
+              <ChevronRight className="w-3.5 h-3.5" />
+              <span className="font-medium text-black">Submit a request</span>
             </div>
 
-            <div className="max-w-3xl">
-              <h1 className="text-5xl md:text-6xl font-bold text-foreground mb-8">Submit a request</h1>
+            <div className="max-w-2xl">
+              <h1 className="text-4xl md:text-5xl font-bold text-black mb-6">Submit a request</h1>
               <div className="relative max-w-xl">
-                <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Search Help Center"
@@ -217,201 +225,287 @@ const ContactPage = () => {
                       window.location.href = `/support?q=${encodeURIComponent(searchQuery.trim())}`;
                     }
                   }}
-                  className="w-full py-4 pl-14 pr-6 rounded-full bg-white text-gray-900 placeholder:text-muted-foreground focus:outline-none text-lg shadow-lg"
+                  className="w-full py-4 pl-14 pr-6 rounded-full bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-base shadow-lg"
                 />
               </div>
             </div>
           </div>
         </section>
 
-        <div className="container mx-auto max-w-2xl px-4 py-16">
+        {/* Page body */}
+        <div className="max-w-7xl mx-auto px-6 py-10">
           {submitted ? (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle className="w-8 h-8 text-green-600" />
+            <div className="max-w-lg mx-auto text-center py-16">
+              <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle className="w-8 h-8 text-green-500" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-3">Request submitted</h2>
-              <p className="text-gray-500 mb-2">
-                We've received your message and will reply to <strong>{email}</strong> as soon as possible.
+              <h2 className="text-2xl font-bold text-foreground mb-3">Request submitted</h2>
+              <p className="text-muted-foreground mb-1">
+                We've received your message and will reply to{" "}
+                <strong className="text-foreground">{email}</strong> as soon as possible.
               </p>
-              <p className="text-gray-400 text-sm mb-8">Typical response time: 24–48 hours</p>
-              <Link href="/support" className="text-primary font-medium hover:underline underline-offset-2">
+              <p className="text-muted-foreground text-sm mb-8">Typical response time: 24–48 hours</p>
+              <Link
+                href="/support"
+                className="inline-flex items-center gap-2 text-primary font-medium hover:underline underline-offset-2"
+              >
+                <ChevronRight className="w-4 h-4 rotate-180" />
                 Back to Help Center
               </Link>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} noValidate className="space-y-7">
-              {/* Topic */}
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-gray-700 block">
-                  What can we help you with? <span className="text-red-500">*</span>
-                </label>
-                <Select value={selectedService} onValueChange={(val) => { setSelectedService(val); setRequestType(""); setErrors((e) => ({ ...e, service: "", requestType: "" })); }}>
-                  <SelectTrigger className={`w-full h-12 text-base rounded-md bg-white text-gray-900 ${errors.service ? "border-red-400" : "border-gray-300"}`}>
-                    <SelectValue placeholder="Select a topic" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {services.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.service && <p className="text-xs text-red-500 mt-1">{errors.service}</p>}
+            /* Two-column layout on desktop */
+            <div className="flex flex-col lg:flex-row gap-10">
+              {/* Left — form */}
+              <div className="flex-1 min-w-0">
+                <form onSubmit={handleSubmit} noValidate className="space-y-6">
+                  {/* Topic */}
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-foreground block">
+                      What can we help you with? <span className="text-destructive">*</span>
+                    </label>
+                    <Select
+                      value={selectedService}
+                      onValueChange={(val) => {
+                        setSelectedService(val);
+                        setRequestType("");
+                        setErrors((e) => ({ ...e, service: "", requestType: "" }));
+                      }}
+                    >
+                      <SelectTrigger className={`w-full h-11 text-sm ${errors.service ? "border-destructive" : ""}`}>
+                        <SelectValue placeholder="Select a topic" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {services.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.service && <p className="text-xs text-destructive mt-1">{errors.service}</p>}
+                  </div>
+
+                  {selectedService && (
+                    <div className="space-y-6 animate-fade-in">
+                      {/* Email */}
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-foreground block">
+                          Your email address <span className="text-destructive">*</span>
+                        </label>
+                        <Input
+                          type="email"
+                          value={email}
+                          onChange={(e) => { setEmail(e.target.value); setErrors((err) => ({ ...err, email: "" })); }}
+                          className={`h-11 text-sm ${errors.email ? "border-destructive" : ""}`}
+                          placeholder="you@example.com"
+                          required
+                        />
+                        {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
+                      </div>
+
+                      {/* Request type sub-select */}
+                      {currentSubOptions.length > 0 && (
+                        <div className="space-y-1.5">
+                          <label className="text-sm font-medium text-foreground block">
+                            {subLabels[selectedService] ?? "What is your request about?"}{" "}
+                            <span className="text-destructive">*</span>
+                          </label>
+                          <Select
+                            value={requestType}
+                            onValueChange={(val) => { setRequestType(val); setErrors((e) => ({ ...e, requestType: "" })); }}
+                          >
+                            <SelectTrigger className={`w-full h-11 text-sm ${errors.requestType ? "border-destructive" : ""}`}>
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {currentSubOptions.map((t) => (
+                                <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {errors.requestType && <p className="text-xs text-destructive mt-1">{errors.requestType}</p>}
+                        </div>
+                      )}
+
+                      {/* Subject */}
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-foreground block">
+                          Subject <span className="text-destructive">*</span>
+                        </label>
+                        <Input
+                          value={subject}
+                          onChange={(e) => { setSubject(e.target.value); setErrors((err) => ({ ...err, subject: "" })); }}
+                          className={`h-11 text-sm ${errors.subject ? "border-destructive" : ""}`}
+                          placeholder="Brief summary of your issue"
+                          required
+                        />
+                        {errors.subject && <p className="text-xs text-destructive mt-1">{errors.subject}</p>}
+                      </div>
+
+                      {/* Description */}
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-foreground block">
+                          Description <span className="text-destructive">*</span>
+                        </label>
+                        <Textarea
+                          value={description}
+                          onChange={(e) => { setDescription(e.target.value); setErrors((err) => ({ ...err, description: "" })); }}
+                          className={`min-h-[160px] resize-none text-sm ${errors.description ? "border-destructive" : ""}`}
+                          placeholder="Please describe your issue in detail. Include any relevant transaction IDs or screenshots."
+                          required
+                        />
+                        <div className="flex items-center justify-between">
+                          {errors.description
+                            ? <p className="text-xs text-destructive">{errors.description}</p>
+                            : <p className="text-xs text-muted-foreground">A member of our team will respond as soon as possible.</p>
+                          }
+                          <span className={`text-xs tabular-nums ${description.length > 0 && description.length < 20 ? "text-destructive" : "text-muted-foreground"}`}>
+                            {description.length} chars
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Attachments */}
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-foreground block">
+                          Attachments{" "}
+                          <span className="text-muted-foreground font-normal">(optional · max 3 files · 5 MB each)</span>
+                        </label>
+                        <div
+                          className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 hover:bg-muted/30 transition-colors cursor-pointer group"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          <div className="flex flex-col items-center gap-2">
+                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:bg-primary/10 transition-colors">
+                              <Paperclip className="w-5 h-5" />
+                            </div>
+                            <span className="text-sm text-muted-foreground">Click to add files — PNG, JPG, PDF</span>
+                          </div>
+                        </div>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          multiple
+                          accept={ACCEPTED_TYPES.join(",")}
+                          className="hidden"
+                          onChange={handleFileChange}
+                        />
+                        {attachments.length > 0 && (
+                          <ul className="mt-2 space-y-1.5">
+                            {attachments.map((f, i) => (
+                              <li key={i} className="flex items-center justify-between text-sm text-foreground bg-muted/50 rounded-lg px-3 py-2 border border-border">
+                                <span className="truncate max-w-[85%] text-xs">{f.name}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => removeFile(i)}
+                                  className="text-muted-foreground hover:text-destructive transition-colors ml-2 flex-shrink-0"
+                                  aria-label="Remove file"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+
+                      {/* Server error */}
+                      {submitError && (
+                        <div className="flex items-start gap-3 bg-destructive/10 border border-destructive/30 rounded-lg px-4 py-3 text-sm text-destructive">
+                          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                          <span>{submitError}</span>
+                        </div>
+                      )}
+
+                      <Button
+                        type="submit"
+                        disabled={submitting}
+                        className="h-11 px-8 font-semibold text-sm rounded-lg disabled:opacity-60"
+                      >
+                        {submitting ? "Submitting…" : "Submit request"}
+                      </Button>
+                    </div>
+                  )}
+                </form>
               </div>
 
-              {selectedService && (
-                <div className="space-y-7 animate-fade-in">
-                  {/* Email */}
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-gray-700 block">
-                      Your email address <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      type="email"
-                      value={email}
-                      onChange={(e) => { setEmail(e.target.value); setErrors((err) => ({ ...err, email: "" })); }}
-                      className={`h-12 text-gray-900 ${errors.email ? "border-red-400" : "border-gray-300"}`}
-                      placeholder="you@example.com"
-                      required
-                    />
-                    {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
-                  </div>
-
-                  {/* Request type sub-select */}
-                  {currentSubOptions.length > 0 && (
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-gray-700 block">
-                        {subLabels[selectedService] ?? "What is your request about?"} <span className="text-red-500">*</span>
-                      </label>
-                      <Select value={requestType} onValueChange={(val) => { setRequestType(val); setErrors((e) => ({ ...e, requestType: "" })); }}>
-                        <SelectTrigger className={`w-full h-12 text-base rounded-md bg-white text-gray-900 ${errors.requestType ? "border-red-400" : "border-gray-300"}`}>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {currentSubOptions.map((t) => (
-                            <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {errors.requestType && <p className="text-xs text-red-500 mt-1">{errors.requestType}</p>}
+              {/* Right sidebar — info panels */}
+              <div className="w-full lg:w-72 flex-shrink-0 space-y-4">
+                {/* Response time */}
+                <div className="bg-card border border-border rounded-xl p-5">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                      <Clock className="w-4 h-4 text-primary" />
                     </div>
-                  )}
-
-                  {/* Subject */}
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-gray-700 block">
-                      Subject <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      value={subject}
-                      onChange={(e) => { setSubject(e.target.value); setErrors((err) => ({ ...err, subject: "" })); }}
-                      className={`h-12 text-gray-900 ${errors.subject ? "border-red-400" : "border-gray-300"}`}
-                      placeholder="Brief summary of your issue"
-                      required
-                    />
-                    {errors.subject && <p className="text-xs text-red-500 mt-1">{errors.subject}</p>}
+                    <h3 className="text-sm font-semibold text-foreground">Response time</h3>
                   </div>
-
-                  {/* Description */}
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-gray-700 block">
-                      Description <span className="text-red-500">*</span>
-                    </label>
-                    <Textarea
-                      value={description}
-                      onChange={(e) => { setDescription(e.target.value); setErrors((err) => ({ ...err, description: "" })); }}
-                      className={`min-h-[150px] resize-none text-gray-900 ${errors.description ? "border-red-400" : "border-gray-300"}`}
-                      placeholder="Please describe your issue in detail. Include any relevant transaction IDs or screenshots."
-                      required
-                    />
-                    <div className="flex items-center justify-between mt-1">
-                      {errors.description
-                        ? <p className="text-xs text-red-500">{errors.description}</p>
-                        : <p className="text-xs text-gray-400">A member of our team will respond as soon as possible.</p>
-                      }
-                      <span className={`text-xs ${description.length < 20 && description.length > 0 ? "text-red-400" : "text-gray-400"}`}>
-                        {description.length} chars
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Attachments */}
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-gray-700 block">
-                      Attachments <span className="text-gray-400 font-normal">(optional, max 3 files, 5 MB each)</span>
-                    </label>
-                    <div
-                      className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer bg-gray-50 group"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <div className="flex flex-col items-center gap-2">
-                        <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-gray-400 group-hover:text-primary transition-colors">
-                          <Paperclip className="w-5 h-5" />
-                        </div>
-                        <span className="text-sm text-gray-500">Click to add files (PNG, JPG, PDF)</span>
-                      </div>
-                    </div>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      multiple
-                      accept={ACCEPTED_TYPES.join(",")}
-                      className="hidden"
-                      onChange={handleFileChange}
-                    />
-                    {attachments.length > 0 && (
-                      <ul className="mt-2 space-y-1">
-                        {attachments.map((f, i) => (
-                          <li key={i} className="flex items-center justify-between text-sm text-gray-600 bg-gray-50 rounded px-3 py-2">
-                            <span className="truncate max-w-[80%]">{f.name}</span>
-                            <button type="button" onClick={() => removeFile(i)} className="text-gray-400 hover:text-red-500 transition-colors ml-2">
-                              <X className="w-4 h-4" />
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-
-                  {/* Server error */}
-                  {submitError && (
-                    <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
-                      <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                      <span>{submitError}</span>
-                    </div>
-                  )}
-
-                  <Button
-                    type="submit"
-                    disabled={submitting}
-                    className="h-12 px-8 bg-[#002B24] hover:bg-[#002B24]/90 text-white font-semibold rounded-md transition-colors disabled:opacity-60"
-                  >
-                    {submitting ? "Submitting…" : "Submit request"}
-                  </Button>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Our team typically responds within <strong className="text-foreground">24–48 hours</strong> on business days.
+                  </p>
                 </div>
-              )}
-            </form>
+
+                {/* Direct email */}
+                <div className="bg-card border border-border rounded-xl p-5">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                      <Mail className="w-4 h-4 text-primary" />
+                    </div>
+                    <h3 className="text-sm font-semibold text-foreground">Email us directly</h3>
+                  </div>
+                  <a
+                    href="mailto:support@pexly.app"
+                    className="text-sm text-primary font-medium hover:underline underline-offset-2 break-all"
+                  >
+                    support@pexly.app
+                  </a>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    For urgent issues or if the form isn't working.
+                  </p>
+                </div>
+
+                {/* Security note */}
+                <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-5">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 bg-destructive/10 rounded-lg flex items-center justify-center">
+                      <ShieldCheck className="w-4 h-4 text-destructive" />
+                    </div>
+                    <h3 className="text-sm font-semibold text-foreground">Stay safe</h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Pexly support will <strong className="text-foreground">NEVER</strong> ask for your seed phrase, private keys, or password. Anyone who does is a scammer.
+                  </p>
+                </div>
+
+                {/* Back to help center */}
+                <Link
+                  href="/support"
+                  className="flex items-center justify-between w-full bg-card border border-border rounded-xl p-4 hover:bg-muted/40 transition-colors group"
+                >
+                  <span className="text-sm font-medium text-foreground">Browse Help Center</span>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                </Link>
+              </div>
+            </div>
           )}
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="py-12 px-4 border-t border-gray-100 bg-white">
-        <div className="container mx-auto max-w-5xl">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-            <p className="text-gray-500 text-sm">© Pexly Technologies, Inc.</p>
-            <div className="flex flex-wrap items-center justify-center gap-8">
-              <button className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors text-sm">
-                <Globe className="w-5 h-5" />
+      <footer className="py-8 px-6 border-t border-border bg-card mt-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-muted-foreground text-sm">© Pexly Technologies, Inc.</p>
+            <div className="flex items-center gap-4">
+              <button className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors text-sm font-medium">
+                <Globe className="w-4 h-4" />
                 <span>English (US)</span>
-                <ChevronDown className="w-4 h-4" />
+                <ChevronDown className="w-3.5 h-3.5" />
               </button>
-              <div className="flex items-center gap-6">
-                <a href="#" className="text-gray-500 hover:text-gray-900 transition-colors">
-                  <Facebook className="w-5 h-5" />
+              <div className="flex items-center gap-2">
+                <a href="#" aria-label="Facebook" className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
+                  <Facebook className="w-4 h-4" />
                 </a>
-                <a href="#" className="text-gray-500 hover:text-gray-900 transition-colors">
-                  <Twitter className="w-5 h-5" />
+                <a href="#" aria-label="Twitter" className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
+                  <Twitter className="w-4 h-4" />
                 </a>
               </div>
             </div>
@@ -419,7 +513,7 @@ const ContactPage = () => {
         </div>
       </footer>
 
-      <FloatingHelpButton />
+      <FloatingChatButton />
     </div>
   );
 };
