@@ -229,9 +229,23 @@ function FloatingButton({ isOpen, onClick }: { isOpen: boolean; onClick: () => v
           }}
         >
           {isOpen ? (
-            <X style={{ width: 20, height: 20, color: "rgba(255,255,255,0.8)" }} />
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           ) : (
-            <Sparkles style={{ width: 20, height: 20, color: "#B4F22E" }} />
+            <svg width="26" height="26" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M2 5.5A3.5 3.5 0 0 1 5.5 2h9A3.5 3.5 0 0 1 18 5.5v7A3.5 3.5 0 0 1 14.5 16H11l-3.2 2.4A.75.75 0 0 1 6.75 18v-2H5.5A3.5 3.5 0 0 1 2 12.5v-7Z"
+                fill="white"
+                opacity=".92"
+              />
+              <circle cx="7"  cy="9" r="1.1" fill="#0f0f0f" />
+              <circle cx="10" cy="9" r="1.1" fill="#0f0f0f" />
+              <circle cx="13" cy="9" r="1.1" fill="#0f0f0f" />
+            </svg>
           )}
         </span>
         {hovered && !isOpen && (
