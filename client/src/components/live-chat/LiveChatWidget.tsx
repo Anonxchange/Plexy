@@ -9,7 +9,7 @@
  *
  * Supabase tables required (run in SQL editor):
  * ─────────────────────────────────────────────
-, Search, ArrowRight *   create table support_conversations (
+ *   create table support_conversations (
  *     id uuid default gen_random_uuid() primary key,
  *     user_id uuid references auth.users,
  *     visitor_id text,
@@ -36,7 +36,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { X, ChevronLeft, Send, Loader2, Sparkles } from "lucide-react";
+import { X, ChevronLeft, Send, Loader2, Sparkles, Search, ArrowRight } from "lucide-react";
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
 
@@ -79,7 +79,41 @@ async function streamAiChat({
 
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
-    let buff  const [aiInitialMsg, setAiInitialMsg] = useState<string | undefined>(undefined);
+    let buff = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buff += decoder.decode(value, { stream: true });
+      const lines = buff.split("\n");
+      buff = lines.pop() ?? "";
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const raw = line.slice(6).trim();
+        if (raw === "[DONE]") continue;
+        try {
+          const json = JSON.parse(raw);
+          const delta = json.choices?.[0]?.delta?.content;
+          if (delta) onDelta(delta);
+        } catch {
+          // ignore parse errors for malformed SSE lines
+        }
+      }
+    }
+    onDone();
+  } catch (err: unknown) {
+    onError(err instanceof Error ? err.message : "Network error. Please try again.");
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MAIN WIDGET COMPONENT
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+export function LiveChatWidget() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [view, setView] = useState<View>("home");
+  const [aiInitialMsg, setAiInitialMsg] = useState<string | undefined>(undefined);
 
   const goHome = useCallback(() => {
     setView("home");
@@ -130,39 +164,6 @@ async function streamAiChat({
               <AIChatView
                 key={aiInitialMsg ?? "ai-chat"}
                 initialMessage={aiInitialMsg}
-
-      {/* ── Backdrop (mobile) ── */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm sm:hidden"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
-
-      {/* ── Slide-in panel ── */}
-      <div
-        className={`fixed z-50 flex flex-col bg-card border border-border shadow-2xl
-          bottom-0 left-0 right-0 rounded-t-[24px]
-          sm:bottom-6 sm:right-6 sm:left-auto sm:rounded-[20px] sm:w-[380px] sm:max-h-[600px]
-          ${isOpen
-            ? "translate-y-0 opacity-100 pointer-events-auto"
-            : "translate-y-full opacity-0 pointer-events-none sm:translate-y-2 sm:opacity-0"
-          }`}
-        style={{
-          height: isOpen ? "90dvh" : 0,
-          transition: "transform 300ms cubic-bezier(.16,1,.3,1), opacity 300ms cubic-bezier(.16,1,.3,1), height 300ms cubic-bezier(.16,1,.3,1)",
-        }}
-      >
-        {isOpen && (
-          <>
-            {view === "home" && (
-              <HomeView
-                onClose={() => setIsOpen(false)}
-                onOpenAiChat={openAiChat}
-              />
-            )}
-            {view === "ai-chat" && (
-              <AIChatView
                 onBack={goHome}
                 onClose={() => setIsOpen(false)}
               />
@@ -205,11 +206,9 @@ function FloatingButton({ isOpen, onClick }: { isOpen: boolean; onClick: () => v
           minWidth: 52,
           padding: hovered && !isOpen ? "0 18px 0 14px" : "0",
           borderRadius: 9999,
-          background: isOpen
+          background: isOpen || hovered
             ? "linear-gradient(145deg,#1c1c1c 0%,#111 100%)"
-            : hovered
-              ? "linear-gradient(145deg,#1c1c1c 0%,#111 100%)"
-              : "linear-gradient(145deg,#1a1a1a 0%,#0f0f0f 100%)",
+            : "linear-gradient(145deg,#1a1a1a 0%,#0f0f0f 100%)",
           boxShadow: hovered
             ? "0 1px 2px rgba(0,0,0,.08),0 4px 12px rgba(0,0,0,.14),0 12px 32px rgba(0,0,0,.18)"
             : "0 1px 2px rgba(0,0,0,.06),0 2px 8px rgba(0,0,0,.10),0 6px 20px rgba(0,0,0,.12)",
@@ -227,7 +226,29 @@ function FloatingButton({ isOpen, onClick }: { isOpen: boolean; onClick: () => v
             flexShrink: 0,
             transition: "transform .2s",
             transform: isOpen ? "rotate(90deg) scale(1.05)" : hovered ? "scale(1.08)" : "none",
-      const ALL_FAQS = [
+          }}
+        >
+          {isOpen ? (
+            <X style={{ width: 20, height: 20, color: "rgba(255,255,255,0.8)" }} />
+          ) : (
+            <Sparkles style={{ width: 20, height: 20, color: "#B4F22E" }} />
+          )}
+        </span>
+        {hovered && !isOpen && (
+          <span className="fcb-label text-sm font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>
+            Need help?
+          </span>
+        )}
+      </button>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HOME VIEW
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const ALL_FAQS = [
   "How do I buy crypto on Pexly?",
   "How do I sell crypto?",
   "How do I verify my identity (KYC)?",
@@ -259,11 +280,8 @@ function HomeView({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div
-        className="px-5 pt-6 pb-7 rounded-t-[24px] sm:rounded-t-[20px] flex-shrink-0"
-        style={{ background: "linear-gradient(160deg,#141414 0%,#1a1a1a 60%,#1c1c1c 100%)" }}
-      >
+      {/* Header — intentionally dark/branded in both themes */}
+      <div className="px-5 pt-6 pb-7 rounded-t-[24px] sm:rounded-t-[20px] flex-shrink-0 bg-[#141414] dark:bg-[#0f0f0f]">
         <div className="flex items-start justify-between mb-4">
           <p className="text-xs font-semibold text-white/35 uppercase tracking-widest">Pexly Support</p>
           <button onClick={onClose} className="text-white/35 hover:text-white/70 transition-colors -mt-0.5">
@@ -273,7 +291,7 @@ function HomeView({
         <h2 className="text-[26px] font-bold text-white/40 leading-tight">Hi {displayName} 👋</h2>
         <h2 className="text-[26px] font-bold text-white leading-tight">How can we help you?</h2>
 
-        {/* Ask AI CTA — sits inside the dark header */}
+        {/* Ask AI CTA */}
         <button
           onClick={() => onOpenAiChat()}
           className="mt-5 w-full flex items-center justify-between bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#B4F22E]/40 rounded-2xl px-4 py-3.5 text-left transition-all group"
@@ -291,8 +309,8 @@ function HomeView({
         </button>
       </div>
 
-      {/* FAQ section */}
-      <div className="flex-1 overflow-y-auto">
+      {/* FAQ section — fully theme-aware */}
+      <div className="flex-1 overflow-y-auto bg-card">
         {/* Search bar */}
         <div className="px-4 pt-4 pb-2">
           <div className="flex items-center gap-2.5 bg-muted border border-border rounded-xl px-3.5 py-2.5 focus-within:border-[#B4F22E]/40 transition-colors">
@@ -327,47 +345,22 @@ function HomeView({
               ))}
             </div>
           )}
-        </divupport</p>
-          <h2 className="text-2xl font-bold text-white leading-tight">Hi {displayName} 👋</h2>
-          <p className="text-sm text-white/60 mt-1">How can we help you?</p>
         </div>
-        <button onClick={onClose} className="text-white/40 hover:text-white/80 transition-colors mt-0.5">
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-
-      {/* Body */}
-      <div className="flex-1 flex flex-col justify-center px-4 py-6">
-        <button
-          onClick={onOpenAiChat}
-          className="w-full flex items-center gap-3 bg-[#B4F22E]/8 hover:bg-[#B4F22E]/15 border border-[#B4F22E]/25 hover:border-[#B4F22E]/50 rounded-2xl px-4 py-4 text-left transition-all group"
-        >
-          <span className="w-10 h-10 rounded-xl bg-[#B4F22E]/20 flex items-center justify-center flex-shrink-0 group-hover:bg-[#B4F22E]/30 transition-colors">
-            <Sparkles className="w-5 h-5 text-[#B4F22E]" />
-          </span>
-          <div>
-            <p className="font-semibold text-sm text-foreground">Ask AI instantly</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Get answers in seconds</p>
-          </div>
-        </button>
       </div>
 
       {/* Footer */}
-      <div className="flex-shrin
-  initialMessage,
-  onBack,
-  onClose,
-}: {
-  initialMessage?: string;
-  onBack: () => void;
-  onClose: () => void;
-}) {
-  const [messages, setMessages] = useState<AiMessage[]>([]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const sentInitial = useRef(falsefunction TypingDots() {
+      <div className="flex-shrink-0 px-4 py-3 border-t border-border bg-card text-center rounded-b-[24px] sm:rounded-b-[20px]">
+        <p className="text-xs text-muted-foreground">Powered by Pexly Support</p>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TYPING DOTS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function TypingDots() {
   return (
     <div className="flex items-center gap-1">
       <style>{`
@@ -394,26 +387,27 @@ const AI_QUICK_CHIPS = [
   "Wallet setup help",
 ];
 
-function AIChatView({ onBack, onClose }: { onBack: () => void; onClose: () => void }) {
+function AIChatView({
+  initialMessage,
+  onBack,
+  onClose,
+}: {
+  initialMessage?: string;
+  onBack: () => void;
+  onClose: () => void;
+}) {
   const [messages, setMessages] = useState<AiMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const sentInitial = useRef(false);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
-  useE/* Auto-send the initial message (from FAQ tap) exactly once */
   useEffect(() => {
-    if (initialMessage && !sentInitial.current) {
-      sentInitial.current = true;
-      send(initialMessage);
-    }
-  }, [initialMessage, send]);
-
-  ffect(() => {
     inputRef.current?.focus();
   }, []);
 
@@ -456,15 +450,20 @@ function AIChatView({ onBack, onClose }: { onBack: () => void; onClose: () => vo
     });
   }, [input, isLoading, messages]);
 
+  /* Auto-send the initial message (from FAQ tap) exactly once */
+  useEffect(() => {
+    if (initialMessage && !sentInitial.current) {
+      sentInitial.current = true;
+      send(initialMessage);
+    }
+  }, [initialMessage, send]);
+
   const isStreaming = isLoading && messages[messages.length - 1]?.role === "assistant";
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div
-        className="flex items-center justify-between px-4 py-3.5 flex-shrink-0 rounded-t-[24px] sm:rounded-t-[20px]"
-        style={{ background: "linear-gradient(135deg,#141414 0%,#1c1c1c 100%)" }}
-      >
+      {/* Header — intentionally dark/branded in both themes */}
+      <div className="flex items-center justify-between px-4 py-3.5 flex-shrink-0 rounded-t-[24px] sm:rounded-t-[20px] bg-[#141414] dark:bg-[#0f0f0f]">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="text-white/50 hover:text-white/90 transition-colors">
             <ChevronLeft className="w-5 h-5" />
@@ -474,7 +473,8 @@ function AIChatView({ onBack, onClose }: { onBack: () => void; onClose: () => vo
               <div className="w-8 h-8 rounded-full bg-[#B4F22E]/20 flex items-center justify-center">
                 <Sparkles className="w-4 h-4 text-[#B4F22E]" />
               </div>
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[#B4F22E] rounded-full border-2 border-[#1c1c1c]" />
+              {/* Border color matches the header background */}
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[#B4F22E] rounded-full border-2 border-[#141414] dark:border-[#0f0f0f]" />
             </div>
             <div>
               <p className="text-sm font-semibold text-white leading-none">Pexly AI</p>
@@ -489,8 +489,8 @@ function AIChatView({ onBack, onClose }: { onBack: () => void; onClose: () => vo
         </button>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+      {/* Messages — fully theme-aware */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-card">
         {/* Empty state */}
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center gap-3 pb-4">
@@ -506,7 +506,7 @@ function AIChatView({ onBack, onClose }: { onBack: () => void; onClose: () => vo
                 <button
                   key={q}
                   onClick={() => send(q)}
-                  className="rounded-full border border-border bg-muted hover:border-[#B4F22E]/40 hover:bg-[#B4F22E]/8 px-3 py-1 text-xs text-foreground transition-colors"
+                  className="rounded-full border border-border bg-muted hover:border-[#B4F22E]/40 hover:bg-[#B4F22E]/10 px-3 py-1 text-xs text-foreground transition-colors"
                 >
                   {q}
                 </button>
@@ -555,7 +555,7 @@ function AIChatView({ onBack, onClose }: { onBack: () => void; onClose: () => vo
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
+      {/* Input — fully theme-aware */}
       <div className="flex-shrink-0 px-3 py-3 border-t border-border bg-card rounded-b-[24px] sm:rounded-b-[20px]">
         <form
           onSubmit={(e) => { e.preventDefault(); send(); }}
@@ -586,4 +586,3 @@ function AIChatView({ onBack, onClose }: { onBack: () => void; onClose: () => vo
     </div>
   );
 }
-
