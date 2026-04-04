@@ -63,6 +63,8 @@ const NotificationSettings = lazy(() => import("@/pages/notification-settings"))
 const About = lazy(() => import("@/pages/about"));
 const Reviews = lazy(() => import("@/pages/reviews"));
 const Support = lazy(() => import("@/pages/support"));
+const SupportArticle = lazy(() => import("@/pages/support-article"));
+const SupportCategory = lazy(() => import("@/pages/support-category"));
 const Contact = lazy(() => import("@/pages/contact"));
 const Terms = lazy(() => import("@/pages/terms"));
 const Privacy = lazy(() => import("@/pages/privacy"));
@@ -220,6 +222,8 @@ function AppRoutes() {
       <Route path="/blog/:postId">{() => <LazyRoute component={BlogPost} />}</Route>
       <Route path="/reviews">{() => <LazyRoute component={Reviews} />}</Route>
       <Route path="/support">{() => <LazyRoute component={Support} />}</Route>
+      <Route path="/support/article/:slug">{() => <LazyRoute component={SupportArticle} />}</Route>
+      <Route path="/support/:category">{() => <LazyRoute component={SupportCategory} />}</Route>
       <Route path="/contact">{() => <LazyRoute component={Contact} />}</Route>
       <Route path="/terms">{() => <LazyRoute component={Terms} />}</Route>
       <Route path="/privacy">{() => <LazyRoute component={Privacy} />}</Route>
@@ -272,7 +276,7 @@ function AppContent() {
   const { user, walletImportState, setWalletImportState } = useAuth();
   const [location] = useLocation();
   const hideAppFooter = ["/", "/about", "/spot", "/perpetual", "/swap", "/prediction", "/wallet", "/analysis", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/utility-bill", "/utility", "/wallet/stake", "/wallet/lightning", "/wallet/buy-crypto", "/gift-cards", "/dashboard", "/profile", "/shop", "/shop/post", "/account-settings", "/verification", "/admin", "/admin/verifications", "/admin/blog", "/admin/gift-cards", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/support", "/contact", "/referral", "/rewards", "/terms", "/privacy", "/cookie-policy", "/restricted-countries", "/rewards-program", "/risk-disclosure", "/submit-idea", "/explorer", "/shop/product", "/buy-crypto", "/bitcoin-calculator"].some(path => location === path || location.startsWith(path + "/")) || location.startsWith("/explorer/") || location.startsWith("/blog/") || location.startsWith("/gift-cards/");
-  const hideHeaderAndNav = ["/signin", "/signup", "/verify-email", "/support", "/contact", "/explorer"].includes(location) || location.startsWith("/explorer/");
+  const hideHeaderAndNav = ["/signin", "/signup", "/verify-email", "/support", "/contact", "/explorer"].includes(location) || location.startsWith("/explorer/") || location.startsWith("/support/");
   const hidePageNav = ["/terms", "/explorer"].includes(location) || location.startsWith("/explorer/");
 
   return (
