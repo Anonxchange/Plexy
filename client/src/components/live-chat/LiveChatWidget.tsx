@@ -38,11 +38,13 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
-import { X, ChevronLeft, Send, Loader2, MessageSquare, Clock } from "lucide-react";
+import { X, ChevronLeft, Send, Loader2, MessageSquare, Clock, Sparkles } from "lucide-react";
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
 
-type View = "home" | "conversation";
+type View = "home" | "conversation" | "ai-chat";
+
+type AiMessage = { role: "user" | "assistant"; content: string };
 
 interface Message {
   id: string;
@@ -145,6 +147,71 @@ function getBotReply(input: string): string {
   return "Thanks for reaching out! 🙏 I'm not sure I fully understood that. Could you provide more detail? If you need anything specific about swaps, staking, gift cards, mobile top-ups, utility bills, the explorer, or your wallet — I'm here to help. Or type 'speak to an agent' to connect with a human. 💬";
 }
 
+/* ─── AI streaming ───────────────────────────────────────────────────────── */
+
+const AI_CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pexly-chat`;
+
+async function streamAiChat({
+  messages,
+  onDelta,
+  onDone,
+  onError,
+}: {
+  messages: AiMessage[];
+  onDelta: (text: string) => void;
+  onDone: () => void;
+  onError: (err: string) => void;
+}) {
+  try {
+    const resp = await fetch(AI_CHAT_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ messages }),
+    });
+
+    if (!resp.ok) {
+      const data = await resp.json().catch(() => ({}));
+      onError((data as { error?: string }).error || "Something went wrong. Please try again.");
+      return;
+    }
+
+    if (!resp.body) { onError("No response received."); return; }
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let idx: number;
+      while ((idx = buffer.indexOf("\n")) !== -1) {
+        let line = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 1);
+        if (line.endsWith("\r")) line = line.slice(0, -1);
+        if (!line.startsWith("data: ")) continue;
+        const json = line.slice(6).trim();
+        if (json === "[DONE]") { onDone(); return; }
+        try {
+          const parsed = JSON.parse(json);
+          const content = parsed.choices?.[0]?.delta?.content;
+          if (content) onDelta(content);
+        } catch {
+          buffer = line + "\n" + buffer;
+          break;
+        }
+      }
+    }
+    onDone();
+  } catch {
+    onError("Connection failed. Please try again.");
+  }
+}
+
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 
 function getOrCreateVisitorId(): string {
@@ -190,6 +257,8 @@ export function LiveChatWidget() {
     setConversationId(null);
   }, []);
 
+  const openAiChat = useCallback(() => setView("ai-chat"), []);
+
   return (
     <>
       {/* ── Floating button ── */}
@@ -213,7 +282,7 @@ export function LiveChatWidget() {
             : "translate-y-full opacity-0 pointer-events-none sm:translate-y-2 sm:opacity-0"
           }`}
         style={{
-          height: isOpen ? "75dvh" : 0,
+          height: isOpen ? "90dvh" : 0,
           transition: "transform 300ms cubic-bezier(.16,1,.3,1), opacity 300ms cubic-bezier(.16,1,.3,1), height 300ms cubic-bezier(.16,1,.3,1)",
         }}
       >
@@ -223,11 +292,18 @@ export function LiveChatWidget() {
               <HomeView
                 onClose={() => setIsOpen(false)}
                 onOpenConversation={openConversation}
+                onOpenAiChat={openAiChat}
               />
             )}
             {view === "conversation" && conversationId && (
               <ConversationView
                 conversationId={conversationId}
+                onBack={goHome}
+                onClose={() => setIsOpen(false)}
+              />
+            )}
+            {view === "ai-chat" && (
+              <AIChatView
                 onBack={goHome}
                 onClose={() => setIsOpen(false)}
               />
@@ -326,9 +402,11 @@ function FloatingButton({ isOpen, onClick }: { isOpen: boolean; onClick: () => v
 function HomeView({
   onClose,
   onOpenConversation,
+  onOpenAiChat,
 }: {
   onClose: () => void;
   onOpenConversation: (id: string) => void;
+  onOpenAiChat: () => void;
 }) {
   const { user } = useAuth();
   const supabase = createClient();
@@ -416,6 +494,20 @@ function HomeView({
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+        {/* Ask AI CTA */}
+        <button
+          onClick={onOpenAiChat}
+          className="w-full flex items-center gap-3 bg-[#B4F22E]/8 hover:bg-[#B4F22E]/15 border border-[#B4F22E]/25 hover:border-[#B4F22E]/50 rounded-2xl px-4 py-3.5 text-left transition-all group"
+        >
+          <span className="w-9 h-9 rounded-xl bg-[#B4F22E]/20 flex items-center justify-center flex-shrink-0 group-hover:bg-[#B4F22E]/30 transition-colors">
+            <Sparkles className="w-4 h-4 text-[#B4F22E]" />
+          </span>
+          <div>
+            <p className="font-semibold text-sm text-foreground">Ask AI instantly</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Get answers in seconds</p>
+          </div>
+        </button>
+
         {/* New conversation CTA */}
         <button
           onClick={startConversation}
@@ -788,6 +880,202 @@ function TypingDots() {
       {[0, 1, 2].map((i) => (
         <span key={i} className="td w-1.5 h-1.5 rounded-full bg-muted-foreground/50 block" />
       ))}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AI CHAT VIEW
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const AI_QUICK_CHIPS = [
+  "How do I swap crypto?",
+  "How do I stake?",
+  "Gift card not delivered",
+  "Wallet setup help",
+];
+
+function AIChatView({ onBack, onClose }: { onBack: () => void; onClose: () => void }) {
+  const [messages, setMessages] = useState<AiMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isLoading]);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const send = useCallback(async (overrideText?: string) => {
+    const text = (overrideText ?? input).trim();
+    if (!text || isLoading) return;
+
+    const userMsg: AiMessage = { role: "user", content: text };
+    const updated = [...messages, userMsg];
+    setMessages(updated);
+    setInput("");
+    setIsLoading(true);
+
+    let assistantContent = "";
+
+    const upsert = (chunk: string) => {
+      assistantContent += chunk;
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (last?.role === "assistant") {
+          return prev.map((m, i) =>
+            i === prev.length - 1 ? { ...m, content: assistantContent } : m
+          );
+        }
+        return [...prev, { role: "assistant", content: assistantContent }];
+      });
+    };
+
+    await streamAiChat({
+      messages: updated,
+      onDelta: upsert,
+      onDone: () => setIsLoading(false),
+      onError: (err) => {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: `Sorry, ${err}` },
+        ]);
+        setIsLoading(false);
+      },
+    });
+  }, [input, isLoading, messages]);
+
+  const isStreaming = isLoading && messages[messages.length - 1]?.role === "assistant";
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div
+        className="flex items-center justify-between px-4 py-3.5 flex-shrink-0 rounded-t-[24px] sm:rounded-t-[20px]"
+        style={{ background: "linear-gradient(135deg,#141414 0%,#1c1c1c 100%)" }}
+      >
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="text-white/50 hover:text-white/90 transition-colors">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2.5">
+            <div className="relative">
+              <div className="w-8 h-8 rounded-full bg-[#B4F22E]/20 flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-[#B4F22E]" />
+              </div>
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[#B4F22E] rounded-full border-2 border-[#1c1c1c]" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white leading-none">Pexly AI</p>
+              <p className="text-[10px] mt-0.5 text-[#B4F22E]">
+                {isLoading && !isStreaming ? "Thinking…" : isStreaming ? "Typing…" : "Instant answers · always on"}
+              </p>
+            </div>
+          </div>
+        </div>
+        <button onClick={onClose} className="text-white/40 hover:text-white/80 transition-colors">
+          <X className="w-4.5 h-4.5" />
+        </button>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+        {/* Empty state */}
+        {messages.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full text-center gap-3 pb-4">
+            <div className="w-12 h-12 rounded-2xl bg-[#B4F22E]/15 flex items-center justify-center">
+              <Sparkles className="w-6 h-6 text-[#B4F22E]" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Ask me anything</p>
+              <p className="text-xs text-muted-foreground mt-1">I know everything about Pexly</p>
+            </div>
+            <div className="flex flex-wrap gap-1.5 justify-center mt-1">
+              {AI_QUICK_CHIPS.map((q) => (
+                <button
+                  key={q}
+                  onClick={() => send(q)}
+                  className="rounded-full border border-border bg-muted hover:border-[#B4F22E]/40 hover:bg-[#B4F22E]/8 px-3 py-1 text-xs text-foreground transition-colors"
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Message bubbles */}
+        {messages.map((msg, i) => {
+          const isUser = msg.role === "user";
+          return (
+            <div key={i} className={`flex items-end gap-2 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
+              {!isUser && (
+                <div className="w-6 h-6 rounded-full bg-[#B4F22E]/20 flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="w-3 h-3 text-[#B4F22E]" />
+                </div>
+              )}
+              <div className={`max-w-[78%] flex flex-col gap-1 ${isUser ? "items-end" : "items-start"}`}>
+                <div
+                  className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                    isUser
+                      ? "bg-[#B4F22E] text-black rounded-br-sm font-medium"
+                      : "bg-muted border border-border text-foreground rounded-bl-sm"
+                  }`}
+                >
+                  {msg.content}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Streaming / thinking indicator */}
+        {isLoading && !isStreaming && (
+          <div className="flex items-end gap-2">
+            <div className="w-6 h-6 rounded-full bg-[#B4F22E]/20 flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-3 h-3 text-[#B4F22E]" />
+            </div>
+            <div className="bg-muted border border-border rounded-2xl rounded-bl-sm px-4 py-3">
+              <TypingDots />
+            </div>
+          </div>
+        )}
+
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input */}
+      <div className="flex-shrink-0 px-3 py-3 border-t border-border bg-card rounded-b-[24px] sm:rounded-b-[20px]">
+        <form
+          onSubmit={(e) => { e.preventDefault(); send(); }}
+          className="flex items-center gap-2 bg-muted rounded-full px-4 py-2 border border-border focus-within:border-[#B4F22E]/50 transition-colors"
+        >
+          <input
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask Pexly AI…"
+            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none min-w-0"
+            disabled={isLoading}
+          />
+          <button
+            type="submit"
+            disabled={!input.trim() || isLoading}
+            className="w-7 h-7 rounded-full bg-[#B4F22E] flex items-center justify-center transition-all disabled:opacity-30 hover:bg-[#c8ff44] active:scale-95"
+          >
+            {isLoading && !isStreaming ? (
+              <Loader2 className="w-3.5 h-3.5 text-black animate-spin" />
+            ) : (
+              <Send className="w-3.5 h-3.5 text-black" />
+            )}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
