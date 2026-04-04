@@ -29,7 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { Link } from "wouter";
-import { FloatingChatButton } from "@/components/floating-chat-button";
+import { LiveChatWidget } from "@/components/live-chat/LiveChatWidget";
 
 const services = [
   { id: "account", label: "Account" },
@@ -513,7 +513,7 @@ const ContactPage = () => {
         </div>
       </footer>
 
-      <FloatingChatButton />
+      <LiveChatWidget />
     </div>
   );
 };
