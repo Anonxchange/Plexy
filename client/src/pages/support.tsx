@@ -23,7 +23,7 @@ import {
   Mail,
   LucideIcon,
 } from "lucide-react";
-import { FloatingChatButton } from "@/components/floating-chat-button";
+import { LiveChatWidget } from "@/components/live-chat/LiveChatWidget";
 import { useState } from "react";
 import { Link } from "wouter";
 
@@ -351,7 +351,7 @@ const HelpCenter = () => {
         </div>
       </footer>
 
-      <FloatingChatButton />
+      <LiveChatWidget />
     </div>
   );
 };
