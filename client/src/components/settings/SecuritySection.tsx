@@ -22,14 +22,14 @@ import { TwoFactorSetupDialog } from "@/components/two-factor-setup-dialog";
 import { PasskeySetup } from "@/components/passkey-setup";
 import { WithdrawalWhitelistDialog } from "@/components/withdrawal-whitelist-dialog";
 import { IPWhitelistDialog } from "@/components/ip-whitelist-dialog";
-import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
+import { RevealPhraseModal } from "@/components/wallet/RevealPhraseModal";
 import {
   Shield,
   CheckCircle2,
   Info,
   AlertTriangle,
   Trash2,
-  Copy,
+  KeyRound,
 } from "lucide-react";
 
 
@@ -66,10 +66,7 @@ export function SecuritySection() {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deletingAccount, setDeletingAccount] = useState(false);
 
-  const [backupPassword, setBackupPassword] = useState("");
-  const [showBackupPhrase, setShowBackupPhrase] = useState(false);
-  const [mnemonic, setMnemonic] = useState("");
-  const [isVerifyingBackupPassword, setIsVerifyingBackupPassword] = useState(false);
+  const [showRevealPhraseModal, setShowRevealPhraseModal] = useState(false);
 
   const [whitelistEnabled, setWhitelistEnabled] = useState(false);
   const [loadingWhitelist, setLoadingWhitelist] = useState(false);
@@ -348,31 +345,6 @@ export function SecuritySection() {
       setConfirmPassword("");
     } catch {
       toast({ title: "Error", description: "Failed to update password", variant: "destructive" });
-    }
-  };
-
-  const handleShowBackupPhrase = async () => {
-    if (!backupPassword) {
-      toast({ title: "Password Required", description: "Please enter your wallet password", variant: "destructive" });
-      return;
-    }
-    setIsVerifyingBackupPassword(true);
-    try {
-      if (!user?.id) throw new Error("User not authenticated");
-      const wallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
-      if (wallets.length === 0) throw new Error("No non-custodial wallet found.");
-      const mnemonicPhrase = await nonCustodialWalletManager.getWalletMnemonic(wallets[0].id, backupPassword, user.id);
-      if (mnemonicPhrase) {
-        setMnemonic(mnemonicPhrase);
-        setShowBackupPhrase(true);
-        setBackupPassword("");
-      } else {
-        throw new Error("Failed to decrypt recovery phrase");
-      }
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message || "Failed to access recovery phrase", variant: "destructive" });
-    } finally {
-      setIsVerifyingBackupPassword(false);
     }
   };
 
@@ -755,54 +727,38 @@ export function SecuritySection() {
           </div>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="space-y-6">
-            <div className="bg-muted/50 rounded-xl p-4 border border-border">
-              <h4 className="font-semibold mb-2">Backup Recovery Phrase</h4>
-              <p className="text-sm text-muted-foreground mb-4">
-                Your recovery phrase is the only way to restore your wallet if you lose access to this device. Pexly does not store it.
+          <div className="space-y-4">
+            <div>
+              <h4 className="font-semibold mb-1">Backup Recovery Phrase</h4>
+              <p className="text-sm text-muted-foreground">
+                Your recovery phrase is the only way to restore your wallet if you lose access. Pexly does not store it — keep it safe.
               </p>
-              {!showBackupPhrase ? (
-                <div className="space-y-4">
-                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
-                    <p className="text-sm text-blue-800 dark:text-blue-200">
-                      Enter the <strong>wallet password</strong> you set when you created this non-custodial wallet.
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="backup-password">Wallet Password</Label>
-                    <Input
-                      id="backup-password"
-                      type="password"
-                      value={backupPassword}
-                      onChange={(e) => setBackupPassword(e.target.value)}
-                      placeholder="Enter your wallet password"
-                      disabled={isVerifyingBackupPassword}
-                    />
-                  </div>
-                  <Button onClick={handleShowBackupPhrase} disabled={isVerifyingBackupPassword || !backupPassword} variant="outline">
-                    {isVerifyingBackupPassword ? "Verifying..." : "Show Recovery Phrase"}
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4 animate-in fade-in duration-500">
-                  <div className="p-4 bg-background border border-destructive/30 rounded-lg font-mono text-sm leading-relaxed text-destructive break-words">
-                    {mnemonic}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="ghost" size="sm" onClick={() => setShowBackupPhrase(false)}>
-                      Hide Phrase
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(mnemonic); toast({ title: "Copied to clipboard" }); }}>
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copy
-                    </Button>
-                  </div>
-                </div>
-              )}
             </div>
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-800 dark:text-amber-300">
+                Never share your recovery phrase with anyone. Anyone with access to it controls your funds.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              className="w-full gap-2 h-11"
+              onClick={() => setShowRevealPhraseModal(true)}
+            >
+              <KeyRound className="h-4 w-4" />
+              View Recovery Phrase
+            </Button>
           </div>
         </CardContent>
       </Card>
+
+      {user?.id && (
+        <RevealPhraseModal
+          open={showRevealPhraseModal}
+          onOpenChange={setShowRevealPhraseModal}
+          userId={user.id}
+        />
+      )}
 
       {/* Login Password */}
       <div>
