@@ -2,17 +2,8 @@ import { useHead } from "@unhead/react";
 import {
   Menu,
   Search,
-  User,
-  ChevronRight,
   Star,
-  Shield,
-  RefreshCw,
-  Layout,
-  ShoppingBag,
-  History,
-  TrendingUp,
-  Home as HomeIcon,
-  Phone,
+  ChevronRight,
   MessageCircle,
   Sparkles,
   Globe,
@@ -21,14 +12,98 @@ import {
   Instagram,
   X,
   Mail,
-  LucideIcon,
+  Home as HomeIcon,
+  Phone,
 } from "lucide-react";
 import { LiveChatWidget } from "@/components/live-chat/LiveChatWidget";
 import { useState } from "react";
 import { Link } from "wouter";
 
+/* ─── App-icon SVGs ──────────────────────────────────────────────────────── */
+
+const IconGetStarted = () => (
+  <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+    <rect width="44" height="44" rx="10" fill="#B4F22E" />
+    <path d="M22 12c-5.523 0-10 4.477-10 10s4.477 10 10 10 10-4.477 10-10S27.523 12 22 12Z" fill="white" opacity=".25" />
+    <path d="M26.5 19.5 20 22l-2.5 6.5L30 18l-3.5 1.5Z" fill="white" />
+    <circle cx="19.5" cy="24.5" r="1.5" fill="#0f1f00" />
+  </svg>
+);
+
+const IconShop = () => (
+  <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+    <rect width="44" height="44" rx="10" fill="#F59E0B" />
+    <path d="M15 16h14l-2 10H17L15 16Z" fill="white" opacity=".3" />
+    <path d="M15 16h14l-2 10H17L15 16Z" stroke="white" strokeWidth="1.8" strokeLinejoin="round" />
+    <path d="M19 16c0-1.657 1.343-3 3-3s3 1.343 3 3" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+    <circle cx="19" cy="28" r="1.3" fill="white" />
+    <circle cx="27" cy="28" r="1.3" fill="white" />
+  </svg>
+);
+
+const IconAccount = () => (
+  <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+    <rect width="44" height="44" rx="10" fill="#3B82F6" />
+    <circle cx="22" cy="18" r="4.5" fill="white" />
+    <path d="M13 32c0-4.97 4.03-9 9-9s9 4.03 9 9" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+    <circle cx="29" cy="20" r="4" fill="#3B82F6" />
+    <circle cx="29" cy="20" r="3" stroke="white" strokeWidth="1.5" />
+    <path d="M27.5 20h3M29 18.5v3" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
+);
+
+const IconBuySell = () => (
+  <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+    <rect width="44" height="44" rx="10" fill="#22C55E" />
+    <path d="M14 28l5-6 4 3 5-8" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="28" cy="17" r="2" fill="white" />
+    <path d="M28 24v4M26 27l2 2 2-2" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const IconApps = () => (
+  <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+    <rect width="44" height="44" rx="10" fill="#8B5CF6" />
+    <rect x="13" y="13" width="7" height="7" rx="2" fill="white" />
+    <rect x="24" y="13" width="7" height="7" rx="2" fill="white" opacity=".7" />
+    <rect x="13" y="24" width="7" height="7" rx="2" fill="white" opacity=".7" />
+    <rect x="24" y="24" width="7" height="7" rx="2" fill="white" opacity=".4" />
+  </svg>
+);
+
+const IconSecurity = () => (
+  <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+    <rect width="44" height="44" rx="10" fill="#6366F1" />
+    <path d="M22 12l9 3.5v7c0 4.5-3.8 8.7-9 10-5.2-1.3-9-5.5-9-10v-7L22 12Z" fill="white" opacity=".25" />
+    <path d="M22 12l9 3.5v7c0 4.5-3.8 8.7-9 10-5.2-1.3-9-5.5-9-10v-7L22 12Z" stroke="white" strokeWidth="1.8" strokeLinejoin="round" />
+    <path d="M18.5 22l2.5 2.5 4.5-4.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const IconStaking = () => (
+  <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+    <rect width="44" height="44" rx="10" fill="#06B6D4" />
+    <ellipse cx="22" cy="16" rx="8" ry="3" fill="white" opacity=".9" />
+    <path d="M14 16v4c0 1.657 3.582 3 8 3s8-1.343 8-3v-4" stroke="white" strokeWidth="1.8" />
+    <path d="M14 20v4c0 1.657 3.582 3 8 3s8-1.343 8-3v-4" stroke="white" strokeWidth="1.8" />
+    <path d="M14 24v4c0 1.657 3.582 3 8 3s8-1.343 8-3v-4" stroke="white" strokeWidth="1.8" />
+  </svg>
+);
+
+const IconTrading = () => (
+  <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+    <rect width="44" height="44" rx="10" fill="#F97316" />
+    <rect x="13" y="22" width="4" height="9" rx="1" fill="white" />
+    <rect x="20" y="17" width="4" height="14" rx="1" fill="white" opacity=".8" />
+    <rect x="27" y="13" width="4" height="18" rx="1" fill="white" opacity=".6" />
+    <path d="M13 20l4-5 5 3 7-7" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+/* ─── Category config ────────────────────────────────────────────────────── */
+
 interface Category {
-  icon: LucideIcon;
+  icon: React.ReactNode;
   title: string;
   description: string;
   slug: string;
@@ -38,15 +113,15 @@ interface CategoryCardProps extends Category {
   delay?: number;
 }
 
-const CategoryCard = ({ icon: Icon, title, description, slug, delay = 0 }: CategoryCardProps) => (
+const CategoryCard = ({ icon, title, description, slug, delay = 0 }: CategoryCardProps) => (
   <Link
     href={`/support/${slug}`}
     className="group flex items-center justify-between p-5 border-b border-border last:border-0 hover:bg-muted/40 transition-colors cursor-pointer animate-fade-in"
     style={{ animationDelay: `${delay}s` }}
   >
     <div className="flex items-start gap-4 flex-1 min-w-0">
-      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-        <Icon className="w-5 h-5 text-primary" />
+      <div className="flex-shrink-0 mt-0.5 rounded-[10px] overflow-hidden shadow-sm">
+        {icon}
       </div>
       <div className="flex-1 min-w-0">
         <h3 className="text-sm font-semibold text-foreground mb-0.5">{title}</h3>
@@ -59,49 +134,49 @@ const CategoryCard = ({ icon: Icon, title, description, slug, delay = 0 }: Categ
 
 const categories: Category[] = [
   {
-    icon: Sparkles,
+    icon: <IconGetStarted />,
     title: "Get started",
     description: "Create your Pexly wallet, customize your accounts, and learn about the key features.",
     slug: "get-started",
   },
   {
-    icon: ShoppingBag,
+    icon: <IconShop />,
     title: "Shop",
     description: "Buy products with crypto or list your own items to sell in the Pexly marketplace.",
     slug: "shop",
   },
   {
-    icon: User,
+    icon: <IconAccount />,
     title: "Account and settings",
     description: "Manage your wallets, account names, recovery phrases, privacy, and device settings in Pexly.",
     slug: "account-settings",
   },
   {
-    icon: RefreshCw,
+    icon: <IconBuySell />,
     title: "Buy and sell tokens",
     description: "Use on-ramps and off-ramps to buy, sell, or withdraw tokens — and fix common purchase issues.",
     slug: "buy-sell",
   },
   {
-    icon: Layout,
+    icon: <IconApps />,
     title: "Apps",
     description: "Connect Pexly to apps, manage your connection settings, and troubleshoot connections.",
     slug: "apps",
   },
   {
-    icon: Shield,
+    icon: <IconSecurity />,
     title: "Security",
     description: "Protect your wallet from scams, phishing, and hacks — plus tips on staying safe.",
     slug: "security",
   },
   {
-    icon: TrendingUp,
+    icon: <IconStaking />,
     title: "Staking",
     description: "Use liquid staking with PSOL or stake SOL natively to earn rewards.",
     slug: "staking",
   },
   {
-    icon: History,
+    icon: <IconTrading />,
     title: "Trading",
     description: "Swap, bridge, or trade tokens and perps — plus understand gas, slippage, and trade execution.",
     slug: "trading",
@@ -131,7 +206,7 @@ const HelpCenter = () => {
   const q = searchQuery.trim().toLowerCase();
 
   const filteredCategories = q
-    ? categories.filter((c) => c.title.toLowerCase().includes(q) || c.description.toLowerCase().includes(q))
+    ? categories.filter((c) => c.title.toLowerCase().includes(q) || (c.description as string).toLowerCase().includes(q))
     : categories;
 
   const filteredArticles = q
@@ -259,7 +334,6 @@ const HelpCenter = () => {
                 <h2 className="text-base font-semibold text-foreground mb-3 px-1">
                   {q ? "Matching categories" : "Browse by topic"}
                 </h2>
-                {/* Two-column grid on md+ */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {filteredCategories.map((category, index) => (
                     <div
@@ -301,8 +375,15 @@ const HelpCenter = () => {
               {/* Still need help */}
               {!q && (
                 <div className="bg-card rounded-xl border border-border shadow-sm p-5 text-center">
-                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <MessageCircle className="w-5 h-5 text-primary" />
+                  <div className="w-12 h-12 mx-auto mb-3 rounded-[10px] overflow-hidden shadow-sm">
+                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                      <rect width="48" height="48" rx="10" fill="#B4F22E" />
+                      <path d="M24 14c-5.523 0-10 4.477-10 10s4.477 10 10 10 10-4.477 10-10S29.523 14 24 14Z" fill="white" opacity=".2" />
+                      <path d="M24 20v4l3 3" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                      <path d="M17 29l4-2M31 29l-4-2" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                      <path d="M20 17l1 2M28 17l-1 2" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                      <circle cx="24" cy="24" r="6" stroke="white" strokeWidth="1.8" />
+                    </svg>
                   </div>
                   <p className="text-foreground font-semibold text-sm mb-1">Still need help?</p>
                   <p className="text-muted-foreground text-xs mb-4 leading-relaxed">
@@ -312,7 +393,7 @@ const HelpCenter = () => {
                     href="/contact"
                     className="inline-flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2 rounded-full hover:opacity-90 transition-opacity"
                   >
-                    <Mail className="w-4 h-4" />
+                    <MessageCircle className="w-4 h-4" />
                     Submit a request
                   </Link>
                 </div>
