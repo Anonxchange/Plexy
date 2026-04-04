@@ -61,25 +61,88 @@ interface Conversation {
 
 /* ─── Bot keyword responses ──────────────────────────────────────────────── */
 
+/** Returns "__ESCALATE__" when the user wants a human agent. */
 function getBotReply(input: string): string {
   const t = input.toLowerCase();
-  if (/\b(hi|hello|hey|hiya|howdy)\b/.test(t))
-    return "Hi there! 👋 How can I help you today?";
-  if (/\b(fee|fees|cost|charge|rate|commission)\b/.test(t))
-    return "Our fees are transparent and competitive. You can view them on the Fees page. Is there a specific fee you'd like to know about?";
-  if (/\b(trade|buy|sell|offer|p2p)\b/.test(t))
-    return "For trade-related questions, please share your trade ID so we can look into it faster. You can find it in your active trades.";
-  if (/\b(wallet|send|receive|deposit|withdraw|transaction)\b/.test(t))
-    return "For wallet issues, please describe what happened and include the transaction ID if you have one. Our team will investigate.";
-  if (/\b(account|verify|kyc|identity|document|id)\b/.test(t))
-    return "For account and verification questions, please make sure your documents are clear and up to date. Verification usually takes 24–48 hours.";
-  if (/\b(password|login|sign in|access|locked|reset)\b/.test(t))
-    return "For login issues, try the 'Forgot Password' link on the sign-in page. If you're still having trouble, our team can help.";
-  if (/\b(bug|error|broken|crash|issue|problem|glitch)\b/.test(t))
-    return "Sorry to hear something isn't working! Please describe what you see (including any error messages) and we'll look into it right away.";
-  if (/\b(refund|dispute|scam|fraud|chargeback)\b/.test(t))
-    return "This sounds urgent. Please provide your trade ID and details of what happened. A senior agent will review this as a priority.";
-  return "Thanks for reaching out! 🙏 A support agent will be with you shortly. Our typical response time is under 2 hours.";
+
+  /* ── Escalation / human request ── */
+  if (/\b(human|agent|real person|customer care|customer support|speak to someone|talk to someone|representative|live agent|live support|connect me|speak with|talk with|actual person)\b/.test(t))
+    return "__ESCALATE__";
+
+  /* ── Greetings ── */
+  if (/\b(hi|hello|hey|hiya|howdy|good morning|good afternoon|good evening)\b/.test(t))
+    return "Hi there! 👋 Welcome to Pexly support. I'm here to help with anything about our platform — swaps, staking, gift cards, mobile top-ups, wallet, and more. What can I help you with?";
+
+  /* ── What is Pexly / about ── */
+  if (/\b(what is pexly|about pexly|what does pexly|how does pexly work|tell me about|what can pexly)\b/.test(t))
+    return "Pexly is a non-custodial decentralised platform. You keep full custody of your assets at all times — we never hold your funds. Features include: crypto swaps across 10+ blockchains, staking for yield, gift card purchases, mobile top-ups, utility bill payments, a blockchain explorer, and a Web3 shop. All from one place. 🌍";
+
+  /* ── Swap ── */
+  if (/\b(swap|exchange|convert|cross.?chain|bridge)\b/.test(t))
+    return "Our Swap feature lets you exchange cryptocurrencies across 10+ blockchains — BTC, ETH, USDT, USDC, SOL, BNB, TRX, XRP, and more. It's fully non-custodial, meaning your assets go directly to your wallet. You'll see the exact rate and network fee before confirming. Head to the Swap page to get started! 🔄";
+
+  /* ── Staking ── */
+  if (/\b(stak|yield|earn|apy|apr|interest|passive)\b/.test(t))
+    return "Pexly's Staking feature lets you earn yield on your crypto through Stader Labs — a trusted liquid staking protocol. You can stake ETH, BNB, MATIC, FTM, and HBAR. Staking is non-custodial: you get liquid staking tokens (like MaticX or BNBx) that you can unstake any time. Visit the Earn page to see live APY rates! 📈";
+
+  /* ── Gift cards ── */
+  if (/\b(gift card|giftcard|voucher|redeem|gift code)\b/.test(t))
+    return "Our Gift Cards feature lets you buy digital gift cards using crypto — instantly, with no KYC needed for most purchases. We support hundreds of brands including Amazon, Google Play, Apple, Steam, and more across 140+ countries. Go to the Gift Cards page, pick your brand and amount, and pay with any supported crypto. 🎁";
+
+  /* ── Mobile top-up / airtime ── */
+  if (/\b(mobile|airtime|top.?up|top up|recharge|phone|data plan|sim)\b/.test(t))
+    return "With Mobile Top-Up, you can recharge any mobile number worldwide using crypto — no account needed. We support thousands of operators in 140+ countries. Just enter the phone number, pick a data or airtime plan, and pay with crypto. It's instant! Visit the Mobile Top-Up page to get started. 📱";
+
+  /* ── Utility bills ── */
+  if (/\b(utility|bill|electricity|water|internet|cable|tv|energy|power|gas bill|dstv|gotv)\b/.test(t))
+    return "The Utility Bills feature lets you pay electricity, water, internet, TV subscriptions, and more using crypto — covering providers in 100+ countries. Go to the Bills page, select your country and service provider, enter your account number, and pay. It processes in minutes! ⚡";
+
+  /* ── Explorer / blockchain ── */
+  if (/\b(explorer|blockchain|block|transaction hash|txid|tx id|address lookup|on.?chain|on chain|view transaction)\b/.test(t))
+    return "The Pexly Explorer lets you look up any blockchain transaction, wallet address, or block across multiple chains. Just paste a transaction hash or wallet address into the search bar on the Explorer page. It's a read-only tool — no login needed. 🔍";
+
+  /* ── Wallet ── */
+  if (/\b(wallet|send crypto|receive crypto|deposit|withdraw|balance|address|receive address)\b/.test(t))
+    return "Pexly's built-in wallet is non-custodial — your private keys are generated and stored securely on your device. You can send and receive BTC, ETH, USDT, SOL, and other supported assets. To get your receive address, go to Wallet → Receive. For sending, use Wallet → Send and double-check the address before confirming, as crypto transfers are irreversible.";
+
+  /* ── Transaction / transfer issues ── */
+  if (/\b(transaction|transfer|missing|not arrived|stuck|pending|delayed|lost)\b/.test(t))
+    return "If a transaction is pending or hasn't arrived, please check the Explorer using your transaction hash to see its on-chain status. Delays are usually caused by network congestion. If it's been over 2 hours and the transaction shows confirmed on-chain but funds aren't in your wallet, please share the transaction ID and our team will look into it. 🔎";
+
+  /* ── Market / prices ── */
+  if (/\b(price|market|chart|btc price|eth price|usdt|markets|spot|perpetual|futures)\b/.test(t))
+    return "You can track live crypto prices on the Markets page, which shows real-time prices, charts, and market cap data for hundreds of assets. We also have a Spot trading interface and Perpetual contracts for more advanced trading. Visit the Markets or Trade tabs at the top of the app! 📊";
+
+  /* ── Shop ── */
+  if (/\b(shop|shopping|product|buy with crypto|store|purchase)\b/.test(t))
+    return "The Pexly Shop lets you buy real products using cryptocurrency — from electronics and fashion to everyday essentials. Browse the Shop page, add items to your cart, and check out with your preferred crypto. It's a seamless Web3 shopping experience! 🛍️";
+
+  /* ── Non-custodial / security / keys ── */
+  if (/\b(non.?custodial|custody|keys|private key|seed phrase|mnemonic|self.?custody|your keys|safe|secure|safety)\b/.test(t))
+    return "Pexly is 100% non-custodial — we never hold your funds or private keys. Your wallet keys are generated on your device and only you have access to them. Always back up your seed phrase offline and never share it with anyone, including Pexly support staff. 🔒";
+
+  /* ── Fees ── */
+  if (/\b(fee|fees|cost|charge|commission|how much does it cost)\b/.test(t))
+    return "Pexly charges no platform fees on most features. For swaps, you pay only the network (gas) fee and a small liquidity provider spread, which is shown before you confirm. Gift cards, mobile top-ups, and utility bills include the provider's processing cost in the displayed price — no hidden fees. Check each feature page for the exact breakdown before confirming. 💰";
+
+  /* ── Account / verification / KYC ── */
+  if (/\b(account|verify|kyc|identity|document|id verification|passport|selfie)\b/.test(t))
+    return "Account verification on Pexly is quick. For basic features you only need an email. For higher limits and advanced features, identity verification (KYC) may be required — you'll need a government-issued ID and a selfie. Verification usually takes 24–48 hours. Go to Settings → Verification to check your current level and submit documents. ✅";
+
+  /* ── Login / password / 2FA ── */
+  if (/\b(password|login|sign in|sign up|access|locked|reset|2fa|two.?factor|authenticator|passkey)\b/.test(t))
+    return "For login issues, use the 'Forgot Password' link on the sign-in page to reset via email. If you have 2FA enabled and lost access to your authenticator app, you'll need to go through account recovery — please contact support with your registered email and proof of identity. We also support Passkeys for faster, passwordless sign-in. 🔑";
+
+  /* ── Bug / error / broken ── */
+  if (/\b(bug|error|broken|crash|issue|not working|problem|glitch|loading|blank|white screen|failed)\b/.test(t))
+    return "Sorry something isn't working right! Please describe what you're seeing (any error message, which page, what you were trying to do) and we'll investigate right away. A screenshot or screen recording is very helpful if you can share one. 🐛";
+
+  /* ── Refund / dispute / fraud ── */
+  if (/\b(refund|scam|fraud|unauthorized|hacked|suspicious|stolen)\b/.test(t))
+    return "This sounds serious and we take it very seriously. Please provide your account email, a description of what happened, and any transaction IDs involved. A senior agent will review your case as a priority. You can also email us directly at support@pexly.app. 🚨";
+
+  /* ── Default ── */
+  return "Thanks for reaching out! 🙏 I'm not sure I fully understood that. Could you provide more detail? If you need anything specific about swaps, staking, gift cards, mobile top-ups, utility bills, the explorer, or your wallet — I'm here to help. Or type 'speak to an agent' to connect with a human. 💬";
 }
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
@@ -143,15 +206,15 @@ export function LiveChatWidget() {
       {/* ── Slide-in panel ── */}
       <div
         className={`fixed z-50 flex flex-col bg-card border border-border shadow-2xl
-          bottom-0 left-0 right-0 rounded-t-[24px] max-h-[90dvh]
+          bottom-0 left-0 right-0 rounded-t-[24px]
           sm:bottom-6 sm:right-6 sm:left-auto sm:rounded-[20px] sm:w-[380px] sm:max-h-[600px]
           ${isOpen
             ? "translate-y-0 opacity-100 pointer-events-auto"
-            : "translate-y-4 opacity-0 pointer-events-none sm:translate-y-2"
+            : "translate-y-full opacity-0 pointer-events-none sm:translate-y-2 sm:opacity-0"
           }`}
         style={{
-          height: isOpen ? undefined : 0,
-          transition: "transform 300ms cubic-bezier(.16,1,.3,1), opacity 300ms cubic-bezier(.16,1,.3,1)",
+          height: isOpen ? "75dvh" : 0,
+          transition: "transform 300ms cubic-bezier(.16,1,.3,1), opacity 300ms cubic-bezier(.16,1,.3,1), height 300ms cubic-bezier(.16,1,.3,1)",
         }}
       >
         {isOpen && (
@@ -444,6 +507,7 @@ function ConversationView({
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [botTyping, setBotTyping] = useState(false);
+  const [escalated, setEscalated] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const visitorId = getOrCreateVisitorId();
@@ -537,19 +601,45 @@ function ConversationView({
       await delay(1200 + Math.random() * 600);
       setBotTyping(false);
 
-      const reply = getBotReply(text);
+      const botResult = getBotReply(text);
 
-      if (conversationId !== "demo") {
-        await supabase.from("support_messages").insert({
-          conversation_id: conversationId,
-          content: reply,
-          sender_type: "bot",
-        });
+      if (botResult === "__ESCALATE__") {
+        /* Mark conversation as escalated in DB */
+        if (conversationId !== "demo") {
+          await supabase
+            .from("support_conversations")
+            .update({ status: "escalated" })
+            .eq("id", conversationId);
+        }
+        setEscalated(true);
+
+        const escalateMsg = "I'm connecting you to a customer care agent now. 🧑‍💼 Please hold on — an agent will join this conversation shortly. Our typical response time is under 2 hours. You can also reach us directly at support@pexly.app.";
+
+        if (conversationId !== "demo") {
+          await supabase.from("support_messages").insert({
+            conversation_id: conversationId,
+            content: escalateMsg,
+            sender_type: "bot",
+          });
+        } else {
+          setMessages((prev) => [
+            ...prev,
+            { id: crypto.randomUUID(), content: escalateMsg, sender_type: "bot", created_at: new Date().toISOString() },
+          ]);
+        }
       } else {
-        setMessages((prev) => [
-          ...prev,
-          { id: crypto.randomUUID(), content: reply, sender_type: "bot", created_at: new Date().toISOString() },
-        ]);
+        if (conversationId !== "demo") {
+          await supabase.from("support_messages").insert({
+            conversation_id: conversationId,
+            content: botResult,
+            sender_type: "bot",
+          });
+        } else {
+          setMessages((prev) => [
+            ...prev,
+            { id: crypto.randomUUID(), content: botResult, sender_type: "bot", created_at: new Date().toISOString() },
+          ]);
+        }
       }
     } catch {
       /* Realtime subscription will add the agent message */
@@ -579,8 +669,8 @@ function ConversationView({
             </div>
             <div>
               <p className="text-sm font-semibold text-white leading-none">Pexly Support</p>
-              <p className="text-[10px] text-white/40 mt-0.5">
-                {botTyping ? "Typing…" : "Online · replies in ~2h"}
+              <p className="text-[10px] mt-0.5" style={{ color: escalated ? "#B4F22E" : "rgba(255,255,255,0.4)" }}>
+                {botTyping ? "Typing…" : escalated ? "Connecting you to an agent…" : "Online · replies in ~2h"}
               </p>
             </div>
           </div>
@@ -595,6 +685,16 @@ function ConversationView({
         {messages.map((m) => (
           <MessageBubble key={m.id} message={m} />
         ))}
+
+        {/* Escalation banner */}
+        {escalated && !botTyping && (
+          <div className="flex justify-center">
+            <div className="flex items-center gap-2 bg-[#B4F22E]/10 border border-[#B4F22E]/30 rounded-full px-3 py-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#B4F22E] animate-pulse" />
+              <p className="text-[11px] font-medium text-[#B4F22E]">Agent joining soon · avg. wait ~2h</p>
+            </div>
+          </div>
+        )}
 
         {/* Typing indicator */}
         {botTyping && (
@@ -620,7 +720,7 @@ function ConversationView({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-            placeholder="Message support…"
+            placeholder={escalated ? "Message the agent…" : "Message support…"}
             className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none min-w-0"
             autoFocus
           />
