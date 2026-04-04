@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   Drawer,
@@ -9,7 +9,12 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
-import { AlertTriangle, Copy, Check, Eye, EyeOff, Loader2 } from "lucide-react";
+import { AlertTriangle, Copy, Check, Eye, EyeOff, Loader2, ShieldOff, Lock } from "lucide-react";
+// SVG is imported as a static asset URL and rendered via <img>.
+// Browsers fully sandbox SVGs loaded this way — no scripts or event
+// handlers inside the file can execute. The file itself contains only
+// geometric paths and masks with no scripts, foreignObject, or external
+// href references, so it is safe even if rendered inline.
 import securityIllustration from "@/assets/svg-image-1 20.svg";
 
 type Step = "warning" | "password" | "phrase";
@@ -137,7 +142,7 @@ function ModalInner({
   const words = mnemonic ? mnemonic.trim().split(/\s+/) : [];
 
   return (
-    <div className="relative flex flex-col items-center pt-10 pb-8 px-6">
+    <div className="relative flex flex-col items-center pt-10 pb-8 px-6 overflow-y-auto max-h-[85dvh]">
       {/* Floating illustration — only on desktop (not mobile where sheet clips it) */}
       {!isMobile && (
         <div className="absolute -top-[68px] left-1/2 -translate-x-1/2 w-32 h-32 pointer-events-none z-50">
@@ -257,54 +262,159 @@ function ModalInner({
 
         {/* ── STEP 3: PHRASE ── */}
         {step === "phrase" && (
-          <div className="flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-400">
-            <div className="text-center space-y-1">
-              <h2 className="text-xl font-bold text-foreground">Recovery Phrase</h2>
-              <p className="text-xs text-muted-foreground">Write these words down in order and keep them safe.</p>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              {words.map((word, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-1.5 bg-muted border border-border rounded-xl px-2.5 py-2.5"
-                >
-                  <span className="text-[10px] font-bold text-muted-foreground w-4 shrink-0 text-right leading-none">
-                    {i + 1}
-                  </span>
-                  <span className="text-sm font-semibold text-foreground leading-none truncate">
-                    {word}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2.5">
-              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
-                Never share your secret phrase with anyone, and store it securely!
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={handleCopy}
-                className="flex-1 h-11 rounded-full text-sm font-semibold gap-2"
-              >
-                {copied ? <Check className="w-4 h-4 text-[#B4F22E]" /> : <Copy className="w-4 h-4" />}
-                {copied ? "Copied!" : "Copy"}
-              </Button>
-              <Button
-                onClick={() => handleClose(false)}
-                className="flex-1 h-11 bg-[#B4F22E] hover:bg-[#c8ff44] text-black font-bold rounded-full text-sm shadow-[0_4px_14px_rgba(180,242,46,0.25)]"
-              >
-                Done
-              </Button>
-            </div>
-          </div>
+          <PhraseReveal
+            words={words}
+            copied={copied}
+            handleCopy={handleCopy}
+            handleClose={handleClose}
+          />
         )}
 
+      </div>
+    </div>
+  );
+}
+
+function PhraseReveal({
+  words,
+  copied,
+  handleCopy,
+  handleClose,
+}: {
+  words: string[];
+  copied: boolean;
+  handleCopy: () => void;
+  handleClose: (open: boolean) => void;
+}) {
+  const [isRevealed, setIsRevealed] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+
+  const hide = useCallback(() => {
+    setIsRevealed(false);
+    setCountdown(0);
+  }, []);
+
+  // Auto-hide when tab/app goes to background (catches screen recording too)
+  useEffect(() => {
+    const onHide = () => { if (document.hidden) hide(); };
+    document.addEventListener("visibilitychange", onHide);
+    return () => document.removeEventListener("visibilitychange", onHide);
+  }, [hide]);
+
+  // 30-second countdown auto-hide
+  useEffect(() => {
+    if (!isRevealed) return;
+    setCountdown(30);
+    const interval = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) { hide(); clearInterval(interval); return 0; }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isRevealed, hide]);
+
+  const startReveal = (e: React.PointerEvent) => {
+    e.preventDefault();
+    setIsRevealed(true);
+  };
+  const stopReveal = () => hide();
+
+  return (
+    <div className="flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-400">
+      <div className="text-center space-y-1">
+        <h2 className="text-xl font-bold text-foreground">Recovery Phrase</h2>
+        <p className="text-xs text-muted-foreground">Write these words down in order and keep them safe.</p>
+      </div>
+
+      {/* Screenshot-protection status bar */}
+      <div className="flex items-center justify-between bg-muted/60 border border-border rounded-xl px-3 py-2">
+        <div className="flex items-center gap-1.5">
+          <Lock className="w-3.5 h-3.5 text-[#B4F22E]" />
+          <span className="text-[11px] font-semibold text-muted-foreground">Screenshot protection on</span>
+        </div>
+        {isRevealed && (
+          <span className="text-[11px] font-bold text-amber-500 tabular-nums">
+            Hiding in {countdown}s
+          </span>
+        )}
+      </div>
+
+      {/* Word grid — blurred until held */}
+      <div
+        className="relative rounded-2xl overflow-hidden"
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        <div
+          className={`grid grid-cols-3 gap-2 transition-all duration-200 select-none ${
+            isRevealed ? "blur-none" : "blur-md pointer-events-none"
+          }`}
+          style={{ WebkitUserSelect: "none", userSelect: "none" }}
+        >
+          {words.map((word, i) => (
+            <div
+              key={i}
+              className="flex flex-col items-center gap-1 bg-muted border border-border rounded-xl px-2 py-2.5 min-h-[54px] justify-center"
+            >
+              <span className="text-[9px] font-bold text-muted-foreground leading-none">
+                {i + 1}
+              </span>
+              <span className="text-[13px] font-semibold text-foreground leading-snug text-center break-words w-full px-1">
+                {word}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Overlay shown when blurred */}
+        {!isRevealed && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl bg-background/60 backdrop-blur-sm">
+            <ShieldOff className="w-7 h-7 text-muted-foreground" />
+            <p className="text-xs font-semibold text-muted-foreground text-center px-4">
+              Hold the button below to reveal
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Hold-to-reveal button */}
+      <button
+        type="button"
+        onPointerDown={startReveal}
+        onPointerUp={stopReveal}
+        onPointerLeave={stopReveal}
+        onPointerCancel={stopReveal}
+        className={`w-full h-12 rounded-full font-bold text-sm select-none touch-none transition-all ${
+          isRevealed
+            ? "bg-amber-500 text-white shadow-[0_4px_14px_rgba(245,158,11,0.35)] scale-[0.98]"
+            : "bg-muted border border-border text-foreground hover:bg-muted/80"
+        }`}
+      >
+        {isRevealed ? "Release to hide" : "Hold to Reveal"}
+      </button>
+
+      <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2.5">
+        <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+        <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
+          Never share your secret phrase with anyone, and store it securely!
+        </p>
+      </div>
+
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          onClick={handleCopy}
+          className="flex-1 h-11 rounded-full text-sm font-semibold gap-2"
+        >
+          {copied ? <Check className="w-4 h-4 text-[#B4F22E]" /> : <Copy className="w-4 h-4" />}
+          {copied ? "Copied!" : "Copy"}
+        </Button>
+        <Button
+          onClick={() => handleClose(false)}
+          className="flex-1 h-11 bg-[#B4F22E] hover:bg-[#c8ff44] text-black font-bold rounded-full text-sm shadow-[0_4px_14px_rgba(180,242,46,0.25)]"
+        >
+          Done
+        </Button>
       </div>
     </div>
   );
