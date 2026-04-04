@@ -247,7 +247,7 @@ function AppRoutes() {
       <Route path="/utility">{() => <ProtectedRoute component={UtilityBill} />}</Route>
       <Route path="/wallet/utility-bill">{() => <ProtectedRoute component={UtilityBill} />}</Route>
       <Route path="/wallet/stake">{() => <ProtectedRoute component={Stake} />}</Route>
-      <Route path="/wallet/lightning">{() => <ProtectedRoute component={Lightning} />}</Route>
+      <Route path="/wallet/lightning">{() => <LazyRoute component={Lightning} />}</Route>
       <Route path="/account-settings">{() => <ProtectedRoute component={AccountSettings} skeleton={<PageSkeleton />} />}</Route>
       <Route path="/devices">{() => <ProtectedRoute component={DevicesPage} />}</Route>
       <Route path="/notification-settings">{() => <ProtectedRoute component={NotificationSettings} />}</Route>
