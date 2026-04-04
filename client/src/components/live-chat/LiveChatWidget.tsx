@@ -34,32 +34,15 @@
  *   create policy "open" on support_messages for all using (true) with check (true);
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { createClient } from "@/lib/supabase";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { Button } from "@/components/ui/button";
-import { X, ChevronLeft, Send, Loader2, MessageSquare, Clock, Sparkles } from "lucide-react";
+import { X, ChevronLeft, Send, Loader2, Sparkles } from "lucide-react";
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
 
-type View = "home" | "conversation" | "ai-chat";
+type View = "home" | "ai-chat";
 
 type AiMessage = { role: "user" | "assistant"; content: string };
-
-interface Message {
-  id: string;
-  content: string;
-  sender_type: "user" | "agent" | "bot";
-  created_at: string;
-}
-
-interface Conversation {
-  id: string;
-  last_message: string | null;
-  last_message_at: string;
-  status: string;
-  created_at: string;
-}
 
 /* ─── AI streaming ───────────────────────────────────────────────────────── */
 
@@ -126,31 +109,6 @@ async function streamAiChat({
   }
 }
 
-/* ─── Helpers ────────────────────────────────────────────────────────────── */
-
-function getOrCreateVisitorId(): string {
-  const key = "pexly_visitor_id";
-  let id = localStorage.getItem(key);
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem(key, id);
-  }
-  return id;
-}
-
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  const now = new Date();
-  const diff = now.getTime() - d.getTime();
-  if (diff < 86_400_000) return formatTime(iso);
-  if (diff < 604_800_000)
-    return d.toLocaleDateString([], { weekday: "short" });
-  return d.toLocaleDateString([], { month: "short", day: "numeric" });
-}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ROOT WIDGET
@@ -159,18 +117,8 @@ function formatDate(iso: string): string {
 export function LiveChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<View>("home");
-  const [conversationId, setConversationId] = useState<string | null>(null);
 
-  const openConversation = useCallback((id: string) => {
-    setConversationId(id);
-    setView("conversation");
-  }, []);
-
-  const goHome = useCallback(() => {
-    setView("home");
-    setConversationId(null);
-  }, []);
-
+  const goHome = useCallback(() => setView("home"), []);
   const openAiChat = useCallback(() => setView("ai-chat"), []);
 
   return (
@@ -205,15 +153,7 @@ export function LiveChatWidget() {
             {view === "home" && (
               <HomeView
                 onClose={() => setIsOpen(false)}
-                onOpenConversation={openConversation}
                 onOpenAiChat={openAiChat}
-              />
-            )}
-            {view === "conversation" && conversationId && (
-              <ConversationView
-                conversationId={conversationId}
-                onBack={goHome}
-                onClose={() => setIsOpen(false)}
               />
             )}
             {view === "ai-chat" && (
@@ -313,78 +253,8 @@ function FloatingButton({ isOpen, onClick }: { isOpen: boolean; onClick: () => v
    HOME VIEW
    ═══════════════════════════════════════════════════════════════════════════ */
 
-function HomeView({
-  onClose,
-  onOpenConversation,
-  onOpenAiChat,
-}: {
-  onClose: () => void;
-  onOpenConversation: (id: string) => void;
-  onOpenAiChat: () => void;
-}) {
+function HomeView({ onClose, onOpenAiChat }: { onClose: () => void; onOpenAiChat: () => void }) {
   const { user } = useAuth();
-  const supabase = createClient();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [starting, setStarting] = useState(false);
-  const visitorId = getOrCreateVisitorId();
-
-  useEffect(() => {
-    (async () => {
-      try {
-        let q = supabase
-          .from("support_conversations")
-          .select("id,last_message,last_message_at,status,created_at")
-          .order("last_message_at", { ascending: false })
-          .limit(8);
-
-        if (user?.id) {
-          q = q.eq("user_id", user.id);
-        } else {
-          q = q.eq("visitor_id", visitorId);
-        }
-
-        const { data } = await q;
-        setConversations((data as Conversation[]) ?? []);
-      } catch {
-        /* table may not exist yet — silently handled */
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [user?.id]);
-
-  const startConversation = async () => {
-    setStarting(true);
-    try {
-      const payload: Record<string, string> = {};
-      if (user?.id) payload.user_id = user.id;
-      else payload.visitor_id = visitorId;
-
-      const { data, error } = await supabase
-        .from("support_conversations")
-        .insert(payload)
-        .select("id")
-        .single();
-
-      if (error) throw error;
-
-      const convId = (data as { id: string }).id;
-
-      await supabase.from("support_messages").insert({
-        conversation_id: convId,
-        content: `Hi ${user?.email?.split("@")[0] ?? "there"}! 👋 Welcome to Pexly support. How can we help you today?`,
-        sender_type: "bot",
-      });
-
-      onOpenConversation(convId);
-    } catch {
-      onOpenConversation("demo");
-    } finally {
-      setStarting(false);
-    }
-  };
-
   const displayName = user?.email?.split("@")[0] ?? "there";
 
   return (
@@ -396,9 +266,7 @@ function HomeView({
       >
         <div>
           <p className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-1.5">Pexly Support</p>
-          <h2 className="text-2xl font-bold text-white leading-tight">
-            Hi {displayName} 👋
-          </h2>
+          <h2 className="text-2xl font-bold text-white leading-tight">Hi {displayName} 👋</h2>
           <p className="text-sm text-white/60 mt-1">How can we help you?</p>
         </div>
         <button onClick={onClose} className="text-white/40 hover:text-white/80 transition-colors mt-0.5">
@@ -407,304 +275,26 @@ function HomeView({
       </div>
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-        {/* Ask AI CTA */}
+      <div className="flex-1 flex flex-col justify-center px-4 py-6">
         <button
           onClick={onOpenAiChat}
-          className="w-full flex items-center gap-3 bg-[#B4F22E]/8 hover:bg-[#B4F22E]/15 border border-[#B4F22E]/25 hover:border-[#B4F22E]/50 rounded-2xl px-4 py-3.5 text-left transition-all group"
+          className="w-full flex items-center gap-3 bg-[#B4F22E]/8 hover:bg-[#B4F22E]/15 border border-[#B4F22E]/25 hover:border-[#B4F22E]/50 rounded-2xl px-4 py-4 text-left transition-all group"
         >
-          <span className="w-9 h-9 rounded-xl bg-[#B4F22E]/20 flex items-center justify-center flex-shrink-0 group-hover:bg-[#B4F22E]/30 transition-colors">
-            <Sparkles className="w-4 h-4 text-[#B4F22E]" />
+          <span className="w-10 h-10 rounded-xl bg-[#B4F22E]/20 flex items-center justify-center flex-shrink-0 group-hover:bg-[#B4F22E]/30 transition-colors">
+            <Sparkles className="w-5 h-5 text-[#B4F22E]" />
           </span>
           <div>
             <p className="font-semibold text-sm text-foreground">Ask AI instantly</p>
             <p className="text-xs text-muted-foreground mt-0.5">Get answers in seconds</p>
           </div>
         </button>
-
-        {/* New conversation CTA */}
-        <button
-          onClick={startConversation}
-          disabled={starting}
-          className="w-full flex items-center gap-3 bg-muted hover:bg-muted/80 border border-border rounded-2xl px-4 py-3.5 text-left transition-all hover:border-[#B4F22E]/40 group"
-        >
-          <span className="w-9 h-9 rounded-xl bg-[#B4F22E]/15 flex items-center justify-center flex-shrink-0 group-hover:bg-[#B4F22E]/25 transition-colors">
-            {starting ? (
-              <Loader2 className="w-4 h-4 text-[#B4F22E] animate-spin" />
-            ) : (
-              <MessageSquare className="w-4 h-4 text-[#B4F22E]" />
-            )}
-          </span>
-          <div>
-            <p className="font-semibold text-sm text-foreground">Send us a message</p>
-            <p className="text-xs text-muted-foreground mt-0.5">We reply within 2 hours</p>
-          </div>
-        </button>
-
-        {/* Previous conversations */}
-        {!loading && conversations.length > 0 && (
-          <div>
-            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-2">
-              Previous conversations
-            </p>
-            <div className="space-y-1.5">
-              {conversations.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => onOpenConversation(c.id)}
-                  className="w-full flex items-center gap-3 bg-muted/50 hover:bg-muted border border-border rounded-xl px-4 py-3 text-left transition-all"
-                >
-                  <div className="w-8 h-8 rounded-full bg-[#B4F22E]/10 flex items-center justify-center flex-shrink-0">
-                    <MessageSquare className="w-3.5 h-3.5 text-[#B4F22E]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-foreground truncate font-medium">
-                      {c.last_message ?? "Conversation started"}
-                    </p>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <Clock className="w-2.5 h-2.5 text-muted-foreground" />
-                      <p className="text-[11px] text-muted-foreground">{formatDate(c.last_message_at)}</p>
-                    </div>
-                  </div>
-                  <span
-                    className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                      c.status === "open" ? "bg-[#B4F22E]" : "bg-muted-foreground/30"
-                    }`}
-                  />
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {loading && (
-          <div className="flex justify-center py-4">
-            <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
-          </div>
-        )}
       </div>
 
       {/* Footer */}
       <div className="flex-shrink-0 px-4 py-3 border-t border-border">
         <p className="text-[11px] text-center text-muted-foreground">
-          Powered by <span className="font-semibold text-foreground">Pexly</span> Support
+          Powered by <span className="font-semibold text-foreground">Pexly</span> AI
         </p>
-      </div>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   CONVERSATION VIEW
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-function ConversationView({
-  conversationId,
-  onBack,
-  onClose,
-}: {
-  conversationId: string;
-  onBack: () => void;
-  onClose: () => void;
-}) {
-  const { user } = useAuth();
-  const supabase = createClient();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [sending, setSending] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const visitorId = getOrCreateVisitorId();
-
-  /* Load existing messages */
-  useEffect(() => {
-    if (conversationId === "demo") {
-      setMessages([{
-        id: "demo-1",
-        content: "Hi! 👋 Welcome to Pexly support. How can we help you today?",
-        sender_type: "bot",
-        created_at: new Date().toISOString(),
-      }]);
-      return;
-    }
-
-    (async () => {
-      const { data } = await supabase
-        .from("support_messages")
-        .select("id,content,sender_type,created_at")
-        .eq("conversation_id", conversationId)
-        .order("created_at", { ascending: true });
-      setMessages((data as Message[]) ?? []);
-    })();
-  }, [conversationId]);
-
-  /* Subscribe to new messages via Supabase Realtime */
-  useEffect(() => {
-    if (conversationId === "demo") return;
-
-    const channel = supabase
-      .channel(`chat:${conversationId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "support_messages",
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const msg = payload.new as Message;
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === msg.id)) return prev;
-            return [...prev, msg];
-          });
-        }
-      )
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [conversationId]);
-
-  /* Auto-scroll on new messages */
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const sendMessage = async () => {
-    const text = input.trim();
-    if (!text || sending) return;
-
-    setInput("");
-    setSending(true);
-
-    const optimisticId = crypto.randomUUID();
-    const optimistic: Message = {
-      id: optimisticId,
-      content: text,
-      sender_type: "user",
-      created_at: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, optimistic]);
-
-    try {
-      if (conversationId !== "demo") {
-        await supabase.from("support_messages").insert({
-          conversation_id: conversationId,
-          content: text,
-          sender_type: "user",
-        });
-
-        await supabase
-          .from("support_conversations")
-          .update({ last_message: text, last_message_at: new Date().toISOString() })
-          .eq("id", conversationId);
-      }
-    } catch {
-      /* Realtime subscription will add the agent message */
-    } finally {
-      setSending(false);
-      inputRef.current?.focus();
-    }
-  };
-
-  return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div
-        className="flex items-center justify-between px-4 py-3.5 flex-shrink-0 rounded-t-[24px] sm:rounded-t-[20px]"
-        style={{ background: "linear-gradient(135deg,#141414 0%,#1c1c1c 100%)" }}
-      >
-        <div className="flex items-center gap-3">
-          <button onClick={onBack} className="text-white/50 hover:text-white/90 transition-colors">
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <div className="flex items-center gap-2.5">
-            <div className="relative">
-              <div className="w-8 h-8 rounded-full bg-[#B4F22E]/20 flex items-center justify-center">
-                <span className="text-sm font-bold text-[#B4F22E]">P</span>
-              </div>
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-[#1c1c1c]" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-white leading-none">Pexly Support</p>
-              <p className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
-                Online · replies in ~2h
-              </p>
-            </div>
-          </div>
-        </div>
-        <button onClick={onClose} className="text-white/40 hover:text-white/80 transition-colors">
-          <X className="w-4.5 h-4.5" />
-        </button>
-      </div>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-        {messages.map((m) => (
-          <MessageBubble key={m.id} message={m} />
-        ))}
-
-        <div ref={bottomRef} />
-      </div>
-
-      {/* Input */}
-      <div className="flex-shrink-0 px-3 py-3 border-t border-border bg-card rounded-b-[24px] sm:rounded-b-[20px]">
-        <div className="flex items-center gap-2 bg-muted rounded-full px-4 py-2 border border-border focus-within:border-[#B4F22E]/50 transition-colors">
-          <input
-            ref={inputRef}
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-            placeholder="Message support…"
-            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none min-w-0"
-            autoFocus
-          />
-          <button
-            type="button"
-            onClick={sendMessage}
-            disabled={!input.trim() || sending}
-            className="w-7 h-7 rounded-full bg-[#B4F22E] flex items-center justify-center transition-all disabled:opacity-30 hover:bg-[#c8ff44] active:scale-95"
-          >
-            {sending ? (
-              <Loader2 className="w-3.5 h-3.5 text-black animate-spin" />
-            ) : (
-              <Send className="w-3.5 h-3.5 text-black" />
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Message bubble ─────────────────────────────────────────────────────── */
-
-function MessageBubble({ message }: { message: Message }) {
-  const isUser = message.sender_type === "user";
-
-  return (
-    <div className={`flex items-end gap-2 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
-      {/* Avatar (agent/bot only) */}
-      {!isUser && (
-        <div className="w-6 h-6 rounded-full bg-[#B4F22E]/20 flex items-center justify-center flex-shrink-0">
-          <span className="text-[10px] font-bold text-[#B4F22E]">P</span>
-        </div>
-      )}
-
-      <div className={`max-w-[78%] ${isUser ? "items-end" : "items-start"} flex flex-col gap-1`}>
-        <div
-          className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
-            isUser
-              ? "bg-[#B4F22E] text-black rounded-br-sm font-medium"
-              : "bg-muted border border-border text-foreground rounded-bl-sm"
-          }`}
-        >
-          {message.content}
-        </div>
-        <span className="text-[10px] text-muted-foreground px-1">
-          {formatTime(message.created_at)}
-        </span>
       </div>
     </div>
   );
