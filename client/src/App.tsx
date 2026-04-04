@@ -241,8 +241,8 @@ function AppRoutes() {
       {/* ── Protected pages (require a valid session) ── */}
       <Route path="/dashboard">{() => <ProtectedRoute component={Dashboard} />}</Route>
       <Route path="/wallet">{() => <ProtectedRoute component={Wallet} />}</Route>
-      <Route path="/wallet/visa-card">{() => <ProtectedRoute component={VisaCard} />}</Route>
-      <Route path="/wallet/visa-card/details">{() => <ProtectedRoute component={VisaCardDetails} />}</Route>
+      <Route path="/wallet/visa-card">{() => <LazyRoute component={VisaCard} />}</Route>
+      <Route path="/wallet/visa-card/details">{() => <LazyRoute component={VisaCardDetails} />}</Route>
       <Route path="/wallet/mobile-topup">{() => <ProtectedRoute component={MobileTopup} />}</Route>
       <Route path="/utility">{() => <ProtectedRoute component={UtilityBill} />}</Route>
       <Route path="/wallet/utility-bill">{() => <ProtectedRoute component={UtilityBill} />}</Route>
