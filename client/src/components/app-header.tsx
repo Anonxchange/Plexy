@@ -357,7 +357,18 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar }: { onOpenSid
 
         {/* Right side: user section (lazy) + language + theme */}
         <div className="flex items-center gap-2 ml-auto">
-          <Suspense fallback={<div className="flex items-center gap-2 w-32 h-9" aria-hidden />}>
+          <Suspense fallback={
+            // Mirrors the unauthenticated render at every breakpoint so no layout
+            // shift occurs when the lazy chunk loads:
+            //   mobile (<sm)  → hamburger button only  (h-9 w-9, lg:hidden)
+            //   sm–lg         → hamburger + Sign In + Get Started
+            //   lg+           → Sign In + Get Started  (hamburger is lg:hidden)
+            <div className="flex items-center gap-2 pointer-events-none select-none" aria-hidden>
+              <div className="h-9 w-9 rounded-md border border-border lg:hidden flex-shrink-0" />
+              <div className="hidden sm:block h-8 w-16 rounded-md bg-muted/40" />
+              <div className="hidden sm:block h-8 w-[6.5rem] rounded-md bg-primary/20" />
+            </div>
+          }>
             <LazyUserSection onOpenSidebar={onOpenSidebar} />
           </Suspense>
 
