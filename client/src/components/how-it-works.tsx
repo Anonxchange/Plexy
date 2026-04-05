@@ -3,17 +3,17 @@ import { Badge } from "@/components/ui/badge";
 
 const steps = [
   {
-    iconSrc: "/icons/step1.svg",
+    iconSrc: "/svgs/step1.svg",
     title: "Create Your Account",
     description: "Sign up in seconds and get instant access to your non-custodial wallet and DeFi services.",
   },
   {
-    iconSrc: "/icons/step2.svg",
+    iconSrc: "/svgs/step2.svg",
     title: "Acquire Crypto",
     description: "Buy or sell crypto through trusted third-party providers fast, secure, and non-custodial.",
   },
   {
-    iconSrc: "/icons/step3.svg",
+    iconSrc: "/svgs/step3.svg",
     title: "Use Your Crypto",
     description: "Send, receive, swap, stake, or trade, all powered by decentralized protocols.",
   },
