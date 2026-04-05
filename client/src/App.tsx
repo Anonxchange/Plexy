@@ -18,14 +18,14 @@ const GlobalNotificationListener = lazy(() =>
 import { AppHeader } from "@/components/app-header";
 import { AppFooter } from "@/components/app-footer";
 import { PageNavigation } from "@/components/page-navigation";
-import { CookieConsent } from "@/components/cookie-consent";
+const CookieConsent = lazy(() => import("@/components/cookie-consent").then(m => ({ default: m.CookieConsent })));
 const WalletSetupDialog = lazy(() => import("@/components/wallet/WalletSetupDialog").then(m => ({ default: m.WalletSetupDialog })));
 import { PageSkeleton, ChartPageSkeleton } from "@/components/page-skeleton";
 
 // Core pages - loaded eagerly (only what's needed for first-visit home page)
 import Home from "@/pages/home";
 import NotFound from "@/pages/not-found";
-import { VerifyEmail } from "@/pages/verify-email";
+const VerifyEmail = lazy(() => import("@/pages/verify-email").then(m => ({ default: m.VerifyEmail })));
 
 // Auth/app pages - lazy loaded since home page is the universal first stop
 const SignIn = lazy(() => import("@/pages/signin").then(m => ({ default: m.SignIn })));
@@ -232,7 +232,7 @@ function AppRoutes() {
       <Route path="/rewards-program">{() => <LazyRoute component={RewardsProgram} />}</Route>
       <Route path="/risk-disclosure">{() => <LazyRoute component={RiskDisclosure} />}</Route>
       <Route path="/profile/:userId?">{() => <LazyRoute component={Profile} />}</Route>
-      <Route path="/verify-email" component={VerifyEmail} />
+      <Route path="/verify-email">{() => <LazyRoute component={VerifyEmail} />}</Route>
 
       {/* ── Auth pages (redirect away if already signed in) ── */}
       <Route path="/signin">{() => <AuthRoute component={SignIn} />}</Route>
@@ -302,7 +302,7 @@ function AppContent() {
 
       <Suspense fallback={null}><Toaster /></Suspense>
       <Suspense fallback={null}><SonnerToaster position="top-center" richColors /></Suspense>
-      <CookieConsent />
+      <Suspense fallback={null}><CookieConsent /></Suspense>
     </div>
   );
 }
