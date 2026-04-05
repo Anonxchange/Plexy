@@ -205,27 +205,18 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
           </div>
         </div>
 
-        {/*
-          Show a skeleton circle during both loading phases:
-          1. isAvatarFetching  — Supabase call still in-flight
-          2. profileAvatar set but imageLoadStatus === "loading" — browser downloading the image
-          Once both are done the real avatar (or initials fallback) appears.
-        */}
         {isAvatarFetching || (profileAvatar !== null && imageLoadStatus === "loading") ? (
+          /* Skeleton replaces the avatar button during both loading phases:
+             Phase 1 — Supabase fetch in-flight (isAvatarFetching)
+             Phase 2 — URL received, browser downloading the image (imageLoadStatus === "loading")
+             Once both are done the real dropdown trigger appears in the same spot. */
           <Skeleton className="h-9 w-9 sm:h-10 sm:w-10 rounded-full flex-shrink-0" />
-        ) : null}
-
+        ) : (
         <DropdownMenu>
-          {/* Keep the trigger hidden (not unmounted) while skeleton shows so the
-              dropdown content stays accessible and Radix state is preserved. */}
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              className={`relative h-9 w-9 sm:h-10 sm:w-10 rounded-full p-0 focus-visible:ring-0 focus-visible:ring-offset-0 ${
-                isAvatarFetching || (profileAvatar !== null && imageLoadStatus === "loading")
-                  ? "sr-only"
-                  : ""
-              }`}
+              className="relative h-9 w-9 sm:h-10 sm:w-10 rounded-full p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
               data-testid="button-profile"
             >
               <Avatar
@@ -448,6 +439,7 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
             </div>
           </DropdownMenuContent>
         </DropdownMenu>
+        )}
 
         <NotificationIcon count={unreadCount} onClick={() => navigate("/notifications")} />
       </>
