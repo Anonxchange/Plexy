@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth-context";
 
-const AppSidebar = lazy(() => import("./app-sidebar").then(m => ({ default: m.AppSidebar })));
+import { AppSidebar } from "./app-sidebar";
 const SymbolSelector = lazy(() => import("./trading/SymbolSelector"));
 const LazyUserSection = lazy(() =>
   import("./app-header-user-section").then(m => ({ default: m.AppHeaderUserSection }))
@@ -433,9 +433,7 @@ export function AppHeader() {
           <SheetHeader className="sr-only">
             <SheetTitle>Navigation Menu</SheetTitle>
           </SheetHeader>
-          <Suspense fallback={null}>
-            <AppSidebar onNavigate={closeSidebar} />
-          </Suspense>
+          <AppSidebar onNavigate={closeSidebar} />
         </SheetContent>
       </Sheet>
     </>
