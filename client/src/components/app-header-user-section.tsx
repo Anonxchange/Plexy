@@ -76,6 +76,10 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
   const [profileAvatar, setProfileAvatar] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>("");
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  // true while the Supabase avatar fetch is in-flight; prevents initials flash
+  const [isAvatarFetching, setIsAvatarFetching] = useState(true);
+  // tracks whether the <img> itself has finished loading after we have the URL
+  const [imageLoadStatus, setImageLoadStatus] = useState<"idle" | "loading" | "loaded" | "error">("idle");
 
   const { data: walletData, isLoading: walletsLoading } = useWalletData();
   const balance = walletData?.totalBalance || 0;
@@ -114,6 +118,10 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
 
   useEffect(() => {
     if (!user) return;
+    // Reset avatar state for this user session so we always show skeleton first
+    setIsAvatarFetching(true);
+    setImageLoadStatus("idle");
+    setProfileAvatar(null);
     fetchProfileAvatar();
     (async () => {
       const supabase = await getSupabase();
@@ -126,7 +134,7 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
       if (profile?.preferred_currency)
         setPreferredCurrency(profile.preferred_currency.toUpperCase());
     })();
-  }, [user]);
+  }, [user?.id]);
 
   const fetchProfileAvatar = async () => {
     try {
@@ -144,7 +152,10 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
         if (found) setProfileAvatar(found.image);
       }
     } catch {
-      // silent — avatar is cosmetic
+      // silent — avatar is cosmetic, fall through to show initials
+    } finally {
+      // Always clear the fetch-spinner regardless of success or failure
+      setIsAvatarFetching(false);
     }
   };
 
@@ -194,11 +205,27 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
           </div>
         </div>
 
+        {/*
+          Show a skeleton circle during both loading phases:
+          1. isAvatarFetching  — Supabase call still in-flight
+          2. profileAvatar set but imageLoadStatus === "loading" — browser downloading the image
+          Once both are done the real avatar (or initials fallback) appears.
+        */}
+        {isAvatarFetching || (profileAvatar !== null && imageLoadStatus === "loading") ? (
+          <Skeleton className="h-9 w-9 sm:h-10 sm:w-10 rounded-full flex-shrink-0" />
+        ) : null}
+
         <DropdownMenu>
+          {/* Keep the trigger hidden (not unmounted) while skeleton shows so the
+              dropdown content stays accessible and Radix state is preserved. */}
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              className="relative h-9 w-9 sm:h-10 sm:w-10 rounded-full p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+              className={`relative h-9 w-9 sm:h-10 sm:w-10 rounded-full p-0 focus-visible:ring-0 focus-visible:ring-offset-0 ${
+                isAvatarFetching || (profileAvatar !== null && imageLoadStatus === "loading")
+                  ? "sr-only"
+                  : ""
+              }`}
               data-testid="button-profile"
             >
               <Avatar
@@ -208,7 +235,11 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
                   boxShadow: `0 0 0 2px ${securityInfo.color === "green" ? "#22c55e" : securityInfo.color === "yellow" ? "#eab308" : "#ef4444"}`,
                 }}
               >
-                <AvatarImage src={profileAvatar || user.user_metadata?.avatar_url} alt="User avatar" />
+                <AvatarImage
+                  src={profileAvatar || user.user_metadata?.avatar_url}
+                  alt="User avatar"
+                  onLoadingStatusChange={setImageLoadStatus}
+                />
                 <AvatarFallback className="bg-primary text-primary-foreground font-semibold text-sm">
                   {user.user_metadata?.full_name?.substring(0, 2)?.toUpperCase() ??
                     user.email?.substring(0, 2)?.toUpperCase() ??
