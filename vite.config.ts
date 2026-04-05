@@ -88,21 +88,20 @@ export default defineConfig({
         manualChunks: {
           "vendor-react": ["react", "react-dom"],
 
-          // Radix UI packages required for the initial render:
-          // AppHeader needs slot, avatar, dialog, dropdown-menu.
-          // TooltipProvider (context-only, lightweight) needs tooltip.
-          // Toast is excluded — Toaster is now lazy-loaded.
+          // Only components needed for initial paint of every page (nav dropdowns,
+          // tooltip provider, button slot). Avatar is now in vendor-ui-x because
+          // it is only imported by the lazy AppHeaderUserSection component.
           "vendor-ui": [
-            "@radix-ui/react-avatar",
             "@radix-ui/react-dialog",
             "@radix-ui/react-dropdown-menu",
             "@radix-ui/react-slot",
             "@radix-ui/react-tooltip",
           ],
 
-          // Extended UI – only used inside lazy-loaded pages/dialogs.
+          // Extended UI – only used inside lazy-loaded pages/dialogs/components.
           // This chunk is never preloaded on the home page.
           "vendor-ui-x": [
+            "@radix-ui/react-avatar",
             "@radix-ui/react-accordion",
             "@radix-ui/react-alert-dialog",
             "@radix-ui/react-aspect-ratio",
