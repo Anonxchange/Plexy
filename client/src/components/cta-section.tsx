@@ -74,7 +74,7 @@ export function CTASection() {
           {/* RIGHT — IMAGE */}
           <div className="flex justify-center lg:justify-end">
             <img
-              src="/hero-app-screens.svg"
+              src="/svgs/hero-app-screens.svg"
               alt="Pexly Mobile App Screens"
               width={615}
               height={550}
