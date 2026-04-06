@@ -3,14 +3,20 @@ import { Link } from "wouter";
 import { ArrowDown } from "lucide-react";
 
 const BRANDS = [
-  { name: "Netflix",  domain: "netflix.com"  },
-  { name: "Amazon",   domain: "amazon.com"   },
-  { name: "Spotify",  domain: "spotify.com"  },
-  { name: "Apple",    domain: "apple.com"    },
-  { name: "Uber",     domain: "uber.com"     },
-  { name: "Airbnb",   domain: "airbnb.com"   },
-  { name: "Google",   domain: "google.com"   },
-  { name: "Steam",    domain: "steampowered.com" },
+  { name: "Netflix",      logo: "/logos/brands/netflix.svg"      },
+  { name: "Amazon",       logo: "/logos/brands/amazon.svg"       },
+  { name: "Spotify",      logo: "/logos/brands/spotify.svg"      },
+  { name: "Apple",        logo: "/logos/brands/apple.svg"        },
+  { name: "Uber",         logo: "/logos/brands/uber.svg"         },
+  { name: "Airbnb",       logo: "/logos/brands/airbnb.svg"       },
+  { name: "Google",       logo: "/logos/brands/google.svg"       },
+  { name: "Steam",        logo: "/logos/brands/steampowered.svg" },
+  { name: "Google Play",  logo: "/logos/brands/googleplay.svg"   },
+  { name: "PlayStation",  logo: "/logos/brands/playstation.svg"  },
+  { name: "Xbox",         logo: "/logos/brands/xbox.svg"         },
+  { name: "eBay",         logo: "/logos/brands/ebay.svg"         },
+  { name: "Visa",         logo: "/logos/brands/visa.svg"         },
+  { name: "Mastercard",   logo: "/logos/brands/mastercard.svg"   },
 ];
 
 interface NotifCardProps {
@@ -121,22 +127,18 @@ export function HeroSection() {
           <p className="text-[10px] font-bold uppercase tracking-widest text-white/30">
             Spend at 500+ merchants
           </p>
-          <div className="flex items-center gap-3 flex-wrap justify-center">
+          <div className="grid grid-cols-7 gap-3">
             {BRANDS.map((b) => (
               <div
-                key={b.domain}
+                key={b.name}
                 className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden border border-white/10 transition-transform hover:scale-110"
                 style={{ background: "rgba(255,255,255,0.08)" }}
                 title={b.name}
               >
                 <img
-                  src={`https://logo.clearbit.com/${b.domain}`}
+                  src={b.logo}
                   alt={b.name}
                   className="w-5 h-5 object-contain"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src =
-                      `https://www.google.com/s2/favicons?sz=32&domain=${b.domain}`;
-                  }}
                 />
               </div>
             ))}
@@ -155,14 +157,17 @@ export function HeroSection() {
           }}
         />
 
-        <img
-          src="/hero-bg.png"
-          alt=""
-          aria-hidden="true"
-          className="w-full h-full object-cover object-[center_15%]"
-          fetchPriority="high"
-          decoding="async"
-        />
+        <picture>
+          <source srcSet="/hero-bg.webp" type="image/webp" />
+          <img
+            src="/hero-bg.png"
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full object-cover object-center"
+            fetchPriority="high"
+            decoding="async"
+          />
+        </picture>
 
         {/* Side vignettes */}
         <div
@@ -175,7 +180,7 @@ export function HeroSection() {
         {/* Notification card — bottom left */}
         <div className="absolute z-20 hidden sm:block" style={{ bottom: "20%", left: "5%" }}>
           <NotifCard
-            logo="https://logo.clearbit.com/bitcoin.org"
+            logo="/logos/brands/bitcoin.svg"
             logoBg="#F7931A"
             title="Crypto received"
             subtitle="2 min ago"
@@ -187,7 +192,7 @@ export function HeroSection() {
         {/* Notification card — bottom right */}
         <div className="absolute z-20 hidden sm:block" style={{ bottom: "6%", right: "5%" }}>
           <NotifCard
-            logo="https://logo.clearbit.com/netflix.com"
+            logo="/logos/brands/netflix.svg"
             logoBg="#E50914"
             title="Payment successful"
             subtitle="5 min ago"
