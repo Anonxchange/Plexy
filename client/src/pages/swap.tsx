@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ArrowUpDown, TrendingDown, Shield, Gift, Loader2, Lock, BarChart3 } from "lucide-react";
+import { ArrowUpDown, TrendingDown, Shield, Gift, Loader2, Lock, BarChart3, Zap, CheckCircle2, ChevronRight, ArrowRight } from "lucide-react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
@@ -511,364 +511,527 @@ export function Swap() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex flex-col bg-background relative overflow-hidden">
-        {/* Background Decorative Shapes */}
-        <div className="absolute inset-0 pointer-events-none opacity-10">
-          <div className="absolute top-[10%] left-[5%] rotate-12">
-            <div className="h-24 w-24 rounded-full border-4 border-primary/20" />
+      <div className="min-h-screen flex flex-col bg-background">
+
+        {/* ── HERO ── */}
+        <section className="relative overflow-hidden">
+          {/* Subtle radial glow */}
+          <div className="pointer-events-none absolute inset-0">
+            <div className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full bg-primary/8 blur-[120px]" />
+            <div className="absolute top-1/2 -left-32 w-[400px] h-[400px] rounded-full bg-primary/5 blur-[100px]" />
           </div>
-          <div className="absolute top-[20%] right-[10%] -rotate-12">
-            <div className="h-32 w-32 border-2 border-primary/30 rotate-45" />
-          </div>
-          <div className="absolute bottom-[30%] left-[15%] rotate-45">
-            <div className="h-16 w-16 bg-primary/10 rounded-lg" />
-          </div>
-          <div className="absolute bottom-[10%] right-[20%] -rotate-6">
-            <div className="h-40 w-40 rounded-full border border-primary/20 flex items-center justify-center">
-              <div className="h-20 w-20 rounded-full border border-primary/10" />
-            </div>
-          </div>
-          <div className="absolute top-[50%] left-[2%] -rotate-12">
-            <div className="h-12 w-48 bg-primary/5 rounded-full rotate-45" />
-          </div>
-          <div className="absolute top-[40%] right-[5%] rotate-12">
-            <div className="h-20 w-20 border-t-4 border-l-4 border-primary/20 rounded-tl-3xl" />
-          </div>
-        </div>
 
-        <div className="flex-1 relative z-10">
-          {/* Hero Section */}
-          <section className="relative py-20 px-4 overflow-hidden">
-            <div className="max-w-4xl mx-auto text-center relative z-10">
-              <h1 className="text-4xl md:text-6xl font-black text-foreground mb-6 leading-tight">
-                Exchange cryptocurrencies<br />seamlessly
-              </h1>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-12">
-                Instantly convert digital assets with competitive rates and high-speed execution
-              </p>
+          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-12 lg:pt-14 lg:pb-16">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-14 items-center">
 
-              <Card className="max-w-lg mx-auto bg-card border-none shadow-2xl overflow-hidden rounded-2xl">
-                <CardContent className="p-6 space-y-4">
-                  {/* From Box */}
-                  <div className="bg-accent/5 p-6 rounded-xl border border-border/40 text-left">
-                    <div className="flex items-center justify-between mb-2">
-                      <Label className="text-foreground font-bold text-sm">From</Label>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <Input
-                        type="number"
-                        value={fromAmount}
-                        onChange={(e) => handleFromAmountChange(e.target.value)}
-                        className="bg-transparent border-none text-3xl font-bold p-0 focus-visible:ring-0 h-auto w-full"
-                        placeholder="0"
-                      />
-                      <div className="ml-auto flex flex-col items-end gap-1">
-                        <Select value={fromCurrency} onValueChange={setFromCurrency}>
-                          <SelectTrigger className="w-auto bg-card border border-border/40 px-3 py-1.5 rounded-full shadow-sm h-auto font-bold">
-                            <div className="flex items-center gap-2">
-                              <img src={getCurrency(fromCurrency)?.iconUrl} alt="" className="w-5 h-5 rounded-full" />
-                              <SelectValue placeholder="Select" />
-                            </div>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {currencies.map(c => (
-                              <SelectItem key={c.symbol} value={c.symbol}>
-                                <div className="flex items-center gap-2">
-                                  <img src={c.iconUrl} alt="" className="w-4 h-4 rounded-full" />
-                                  <span>{c.symbol}</span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {getCurrency(fromCurrency)?.networks && (
-                          <Select value={fromNetwork} onValueChange={setFromNetwork}>
-                            <SelectTrigger className="h-auto p-0 border-none bg-transparent text-[10px] text-muted-foreground font-medium px-2 uppercase tracking-tighter focus:ring-0">
-                              <SelectValue placeholder="Network" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {getCurrency(fromCurrency)?.networks?.map(n => (
-                                <SelectItem key={n.chain} value={n.chain}>{n.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                      </div>
-                    </div>
-                    <div className="mt-2 flex justify-between items-center">
-                      <span className="text-xs text-muted-foreground">
-                        Balance: {balance !== null ? balance.toLocaleString(undefined, { maximumFractionDigits: 8 }) : <Skeleton className="h-3 w-16 inline-block" />} {fromCurrency}
-                      </span>
-                      {balance !== null && balance > 0 && (
-                        <button 
-                          onClick={() => handleFromAmountChange(balance.toString())}
-                          className="text-xs text-primary font-bold hover:underline"
-                        >
-                          MAX
-                        </button>
-                      )}
-                    </div>
-                  </div>
+              {/* Left — headline + trust signals */}
+              <div className="space-y-5">
+                <div className="space-y-3">
+                  <h1 className="text-5xl md:text-6xl lg:text-7xl font-black leading-[1.02] tracking-tight text-foreground">
+                    Swap crypto<br />
+                    <span className="text-gradient-brand">your way</span>
+                  </h1>
+                  <p className="text-lg text-muted-foreground max-w-md leading-relaxed">
+                    Convert any digital asset at the best available rate — no middlemen, no custody risk, no hidden fees.
+                  </p>
+                </div>
 
-                  <div className="flex justify-center -my-6 relative z-10">
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="rounded-full bg-card border-2 border-border shadow-md hover:bg-accent transition-all active:scale-95"
-                      onClick={handleSwapCurrencies}
-                    >
-                      <ArrowUpDown className="h-4 w-4" />
-                    </Button>
-                  </div>
+                {/* Trust bullets */}
+                <ul className="space-y-3">
+                  {[
+                    "Best-price routing across 50+ liquidity sources",
+                    "Non-custodial — your keys, your crypto",
+                    "Supports 140+ countries and 500+ payment methods",
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-center gap-3 text-sm text-foreground/80">
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
 
-                  {/* To Box */}
-                  <div className="bg-accent/5 p-6 rounded-xl border border-border/40 text-left">
-                    <div className="flex items-center justify-between mb-2">
-                      <Label className="text-foreground font-bold text-sm">To (Estimated)</Label>
+                {/* Stats strip */}
+                <div className="flex flex-wrap gap-6 pt-2">
+                  {[
+                    { value: "14M+", label: "Users" },
+                    { value: "500+", label: "Payment methods" },
+                    { value: "140+", label: "Countries" },
+                  ].map((s, i) => (
+                    <div key={i} className="flex flex-col">
+                      <span className="text-2xl font-black text-foreground">{s.value}</span>
+                      <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{s.label}</span>
                     </div>
-                    <div className="flex items-center gap-4">
-                      {isLoading ? (
-                        <Skeleton className="h-9 w-32" />
-                      ) : (
-                        <Input
-                          type="number"
-                          value={toAmount}
-                          onChange={(e) => handleToAmountChange(e.target.value)}
-                          className="bg-transparent border-none text-3xl font-bold p-0 focus-visible:ring-0 h-auto w-full"
-                          placeholder="0"
-                        />
-                      )}
-                      <div className="ml-auto flex flex-col items-end gap-1">
-                        <Select value={toCurrency} onValueChange={setToCurrency}>
-                          <SelectTrigger className="w-auto bg-card border border-border/40 px-3 py-1.5 rounded-full shadow-sm h-auto font-bold">
-                            <div className="flex items-center gap-2">
-                              <img src={getCurrency(toCurrency)?.iconUrl} alt="" className="w-5 h-5 rounded-full" />
-                              <SelectValue placeholder="Select" />
-                            </div>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {currencies.map(c => (
-                              <SelectItem key={c.symbol} value={c.symbol}>
-                                <div className="flex items-center gap-2">
-                                  <img src={c.iconUrl} alt="" className="w-4 h-4 rounded-full" />
-                                  <span>{c.symbol}</span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {getCurrency(toCurrency)?.networks && (
-                          <Select value={toNetwork} onValueChange={setToNetwork}>
-                            <SelectTrigger className="h-auto p-0 border-none bg-transparent text-[10px] text-muted-foreground font-medium px-2 uppercase tracking-tighter focus:ring-0">
-                              <SelectValue placeholder="Network" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {getCurrency(toCurrency)?.networks?.map(n => (
-                                <SelectItem key={n.chain} value={n.chain}>{n.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  ))}
+                </div>
 
-                  {/* Quote Details */}
-                  <div className="space-y-3 pt-2">
-                    <div className="flex items-center justify-between text-sm px-1">
-                      <span className="text-muted-foreground flex items-center gap-1.5">
-                        <TrendingDown className="h-3.5 w-3.5" />
-                        Exchange Rate
-                      </span>
-                      <span className="font-medium">
-                        {isLoading ? <Skeleton className="h-4 w-24" /> : `1 ${fromCurrency} ≈ ${formatRate(swapRate)} ${toCurrency}`}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between text-sm px-1">
-                      <span className="text-muted-foreground flex items-center gap-1.5">
-                        <Shield className="h-3.5 w-3.5" />
-                        Network Fee
-                      </span>
-                      <span className="font-medium text-amber-500">
-                        {isLoading ? <Skeleton className="h-4 w-16" /> : (estFees[fromNetwork] || "Fetching...")}
-                      </span>
-                    </div>
-
-                    {bestQuote?.priceImpact !== undefined && (
-                      <div className="flex items-center justify-between text-sm px-1">
-                        <span className="text-muted-foreground flex items-center gap-1.5">
-                          <BarChart3 className="h-3.5 w-3.5" />
-                          Price Impact
-                        </span>
-                        <span className={`font-medium ${bestQuote.priceImpact > 2 ? 'text-red-500' : 'text-green-500'}`}>
-                          {bestQuote.priceImpact.toFixed(2)}%
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex justify-center -my-6 relative z-10">
-                    <div className="rounded-full bg-[#B4F22E] text-black h-10 w-10 flex items-center justify-center border-4 border-card shadow-lg">
-                      <ArrowUpDown className="h-5 w-5" />
-                    </div>
-                  </div>
-
-                  {/* To Box */}
-                  <div className="bg-accent/5 p-6 rounded-xl border border-border/40 text-left">
-                    <div className="flex items-center justify-between mb-2">
-                      <Label className="text-foreground font-bold text-sm">To</Label>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-3xl font-bold text-muted-foreground/30">0</span>
-                      <div className="ml-auto flex flex-col items-end gap-1">
-                        <div className="flex items-center gap-2 bg-card border border-border/40 px-3 py-1.5 rounded-full shadow-sm">
-                          <img src={getCurrency(toCurrency)?.iconUrl} alt="" className="w-5 h-5 rounded-full" />
-                          <span className="font-bold">{toCurrency}</span>
-                        </div>
-                        {getCurrency(toCurrency)?.networks && (
-                          <span className="text-[10px] text-muted-foreground font-medium px-2 uppercase tracking-tighter">
-                            {getCurrency(toCurrency)?.networks?.find(n => n.chain === toNetwork)?.name || toNetwork}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-left pt-2">
-                    <span className="text-xs text-muted-foreground block mb-1 text-[10px] uppercase font-bold tracking-wider">Market rate</span>
-                    <div className="flex items-center gap-1 min-h-[16px] overflow-hidden">
-                      {isLoading ? (
-                        <Skeleton className="h-3 w-32" />
-                      ) : (
-                        <span className="text-xs font-bold truncate">1 {fromCurrency} = {formatRate(marketRate)} {toCurrency}</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <Button 
-                    className="w-full h-14 text-lg font-bold bg-[#B4F22E] hover:bg-[#a3db29] text-black rounded-xl shadow-sm transition-all" 
+                {/* Mobile CTA (hidden on lg, widget handles it on desktop) */}
+                <div className="flex items-center gap-3 lg:hidden">
+                  <Button
+                    className="h-12 px-7 font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm shadow-md"
+                    onClick={() => setLocation("/signup")}
+                  >
+                    Get started free
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="h-12 px-4 font-semibold text-sm"
                     onClick={() => setLocation("/signin")}
                   >
-                    Log in/Join us
+                    Sign in <ChevronRight className="h-4 w-4 ml-1" />
                   </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </section>
+                </div>
+              </div>
 
-          {/* Why Exchange Section */}
-          <section className="py-20 bg-background">
-            <div className="max-w-7xl mx-auto px-4">
-              <div className="text-center mb-16">
-                <h2 className="text-4xl md:text-5xl font-black mb-4">Why use Pexly</h2>
-                <p className="text-muted-foreground">Easily trade digital assets with Pexly in just a few clicks</p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {[
-                  { title: "Best rates", desc: "Exchange assets at the most competitive market rates", icon: <TrendingDown className="h-6 w-6 text-primary" /> },
-                  { title: "Privacy first", desc: "Secure and confidential transactions for all users", icon: <Shield className="h-6 w-6 text-primary" /> },
-                  { title: "Fast execution", desc: "Benefit from rapid processing and instant settlements", icon: <Gift className="h-6 w-6 text-primary" /> }
-                ].map((item, i) => (
-                  <Card key={i} className="bg-card/50 border-none shadow-sm hover:shadow-md transition-shadow p-8 text-center flex flex-col items-center">
-                    <div className="w-12 h-12 rounded-full bg-accent/5 flex items-center justify-center mb-6">
-                      {item.icon}
+              {/* Right — live swap widget */}
+              <div className="w-full">
+                <Card className="bg-card border border-border/40 shadow-2xl rounded-2xl overflow-hidden">
+                  {/* Widget header */}
+                  <div className="px-6 pt-5 pb-4 border-b border-border/30 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-2 w-2 rounded-full bg-[#4ADE80] animate-pulse" />
+                      <span className="text-sm font-bold text-foreground">Live rates</span>
                     </div>
-                    <h3 className="text-xl font-bold mb-3">{item.title}</h3>
-                    <p className="text-muted-foreground text-sm">{item.desc}</p>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          </section>
+                    <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Powered by RocketX</span>
+                  </div>
 
-          {/* Asset Pairs Section */}
-          <section className="py-20 bg-accent/5">
-            <div className="max-w-7xl mx-auto px-4">
-              <div className="text-center mb-16">
-                <h2 className="text-4xl md:text-5xl font-black mb-4">Wide range of trading pairs</h2>
-                <p className="text-muted-foreground">Easily trade between a variety of digital assets</p>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {[
-                  { pair: "BTC/USDT", color: "from-orange-500/10 to-transparent", icon: cryptoIconUrls.BTC },
-                  { pair: "XMR/USDT", color: "from-orange-600/10 to-transparent", icon: cryptoIconUrls.BTC }, // Placeholder for XMR
-                  { pair: "SOL/USDT", color: "from-purple-500/10 to-transparent", icon: cryptoIconUrls.SOL },
-                  { pair: "ETH/USDT", color: "from-blue-500/10 to-transparent", icon: cryptoIconUrls.ETH }
-                ].map((item, i) => (
-                  <Card key={i} className="bg-card border-none shadow-sm overflow-hidden p-4 group cursor-pointer hover:shadow-md transition-all">
-                    <div className="flex items-center gap-3 mb-4">
-                      <img src={item.icon} className="w-8 h-8 rounded-full" alt="" />
-                      <span className="font-bold text-sm uppercase">{item.pair} ↑</span>
-                    </div>
-                    <div className={`h-24 w-full rounded-lg bg-gradient-to-t ${item.color} relative overflow-hidden`}>
-                      <div className="absolute inset-0 flex items-end">
-                        <div className="w-full h-1/2 bg-gradient-to-t from-background/20 to-transparent" />
+                  <CardContent className="p-5 space-y-3">
+                    {/* From token box */}
+                    <div className="bg-accent/5 hover:bg-accent/8 transition-colors p-4 rounded-xl border border-border/40">
+                      <Label className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider mb-3 block">You send</Label>
+                      <div className="flex items-center gap-3">
+                        <Input
+                          type="number"
+                          value={fromAmount}
+                          onChange={(e) => handleFromAmountChange(e.target.value)}
+                          className="bg-transparent border-none text-3xl font-black p-0 focus-visible:ring-0 h-auto flex-1 min-w-0"
+                          placeholder="0"
+                        />
+                        <div className="flex flex-col items-end gap-1.5 shrink-0">
+                          <Select value={fromCurrency} onValueChange={setFromCurrency}>
+                            <SelectTrigger className="w-auto bg-card border border-border/50 px-3 py-2 rounded-full h-auto font-bold text-sm gap-2 shadow-sm hover:bg-accent/5 transition-colors">
+                              <div className="flex items-center gap-2">
+                                <img src={getCurrency(fromCurrency)?.iconUrl} alt="" className="w-5 h-5 rounded-full" />
+                                <SelectValue placeholder="Select" />
+                              </div>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {currencies.map(c => (
+                                <SelectItem key={c.symbol} value={c.symbol}>
+                                  <div className="flex items-center gap-2">
+                                    <img src={c.iconUrl} alt="" className="w-4 h-4 rounded-full" />
+                                    <span className="font-semibold">{c.symbol}</span>
+                                    <span className="text-muted-foreground text-xs">{c.name}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {getCurrency(fromCurrency)?.networks && (
+                            <Select value={fromNetwork} onValueChange={setFromNetwork}>
+                              <SelectTrigger className="h-auto p-0 border-none bg-transparent text-[10px] text-muted-foreground font-semibold px-1 uppercase tracking-wider focus:ring-0">
+                                <SelectValue placeholder="Network" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {getCurrency(fromCurrency)?.networks?.map(n => (
+                                  <SelectItem key={n.chain} value={n.chain}>{n.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-2.5 flex justify-between items-center">
+                        <span className="text-[11px] text-muted-foreground">Balance: — {fromCurrency}</span>
+                        <span className="text-[11px] text-primary font-bold cursor-pointer hover:underline" onClick={() => setLocation("/signin")}>Sign in to see</span>
                       </div>
                     </div>
-                  </Card>
-                ))}
+
+                    {/* Swap direction button */}
+                    <div className="flex justify-center -my-1.5 relative z-10">
+                      <button
+                        className="h-9 w-9 rounded-full bg-primary text-black flex items-center justify-center shadow-md hover:bg-primary/90 active:scale-95 transition-all border-4 border-card"
+                        onClick={handleSwapCurrencies}
+                      >
+                        <ArrowUpDown className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    {/* To token box */}
+                    <div className="bg-accent/5 hover:bg-accent/8 transition-colors p-4 rounded-xl border border-border/40">
+                      <Label className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider mb-3 block">You receive</Label>
+                      <div className="flex items-center gap-3">
+                        {isLoading ? (
+                          <Skeleton className="h-9 w-28 rounded-lg" />
+                        ) : (
+                          <span className="text-3xl font-black flex-1 min-w-0 truncate text-foreground">
+                            {toAmount !== "0.00" ? toAmount : <span className="text-muted-foreground/40">0</span>}
+                          </span>
+                        )}
+                        <div className="flex flex-col items-end gap-1.5 shrink-0">
+                          <Select value={toCurrency} onValueChange={setToCurrency}>
+                            <SelectTrigger className="w-auto bg-card border border-border/50 px-3 py-2 rounded-full h-auto font-bold text-sm gap-2 shadow-sm hover:bg-accent/5 transition-colors">
+                              <div className="flex items-center gap-2">
+                                <img src={getCurrency(toCurrency)?.iconUrl} alt="" className="w-5 h-5 rounded-full" />
+                                <SelectValue placeholder="Select" />
+                              </div>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {currencies.map(c => (
+                                <SelectItem key={c.symbol} value={c.symbol}>
+                                  <div className="flex items-center gap-2">
+                                    <img src={c.iconUrl} alt="" className="w-4 h-4 rounded-full" />
+                                    <span className="font-semibold">{c.symbol}</span>
+                                    <span className="text-muted-foreground text-xs">{c.name}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {getCurrency(toCurrency)?.networks && (
+                            <Select value={toNetwork} onValueChange={setToNetwork}>
+                              <SelectTrigger className="h-auto p-0 border-none bg-transparent text-[10px] text-muted-foreground font-semibold px-1 uppercase tracking-wider focus:ring-0">
+                                <SelectValue placeholder="Network" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {getCurrency(toCurrency)?.networks?.map(n => (
+                                  <SelectItem key={n.chain} value={n.chain}>{n.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Rate details row */}
+                    <div className="grid grid-cols-3 gap-2 px-1 pt-1">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Rate</span>
+                        <span className="text-xs font-bold text-foreground truncate">
+                          {isLoading ? <Skeleton className="h-3 w-20 mt-0.5" /> : `1 ${fromCurrency} ≈ ${formatRate(swapRate)} ${toCurrency}`}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Fee</span>
+                        <span className="text-xs font-bold text-amber-500">
+                          {isLoading ? <Skeleton className="h-3 w-12 mt-0.5" /> : (estFees[fromNetwork] || "—")}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Impact</span>
+                        <span className="text-xs font-bold text-[#4ADE80]">
+                          {isLoading ? <Skeleton className="h-3 w-10 mt-0.5" /> : (bestQuote?.priceImpact !== undefined ? `${bestQuote.priceImpact.toFixed(2)}%` : "< 0.01%")}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* CTA */}
+                    <Button
+                      className="w-full h-13 text-base font-black bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-lg transition-all duration-150 active:scale-[0.98] mt-1"
+                      onClick={() => setLocation("/signin")}
+                    >
+                      Sign in to swap
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+
+                    <p className="text-center text-[11px] text-muted-foreground">
+                      New to Pexly?{" "}
+                      <button className="text-primary font-bold hover:underline" onClick={() => setLocation("/signup")}>
+                        Create a free account
+                      </button>
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
             </div>
-          </section>
+          </div>
+        </section>
 
-          {/* How It Works Section */}
-          <section className="py-20 bg-background border-t">
-            <div className="max-w-7xl mx-auto px-4">
-              <div className="text-center mb-16">
-                <h2 className="text-4xl md:text-5xl font-black mb-4">How it works</h2>
-                <p className="text-muted-foreground">Log in to your Pexly account and select Swap from the Trade menu in the header</p>
+        {/* ── TRUST BAR ── */}
+        <div className="border-y border-border/40 bg-accent/3 py-4">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-2 text-xs text-muted-foreground font-medium">
+              {[
+                { icon: <Shield className="h-3.5 w-3.5 text-primary" />, text: "Non-custodial & self-sovereign" },
+                { icon: <Zap className="h-3.5 w-3.5 text-primary" />, text: "Sub-second rate updates" },
+                { icon: <CheckCircle2 className="h-3.5 w-3.5 text-primary" />, text: "Best-price routing across 50+ DEXs" },
+                { icon: <TrendingDown className="h-3.5 w-3.5 text-primary" />, text: "Competitive low fees" },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  {item.icon}
+                  <span>{item.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── FEATURES ── */}
+        <section className="py-12 lg:py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-8">
+              <h2 className="text-4xl md:text-5xl font-black mb-3">Why use Pexly Swap</h2>
+              <p className="text-muted-foreground text-lg max-w-xl mx-auto">Built for traders who want control, speed, and the best price every time.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Best rates */}
+              <Card className="bg-card border border-border/40 rounded-2xl p-7 hover:shadow-lg transition-shadow group">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-5 group-hover:bg-primary/15 transition-colors">
+                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    {/* Source nodes */}
+                    <circle cx="4" cy="8" r="2.5" fill="#B4F22E" opacity="0.7"/>
+                    <circle cx="4" cy="14" r="2.5" fill="#B4F22E" opacity="0.5"/>
+                    <circle cx="4" cy="20" r="2.5" fill="#B4F22E" opacity="0.35"/>
+                    {/* Hub / router node */}
+                    <circle cx="13" cy="14" r="3.5" fill="#B4F22E"/>
+                    <circle cx="13" cy="14" r="2" fill="black" opacity="0.18"/>
+                    {/* Destination node */}
+                    <circle cx="24" cy="14" r="3" fill="#B4F22E"/>
+                    {/* Grey fan lines (non-optimal paths) */}
+                    <line x1="6.5" y1="8" x2="9.6" y2="12" stroke="#B4F22E" strokeWidth="1.2" strokeOpacity="0.35" strokeLinecap="round"/>
+                    <line x1="6.5" y1="14" x2="9.4" y2="14" stroke="#B4F22E" strokeWidth="1.2" strokeOpacity="0.35" strokeLinecap="round"/>
+                    <line x1="6.5" y1="20" x2="9.6" y2="16" stroke="#B4F22E" strokeWidth="1.2" strokeOpacity="0.35" strokeLinecap="round"/>
+                    {/* Highlighted best-path line */}
+                    <line x1="16.5" y1="14" x2="21" y2="14" stroke="#B4F22E" strokeWidth="2" strokeLinecap="round"/>
+                    {/* Arrow head on destination */}
+                    <polyline points="20,11.5 23,14 20,16.5" fill="none" stroke="#B4F22E" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                    {/* Small tick / checkmark on hub */}
+                    <polyline points="11.2,14.2 12.6,15.6 15.2,12.6" fill="none" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.9"/>
+                  </svg>
+                </div>
+                <h3 className="text-lg font-bold mb-2">Best rates, always</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">Our routing engine queries 50+ liquidity sources simultaneously and selects the optimal path for your swap — so you always get more out.</p>
+              </Card>
+
+              {/* Zero custody risk */}
+              <Card className="bg-card border border-border/40 rounded-2xl p-7 hover:shadow-lg transition-shadow group">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-5 group-hover:bg-primary/15 transition-colors">
+                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    {/* Shield body */}
+                    <path d="M14 3L5 7V14.5C5 19.2 9 23.4 14 25C19 23.4 23 19.2 23 14.5V7L14 3Z" fill="#B4F22E" fillOpacity="0.18" stroke="#B4F22E" strokeWidth="1.6" strokeLinejoin="round"/>
+                    {/* Inner shield highlight */}
+                    <path d="M14 6L8 9.5V14.5C8 17.7 10.7 20.6 14 21.8C17.3 20.6 20 17.7 20 14.5V9.5L14 6Z" fill="#B4F22E" fillOpacity="0.10"/>
+                    {/* Key circle */}
+                    <circle cx="13" cy="13" r="3" fill="none" stroke="#B4F22E" strokeWidth="1.6"/>
+                    {/* Key shaft */}
+                    <line x1="15.8" y1="15.2" x2="19" y2="18.4" stroke="#B4F22E" strokeWidth="1.6" strokeLinecap="round"/>
+                    {/* Key teeth */}
+                    <line x1="17.2" y1="16.6" x2="18.4" y2="15.4" stroke="#B4F22E" strokeWidth="1.4" strokeLinecap="round"/>
+                    <line x1="18.2" y1="17.6" x2="19.4" y2="16.4" stroke="#B4F22E" strokeWidth="1.4" strokeLinecap="round"/>
+                    {/* Corner dots / circuit feel */}
+                    <circle cx="8.5" cy="19.5" r="1" fill="#B4F22E" opacity="0.4"/>
+                    <circle cx="19.5" cy="8.5" r="1" fill="#B4F22E" opacity="0.4"/>
+                  </svg>
+                </div>
+                <h3 className="text-lg font-bold mb-2">Zero custody risk</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">Your assets never leave your non-custodial wallet during the swap. Pexly acts as a coordinator, not a custodian. Your keys stay yours.</p>
+              </Card>
+
+              {/* Lightning-fast execution */}
+              <Card className="bg-card border border-border/40 rounded-2xl p-7 hover:shadow-lg transition-shadow group">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-5 group-hover:bg-primary/15 transition-colors">
+                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    {/* Speed lines left */}
+                    <line x1="2" y1="10" x2="8" y2="10" stroke="#B4F22E" strokeWidth="1.4" strokeLinecap="round" opacity="0.45"/>
+                    <line x1="2" y1="14" x2="6" y2="14" stroke="#B4F22E" strokeWidth="1.4" strokeLinecap="round" opacity="0.3"/>
+                    <line x1="2" y1="18" x2="8" y2="18" stroke="#B4F22E" strokeWidth="1.4" strokeLinecap="round" opacity="0.45"/>
+                    {/* Main lightning bolt */}
+                    <path d="M17 3L9 15.5H14.5L11 25L22 12H16L17 3Z" fill="#B4F22E" stroke="#B4F22E" strokeWidth="0.6" strokeLinejoin="round"/>
+                    {/* Glow core */}
+                    <path d="M16.2 7L11.5 15.5H15.8L13 21.5L20.5 12H15.8L16.2 7Z" fill="white" fillOpacity="0.22"/>
+                    {/* Small dot accents */}
+                    <circle cx="24" cy="8" r="1.2" fill="#B4F22E" opacity="0.5"/>
+                    <circle cx="25.5" cy="14" r="0.9" fill="#B4F22E" opacity="0.35"/>
+                    <circle cx="24" cy="20" r="1.2" fill="#B4F22E" opacity="0.5"/>
+                  </svg>
+                </div>
+                <h3 className="text-lg font-bold mb-2">Lightning-fast execution</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">Swaps settle in seconds. Real-time price feeds and direct on-chain transactions mean no waiting, no slippage surprises.</p>
+              </Card>
+            </div>
+          </div>
+        </section>
+
+        {/* ── POPULAR PAIRS ── */}
+        <section className="py-12 lg:py-14 bg-accent/4 border-y border-border/30">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+              <div>
+                <h2 className="text-3xl md:text-4xl font-black mb-1">Popular pairs</h2>
+                <p className="text-muted-foreground text-sm">Trade between the most liquid assets on any network</p>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-                {[
-                  { step: "1. Join Pexly today", desc: "Register your Pexly account and log in", img: "/assets/IMG_3627.jpeg" },
-                  { step: "2. Open Trade page", desc: "From the Trade menu in the header, select Exchange", img: "/assets/IMG_3628.jpeg" },
-                  { step: "3. Choose a pair and execute", desc: "Enter the amount, select your assets, and proceed with the transaction", img: "/assets/IMG_3629.jpeg" }
-                ].map((item, i) => (
-                  <div key={i} className="space-y-6">
-                    <h3 className="text-xl font-bold">{item.step}</h3>
-                    <p className="text-muted-foreground text-sm">{item.desc}</p>
-                    <div className="rounded-xl overflow-hidden border border-border/40 shadow-sm bg-accent/5 p-4">
-                      <img src={item.img} className="w-full rounded-lg" alt="" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="text-center mt-20">
-                <Button 
-                  className="px-12 h-14 text-lg font-bold bg-[#B4F22E] hover:bg-[#a3db29] text-black rounded-full shadow-lg transition-all"
+              <button
+                className="text-sm font-bold text-primary hover:underline flex items-center gap-1 shrink-0"
+                onClick={() => setLocation("/signin")}
+              >
+                View all pairs <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                { from: "BTC", to: "USDT", fromIcon: cryptoIconUrls.BTC, toIcon: cryptoIconUrls.USDT, change: "+2.4%", up: true },
+                { from: "ETH", to: "USDT", fromIcon: cryptoIconUrls.ETH, toIcon: cryptoIconUrls.USDT, change: "+1.1%", up: true },
+                { from: "SOL", to: "USDT", fromIcon: cryptoIconUrls.SOL, toIcon: cryptoIconUrls.USDT, change: "-0.7%", up: false },
+                { from: "BNB", to: "USDT", fromIcon: cryptoIconUrls.BNB, toIcon: cryptoIconUrls.USDT, change: "+0.9%", up: true },
+              ].map((pair, i) => (
+                <Card
+                  key={i}
+                  className="bg-card border border-border/40 rounded-2xl p-5 cursor-pointer hover:shadow-md hover:border-primary/30 transition-all group"
                   onClick={() => setLocation("/signin")}
                 >
-                  Start now
-                </Button>
-              </div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="relative flex items-center">
+                      <img src={pair.fromIcon} alt={pair.from} className="w-8 h-8 rounded-full z-10 ring-2 ring-card" />
+                      <img src={pair.toIcon} alt={pair.to} className="w-8 h-8 rounded-full -ml-2 ring-2 ring-card" />
+                    </div>
+                    <div>
+                      <div className="font-black text-sm">{pair.from}/{pair.to}</div>
+                      <div className={`text-xs font-bold ${pair.up ? "text-[#4ADE80]" : "text-red-400"}`}>{pair.change}</div>
+                    </div>
+                  </div>
+                  <div className="h-12 w-full rounded-lg overflow-hidden relative bg-accent/10">
+                    <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="w-full h-full">
+                      <polyline
+                        points={pair.up
+                          ? "0,35 15,30 30,28 45,22 55,25 65,18 80,12 100,8"
+                          : "0,8 15,12 30,15 45,20 55,18 65,25 80,28 100,32"}
+                        fill="none"
+                        stroke={pair.up ? "#4ADE80" : "#EF4444"}
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between">
+                    <span className="text-[11px] text-muted-foreground font-medium">Swap now</span>
+                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                </Card>
+              ))}
             </div>
-          </section>
+          </div>
+        </section>
 
-          {/* FAQ Section */}
-          <section className="py-20 bg-background border-t">
-            <div className="max-w-3xl mx-auto px-4">
-              <div className="text-center mb-16">
-                <h2 className="text-4xl md:text-6xl font-black mb-4 leading-tight">Frequently asked questions</h2>
-                <p className="text-muted-foreground">Find answers to the most popular questions asked by our users</p>
-              </div>
-              <Accordion type="single" collapsible className="w-full space-y-4">
-                {[
-                  "Are there any fees for transactions on Pexly?",
-                  "My transaction failed. What should I do next?",
-                  "My transaction failed, and my funds are either reserved or missing. What should I do?",
-                  "What are the minimum transaction amounts?"
-                ].map((q, i) => (
-                  <AccordionItem key={i} value={`item-${i}`} className="border rounded-xl px-4 bg-card shadow-sm border-border/40 overflow-hidden">
-                    <AccordionTrigger className="text-left font-bold py-6 hover:no-underline">{q}</AccordionTrigger>
-                    <AccordionContent className="text-muted-foreground pb-6">
-                      Detailed information about this topic will be provided here for users to understand the process.
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
+        {/* ── HOW IT WORKS ── */}
+        <section className="py-12 lg:py-16">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-8">
+              <h2 className="text-4xl md:text-5xl font-black mb-3">How to swap in 3 steps</h2>
+              <p className="text-muted-foreground text-lg">No experience required. Start swapping in under 2 minutes.</p>
             </div>
-          </section>
-        </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+              {/* Connector line (desktop only) */}
+              <div className="hidden md:block absolute top-7 left-[calc(16.67%+1rem)] right-[calc(16.67%+1rem)] h-px bg-border/50 pointer-events-none" />
+              {[
+                {
+                  step: "01",
+                  title: "Create your account",
+                  desc: "Sign up in seconds with just an email address. No KYC required to start swapping.",
+                },
+                {
+                  step: "02",
+                  title: "Choose your pair",
+                  desc: "Select the assets you want to swap. Preview live rates before you commit — no surprises.",
+                },
+                {
+                  step: "03",
+                  title: "Confirm & execute",
+                  desc: "Review the quote and hit swap. Your assets land in your non-custodial wallet within seconds.",
+                },
+              ].map((item, i) => (
+                <div key={i} className="flex flex-col items-center text-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center text-black font-black text-lg shadow-lg relative z-10">
+                    {item.step}
+                  </div>
+                  <h3 className="text-lg font-bold">{item.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-center mt-8">
+              <Button
+                className="h-13 px-10 text-base font-black bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-lg transition-all active:scale-[0.98]"
+                onClick={() => setLocation("/signup")}
+              >
+                Start swapping free
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        {/* ── FAQ ── */}
+        <section className="py-12 lg:py-14 border-t border-border/30 bg-accent/3">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl md:text-4xl font-black mb-3">Frequently asked questions</h2>
+              <p className="text-muted-foreground">Find answers to the most popular questions about Pexly Swap</p>
+            </div>
+            <Accordion type="single" collapsible className="space-y-3">
+              {[
+                {
+                  q: "Are there any fees for swapping on Pexly?",
+                  a: "Pexly charges a small protocol fee that is already included in the quoted rate you see. There are also network (gas) fees charged by the blockchain, which vary based on network congestion. You'll always see the total cost before confirming."
+                },
+                {
+                  q: "Is my crypto safe while swapping?",
+                  a: "Yes. Pexly is fully non-custodial, meaning your assets stay in your own wallet throughout the swap process. We coordinate the transaction but never hold your funds."
+                },
+                {
+                  q: "My transaction failed. What should I do?",
+                  a: "Failed swaps typically happen due to price slippage or insufficient gas. Your funds remain in your wallet and are not lost. Try again with a slightly higher slippage tolerance, or wait for network congestion to ease."
+                },
+                {
+                  q: "What are the minimum and maximum swap amounts?",
+                  a: "Minimums vary by asset and network, typically $10 equivalent or more. There are no maximums — large swaps are routed across multiple liquidity sources automatically to minimize price impact."
+                },
+              ].map((item, i) => (
+                <AccordionItem
+                  key={i}
+                  value={`item-${i}`}
+                  className="border border-border/40 rounded-xl px-5 bg-card shadow-sm overflow-hidden"
+                >
+                  <AccordionTrigger className="text-left font-bold py-5 text-sm hover:no-underline">
+                    {item.q}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm text-muted-foreground pb-5 leading-relaxed">
+                    {item.a}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
+        </section>
+
+        {/* ── CTA BANNER ── */}
+        <section className="py-10 lg:py-12 bg-primary">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+            <h2 className="text-3xl md:text-5xl font-black text-black leading-tight">
+              Ready to swap smarter?
+            </h2>
+            <p className="text-black/70 text-lg font-medium max-w-xl mx-auto">
+              Join 14 million users already trading on Pexly. No hidden fees, no custody risk — just fast, fair swaps.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <Button
+                className="h-13 px-10 text-base font-black bg-black text-white hover:bg-black/85 rounded-xl shadow-lg active:scale-[0.98] transition-all"
+                onClick={() => setLocation("/signup")}
+              >
+                Create free account
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+              <Button
+                variant="ghost"
+                className="h-13 px-6 text-base font-bold text-black/80 hover:text-black hover:bg-black/10 rounded-xl"
+                onClick={() => setLocation("/signin")}
+              >
+                Already have an account? Sign in
+              </Button>
+            </div>
+          </div>
+        </section>
+
         <PexlyFooter />
       </div>
     );
