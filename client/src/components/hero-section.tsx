@@ -51,12 +51,48 @@ function NotifCard({ logo, logoBg, title, subtitle, amount, amountColor }: Notif
 export function HeroSection() {
   return (
     <section
-      className="relative overflow-hidden flex flex-col bg-background"
+      className="relative overflow-hidden bg-background flex flex-col lg:block"
       style={{ minHeight: "100vh" }}
     >
-      {/* Subtle lime glow */}
+
+      {/* ══════════════════════════════════════════
+          DESKTOP ONLY — full-bleed background image
+          ══════════════════════════════════════════ */}
+      <div className="hidden lg:block absolute inset-0 z-0">
+        <picture>
+          <source srcSet="/hero-bg.webp" type="image/webp" />
+          <img
+            src="/hero-bg.png"
+            alt=""
+            aria-hidden="true"
+            className="w-full h-full object-cover object-center"
+            fetchPriority="high"
+            decoding="async"
+          />
+        </picture>
+        {/* Dark gradient overlay — opaque on the left where text lives, fades to transparent */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(to right, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.65) 28%, rgba(0,0,0,0.20) 60%, transparent 85%)",
+          }}
+        />
+        {/* Subtle bottom scrim */}
+        <div
+          className="absolute bottom-0 left-0 right-0"
+          style={{
+            height: "120px",
+            background: "linear-gradient(to top, rgba(0,0,0,0.35), transparent)",
+          }}
+        />
+      </div>
+
+      {/* ══════════════════════════════════════════
+          MOBILE ONLY — subtle lime glow
+          ══════════════════════════════════════════ */}
       <div
-        className="absolute pointer-events-none"
+        className="lg:hidden absolute pointer-events-none"
         style={{
           top: "5%", left: "50%", transform: "translateX(-50%)",
           width: "60%", height: "40%",
@@ -64,18 +100,41 @@ export function HeroSection() {
         }}
       />
 
-      {/* ── Upper text content ── */}
-      <div className="relative z-10 flex flex-col items-center text-center px-5 pt-6 pb-10">
-
+      {/* ══════════════════════════════════════════
+          CONTENT — shared between mobile & desktop,
+          responsive alignment/positioning
+          ══════════════════════════════════════════ */}
+      <div
+        className={[
+          "relative z-10",
+          /* mobile: normal-flow, centered */
+          "flex flex-col items-center text-center px-5 pt-6 pb-10",
+          /* desktop: absolutely positioned left column */
+          "lg:absolute lg:inset-y-0 lg:left-0 lg:w-[52%] lg:justify-center",
+          "lg:items-start lg:text-left lg:px-20 lg:pb-0 lg:pt-0",
+        ].join(" ")}
+      >
         {/* Trust badge */}
-        <div className="inline-flex items-center gap-1 rounded-full border border-foreground/15 bg-background px-1 py-1 mb-7">
-          <span className="text-[11px] font-medium text-foreground px-2.5">Trusted by millions of customers</span>
-          <span className="rounded-full bg-foreground/[0.07] px-2.5 py-0.5 text-[11px] font-medium text-foreground/60 whitespace-nowrap">Since 2022</span>
+        <div
+          className={[
+            "inline-flex items-center gap-1 rounded-full px-1 py-1 mb-7",
+            /* mobile */
+            "border border-foreground/15 bg-background",
+            /* desktop override */
+            "lg:border-white/25 lg:bg-white/10 lg:backdrop-blur-sm",
+          ].join(" ")}
+        >
+          <span className="text-[11px] font-medium text-foreground px-2.5 lg:text-white">
+            Trusted by millions of customers
+          </span>
+          <span className="rounded-full bg-foreground/[0.07] lg:bg-white/15 px-2.5 py-0.5 text-[11px] font-medium text-foreground/60 lg:text-white/70 whitespace-nowrap">
+            Since 2022
+          </span>
         </div>
 
         {/* Headline */}
         <h1
-          className="font-black uppercase tracking-tight leading-[0.9] text-foreground mb-5 max-w-3xl"
+          className="font-black uppercase tracking-tight leading-[0.9] text-foreground lg:text-white mb-5 max-w-3xl lg:max-w-xl"
           style={{ fontSize: "clamp(2.6rem, 7.5vw, 5.8rem)" }}
         >
           <span className="block">Your crypto,</span>
@@ -94,14 +153,14 @@ export function HeroSection() {
         </h1>
 
         {/* Subtitle */}
-        <p className="text-muted-foreground text-base lg:text-lg leading-relaxed max-w-md mb-9 font-medium">
+        <p className="text-muted-foreground lg:text-white/75 text-base lg:text-lg leading-relaxed max-w-md mb-9 font-medium">
           Buy, swap and spend crypto at top merchants worldwide — you always hold your keys.
         </p>
 
         {/* CTA */}
         <Link href="/signup">
           <button
-            className="inline-flex items-center gap-2.5 font-black uppercase tracking-wide text-black rounded-full px-9 py-4 text-sm transition-all hover:scale-[1.03] active:scale-[0.97] mb-10"
+            className="inline-flex items-center gap-2.5 font-black uppercase tracking-wide text-black rounded-full px-9 py-4 text-sm transition-all hover:scale-[1.03] active:scale-[0.97] mb-10 lg:bg-white lg:shadow-none"
             style={{ background: "#B4F22E", boxShadow: "0 4px 36px rgba(180,242,46,0.42)" }}
           >
             Get started
@@ -110,15 +169,15 @@ export function HeroSection() {
         </Link>
 
         {/* Brand logos strip */}
-        <div className="flex flex-col items-center gap-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+        <div className="flex flex-col items-center gap-3 lg:items-start">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground lg:text-white/50">
             Spend at 500+ merchants
           </p>
           <div className="grid grid-cols-7 gap-3">
             {BRANDS.map((b) => (
               <div
                 key={b.name}
-                className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden border border-foreground/10 bg-foreground/[0.08] transition-transform hover:scale-110"
+                className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden border border-foreground/10 lg:border-white/15 bg-foreground/[0.08] lg:bg-white/10 transition-transform hover:scale-110"
                 title={b.name}
               >
                 <img
@@ -132,8 +191,10 @@ export function HeroSection() {
         </div>
       </div>
 
-      {/* ── Photo — grows to fill the remaining space below the content ── */}
-      <div className="relative flex-1 min-h-[280px]">
+      {/* ══════════════════════════════════════════
+          MOBILE ONLY — photo sits below the content
+          ══════════════════════════════════════════ */}
+      <div className="lg:hidden relative flex-1 min-h-[280px]">
         {/* Gradient blend from background into photo */}
         <div
           className="absolute top-0 left-0 right-0 z-10 pointer-events-none"
@@ -189,6 +250,31 @@ export function HeroSection() {
           />
         </div>
       </div>
+
+      {/* ══════════════════════════════════════════
+          DESKTOP ONLY — notification cards over image
+          ══════════════════════════════════════════ */}
+      <div className="hidden lg:block absolute z-20" style={{ bottom: "22%", right: "6%" }}>
+        <NotifCard
+          logo="/logos/brands/bitcoin.svg"
+          logoBg="#F7931A"
+          title="Crypto received"
+          subtitle="2 min ago"
+          amount="+0.042 BTC"
+          amountColor="#18A349"
+        />
+      </div>
+      <div className="hidden lg:block absolute z-20" style={{ bottom: "8%", right: "18%" }}>
+        <NotifCard
+          logo="/logos/brands/netflix.svg"
+          logoBg="#E50914"
+          title="Payment successful"
+          subtitle="5 min ago"
+          amount="-$15.99"
+          amountColor="#F97316"
+        />
+      </div>
+
     </section>
   );
 }
