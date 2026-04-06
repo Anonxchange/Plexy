@@ -67,19 +67,10 @@ export function HeroSection() {
       {/* ── Upper text content ── */}
       <div className="relative z-10 flex flex-col items-center text-center px-5 pt-6 pb-10">
 
-        {/* Trust pills */}
-        <div className="flex flex-wrap justify-center gap-2 mb-7">
-          {["Non-Custodial", "Decentralized", "14M+ Users"].map((label) => (
-            <span
-              key={label}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest border border-foreground/15 text-foreground/55 bg-foreground/[0.06]"
-            >
-              {label === "Non-Custodial" && (
-                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse inline-block" />
-              )}
-              {label}
-            </span>
-          ))}
+        {/* Trust badge */}
+        <div className="inline-flex items-center gap-1 rounded-full border border-foreground/15 bg-background px-1 py-1 mb-7">
+          <span className="text-[11px] font-medium text-foreground px-2.5">Trusted by millions of customers</span>
+          <span className="rounded-full bg-foreground/[0.07] px-2.5 py-0.5 text-[11px] font-medium text-foreground/60 whitespace-nowrap">Since 2022</span>
         </div>
 
         {/* Headline */}
