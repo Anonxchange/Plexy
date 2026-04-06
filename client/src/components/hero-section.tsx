@@ -30,7 +30,7 @@ interface NotifCardProps {
 
 function NotifCard({ logo, logoBg, title, subtitle, amount, amountColor }: NotifCardProps) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl bg-white/95 backdrop-blur-md shadow-2xl px-4 py-3 min-w-[200px] max-w-[230px]">
+    <div className="flex items-center gap-3 rounded-2xl bg-card text-card-foreground backdrop-blur-md shadow-2xl px-4 py-3 min-w-[200px] max-w-[230px] border border-border">
       <div
         className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0"
         style={{ background: logoBg }}
@@ -38,8 +38,8 @@ function NotifCard({ logo, logoBg, title, subtitle, amount, amountColor }: Notif
         <img src={logo} alt="" className="w-6 h-6 object-contain" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[12px] font-bold text-gray-900 leading-tight truncate">{title}</p>
-        <p className="text-[10px] text-gray-400 mt-0.5">{subtitle}</p>
+        <p className="text-[12px] font-bold text-foreground leading-tight truncate">{title}</p>
+        <p className="text-[10px] text-muted-foreground mt-0.5">{subtitle}</p>
       </div>
       <span className="text-[12px] font-bold flex-shrink-0" style={{ color: amountColor }}>
         {amount}
@@ -51,11 +51,8 @@ function NotifCard({ logo, logoBg, title, subtitle, amount, amountColor }: Notif
 export function HeroSection() {
   return (
     <section
-      className="relative overflow-hidden flex flex-col"
-      style={{
-        minHeight: "100vh",
-        background: "linear-gradient(175deg, #1b5c78 0%, #0d3347 38%, #07192a 100%)",
-      }}
+      className="relative overflow-hidden flex flex-col bg-background"
+      style={{ minHeight: "100vh" }}
     >
       {/* Subtle lime glow */}
       <div
@@ -75,8 +72,7 @@ export function HeroSection() {
           {["Non-Custodial", "Decentralized", "14M+ Users"].map((label) => (
             <span
               key={label}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest border border-white/15 text-white/55"
-              style={{ background: "rgba(255,255,255,0.06)" }}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest border border-foreground/15 text-foreground/55 bg-foreground/[0.06]"
             >
               {label === "Non-Custodial" && (
                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse inline-block" />
@@ -88,7 +84,7 @@ export function HeroSection() {
 
         {/* Headline */}
         <h1
-          className="font-black uppercase tracking-tight leading-[0.9] text-white mb-5 max-w-3xl"
+          className="font-black uppercase tracking-tight leading-[0.9] text-foreground mb-5 max-w-3xl"
           style={{ fontSize: "clamp(2.6rem, 7.5vw, 5.8rem)" }}
         >
           <span className="block">Your crypto,</span>
@@ -107,7 +103,7 @@ export function HeroSection() {
         </h1>
 
         {/* Subtitle */}
-        <p className="text-white/50 text-base lg:text-lg leading-relaxed max-w-md mb-9 font-medium">
+        <p className="text-muted-foreground text-base lg:text-lg leading-relaxed max-w-md mb-9 font-medium">
           Buy, swap and spend crypto at top merchants worldwide — you always hold your keys.
         </p>
 
@@ -124,15 +120,14 @@ export function HeroSection() {
 
         {/* Brand logos strip */}
         <div className="flex flex-col items-center gap-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/30">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             Spend at 500+ merchants
           </p>
           <div className="grid grid-cols-7 gap-3">
             {BRANDS.map((b) => (
               <div
                 key={b.name}
-                className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden border border-white/10 transition-transform hover:scale-110"
-                style={{ background: "rgba(255,255,255,0.08)" }}
+                className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden border border-foreground/10 bg-foreground/[0.08] transition-transform hover:scale-110"
                 title={b.name}
               >
                 <img
@@ -148,12 +143,12 @@ export function HeroSection() {
 
       {/* ── Photo — grows to fill the remaining space below the content ── */}
       <div className="relative flex-1 min-h-[280px]">
-        {/* Gradient blend from dark into photo */}
+        {/* Gradient blend from background into photo */}
         <div
           className="absolute top-0 left-0 right-0 z-10 pointer-events-none"
           style={{
             height: "80px",
-            background: "linear-gradient(to bottom, #07192a, transparent)",
+            background: "linear-gradient(to bottom, hsl(var(--background)), transparent)",
           }}
         />
 
@@ -169,12 +164,14 @@ export function HeroSection() {
           />
         </picture>
 
-        {/* Side vignettes */}
+        {/* Side vignettes using background color gradients */}
         <div
-          className="absolute inset-0 pointer-events-none z-10"
-          style={{
-            boxShadow: "inset 60px 0 50px rgba(7,25,42,0.55), inset -60px 0 50px rgba(7,25,42,0.55)",
-          }}
+          className="absolute inset-y-0 left-0 z-10 pointer-events-none w-16"
+          style={{ background: "linear-gradient(to right, hsl(var(--background)), transparent)" }}
+        />
+        <div
+          className="absolute inset-y-0 right-0 z-10 pointer-events-none w-16"
+          style={{ background: "linear-gradient(to left, hsl(var(--background)), transparent)" }}
         />
 
         {/* Notification card — bottom left */}
