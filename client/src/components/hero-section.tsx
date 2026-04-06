@@ -1,187 +1,199 @@
-import React, { useMemo } from "react";
-import { HeroForm } from "@/components/hero-form";
+import React from "react";
+import { Link } from "wouter";
+import { ArrowDown } from "lucide-react";
 
-const R = 42;
-const H = R * Math.sqrt(3);
-const COL_SPACING = R * 1.5;
+const BRANDS = [
+  { name: "Netflix",  domain: "netflix.com"  },
+  { name: "Amazon",   domain: "amazon.com"   },
+  { name: "Spotify",  domain: "spotify.com"  },
+  { name: "Apple",    domain: "apple.com"    },
+  { name: "Uber",     domain: "uber.com"     },
+  { name: "Airbnb",   domain: "airbnb.com"   },
+  { name: "Google",   domain: "google.com"   },
+  { name: "Steam",    domain: "steampowered.com" },
+];
 
-function hexPoints(cx: number, cy: number, r = R) {
-  return Array.from({ length: 6 }, (_, i) => {
-    const a = (Math.PI / 3) * i;
-    return `${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`;
-  }).join(" ");
+interface NotifCardProps {
+  logo: string;
+  logoBg: string;
+  title: string;
+  subtitle: string;
+  amount: string;
+  amountColor: string;
 }
 
-const HEX = "currentColor";
-
-function HoneycombGrid() {
-  const cells = useMemo(() => {
-    const out: { cx: number; cy: number; filled: boolean }[] = [];
-    for (let col = -1; col <= 24; col++) {
-      for (let row = -1; row <= 14; row++) {
-        const cx = col * COL_SPACING;
-        const cy = row * H + (col % 2 !== 0 ? H / 2 : 0);
-        const filled = ((col * 5 + row * 11) % 7 === 0);
-        out.push({ cx, cy, filled });
-      }
-    }
-    return out;
-  }, []);
-
+function NotifCard({ logo, logoBg, title, subtitle, amount, amountColor }: NotifCardProps) {
   return (
-    <svg
-      className="absolute inset-0 w-full h-full pointer-events-none"
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 1440 860"
-      preserveAspectRatio="xMidYMid slice"
-    >
-      <defs>
-        <radialGradient id="hgFade" cx="20%" cy="30%" r="80%">
-          <stop offset="0%"   stopColor="white" stopOpacity="1" />
-          <stop offset="65%"  stopColor="white" stopOpacity="0.45" />
-          <stop offset="100%" stopColor="white" stopOpacity="0.05" />
-        </radialGradient>
-        <mask id="hgMask">
-          <rect width="1440" height="860" fill="url(#hgFade)" />
-        </mask>
-
-        <filter id="hexGlow" x="-30%" y="-30%" width="160%" height="160%">
-          <feGaussianBlur stdDeviation="8" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
-
-      {/* Honeycomb grid */}
-      <g mask="url(#hgMask)">
-        {cells.map(({ cx, cy, filled }, i) => (
-          <polygon
-            key={i}
-            points={hexPoints(cx, cy)}
-            fill={filled ? HEX : "none"}
-            fillOpacity={filled ? 0.06 : 0}
-            stroke={HEX}
-            strokeWidth="0.9"
-            strokeOpacity="0.22"
-          />
-        ))}
-      </g>
-
-      {/* Large accent — top-left, partially off-screen */}
-      <polygon
-        points={hexPoints(-60, 80, 200)}
-        fill={HEX}
-        fillOpacity="0.05"
-        stroke={HEX}
-        strokeWidth="2"
-        strokeOpacity="0.30"
-        filter="url(#hexGlow)"
-      />
-      <polygon
-        points={hexPoints(-60, 80, 148)}
-        fill="none"
-        stroke={HEX}
-        strokeWidth="1"
-        strokeOpacity="0.14"
-      />
-
-      {/* Large accent — bottom-right */}
-      <polygon
-        points={hexPoints(1480, 780, 180)}
-        fill={HEX}
-        fillOpacity="0.04"
-        stroke={HEX}
-        strokeWidth="2"
-        strokeOpacity="0.25"
-        filter="url(#hexGlow)"
-      />
-
-      {/* Mid accent — top-right */}
-      <polygon
-        points={hexPoints(1300, 100, 120)}
-        fill={HEX}
-        fillOpacity="0.04"
-        stroke={HEX}
-        strokeWidth="1.5"
-        strokeOpacity="0.25"
-      />
-      <polygon
-        points={hexPoints(1300, 100, 80)}
-        fill="none"
-        stroke={HEX}
-        strokeWidth="0.75"
-        strokeOpacity="0.12"
-      />
-
-      {/* Small floating accent — center-left */}
-      <polygon
-        points={hexPoints(260, 560, 60)}
-        fill={HEX}
-        fillOpacity="0.05"
-        stroke={HEX}
-        strokeWidth="1.2"
-        strokeOpacity="0.28"
-      />
-    </svg>
+    <div className="flex items-center gap-3 rounded-2xl bg-white/95 backdrop-blur-md shadow-2xl px-4 py-3 min-w-[200px] max-w-[230px]">
+      <div
+        className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0"
+        style={{ background: logoBg }}
+      >
+        <img src={logo} alt="" className="w-6 h-6 object-contain" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[12px] font-bold text-gray-900 leading-tight truncate">{title}</p>
+        <p className="text-[10px] text-gray-400 mt-0.5">{subtitle}</p>
+      </div>
+      <span className="text-[12px] font-bold flex-shrink-0" style={{ color: amountColor }}>
+        {amount}
+      </span>
+    </div>
   );
 }
 
 export function HeroSection() {
   return (
-    <section className="relative overflow-hidden bg-background dark:bg-background min-h-[85vh] flex items-center" style={{ willChange: 'transform', transform: 'translateZ(0)' }}>
-
-      <HoneycombGrid />
-
-      {/* Gradient wash behind text — fades hex pattern so text reads cleanly */}
+    <section
+      className="relative overflow-hidden flex flex-col"
+      style={{
+        minHeight: "100vh",
+        background: "linear-gradient(175deg, #1b5c78 0%, #0d3347 38%, #07192a 100%)",
+      }}
+    >
+      {/* Subtle lime glow */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="absolute pointer-events-none"
         style={{
-          background: "linear-gradient(to right, hsl(var(--background) / 0.92) 0%, hsl(var(--background) / 0.78) 40%, hsl(var(--background) / 0.20) 65%, transparent 100%)",
+          top: "5%", left: "50%", transform: "translateX(-50%)",
+          width: "60%", height: "40%",
+          background: "radial-gradient(ellipse at center, rgba(180,242,46,0.07) 0%, transparent 70%)",
         }}
       />
 
-      <div className="max-w-7xl mx-auto px-4 lg:px-8 py-4 relative z-10 w-full">
-        <div className="lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
+      {/* ── Upper text content ── */}
+      <div className="relative z-10 flex flex-col items-center text-center px-5 pt-16 pb-10">
 
-          <div className="text-center lg:text-left space-y-6 lg:space-y-8 max-w-4xl mx-auto lg:mx-0 mb-8 lg:mb-0">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 dark:bg-white/5 border border-white/20 backdrop-blur-xl shadow-lg">
-              <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
-              <span className="text-sm font-semibold">Trusted by 14M+ users worldwide</span>
-            </div>
+        {/* Trust pills */}
+        <div className="flex flex-wrap justify-center gap-2 mb-7">
+          {["Non-Custodial", "Decentralized", "14M+ Users"].map((label) => (
+            <span
+              key={label}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest border border-white/15 text-white/55"
+              style={{ background: "rgba(255,255,255,0.06)" }}
+            >
+              {label === "Non-Custodial" && (
+                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse inline-block" />
+              )}
+              {label}
+            </span>
+          ))}
+        </div>
 
-            <h1 className="text-5xl sm:text-6xl lg:text-6xl xl:text-7xl 2xl:text-8xl font-bold leading-[1.1] lg:leading-[1.05] tracking-tight">
-              <span className="block text-foreground">Trade crypto</span>
-              <span className="block bg-gradient-to-r from-primary via-primary to-primary/60 bg-clip-text text-transparent">
-                your way
-              </span>
-            </h1>
+        {/* Headline */}
+        <h1
+          className="font-black uppercase tracking-tight leading-[0.9] text-white mb-5 max-w-3xl"
+          style={{ fontSize: "clamp(2.6rem, 7.5vw, 5.8rem)" }}
+        >
+          <span className="block">Your crypto,</span>
+          <span className="block">minus the</span>
+          <span
+            className="block"
+            style={{
+              background: "linear-gradient(90deg, #B4F22E 10%, #78d900 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            }}
+          >
+            middleman.
+          </span>
+        </h1>
 
-            <p className="text-lg sm:text-xl lg:text-xl xl:text-2xl text-muted-foreground max-w-2xl mx-auto lg:mx-0 lg:max-w-xl">
-              Unlock the power of decentralized finance. Earn, shop, and manage crypto seamlessly simple, secure, and for everyone.
-            </p>
+        {/* Subtitle */}
+        <p className="text-white/50 text-base lg:text-lg leading-relaxed max-w-md mb-9 font-medium">
+          Buy, swap and spend crypto at top merchants worldwide — you always hold your keys.
+        </p>
 
-            <div className="flex justify-between lg:justify-start items-center pt-4 max-w-[340px] mx-auto lg:mx-0 lg:max-w-none gap-4 lg:gap-12">
-              <div className="text-center lg:text-left flex-1 lg:flex-none lg:w-[120px]">
-                <div className="text-3xl sm:text-4xl lg:text-4xl xl:text-5xl font-bold text-foreground">140+</div>
-                <div className="text-[10px] sm:text-sm text-muted-foreground uppercase tracking-wider whitespace-nowrap lg:mt-1">Countries</div>
+        {/* CTA */}
+        <Link href="/signup">
+          <button
+            className="inline-flex items-center gap-2.5 font-black uppercase tracking-wide text-black rounded-full px-9 py-4 text-sm transition-all hover:scale-[1.03] active:scale-[0.97] mb-10"
+            style={{ background: "#B4F22E", boxShadow: "0 4px 36px rgba(180,242,46,0.42)" }}
+          >
+            Get started
+            <ArrowDown className="w-4 h-4" strokeWidth={3} />
+          </button>
+        </Link>
+
+        {/* Brand logos strip */}
+        <div className="flex flex-col items-center gap-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-white/30">
+            Spend at 500+ merchants
+          </p>
+          <div className="flex items-center gap-3 flex-wrap justify-center">
+            {BRANDS.map((b) => (
+              <div
+                key={b.domain}
+                className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden border border-white/10 transition-transform hover:scale-110"
+                style={{ background: "rgba(255,255,255,0.08)" }}
+                title={b.name}
+              >
+                <img
+                  src={`https://logo.clearbit.com/${b.domain}`}
+                  alt={b.name}
+                  className="w-5 h-5 object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src =
+                      `https://www.google.com/s2/favicons?sz=32&domain=${b.domain}`;
+                  }}
+                />
               </div>
-              <div className="text-center lg:text-left flex-1 lg:flex-none lg:w-[180px]">
-                <div className="text-3xl sm:text-4xl lg:text-4xl xl:text-5xl font-bold text-foreground">500+</div>
-                <div className="text-[10px] sm:text-sm text-muted-foreground uppercase tracking-wider whitespace-nowrap lg:mt-1">Payment methods</div>
-              </div>
-              <div className="text-center lg:text-left flex-1 lg:flex-none lg:w-[120px]">
-                <div className="text-3xl sm:text-4xl lg:text-4xl xl:text-5xl font-bold text-foreground">14M+</div>
-                <div className="text-[10px] sm:text-sm text-muted-foreground uppercase tracking-wider whitespace-nowrap lg:mt-1">Users</div>
-              </div>
-            </div>
+            ))}
           </div>
+        </div>
+      </div>
 
-          <div className="max-w-3xl mx-auto lg:mx-0 w-full">
-            <HeroForm />
-          </div>
+      {/* ── Photo — grows to fill the remaining space below the content ── */}
+      <div className="relative flex-1 min-h-[280px]">
+        {/* Gradient blend from dark into photo */}
+        <div
+          className="absolute top-0 left-0 right-0 z-10 pointer-events-none"
+          style={{
+            height: "80px",
+            background: "linear-gradient(to bottom, #07192a, transparent)",
+          }}
+        />
 
+        <img
+          src="/hero-bg.png"
+          alt=""
+          aria-hidden="true"
+          className="w-full h-full object-cover object-[center_15%]"
+          fetchPriority="high"
+          decoding="async"
+        />
+
+        {/* Side vignettes */}
+        <div
+          className="absolute inset-0 pointer-events-none z-10"
+          style={{
+            boxShadow: "inset 60px 0 50px rgba(7,25,42,0.55), inset -60px 0 50px rgba(7,25,42,0.55)",
+          }}
+        />
+
+        {/* Notification card — bottom left */}
+        <div className="absolute z-20 hidden sm:block" style={{ bottom: "20%", left: "5%" }}>
+          <NotifCard
+            logo="https://logo.clearbit.com/bitcoin.org"
+            logoBg="#F7931A"
+            title="Crypto received"
+            subtitle="2 min ago"
+            amount="+0.042 BTC"
+            amountColor="#18A349"
+          />
+        </div>
+
+        {/* Notification card — bottom right */}
+        <div className="absolute z-20 hidden sm:block" style={{ bottom: "6%", right: "5%" }}>
+          <NotifCard
+            logo="https://logo.clearbit.com/netflix.com"
+            logoBg="#E50914"
+            title="Payment successful"
+            subtitle="5 min ago"
+            amount="-$15.99"
+            amountColor="#F97316"
+          />
         </div>
       </div>
     </section>
