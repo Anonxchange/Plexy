@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "wouter";
-import { ArrowDown } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 const BRANDS = [
   { name: "Netflix",      logo: "/logos/brands/netflix.svg"      },
@@ -51,7 +51,7 @@ function NotifCard({ logo, logoBg, title, subtitle, amount, amountColor }: Notif
 export function HeroSection() {
   return (
     <section
-      className="relative overflow-hidden flex flex-col"
+      className="relative overflow-hidden"
       style={{
         minHeight: "100vh",
         background: "linear-gradient(175deg, #1b5c78 0%, #0d3347 38%, #07192a 100%)",
@@ -61,146 +61,153 @@ export function HeroSection() {
       <div
         className="absolute pointer-events-none"
         style={{
-          top: "5%", left: "50%", transform: "translateX(-50%)",
-          width: "60%", height: "40%",
+          top: "0%", left: "25%",
+          width: "50%", height: "60%",
           background: "radial-gradient(ellipse at center, rgba(180,242,46,0.07) 0%, transparent 70%)",
         }}
       />
 
-      {/* ── Upper text content ── */}
-      <div className="relative z-10 flex flex-col items-center text-center px-5 pt-16 pb-10">
+      {/* ── Split layout container ── */}
+      <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-12 flex flex-col lg:flex-row items-center min-h-screen gap-10 lg:gap-0 pt-10 lg:pt-0">
 
-        {/* Trust pills */}
-        <div className="flex flex-wrap justify-center gap-2 mb-7">
-          {["Non-Custodial", "Decentralized", "14M+ Users"].map((label) => (
-            <span
-              key={label}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest border border-white/15 text-white/55"
-              style={{ background: "rgba(255,255,255,0.06)" }}
-            >
-              {label === "Non-Custodial" && (
-                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse inline-block" />
-              )}
-              {label}
-            </span>
-          ))}
-        </div>
+        {/* ── LEFT: Text content ── */}
+        <div className="flex-1 flex flex-col items-start text-left py-10 lg:py-24 lg:pr-10">
 
-        {/* Headline */}
-        <h1
-          className="font-black uppercase tracking-tight leading-[0.9] text-white mb-5 max-w-3xl"
-          style={{ fontSize: "clamp(2.6rem, 7.5vw, 5.8rem)" }}
-        >
-          <span className="block">Your crypto,</span>
-          <span className="block">minus the</span>
-          <span
-            className="block"
-            style={{
-              background: "linear-gradient(90deg, #B4F22E 10%, #78d900 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-            }}
-          >
-            middleman.
-          </span>
-        </h1>
-
-        {/* Subtitle */}
-        <p className="text-white/50 text-base lg:text-lg leading-relaxed max-w-md mb-9 font-medium">
-          Buy, swap and spend crypto at top merchants worldwide — you always hold your keys.
-        </p>
-
-        {/* CTA */}
-        <Link href="/signup">
-          <button
-            className="inline-flex items-center gap-2.5 font-black uppercase tracking-wide text-black rounded-full px-9 py-4 text-sm transition-all hover:scale-[1.03] active:scale-[0.97] mb-10"
-            style={{ background: "#B4F22E", boxShadow: "0 4px 36px rgba(180,242,46,0.42)" }}
-          >
-            Get started
-            <ArrowDown className="w-4 h-4" strokeWidth={3} />
-          </button>
-        </Link>
-
-        {/* Brand logos strip */}
-        <div className="flex flex-col items-center gap-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/30">
-            Spend at 500+ merchants
-          </p>
-          <div className="grid grid-cols-7 gap-3">
-            {BRANDS.map((b) => (
-              <div
-                key={b.name}
-                className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden border border-white/10 transition-transform hover:scale-110"
-                style={{ background: "rgba(255,255,255,0.08)" }}
-                title={b.name}
+          {/* Trust pills */}
+          <div className="flex flex-wrap gap-2 mb-6">
+            {["Non-Custodial", "Decentralized", "14M+ Users"].map((label) => (
+              <span
+                key={label}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest border border-white/15 text-white/55"
+                style={{ background: "rgba(255,255,255,0.06)" }}
               >
-                <img
-                  src={b.logo}
-                  alt={b.name}
-                  className="w-5 h-5 object-contain"
-                />
-              </div>
+                {label === "Non-Custodial" && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse inline-block" />
+                )}
+                {label}
+              </span>
             ))}
           </div>
+
+          {/* Headline */}
+          <h1
+            className="font-black uppercase tracking-tight leading-[0.9] text-white mb-5 max-w-xl"
+            style={{ fontSize: "clamp(2.8rem, 5.5vw, 5.2rem)" }}
+          >
+            <span className="block">Your crypto,</span>
+            <span className="block">minus the</span>
+            <span
+              className="block"
+              style={{
+                background: "linear-gradient(90deg, #B4F22E 10%, #78d900 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
+              middleman.
+            </span>
+          </h1>
+
+          {/* Subtitle */}
+          <p className="text-white/50 text-base lg:text-lg leading-relaxed max-w-sm mb-8 font-medium">
+            Buy, swap and spend crypto at top merchants worldwide — you always hold your keys.
+          </p>
+
+          {/* CTA buttons */}
+          <div className="flex flex-wrap items-center gap-3 mb-10">
+            <Link href="/signup">
+              <button
+                className="inline-flex items-center gap-2.5 font-black uppercase tracking-wide text-black rounded-full px-8 py-4 text-sm transition-all hover:scale-[1.03] active:scale-[0.97]"
+                style={{ background: "#B4F22E", boxShadow: "0 4px 36px rgba(180,242,46,0.42)" }}
+              >
+                Get started
+                <ArrowRight className="w-4 h-4" strokeWidth={3} />
+              </button>
+            </Link>
+            <Link href="/market">
+              <button className="inline-flex items-center gap-2 font-bold text-white/70 hover:text-white text-sm transition-colors px-2">
+                Explore market →
+              </button>
+            </Link>
+          </div>
+
+          {/* Brand logos strip */}
+          <div className="flex flex-col gap-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-white/30">
+              Spend at 500+ merchants
+            </p>
+            <div className="flex flex-wrap gap-2.5">
+              {BRANDS.map((b) => (
+                <div
+                  key={b.name}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden border border-white/10 transition-transform hover:scale-110"
+                  style={{ background: "rgba(255,255,255,0.08)" }}
+                  title={b.name}
+                >
+                  <img src={b.logo} alt={b.name} className="w-5 h-5 object-contain" />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* ── Photo — grows to fill the remaining space below the content ── */}
-      <div className="relative flex-1 min-h-[280px]">
-        {/* Gradient blend from dark into photo */}
-        <div
-          className="absolute top-0 left-0 right-0 z-10 pointer-events-none"
-          style={{
-            height: "80px",
-            background: "linear-gradient(to bottom, #07192a, transparent)",
-          }}
-        />
+        {/* ── RIGHT: Visual ── */}
+        <div className="flex-1 relative flex items-center justify-center w-full lg:h-screen max-h-[700px] lg:max-h-none">
 
-        <picture>
-          <source srcSet="/hero-bg.webp" type="image/webp" />
+          {/* Glow behind image */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: "radial-gradient(ellipse at center, rgba(180,242,46,0.08) 0%, transparent 70%)",
+            }}
+          />
+
+          {/* Hero image */}
           <img
-            src="/hero-bg.png"
+            src="/hero-bg.webp"
             alt=""
             aria-hidden="true"
-            className="absolute inset-0 w-full h-full object-cover object-center"
+            className="relative z-10 w-full h-full object-cover object-center rounded-2xl"
             fetchPriority="high"
             decoding="async"
           />
-        </picture>
 
-        {/* Side vignettes */}
-        <div
-          className="absolute inset-0 pointer-events-none z-10"
-          style={{
-            boxShadow: "inset 60px 0 50px rgba(7,25,42,0.55), inset -60px 0 50px rgba(7,25,42,0.55)",
-          }}
-        />
+          {/* Notification card — left */}
+          <div className="absolute z-20 hidden lg:block" style={{ bottom: "28%", left: "-2%" }}>
+            <NotifCard
+              logo="/logos/brands/bitcoin.svg"
+              logoBg="#F7931A"
+              title="Crypto received"
+              subtitle="2 min ago"
+              amount="+0.042 BTC"
+              amountColor="#18A349"
+            />
+          </div>
 
-        {/* Notification card — bottom left */}
-        <div className="absolute z-20 hidden sm:block" style={{ bottom: "20%", left: "5%" }}>
-          <NotifCard
-            logo="/logos/brands/bitcoin.svg"
-            logoBg="#F7931A"
-            title="Crypto received"
-            subtitle="2 min ago"
-            amount="+0.042 BTC"
-            amountColor="#18A349"
-          />
+          {/* Notification card — right */}
+          <div className="absolute z-20 hidden lg:block" style={{ bottom: "12%", right: "-2%" }}>
+            <NotifCard
+              logo="/logos/brands/netflix.svg"
+              logoBg="#E50914"
+              title="Payment successful"
+              subtitle="5 min ago"
+              amount="-$15.99"
+              amountColor="#F97316"
+            />
+          </div>
         </div>
 
-        {/* Notification card — bottom right */}
-        <div className="absolute z-20 hidden sm:block" style={{ bottom: "6%", right: "5%" }}>
-          <NotifCard
-            logo="/logos/brands/netflix.svg"
-            logoBg="#E50914"
-            title="Payment successful"
-            subtitle="5 min ago"
-            amount="-$15.99"
-            amountColor="#F97316"
-          />
-        </div>
       </div>
+
+      {/* Bottom fade */}
+      <div
+        className="absolute bottom-0 left-0 right-0 pointer-events-none"
+        style={{
+          height: "120px",
+          background: "linear-gradient(to bottom, transparent, #07192a)",
+        }}
+      />
     </section>
   );
 }
