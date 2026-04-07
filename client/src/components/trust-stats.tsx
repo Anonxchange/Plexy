@@ -68,8 +68,8 @@ export const TrustStats = () => {
           {features.map((item, i) => (
             <div
               key={i}
-              className="rounded-[22px] overflow-hidden relative"
-              style={{ minHeight: 480 }}
+              className="rounded-[32px] overflow-hidden relative"
+              style={{ minHeight: 420 }}
             >
               {/* Full-bleed photo — sharp, boosted brightness */}
               <img
