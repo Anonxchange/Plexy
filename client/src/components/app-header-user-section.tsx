@@ -106,14 +106,20 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
   useEffect(() => {
     if (!user) return;
 
-    getNotifications().then(setNotifications);
+    // Silently ignore errors — notifications are non-critical
+    getNotifications().then(setNotifications).catch(() => {});
 
-    const unsubscribe = subscribeToNotifications(user.id, (notification) => {
-      setNotifications((prev) => [notification, ...prev]);
-      toast({ title: notification.title, description: notification.message });
-    });
+    let unsubscribe: (() => void) | undefined;
+    try {
+      unsubscribe = subscribeToNotifications(user.id, (notification) => {
+        setNotifications((prev) => [notification, ...prev]);
+        toast({ title: notification.title, description: notification.message });
+      });
+    } catch {
+      // Supabase client not ready yet — realtime notifications gracefully skipped
+    }
 
-    return () => unsubscribe();
+    return () => unsubscribe?.();
   }, [user, toast]);
 
   useEffect(() => {
@@ -137,13 +143,21 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
   }, [user?.id]);
 
   const fetchProfileAvatar = async () => {
+    // Hard cap of 5 s so the skeleton never gets permanently stuck if the
+    // network request stalls (wrong URL, flaky connection, cold Supabase, etc.)
+    const withTimeout = <T,>(p: Promise<T>, ms: number): Promise<T> =>
+      Promise.race([p, new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]);
+
     try {
-      const supabase = await getSupabase();
-      const { data, error } = await supabase
-        .from("user_profiles")
-        .select("avatar_url, avatar_type")
-        .eq("id", user?.id)
-        .single();
+      const supabase = await withTimeout(getSupabase(), 5000);
+      const { data, error } = await withTimeout(
+        supabase
+          .from("user_profiles")
+          .select("avatar_url, avatar_type")
+          .eq("id", user?.id)
+          .single(),
+        4000
+      );
       if (error && error.code !== "PGRST116") return;
       if (data?.avatar_url) {
         setProfileAvatar(data.avatar_url);
@@ -154,7 +168,7 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
     } catch {
       // silent — avatar is cosmetic, fall through to show initials
     } finally {
-      // Always clear the fetch-spinner regardless of success or failure
+      // Always clear the fetch-spinner regardless of success, failure, or timeout
       setIsAvatarFetching(false);
     }
   };
