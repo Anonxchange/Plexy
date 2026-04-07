@@ -110,7 +110,7 @@ export function HeroSection() {
           "flex flex-col items-center text-center px-5 pt-6 pb-10",
           /* desktop: left column */
           "lg:flex-none lg:w-[52%] lg:flex lg:flex-col",
-          "lg:items-start lg:text-left lg:px-20 lg:py-24 lg:justify-center",
+          "lg:items-start lg:text-left lg:px-20 lg:pt-10 lg:pb-10 lg:justify-center",
         ].join(" ")}
       >
         {/* Trust badge */}
@@ -285,13 +285,7 @@ export function HeroSection() {
             fetchPriority="high"
             decoding="async"
           />
-        </picture>
-
-        {/* Notification card — upper area of image */}
-        <div className="absolute z-20" style={{ bottom: "30%", right: "8%" }}>
-          <NotifCard
-            logo="/logos/brands/bitcoin.svg"
-            logoBg="#F7931A"
+        </pictureoBg="#F7931A"
             title="Crypto received"
             subtitle="2 min ago"
             amount="+0.042 BTC"
