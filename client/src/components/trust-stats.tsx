@@ -5,7 +5,6 @@ const features = [
     description: "Moved from a custodial exchange. Now holds his own keys and trades peer-to-peer with zero platform risk.",
     image: "/images/trust-person-1.webp",
     alt: "Alex, crypto trader smiling against blue sky",
-    namePosition: "top",
   },
   {
     name: "Priya, Online Merchant",
@@ -13,7 +12,6 @@ const features = [
     description: "Runs an international shop. Switched to Pexly for private payments — no IP logging, no balance tracking.",
     image: "/images/trust-person-2.webp",
     alt: "Priya, online merchant holding phone against blue sky",
-    namePosition: "bottom",
   },
   {
     name: "Tom, DeFi Enthusiast",
@@ -21,7 +19,6 @@ const features = [
     description: "Gets real-time alerts before connecting to any dApp. Caught a malicious contract before it could drain his wallet.",
     image: "/images/trust-person-3.webp",
     alt: "Tom, DeFi enthusiast excited with phone against blue sky",
-    namePosition: "top",
   },
   {
     name: "Maria, Freelancer",
@@ -29,7 +26,6 @@ const features = [
     description: "Receives cross-border payments instantly. No bank delays, no conversion fees eating into her earnings.",
     image: "/images/trust-person-4.webp",
     alt: "Maria, freelancer smiling confidently against blue sky",
-    namePosition: "bottom",
   },
 ];
 
@@ -75,73 +71,38 @@ export const TrustStats = () => {
               className="rounded-[22px] overflow-hidden relative"
               style={{ minHeight: 480 }}
             >
-              {/* Full-bleed photo */}
+              {/* Full-bleed photo — sharp, boosted brightness */}
               <img
                 src={item.image}
                 alt={item.alt}
                 loading="lazy"
                 decoding="async"
                 className="absolute inset-0 w-full h-full object-cover object-top"
+                style={{ filter: "brightness(1.15)" }}
               />
 
-              {/* Left blur vignette */}
-              <div
-                className="absolute inset-y-0 left-0 w-16 pointer-events-none z-10"
-                style={{
-                  backdropFilter: "blur(7px)",
-                  WebkitBackdropFilter: "blur(7px)",
-                  maskImage: "linear-gradient(to right, black 0%, transparent 100%)",
-                  WebkitMaskImage: "linear-gradient(to right, black 0%, transparent 100%)",
-                }}
-              />
-              {/* Right blur vignette */}
-              <div
-                className="absolute inset-y-0 right-0 w-16 pointer-events-none z-10"
-                style={{
-                  backdropFilter: "blur(7px)",
-                  WebkitBackdropFilter: "blur(7px)",
-                  maskImage: "linear-gradient(to left, black 0%, transparent 100%)",
-                  WebkitMaskImage: "linear-gradient(to left, black 0%, transparent 100%)",
-                }}
-              />
+              {/* Name — always at top, all cards */}
+              <div className="absolute top-0 left-0 right-0 px-5 pt-5 z-20">
+                <p className="text-white font-semibold text-lg" style={{ textShadow: "0 1px 8px rgba(0,0,0,0.55)" }}>
+                  {item.name}
+                </p>
+              </div>
 
-              {/* Name at TOP (cards 1 & 3) */}
-              {item.namePosition === "top" && (
-                <>
-                  {/* Top gradient for readability */}
-                  <div
-                    className="absolute top-0 left-0 right-0 h-24 pointer-events-none z-10"
-                    style={{
-                      background: "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, transparent 100%)",
-                    }}
-                  />
-                  <div className="absolute top-0 left-0 right-0 px-5 pt-5 z-20">
-                    <p className="text-white font-semibold text-lg drop-shadow-md">
-                      {item.name}
-                    </p>
-                  </div>
-                </>
-              )}
-
-              {/* Bottom text overlay — always present for quote & description */}
-              <div
-                className="absolute bottom-0 left-0 right-0 px-5 pb-6 pt-24 z-20"
-                style={{
-                  background: "linear-gradient(to top, rgba(0,0,0,0.90) 0%, rgba(0,0,0,0.55) 55%, transparent 100%)",
-                }}
-              >
-                {/* Name at BOTTOM (cards 2 & 4) */}
-                {item.namePosition === "bottom" && (
-                  <p className="text-white font-semibold text-lg mb-2 drop-shadow-md">
-                    {item.name}
-                  </p>
-                )}
-                <p className="text-white font-bold text-xl leading-snug mb-3 italic">
+              {/* Bottom section — quote then description */}
+              <div className="absolute bottom-0 left-0 right-0 px-5 pb-5 z-20">
+                <p className="text-white font-bold text-lg leading-snug italic mb-3" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.4)" }}>
                   {item.quote}
                 </p>
-                <p className="text-white/75 text-sm leading-relaxed">
-                  {item.description}
-                </p>
+                <div
+                  style={{
+                    backdropFilter: "blur(2px)",
+                    WebkitBackdropFilter: "blur(2px)",
+                  }}
+                >
+                  <p className="text-white/90 text-sm leading-relaxed" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}>
+                    {item.description}
+                  </p>
+                </div>
               </div>
             </div>
           ))}
