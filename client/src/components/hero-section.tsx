@@ -57,16 +57,13 @@ function NotifCard({ logo, logoBg, title, subtitle, amount, amountColor }: Notif
 export function HeroSection() {
   return (
     <section
-      className="relative overflow-hidden bg-background flex flex-col lg:flex-row lg:items-stretch"
-      style={{ minHeight: "100vh" }}
+      className="relative overflow-hidden bg-background flex flex-col lg:flex-row lg:items-stretch min-h-screen lg:min-h-0"
     >
 
       {/* ══════════════════════════════════════════
           DESKTOP ONLY — ambient background decorators
-          (no full-bleed image; split layout instead)
           ══════════════════════════════════════════ */}
       <div className="hidden lg:block absolute inset-0 pointer-events-none z-0">
-        {/* Lime accent glow — upper left, behind the text */}
         <div
           className="absolute rounded-full blur-3xl"
           style={{
@@ -75,7 +72,6 @@ export function HeroSection() {
             background: "radial-gradient(circle, rgba(180,242,46,0.10) 0%, transparent 70%)",
           }}
         />
-        {/* Soft glow near bottom-center */}
         <div
           className="absolute rounded-full blur-3xl"
           style={{
@@ -100,22 +96,18 @@ export function HeroSection() {
 
       {/* ══════════════════════════════════════════
           CONTENT COLUMN
-          Mobile: centered, full-width
-          Desktop: left column (~52%), vertically centered
           ══════════════════════════════════════════ */}
       <div
         className={[
           "relative z-10",
-          /* mobile */
           "flex flex-col items-center text-center px-5 pt-6 pb-10",
-          /* desktop: left column */
           "lg:flex-none lg:w-[52%] lg:flex lg:flex-col",
           "lg:items-start lg:text-left lg:px-20 lg:pt-10 lg:pb-10 lg:justify-center",
         ].join(" ")}
       >
         {/* Trust badge */}
         <div
-          className="inline-flex items-center gap-1 rounded-full px-1 py-1 mb-7
+          className="inline-flex items-center gap-1 rounded-full px-1 py-1 mb-7 lg:mb-4
                      border border-foreground/15 bg-background"
         >
           <span className="text-[11px] font-medium text-foreground px-2.5">
@@ -128,7 +120,7 @@ export function HeroSection() {
 
         {/* Headline */}
         <h1
-          className="font-black uppercase tracking-tight leading-[0.9] text-foreground mb-5 max-w-3xl lg:max-w-xl"
+          className="font-black uppercase tracking-tight leading-[0.9] text-foreground mb-5 lg:mb-3 max-w-3xl lg:max-w-xl"
           style={{ fontSize: "clamp(2.6rem, 7.5vw, 5.8rem)" }}
         >
           <span className="block">Your crypto,</span>
@@ -147,14 +139,14 @@ export function HeroSection() {
         </h1>
 
         {/* Subtitle */}
-        <p className="text-muted-foreground text-base lg:text-lg leading-relaxed max-w-md mb-9 font-medium">
+        <p className="text-muted-foreground text-base lg:text-lg leading-relaxed max-w-md mb-9 lg:mb-5 font-medium">
           Buy, swap and spend crypto at top merchants worldwide — you always hold your keys.
         </p>
 
         {/* CTA */}
         <Link href="/signup">
           <button
-            className="inline-flex items-center gap-2.5 font-black uppercase tracking-wide text-black rounded-full px-9 py-4 text-sm transition-all hover:scale-[1.03] active:scale-[0.97] mb-10"
+            className="inline-flex items-center gap-2.5 font-black uppercase tracking-wide text-black rounded-full px-9 py-4 text-sm transition-all hover:scale-[1.03] active:scale-[0.97] mb-10 lg:mb-6"
             style={{ background: "#B4F22E", boxShadow: "0 4px 36px rgba(180,242,46,0.42)" }}
           >
             Get started
@@ -189,7 +181,6 @@ export function HeroSection() {
           MOBILE ONLY — photo sits below the content
           ══════════════════════════════════════════ */}
       <div className="lg:hidden relative flex-1 min-h-[280px]">
-        {/* Gradient blend from background into photo */}
         <div
           className="absolute top-0 left-0 right-0 z-10 pointer-events-none"
           style={{
@@ -210,7 +201,6 @@ export function HeroSection() {
           />
         </picture>
 
-        {/* Side vignettes using background color gradients */}
         <div
           className="absolute inset-y-0 left-0 z-10 pointer-events-none w-16"
           style={{ background: "linear-gradient(to right, hsl(var(--background)), transparent)" }}
@@ -220,7 +210,6 @@ export function HeroSection() {
           style={{ background: "linear-gradient(to left, hsl(var(--background)), transparent)" }}
         />
 
-        {/* Notification card — bottom left */}
         <div className="absolute z-20 hidden sm:block" style={{ bottom: "20%", left: "5%" }}>
           <NotifCard
             logo="/logos/brands/bitcoin.svg"
@@ -232,7 +221,6 @@ export function HeroSection() {
           />
         </div>
 
-        {/* Notification card — bottom right */}
         <div className="absolute z-20 hidden sm:block" style={{ bottom: "6%", right: "5%" }}>
           <NotifCard
             logo="/logos/brands/netflix.svg"
@@ -249,7 +237,6 @@ export function HeroSection() {
           DESKTOP ONLY — right image panel
           ══════════════════════════════════════════ */}
       <div className="hidden lg:flex lg:flex-1 lg:relative lg:overflow-hidden">
-        {/* Left-edge fade — blends the image into the background */}
         <div
           className="absolute inset-y-0 left-0 z-10 pointer-events-none"
           style={{
@@ -257,7 +244,6 @@ export function HeroSection() {
             background: "linear-gradient(to right, hsl(var(--background)), transparent)",
           }}
         />
-        {/* Top-edge fade */}
         <div
           className="absolute top-0 left-0 right-0 z-10 pointer-events-none"
           style={{
@@ -265,7 +251,6 @@ export function HeroSection() {
             background: "linear-gradient(to bottom, hsl(var(--background)), transparent)",
           }}
         />
-        {/* Bottom-edge fade */}
         <div
           className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none"
           style={{
@@ -274,7 +259,6 @@ export function HeroSection() {
           }}
         />
 
-        {/* Hero image — fills the right panel */}
         <picture>
           <source srcSet="/hero-bg.webp" type="image/webp" />
           <img
@@ -285,7 +269,12 @@ export function HeroSection() {
             fetchPriority="high"
             decoding="async"
           />
-        </pictureoBg="#F7931A"
+        </picture>
+
+        <div className="absolute z-20" style={{ bottom: "30%", right: "8%" }}>
+          <NotifCard
+            logo="/logos/brands/bitcoin.svg"
+            logoBg="#F7931A"
             title="Crypto received"
             subtitle="2 min ago"
             amount="+0.042 BTC"
@@ -293,7 +282,6 @@ export function HeroSection() {
           />
         </div>
 
-        {/* Notification card — lower area of image */}
         <div className="absolute z-20" style={{ bottom: "12%", right: "22%" }}>
           <NotifCard
             logo="/logos/brands/netflix.svg"
