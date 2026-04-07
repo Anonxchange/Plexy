@@ -1,26 +1,35 @@
-import { Check } from "lucide-react";
-
 const features = [
   {
-    title: "Added security with encryption",
-    description: "Use our Encrypted Cloud Backup for increased wallet security.",
-    icon: "/svgs/trust-cloud-backup.svg",
-    alt: "Encrypted cloud backup icon",
-    imgClass: "w-40 h-40 mx-auto mb-6 object-contain",
+    name: "Alex, Crypto Trader",
+    quote: "\u201cFinally full control of my wallet without giving up my keys\u201d",
+    description: "Moved from a custodial exchange. Now holds his own keys and trades peer-to-peer with zero platform risk.",
+    image: "/images/trust-person-1.webp",
+    alt: "Alex, crypto trader smiling against blue sky",
+    namePosition: "top",
   },
   {
-    title: "Zero personal tracking",
-    description: "We don't track any personal information, including IP or balances.",
-    icon: "/svgs/trust-privacy-shield.svg",
-    alt: "Privacy shield icon",
-    imgClass: "w-52 h-52 mx-auto mb-2 object-contain scale-110",
+    name: "Priya, Online Merchant",
+    quote: "\u201cNo more tracking, no more profiling \u2014 just pure privacy\u201d",
+    description: "Runs an international shop. Switched to Pexly for private payments — no IP logging, no balance tracking.",
+    image: "/images/trust-person-2.webp",
+    alt: "Priya, online merchant holding phone against blue sky",
+    namePosition: "bottom",
   },
   {
-    title: "Proactive alerts",
-    description: "Stay safe with alerts for risky address and dApp connections.",
-    icon: "/svgs/trust-alert-horn.svg",
-    alt: "Proactive alerts icon",
-    imgClass: "w-40 h-40 mx-auto mb-6 object-contain",
+    name: "Tom, DeFi Enthusiast",
+    quote: "\u201cThe instant alert saved me from a risky dApp connection\u201d",
+    description: "Gets real-time alerts before connecting to any dApp. Caught a malicious contract before it could drain his wallet.",
+    image: "/images/trust-person-3.webp",
+    alt: "Tom, DeFi enthusiast excited with phone against blue sky",
+    namePosition: "top",
+  },
+  {
+    name: "Maria, Freelancer",
+    quote: "\u201cHaven\u2019t missed a single opportunity since switching\u201d",
+    description: "Receives cross-border payments instantly. No bank delays, no conversion fees eating into her earnings.",
+    image: "/images/trust-person-4.webp",
+    alt: "Maria, freelancer smiling confidently against blue sky",
+    namePosition: "bottom",
   },
 ];
 
@@ -28,7 +37,7 @@ export const TrustStats = () => {
   return (
     <section
       id="features"
-      className="py-20 bg-primary text-primary-foreground relative overflow-hidden rounded-3xl -mt-10 z-10"
+      className="py-12 bg-primary text-primary-foreground relative overflow-hidden rounded-3xl -mt-10 z-10"
     >
       {/* Dot pattern */}
       <div
@@ -48,116 +57,107 @@ export const TrustStats = () => {
       />
 
       <div className="max-w-6xl mx-auto px-4 lg:px-6 relative">
-        {/* Header */}
-        <div className="text-center mb-14">
-          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-            Zero personal tracking
-          </h2>
-          <p className="text-primary-foreground/90 text-xl md:text-2xl max-w-3xl mx-auto">
-            Pexly gives you full control of your crypto. Non-custodial by design we never hold your funds. Every transaction is executed on-chain, keeping your assets secure and private.
+        {/* Header — "Seamless finance / in action" style */}
+        <div className="text-center mb-8">
+          <p className="text-primary-foreground/80 text-xl md:text-2xl font-semibold mb-1">
+            Seamless security
           </p>
+          <h2 className="text-7xl md:text-8xl lg:text-9xl font-black italic leading-none tracking-tight">
+            in action
+          </h2>
         </div>
 
-        {/* HERO CARD */}
-        <div
-          className="bg-[#fcfcfc] dark:bg-card rounded-[24px] p-8 md:p-12 max-w-6xl mx-auto mb-14"
-          style={{
-            backdropFilter: "blur(24px)",
-            WebkitBackdropFilter: "blur(24px)",
-            border: "2px solid rgba(255,255,255,0.80)",
-            boxShadow: "inset 0 2px 0 rgba(255,255,255,1), inset 0 -1px 0 rgba(255,255,255,0.4), 0 16px 48px rgba(0,0,0,0.18)",
-          }}
-        >
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div className="flex flex-col text-center lg:text-left">
-              <h3 className="text-3xl md:text-4xl font-bold text-black dark:text-card-foreground mb-6 order-1">
-                True ownership of your crypto assets
-              </h3>
-              <div className="order-2 lg:order-none mb-8 lg:mb-0 lg:hidden">
-                <img
-                  src="/svgs/trust-ownership.svg"
-                  alt="True ownership of crypto assets"
-                  width={384}
-                  height={384}
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full max-w-sm lg:max-w-none mx-auto lg:mx-0 object-contain"
-                />
-              </div>
-              <p className="text-black/70 dark:text-muted-foreground text-lg md:text-xl mb-8 max-w-xl mx-auto lg:mx-0 order-3">
-                We secure your wallet, but don't control or have access to your private keys or secret phrase only you do.
-              </p>
-              <button className="px-10 py-4 bg-primary text-black rounded-full font-bold text-lg order-4">
-                Get Started
-              </button>
-            </div>
-            <div className="hidden lg:flex justify-center lg:justify-end">
-              <img
-                src="/svgs/trust-ownership.svg"
-                alt="True ownership"
-                width={672}
-                height={400}
-                loading="lazy"
-                decoding="async"
-                className="w-full max-w-2xl object-contain"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* FEATURE CARDS — white bg, text in glass pill */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* FEATURE CARDS — 2 col on desktop, 1 col on mobile */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {features.map((item, i) => (
             <div
               key={i}
-              className="bg-[#fcfcfc] dark:bg-card rounded-[20px] p-8 text-center"
-              style={{
-                backdropFilter: "blur(24px)",
-                WebkitBackdropFilter: "blur(24px)",
-                border: "2px solid rgba(255,255,255,0.80)",
-                boxShadow: "inset 0 2px 0 rgba(255,255,255,1), inset 0 -1px 0 rgba(255,255,255,0.4), 0 16px 48px rgba(0,0,0,0.18)",
-              }}
+              className="rounded-[22px] overflow-hidden relative"
+              style={{ minHeight: 480 }}
             >
-              <h3 className="text-2xl font-bold text-black dark:text-card-foreground mb-6">
-                {item.title}
-              </h3>
-
+              {/* Full-bleed photo */}
               <img
-                src={item.icon}
+                src={item.image}
                 alt={item.alt}
                 loading="lazy"
                 decoding="async"
-                className={item.imgClass}
+                className="absolute inset-0 w-full h-full object-cover object-top"
               />
 
-              {/* Glass pill — description only */}
+              {/* Left blur vignette */}
               <div
-                className="flex items-center gap-3 px-4 py-4 rounded-2xl text-left"
+                className="absolute inset-y-0 left-0 w-16 pointer-events-none z-10"
                 style={{
-                  background: "rgba(0,0,0,0.08)",
-                  backdropFilter: "blur(40px)",
-                  WebkitBackdropFilter: "blur(40px)",
-                  border: "1.5px solid rgba(0,0,0,0.10)",
-                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6)",
+                  backdropFilter: "blur(7px)",
+                  WebkitBackdropFilter: "blur(7px)",
+                  maskImage: "linear-gradient(to right, black 0%, transparent 100%)",
+                  WebkitMaskImage: "linear-gradient(to right, black 0%, transparent 100%)",
+                }}
+              />
+              {/* Right blur vignette */}
+              <div
+                className="absolute inset-y-0 right-0 w-16 pointer-events-none z-10"
+                style={{
+                  backdropFilter: "blur(7px)",
+                  WebkitBackdropFilter: "blur(7px)",
+                  maskImage: "linear-gradient(to left, black 0%, transparent 100%)",
+                  WebkitMaskImage: "linear-gradient(to left, black 0%, transparent 100%)",
+                }}
+              />
+
+              {/* Name at TOP (cards 1 & 3) */}
+              {item.namePosition === "top" && (
+                <>
+                  {/* Top gradient for readability */}
+                  <div
+                    className="absolute top-0 left-0 right-0 h-24 pointer-events-none z-10"
+                    style={{
+                      background: "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, transparent 100%)",
+                    }}
+                  />
+                  <div className="absolute top-0 left-0 right-0 px-5 pt-5 z-20">
+                    <p className="text-white font-semibold text-lg drop-shadow-md">
+                      {item.name}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* Bottom text overlay — always present for quote & description */}
+              <div
+                className="absolute bottom-0 left-0 right-0 px-5 pb-6 pt-24 z-20"
+                style={{
+                  background: "linear-gradient(to top, rgba(0,0,0,0.90) 0%, rgba(0,0,0,0.55) 55%, transparent 100%)",
                 }}
               >
-                <div
-                  className="flex-shrink-0 flex items-center justify-center rounded-full"
-                  style={{
-                    width: 36,
-                    height: 36,
-                    background: "#B4F22E",
-                    boxShadow: "0 2px 10px rgba(180,242,46,0.5)",
-                  }}
-                >
-                  <Check strokeWidth={3.5} className="text-black" style={{ width: 18, height: 18 }} />
-                </div>
-                <p className="text-black/70 dark:text-muted-foreground text-base">
+                {/* Name at BOTTOM (cards 2 & 4) */}
+                {item.namePosition === "bottom" && (
+                  <p className="text-white font-semibold text-lg mb-2 drop-shadow-md">
+                    {item.name}
+                  </p>
+                )}
+                <p className="text-white font-bold text-xl leading-snug mb-3 italic">
+                  {item.quote}
+                </p>
+                <p className="text-white/75 text-sm leading-relaxed">
                   {item.description}
                 </p>
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Closing text block — after last card */}
+        <div className="mt-10 text-center max-w-2xl mx-auto">
+          <h3 className="text-3xl md:text-4xl font-black text-primary-foreground leading-tight mb-4">
+            Enterprise-grade security,<br />consumer-friendly experience
+          </h3>
+          <p className="text-primary-foreground/70 text-base md:text-lg mb-5 leading-relaxed">
+            Pexly uses cutting-edge tech and encryption to keep your crypto safe from prying eyes and sticky fingers.
+          </p>
+          <p className="text-primary-foreground font-bold italic text-lg md:text-xl">
+            Your security, your way, no manual required
+          </p>
         </div>
       </div>
     </section>
