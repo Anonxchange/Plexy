@@ -18,12 +18,12 @@ const questions = [
 
 export function StillHaveQuestions() {
   return (
-    <section className="py-12 bg-background border-t border-border">
-      <div className="max-w-5xl mx-auto px-4 lg:px-6">
-        <h2 className="text-5xl md:text-7xl font-bold text-foreground text-center mb-8">
+    <section className="py-12 pb-20 bg-background border-t border-border">
+      <div className="max-w-[88rem] mx-auto px-4 lg:px-6">
+        <h2 className="text-5xl md:text-7xl font-normal text-foreground text-center mb-8">
           Still have questions?
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {questions.map((q, i) => (
             <div key={i} className="flex flex-col gap-3 text-center md:text-left items-center md:items-start">
               <p className="text-lg font-bold text-foreground leading-snug">{q.question}</p>
