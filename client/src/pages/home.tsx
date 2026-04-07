@@ -21,6 +21,9 @@ const PaymentMethods = lazy(() =>
 const Testimonials = lazy(() =>
   import("@/components/testimonials").then(m => ({ default: m.Testimonials }))
 );
+const StillHaveQuestions = lazy(() =>
+  import("@/components/still-have-questions").then(m => ({ default: m.StillHaveQuestions }))
+);
 
 /**
  * 🔥 Skeleton Loader (used everywhere)
@@ -131,6 +134,10 @@ export default function Home() {
           <Testimonials />
         </LazyMount>
       </div>
+
+      <LazyMount height={300}>
+        <StillHaveQuestions />
+      </LazyMount>
 
       <CTASection />
 
