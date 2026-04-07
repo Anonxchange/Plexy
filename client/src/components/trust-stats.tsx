@@ -69,16 +69,15 @@ export const TrustStats = () => {
             <div
               key={i}
               className="rounded-[32px] overflow-hidden relative"
-              style={{ minHeight: 420 }}
+              style={{ height: 480 }}
             >
-              {/* Full-bleed photo — sharp, boosted brightness */}
+              {/* Full-bleed photo */}
               <img
                 src={item.image}
                 alt={item.alt}
                 loading="lazy"
                 decoding="async"
-                className="absolute inset-0 w-full h-full object-cover object-top"
-                style={{ filter: "brightness(1.15)" }}
+                className="absolute inset-0 w-full h-full object-cover object-center"
               />
 
               {/* Name — always at top, all cards */}
@@ -89,20 +88,19 @@ export const TrustStats = () => {
               </div>
 
               {/* Bottom section — quote then description */}
-              <div className="absolute bottom-0 left-0 right-0 px-5 pb-5 z-20">
-                <p className="text-white font-bold text-lg leading-snug italic mb-3" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.4)" }}>
+              <div className="absolute bottom-0 left-0 right-0 px-5 pb-5 pt-6 z-20">
+                <p className="text-white font-bold text-lg leading-snug italic mb-3">
                   {item.quote}
                 </p>
-                <div
+                <p
+                  className="text-white/90 text-sm leading-relaxed"
                   style={{
-                    backdropFilter: "blur(2px)",
-                    WebkitBackdropFilter: "blur(2px)",
+                    backdropFilter: "blur(3px)",
+                    WebkitBackdropFilter: "blur(3px)",
                   }}
                 >
-                  <p className="text-white/90 text-sm leading-relaxed" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}>
-                    {item.description}
-                  </p>
-                </div>
+                  {item.description}
+                </p>
               </div>
             </div>
           ))}
