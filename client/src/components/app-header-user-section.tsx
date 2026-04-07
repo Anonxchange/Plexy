@@ -1,317 +1,483 @@
-import React from "react";
-import { Link } from "wouter";
-import { ArrowDown } from "lucide-react";
+import { useState, useEffect, useMemo, memo } from "react";
+import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Eye, EyeOff, LayoutDashboard, User, Settings, Lightbulb, LogOut,
+  Bell, CheckCircle2, XCircle, Menu,
+} from "lucide-react";
+import { SecurityShieldIcon } from "@/components/ui/security-shield";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
+import { useLocation } from "wouter";
+import { useAuth } from "@/lib/auth-context";
+import { getSupabase } from "@/lib/supabase";
+import { useWalletData } from "@/hooks/use-wallet-data";
+import {
+  getNotifications,
+  subscribeToNotifications,
+  type Notification,
+} from "@/lib/notifications-api";
+import { useToast } from "@/hooks/use-toast";
 
-const BRANDS = [
-  { name: "Netflix",      logo: "/logos/brands/netflix.svg"      },
-  { name: "Amazon",       logo: "/logos/brands/amazon.svg"       },
-  { name: "Spotify",      logo: "/logos/brands/spotify.svg"      },
-  { name: "Apple",        logo: "/logos/brands/apple.svg"        },
-  { name: "Uber",         logo: "/logos/brands/uber.svg"         },
-  { name: "Airbnb",       logo: "/logos/brands/airbnb.svg"       },
-  { name: "Google",       logo: "/logos/brands/google.svg"       },
-  { name: "Steam",        logo: "/logos/brands/steampowered.svg" },
-  { name: "Google Play",  logo: "/logos/brands/googleplay.svg"   },
-  { name: "PlayStation",  logo: "/logos/brands/playstation.svg"  },
-  { name: "Xbox",         logo: "/logos/brands/xbox.svg"         },
-  { name: "eBay",         logo: "/logos/brands/ebay.svg"         },
-  { name: "Visa",         logo: "/logos/brands/visa.svg"         },
-  { name: "Mastercard",   logo: "/logos/brands/mastercard.svg"   },
+interface Props {
+  onOpenSidebar: () => void;
+}
+
+const avatarTypes = [
+  { id: "default",    image: "https://api.dicebear.com/7.x/avataaars/svg?seed=default" },
+  { id: "trader",     image: "https://api.dicebear.com/7.x/avataaars/svg?seed=trader" },
+  { id: "crypto",     image: "https://api.dicebear.com/7.x/avataaars/svg?seed=crypto" },
+  { id: "robot",      image: "https://api.dicebear.com/7.x/bottts/svg?seed=robot" },
+  { id: "ninja",      image: "https://api.dicebear.com/7.x/avataaars/svg?seed=ninja" },
+  { id: "astronaut",  image: "https://api.dicebear.com/7.x/avataaars/svg?seed=astronaut" },
+  { id: "developer",  image: "https://api.dicebear.com/7.x/avataaars/svg?seed=developer" },
+  { id: "artist",     image: "https://api.dicebear.com/7.x/avataaars/svg?seed=artist" },
 ];
 
-interface NotifCardProps {
-  logo: string;
-  logoBg: string;
-  title: string;
-  subtitle: string;
-  amount: string;
-  amountColor: string;
+interface NotificationIconProps {
+  count?: number;
+  onClick?: () => void;
 }
 
-function NotifCard({ logo, logoBg, title, subtitle, amount, amountColor }: NotifCardProps) {
+function NotificationIcon({ count = 0, onClick }: NotificationIconProps) {
+  const displayCount = count > 99 ? "99+" : count;
+  const showBadge = count > 0;
   return (
-    <div className="flex items-center gap-3 rounded-2xl backdrop-blur-xl shadow-2xl px-4 py-3 min-w-[200px] max-w-[230px] border border-white/25"
-      style={{ background: "rgba(255,255,255,0.18)" }}>
-      <div
-        className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0"
-        style={{ background: logoBg }}
-      >
-        <img
-          src={logo}
-          alt=""
-          className="w-6 h-6 object-contain"
-          style={{ filter: "brightness(0) invert(1)" }}
-        />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[12px] font-bold text-white leading-tight truncate">{title}</p>
-        <p className="text-[10px] text-white/60 mt-0.5">{subtitle}</p>
-      </div>
-      <span className="text-[12px] font-bold flex-shrink-0" style={{ color: amountColor }}>
-        {amount}
-      </span>
-    </div>
+    <button
+      onClick={onClick}
+      className="relative flex items-center justify-center w-10 h-10 bg-card rounded-xl shadow-notification hover:shadow-notification-hover transition-all duration-200 hover:scale-105 active:scale-95"
+      aria-label={`Notifications${count > 0 ? `, ${count} unread` : ""}`}
+    >
+      <Bell className="w-5 h-5 text-foreground" strokeWidth={2} />
+      {showBadge && (
+        <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full animate-badge-pop">
+          {displayCount}
+        </span>
+      )}
+    </button>
   );
 }
 
-export function HeroSection() {
-  return (
-    <section
-      className="relative overflow-hidden bg-background flex flex-col lg:flex-row lg:items-stretch"
-      style={{ minHeight: "100vh" }}
-    >
+export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenSidebar }: Props) {
+  const { user, signOut } = useAuth();
+  const [, navigate] = useLocation();
+  const { t } = useTranslation();
+  const { toast } = useToast();
 
-      {/* ══════════════════════════════════════════
-          DESKTOP ONLY — ambient background decorators
-          (no full-bleed image; split layout instead)
-          ══════════════════════════════════════════ */}
-      <div className="hidden lg:block absolute inset-0 pointer-events-none z-0">
-        {/* Lime accent glow — upper left, behind the text */}
-        <div
-          className="absolute rounded-full blur-3xl"
-          style={{
-            top: "-80px", left: "-80px",
-            width: "520px", height: "520px",
-            background: "radial-gradient(circle, rgba(180,242,46,0.10) 0%, transparent 70%)",
-          }}
-        />
-        {/* Soft glow near bottom-center */}
-        <div
-          className="absolute rounded-full blur-3xl"
-          style={{
-            bottom: "-60px", left: "30%",
-            width: "360px", height: "360px",
-            background: "radial-gradient(circle, rgba(180,242,46,0.05) 0%, transparent 70%)",
-          }}
-        />
-      </div>
+  const [balanceVisible, setBalanceVisible] = useState(true);
+  const [profileAvatar, setProfileAvatar] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>("");
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  // true while the Supabase avatar fetch is in-flight; prevents initials flash
+  const [isAvatarFetching, setIsAvatarFetching] = useState(true);
+  // tracks whether the <img> itself has finished loading after we have the URL
+  const [imageLoadStatus, setImageLoadStatus] = useState<"idle" | "loading" | "loaded" | "error">("idle");
 
-      {/* ══════════════════════════════════════════
-          MOBILE ONLY — subtle lime glow
-          ══════════════════════════════════════════ */}
-      <div
-        className="lg:hidden absolute pointer-events-none"
-        style={{
-          top: "5%", left: "50%", transform: "translateX(-50%)",
-          width: "60%", height: "40%",
-          background: "radial-gradient(ellipse at center, rgba(180,242,46,0.07) 0%, transparent 70%)",
-        }}
-      />
+  const { data: walletData, isLoading: walletsLoading } = useWalletData();
+  const balance = walletData?.totalBalance || 0;
+  const preferredCurrency = walletData?.preferredCurrency || "USD";
+  const isConverting = walletData?.isConverting || false;
 
-      {/* ══════════════════════════════════════════
-          CONTENT COLUMN
-          Mobile: centered, full-width
-          Desktop: left column (~52%), vertically centered
-          ══════════════════════════════════════════ */}
-      <div
-        className={[
-          "relative z-10",
-          /* mobile */
-          "flex flex-col items-center text-center px-5 pt-6 pb-10",
-          /* desktop: left column */
-          "lg:flex-none lg:w-[52%] lg:flex lg:flex-col",
-          "lg:items-start lg:text-left lg:px-20 lg:py-24 lg:justify-center",
-        ].join(" ")}
-      >
-        {/* Trust badge */}
-        <div
-          className="inline-flex items-center gap-1 rounded-full px-1 py-1 mb-7
-                     border border-foreground/15 bg-background"
-        >
-          <span className="text-[11px] font-medium text-foreground px-2.5">
-            Trusted by millions of customers
-          </span>
-          <span className="rounded-full bg-foreground/[0.07] px-2.5 py-0.5 text-[11px] font-medium text-foreground/60 whitespace-nowrap">
-            Since 2022
-          </span>
-        </div>
+  const setPreferredCurrency = (currency: string) => {
+    if (user?.id) {
+      localStorage.setItem(`pexly_currency_${user.id}`, currency);
+    }
+  };
 
-        {/* Headline */}
-        <h1
-          className="font-black uppercase tracking-tight leading-[0.9] text-foreground mb-5 max-w-3xl lg:max-w-xl"
-          style={{ fontSize: "clamp(2.6rem, 7.5vw, 5.8rem)" }}
-        >
-          <span className="block">Your crypto,</span>
-          <span className="block">minus the</span>
-          <span
-            className="block"
-            style={{
-              background: "linear-gradient(90deg, #B4F22E 10%, #78d900 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-            }}
-          >
-            middleman.
-          </span>
-        </h1>
+  useEffect(() => {
+    if (!user) return;
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== `pexly_currency_${user.id}` || !e.newValue) return;
+      const upper = e.newValue.toUpperCase();
+      if (upper !== preferredCurrency) setPreferredCurrency(upper);
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [user, preferredCurrency]);
 
-        {/* Subtitle */}
-        <p className="text-muted-foreground text-base lg:text-lg leading-relaxed max-w-md mb-9 font-medium">
-          Buy, swap and spend crypto at top merchants worldwide — you always hold your keys.
-        </p>
+  useEffect(() => {
+    if (!user) return;
 
-        {/* CTA */}
-        <Link href="/signup">
-          <button
-            className="inline-flex items-center gap-2.5 font-black uppercase tracking-wide text-black rounded-full px-9 py-4 text-sm transition-all hover:scale-[1.03] active:scale-[0.97] mb-10"
-            style={{ background: "#B4F22E", boxShadow: "0 4px 36px rgba(180,242,46,0.42)" }}
-          >
-            Get started
-            <ArrowDown className="w-4 h-4" strokeWidth={3} />
-          </button>
-        </Link>
+    // Silently ignore errors — notifications are non-critical
+    getNotifications().then(setNotifications).catch(() => {});
 
-        {/* Brand logos strip */}
-        <div className="flex flex-col items-center gap-3 lg:items-start">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Spend at 500+ merchants
-          </p>
-          <div className="grid grid-cols-7 gap-3">
-            {BRANDS.map((b) => (
-              <div
-                key={b.name}
-                className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden border border-foreground/10 bg-foreground/[0.08] transition-transform hover:scale-110"
-                title={b.name}
-              >
-                <img
-                  src={b.logo}
-                  alt={b.name}
-                  className="w-5 h-5 object-contain"
-                />
-              </div>
-            ))}
+    let unsubscribe: (() => void) | undefined;
+    try {
+      unsubscribe = subscribeToNotifications(user.id, (notification) => {
+        setNotifications((prev) => [notification, ...prev]);
+        toast({ title: notification.title, description: notification.message });
+      });
+    } catch {
+      // Supabase client not ready yet — realtime notifications gracefully skipped
+    }
+
+    return () => unsubscribe?.();
+  }, [user, toast]);
+
+  useEffect(() => {
+    if (!user) return;
+    // Reset avatar state for this user session so we always show skeleton first
+    setIsAvatarFetching(true);
+    setImageLoadStatus("idle");
+    setProfileAvatar(null);
+    fetchProfileAvatar();
+    (async () => {
+      const supabase = await getSupabase();
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("username, preferred_currency")
+        .eq("id", user.id)
+        .single();
+      if (profile?.username) setUserName(profile.username);
+      if (profile?.preferred_currency)
+        setPreferredCurrency(profile.preferred_currency.toUpperCase());
+    })();
+  }, [user?.id]);
+
+  const fetchProfileAvatar = async () => {
+    // Hard cap of 5 s so the skeleton never gets permanently stuck if the
+    // network request stalls (wrong URL, flaky connection, cold Supabase, etc.)
+    const withTimeout = <T,>(p: Promise<T>, ms: number): Promise<T> =>
+      Promise.race([p, new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]);
+
+    try {
+      const supabase = await withTimeout(getSupabase(), 5000);
+      const { data, error } = await withTimeout(
+        supabase
+          .from("user_profiles")
+          .select("avatar_url, avatar_type")
+          .eq("id", user?.id)
+          .single(),
+        4000
+      );
+      if (error && error.code !== "PGRST116") return;
+      if (data?.avatar_url) {
+        setProfileAvatar(data.avatar_url);
+      } else if (data?.avatar_type) {
+        const found = avatarTypes.find((a) => a.id === data.avatar_type);
+        if (found) setProfileAvatar(found.image);
+      }
+    } catch {
+      // silent — avatar is cosmetic, fall through to show initials
+    } finally {
+      // Always clear the fetch-spinner regardless of success, failure, or timeout
+      setIsAvatarFetching(false);
+    }
+  };
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const securityInfo = useMemo(() => {
+    if (!user) return { level: "low" as const, score: 0, label: "At Risk", color: "red" };
+    const has2FA = !!user.user_metadata?.two_factor_enabled;
+    const hasPhone = !!user.phone;
+    const hasEmailVerified = !!user.email_confirmed_at;
+    const score = [has2FA, hasPhone, hasEmailVerified].filter(Boolean).length;
+    if (score === 3)
+      return { level: "high" as const, score, label: "Strong", color: "green", checks: { has2FA, hasPhone, hasEmailVerified } };
+    if (score === 2)
+      return { level: "medium" as const, score, label: "Fair", color: "yellow", checks: { has2FA, hasPhone, hasEmailVerified } };
+    return { level: "low" as const, score, label: "At Risk", color: "red", checks: { has2FA, hasPhone, hasEmailVerified } };
+  }, [user]);
+
+  if (user) {
+    return (
+      <>
+        <div className="text-center relative max-w-[120px] sm:max-w-[150px] hidden sm:block">
+          <div className="text-sm font-semibold text-foreground truncate">
+            {userName || user.email?.split("@")[0] || "User"}
+          </div>
+          <div className="text-xs font-medium text-muted-foreground flex items-center justify-center gap-1">
+            <span className="truncate">
+              {walletsLoading || isConverting ? (
+                <Skeleton className="h-3 w-16" />
+              ) : balanceVisible ? (
+                `${balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${preferredCurrency}`
+              ) : (
+                "****"
+              )}
+            </span>
+            <button
+              className="inline-flex items-center justify-center h-4 w-4 hover:opacity-70 transition-opacity flex-shrink-0"
+              onClick={() => setBalanceVisible(!balanceVisible)}
+              aria-label={balanceVisible ? "Hide balance" : "Show balance"}
+            >
+              {balanceVisible ? (
+                <Eye className="h-3 w-3 text-muted-foreground" />
+              ) : (
+                <EyeOff className="h-3 w-3 text-muted-foreground" />
+              )}
+            </button>
           </div>
         </div>
-      </div>
 
-      {/* ══════════════════════════════════════════
-          MOBILE ONLY — photo sits below the content
-          ══════════════════════════════════════════ */}
-      <div className="lg:hidden relative flex-1 min-h-[280px]">
-        {/* Gradient blend from background into photo */}
-        <div
-          className="absolute top-0 left-0 right-0 z-10 pointer-events-none"
-          style={{
-            height: "80px",
-            background: "linear-gradient(to bottom, hsl(var(--background)), transparent)",
-          }}
-        />
+        {isAvatarFetching || (profileAvatar !== null && imageLoadStatus === "loading") ? (
+          /* Skeleton replaces the avatar button during both loading phases:
+             Phase 1 — Supabase fetch in-flight (isAvatarFetching)
+             Phase 2 — URL received, browser downloading the image (imageLoadStatus === "loading")
+             Once both are done the real dropdown trigger appears in the same spot. */
+          <Skeleton className="h-9 w-9 sm:h-10 sm:w-10 rounded-full flex-shrink-0" />
+        ) : (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="relative h-9 w-9 sm:h-10 sm:w-10 rounded-full p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+              data-testid="button-profile"
+            >
+              <Avatar
+                className="h-9 w-9 sm:h-10 sm:w-10 ring-2 ring-offset-2 ring-offset-background transition-all duration-200"
+                style={{
+                  ringColor: securityInfo.color === "green" ? "#22c55e" : securityInfo.color === "yellow" ? "#eab308" : "#ef4444",
+                  boxShadow: `0 0 0 2px ${securityInfo.color === "green" ? "#22c55e" : securityInfo.color === "yellow" ? "#eab308" : "#ef4444"}`,
+                }}
+              >
+                <AvatarImage
+                  src={profileAvatar || user.user_metadata?.avatar_url}
+                  alt="User avatar"
+                  onLoadingStatusChange={setImageLoadStatus}
+                />
+                <AvatarFallback className="bg-primary text-primary-foreground font-semibold text-sm">
+                  {user.user_metadata?.full_name?.substring(0, 2)?.toUpperCase() ??
+                    user.email?.substring(0, 2)?.toUpperCase() ??
+                    "JD"}
+                </AvatarFallback>
+              </Avatar>
+              <span
+                className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background"
+                style={{
+                  backgroundColor:
+                    securityInfo.color === "green" ? "#22c55e" : securityInfo.color === "yellow" ? "#eab308" : "#ef4444",
+                }}
+              />
+            </Button>
+          </DropdownMenuTrigger>
 
-        <picture>
-          <source srcSet="/hero-bg.webp" type="image/webp" />
-          <img
-            src="/hero-bg.png"
-            alt=""
-            aria-hidden="true"
-            className="absolute inset-0 w-full h-full object-cover object-center"
-            fetchPriority="high"
-            decoding="async"
-          />
-        </picture>
+          <DropdownMenuContent align="end" className="w-[300px] p-0 overflow-hidden" sideOffset={10}>
+            <div className="relative bg-gradient-to-br from-muted/80 to-muted/30 px-4 pt-4 pb-3 border-b border-border">
+              <div className="flex items-center gap-3">
+                <div className="relative flex-shrink-0">
+                  <Avatar
+                    className="h-12 w-12"
+                    style={{
+                      boxShadow: `0 0 0 2px ${securityInfo.color === "green" ? "#22c55e" : securityInfo.color === "yellow" ? "#eab308" : "#ef4444"}, 0 0 12px ${securityInfo.color === "green" ? "#22c55e40" : securityInfo.color === "yellow" ? "#eab30840" : "#ef444440"}`,
+                    }}
+                  >
+                    <AvatarImage src={profileAvatar || user.user_metadata?.avatar_url} alt="User avatar" />
+                    <AvatarFallback className="bg-primary text-primary-foreground font-bold text-base">
+                      {user.user_metadata?.full_name?.substring(0, 2)?.toUpperCase() ??
+                        user.email?.substring(0, 2)?.toUpperCase() ??
+                        "JD"}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm text-foreground truncate">
+                    {userName || user.user_metadata?.full_name || user.email?.split("@")[0] || "User"}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <span
+                      className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                      style={{
+                        backgroundColor:
+                          securityInfo.color === "green" ? "#22c55e20" : securityInfo.color === "yellow" ? "#eab30820" : "#ef444420",
+                        color:
+                          securityInfo.color === "green" ? "#16a34a" : securityInfo.color === "yellow" ? "#ca8a04" : "#dc2626",
+                      }}
+                    >
+                      <SecurityShieldIcon level={securityInfo.level} size={11} />
+                      {securityInfo.level === "high"
+                        ? t("security.strong")
+                        : securityInfo.level === "medium"
+                        ? t("security.fair")
+                        : t("security.at_risk")}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-        {/* Side vignettes using background color gradients */}
-        <div
-          className="absolute inset-y-0 left-0 z-10 pointer-events-none w-16"
-          style={{ background: "linear-gradient(to right, hsl(var(--background)), transparent)" }}
-        />
-        <div
-          className="absolute inset-y-0 right-0 z-10 pointer-events-none w-16"
-          style={{ background: "linear-gradient(to left, hsl(var(--background)), transparent)" }}
-        />
+            <div className="p-1.5">
+              <DropdownMenuItem onClick={() => navigate("/dashboard")} className="cursor-pointer rounded-lg px-3 py-2.5 gap-3 group">
+                <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10 transition-colors">
+                  <LayoutDashboard className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-medium text-foreground">{t("nav.dashboard")}</span>
+                  <span className="text-[10px] text-muted-foreground">{t("user_menu.overview_activity")}</span>
+                </div>
+              </DropdownMenuItem>
 
-        {/* Notification card — bottom left */}
-        <div className="absolute z-20 hidden sm:block" style={{ bottom: "20%", left: "5%" }}>
-          <NotifCard
-            logo="/logos/brands/bitcoin.svg"
-            logoBg="#F7931A"
-            title="Crypto received"
-            subtitle="2 min ago"
-            amount="+0.042 BTC"
-            amountColor="#18A349"
-          />
-        </div>
+              <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer rounded-lg px-3 py-2.5 gap-3 group">
+                <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10 transition-colors">
+                  <User className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-medium text-foreground">{t("user_menu.profile")}</span>
+                  <span className="text-[10px] text-muted-foreground">{t("user_menu.public_profile")}</span>
+                </div>
+              </DropdownMenuItem>
 
-        {/* Notification card — bottom right */}
-        <div className="absolute z-20 hidden sm:block" style={{ bottom: "6%", right: "5%" }}>
-          <NotifCard
-            logo="/logos/brands/netflix.svg"
-            logoBg="#E50914"
-            title="Payment successful"
-            subtitle="5 min ago"
-            amount="-$15.99"
-            amountColor="#F97316"
-          />
-        </div>
-      </div>
+              <DropdownMenuItem onClick={() => navigate("/account-settings")} className="cursor-pointer rounded-lg px-3 py-2.5 gap-3 group">
+                <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10 transition-colors">
+                  <Settings className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-medium text-foreground">{t("user_menu.account_settings")}</span>
+                  <span className="text-[10px] text-muted-foreground">{t("user_menu.preferences_security")}</span>
+                </div>
+              </DropdownMenuItem>
 
-      {/* ══════════════════════════════════════════
-          DESKTOP ONLY — right image panel
-          ══════════════════════════════════════════ */}
-      <div className="hidden lg:flex lg:flex-1 lg:relative lg:overflow-hidden">
-        {/* Left-edge fade — blends the image into the background */}
-        <div
-          className="absolute inset-y-0 left-0 z-10 pointer-events-none"
-          style={{
-            width: "140px",
-            background: "linear-gradient(to right, hsl(var(--background)), transparent)",
-          }}
-        />
-        {/* Top-edge fade */}
-        <div
-          className="absolute top-0 left-0 right-0 z-10 pointer-events-none"
-          style={{
-            height: "80px",
-            background: "linear-gradient(to bottom, hsl(var(--background)), transparent)",
-          }}
-        />
-        {/* Bottom-edge fade */}
-        <div
-          className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none"
-          style={{
-            height: "80px",
-            background: "linear-gradient(to top, hsl(var(--background)), transparent)",
-          }}
-        />
+              <DropdownMenuItem onClick={() => navigate("/submit-idea")} className="cursor-pointer rounded-lg px-3 py-2.5 gap-3 group">
+                <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10 transition-colors">
+                  <Lightbulb className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-medium text-foreground">{t("user_menu.submit_idea")}</span>
+                  <span className="text-[10px] text-muted-foreground">{t("user_menu.share_feedback")}</span>
+                </div>
+              </DropdownMenuItem>
+            </div>
 
-        {/* Hero image — fills the right panel */}
-        <picture>
-          <source srcSet="/hero-bg.webp" type="image/webp" />
-          <img
-            src="/hero-bg.png"
-            alt=""
-            aria-hidden="true"
-            className="w-full h-full object-cover object-center"
-            fetchPriority="high"
-            decoding="async"
-          />
-        </picture>
+            <div className="mx-1.5 mb-1.5 rounded-xl border border-border overflow-hidden">
+              <div
+                className="px-3 pt-3 pb-2.5"
+                style={{
+                  background:
+                    securityInfo.color === "green"
+                      ? "linear-gradient(135deg, #f0fdf4, #dcfce7)"
+                      : securityInfo.color === "yellow"
+                      ? "linear-gradient(135deg, #fefce8, #fef9c3)"
+                      : "linear-gradient(135deg, #fff1f2, #ffe4e6)",
+                }}
+              >
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="text-[10px] font-semibold text-foreground/60 uppercase tracking-widest">
+                    {t("security.account_security")}
+                  </span>
+                  <span
+                    className="text-[11px] font-bold tracking-wide"
+                    style={{
+                      color:
+                        securityInfo.color === "green" ? "#16a34a" : securityInfo.color === "yellow" ? "#ca8a04" : "#dc2626",
+                    }}
+                  >
+                    {securityInfo.level === "high"
+                      ? t("security.strong")
+                      : securityInfo.level === "medium"
+                      ? t("security.fair")
+                      : t("security.at_risk")}
+                  </span>
+                </div>
 
-        {/* Notification card — upper area of image */}
-        <div className="absolute z-20" style={{ bottom: "30%", right: "8%" }}>
-          <NotifCard
-            logo="/logos/brands/bitcoin.svg"
-            logoBg="#F7931A"
-            title="Crypto received"
-            subtitle="2 min ago"
-            amount="+0.042 BTC"
-            amountColor="#18A349"
-          />
-        </div>
+                <div className="flex items-end gap-3">
+                  <div className="flex-shrink-0 drop-shadow-sm">
+                    <SecurityShieldIcon level={securityInfo.level} size={46} />
+                  </div>
+                  <div className="flex-1 flex flex-col gap-1.5">
+                    <div className="flex items-end gap-[2px] h-7">
+                      {Array.from({ length: 20 }).map((_, i) => {
+                        const filled =
+                          securityInfo.color === "green"
+                            ? true
+                            : securityInfo.color === "yellow"
+                            ? i < 13
+                            : i < 6;
+                        const barColor = filled
+                          ? securityInfo.color === "green"
+                            ? "#22c55e"
+                            : securityInfo.color === "yellow"
+                            ? "#eab308"
+                            : "#ef4444"
+                          : "rgba(0,0,0,0.09)";
+                        const heights = [55, 70, 62, 80, 58, 75, 68, 85, 60, 72, 64, 78, 56, 74, 66, 82, 59, 71, 65, 79];
+                        return (
+                          <div
+                            key={i}
+                            className="flex-1 rounded-[2px] transition-all duration-500"
+                            style={{ height: `${heights[i % heights.length]}%`, backgroundColor: barColor, minHeight: "4px" }}
+                          />
+                        );
+                      })}
+                    </div>
+                    <div className="flex flex-col gap-[3px]">
+                      {[
+                        { label: t("security.email_verified"), ok: !!user.email_confirmed_at },
+                        { label: t("security.phone_linked"),   ok: !!user.phone },
+                        { label: t("security.two_fa_enabled"), ok: !!user.user_metadata?.two_factor_enabled },
+                      ].map(({ label, ok }) => (
+                        <div key={label} className="flex items-center justify-between">
+                          <span className="text-[10px] text-foreground/65 leading-none">{label}</span>
+                          {ok ? (
+                            <CheckCircle2 className="w-3 h-3 text-green-500 flex-shrink-0" />
+                          ) : (
+                            <XCircle className="w-3 h-3 text-red-400 flex-shrink-0" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
 
-        {/* Notification card — lower area of image */}
-        <div className="absolute z-20" style={{ bottom: "12%", right: "22%" }}>
-          <NotifCard
-            logo="/logos/brands/netflix.svg"
-            logoBg="#E50914"
-            title="Payment successful"
-            subtitle="5 min ago"
-            amount="-$15.99"
-            amountColor="#F97316"
-          />
-        </div>
-      </div>
+                {securityInfo.level !== "high" && (
+                  <button
+                    onClick={() => navigate("/account-settings")}
+                    className="mt-2.5 w-full text-[10px] font-semibold py-1.5 rounded-lg transition-all duration-150 hover:opacity-90 active:scale-[0.98] text-white"
+                    style={{ backgroundColor: securityInfo.color === "yellow" ? "#ca8a04" : "#dc2626" }}
+                  >
+                    {t("security.improve_security")}
+                  </button>
+                )}
+              </div>
+            </div>
 
-    </section>
+            <div className="p-1.5 pt-0">
+              <DropdownMenuItem
+                onClick={() => signOut()}
+                className="cursor-pointer rounded-lg px-3 py-2.5 gap-3 group text-red-500 focus:text-red-500 focus:bg-red-50 dark:focus:bg-red-950/20"
+              >
+                <div className="w-7 h-7 rounded-md bg-red-50 dark:bg-red-950/30 flex items-center justify-center flex-shrink-0">
+                  <LogOut className="h-3.5 w-3.5 text-red-500" />
+                </div>
+                <span className="text-sm font-medium">{t("auth.sign_out")}</span>
+              </DropdownMenuItem>
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        )}
+
+        <NotificationIcon count={unreadCount} onClick={() => navigate("/notifications")} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={onOpenSidebar}
+        data-testid="button-sidebar-toggle"
+        aria-label="Open navigation menu"
+        className="border-border lg:hidden"
+      >
+        <Menu className="h-5 w-5" />
+      </Button>
+      <Button variant="ghost" size="sm" onClick={() => navigate("/signin")} className="hidden sm:inline-flex">
+        {t("auth.sign_in")}
+      </Button>
+      <Button size="sm" onClick={() => navigate("/signup")} className="hidden sm:inline-flex">
+        {t("auth.get_started")}
+      </Button>
+    </>
   );
-}
+});
