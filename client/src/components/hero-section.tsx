@@ -30,16 +30,22 @@ interface NotifCardProps {
 
 function NotifCard({ logo, logoBg, title, subtitle, amount, amountColor }: NotifCardProps) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl bg-card text-card-foreground backdrop-blur-md shadow-2xl px-4 py-3 min-w-[200px] max-w-[230px] border border-border">
+    <div className="flex items-center gap-3 rounded-2xl backdrop-blur-xl shadow-2xl px-4 py-3 min-w-[200px] max-w-[230px] border border-white/25"
+      style={{ background: "rgba(255,255,255,0.18)" }}>
       <div
         className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0"
         style={{ background: logoBg }}
       >
-        <img src={logo} alt="" className="w-6 h-6 object-contain" />
+        <img
+          src={logo}
+          alt=""
+          className="w-6 h-6 object-contain"
+          style={{ filter: "brightness(0) invert(1)" }}
+        />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[12px] font-bold text-foreground leading-tight truncate">{title}</p>
-        <p className="text-[10px] text-muted-foreground mt-0.5">{subtitle}</p>
+        <p className="text-[12px] font-bold text-white leading-tight truncate">{title}</p>
+        <p className="text-[10px] text-white/60 mt-0.5">{subtitle}</p>
       </div>
       <span className="text-[12px] font-bold flex-shrink-0" style={{ color: amountColor }}>
         {amount}
