@@ -7,7 +7,9 @@
     "dev": "vite dev",
     "build": "vite build",
     "start": "vite preview",
-    "check": "tsc"
+    "check": "tsc",
+    "scan:security": "node scripts/security-scan.mjs",
+    "scan:security:strict": "node scripts/security-scan.mjs --fail-on-high"
   },
   "dependencies": {
     "@ethereumjs/rlp": "^10.1.1",
