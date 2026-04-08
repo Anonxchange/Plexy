@@ -1,5 +1,5 @@
-import { Zap } from "lucide-react";
 import { SiX, SiTelegram, SiFacebook, SiInstagram, SiLinkedin, SiYoutube, SiApple, SiGoogleplay } from "react-icons/si";
+import { PexlyIcon } from "@/components/pexly-icon";
 import { Link } from "wouter";
 
 const footerColumns = [
@@ -85,7 +85,7 @@ export function AppFooter() {
         <div className="flex flex-row items-center justify-between gap-4 mb-16 pb-10 border-b border-white/[0.06]">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-[#B4F22E] flex items-center justify-center">
-              <Zap className="h-5 w-5 text-black" />
+              <PexlyIcon className="h-5 w-5 text-black" />
             </div>
             <span className="text-xl font-bold text-white tracking-tight">Pexly</span>
           </div>
