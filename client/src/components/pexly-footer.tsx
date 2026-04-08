@@ -1,6 +1,7 @@
 
 import { useState } from "react";
-import { Zap, ChevronDown, Globe, HelpCircle, Accessibility, X as XIcon } from "lucide-react";
+import { ChevronDown, Globe, HelpCircle, Accessibility, X as XIcon } from "lucide-react";
+import { PexlyIcon } from "@/components/pexly-icon";
 import { SiDiscord, SiInstagram, SiFacebook, SiYoutube, SiReddit } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import {
@@ -74,7 +75,7 @@ export function PexlyFooter() {
         {/* Logo */}
         <div className="flex items-center gap-3 pb-4 lg:pb-8">
           <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-            <Zap className="h-6 w-6 text-primary-foreground" />
+            <PexlyIcon className="h-6 w-6 text-primary-foreground" />
           </div>
           <span className="text-2xl font-bold">pexly</span>
         </div>
