@@ -7,6 +7,7 @@ import {
   Bitcoin, ArrowDownToLine, CreditCard, Smartphone, Settings,
   HelpCircle, MessageSquare, Users, TrendingUp, Gift, Plus, List,
 } from "lucide-react";
+import { PexlyIcon } from "@/components/pexly-icon";
 import { Link, useLocation } from "wouter";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
@@ -69,7 +70,7 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar }: { onOpenSid
           <Link href="/" className="flex items-center gap-2 hover-elevate active-elevate-2 rounded-lg px-2 py-1" data-testid="link-home-header">
             <div className="relative w-8 h-8">
               <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <Zap className="h-5 w-5 text-primary-foreground" />
+                <PexlyIcon className="h-5 w-5 text-primary-foreground" />
               </div>
             </div>
             <span className="text-xl font-extrabold text-foreground">Pexly</span>
