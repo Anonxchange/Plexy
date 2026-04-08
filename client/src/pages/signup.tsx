@@ -4,7 +4,8 @@ import { useLocation } from "wouter";
 import portraitImage from "@assets/young-woman-portrait-close-up_1_3_optimized.webp";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, Sun, Moon, Zap, MapPin, Check, X } from "lucide-react";
+import { Eye, EyeOff, Sun, Moon, MapPin, Check, X } from "lucide-react";
+import { PexlyIcon } from "@/components/pexly-icon";
 import { FcGoogle } from "react-icons/fc";
 import { FaApple, FaFacebook } from "react-icons/fa";
 import { PhoneVerification } from "@/components/phone-verification";
@@ -455,7 +456,7 @@ export function SignUp() {
         <a href="/" className="flex items-center gap-2 cursor-pointer">
           <div className="relative w-8 h-8">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <Zap className="h-5 w-5 text-primary-foreground" />
+              <PexlyIcon className="h-5 w-5 text-primary-foreground" />
             </div>
           </div>
           <span className={`text-2xl font-extrabold ${isDark ? 'text-white' : 'text-black'}`}>
