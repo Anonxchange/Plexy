@@ -1,8 +1,8 @@
 import {
   ChevronDown,
-  Zap,
   Globe,
 } from "lucide-react";
+import { PexlyIcon } from "@/components/pexly-icon";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -177,7 +177,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       <div className="flex items-center justify-between px-6 py-5">
         <Link href="/" onClick={onNavigate} className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <Zap className="h-5 w-5 text-primary-foreground" />
+            <PexlyIcon className="h-5 w-5 text-primary-foreground" />
           </div>
         </Link>
         <ThemeToggle />
