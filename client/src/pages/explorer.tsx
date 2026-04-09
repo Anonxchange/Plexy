@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Search, Menu, X, TrendingUp, TrendingDown, Box, ArrowRightLeft, ArrowRight, Github, Twitter, Database, Zap, Loader } from "lucide-react";
+import { Search, Menu, X, TrendingUp, TrendingDown, Box, ArrowRightLeft, ArrowRight, Github, Twitter, Database, Loader } from "lucide-react";
+import { PexlyIcon } from "@/components/pexly-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,7 +49,7 @@ const Header = () => {
       <div className="container flex h-16 items-center justify-between">
         <a href="/" className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-            <Zap className="h-5 w-5 text-primary-foreground" />
+            <PexlyIcon className="h-5 w-5 text-primary-foreground" />
           </div>
           <span className="text-xl font-bold">Pexly Explorer</span>
         </a>
@@ -234,18 +235,15 @@ const CryptoCard = ({ name, symbol, price, change24h, chartData, color, icon }: 
               </div>
             )}
             <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-lg">{name}</span>
-                <span className="text-muted-foreground text-sm">{symbol}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-xl">{formattedPrice}</span>
-                <span className={`text-sm font-medium ${isPositive ? 'text-success' : 'text-destructive'}`}>{formattedChange}</span>
-                {changeValue && <span className={`text-sm ${isPositive ? 'text-success' : 'text-destructive'}`}>{changeValue}</span>}
-              </div>
+              <span className="font-bold text-lg">{name}</span>
+              <span className="text-muted-foreground text-sm ml-2">{symbol}</span>
             </div>
           </div>
-          <ArrowRight className="h-5 w-5 text-muted-foreground" />
+          <div className="flex items-center gap-4">
+            <span className="font-bold text-xl">{formattedPrice}</span>
+            <span className={`text-sm font-medium ${isPositive ? 'text-success' : 'text-destructive'}`}>{formattedChange}</span>
+            <ArrowRight className="h-5 w-5 text-muted-foreground" />
+          </div>
         </div>
         <div className="h-40 w-full bg-white dark:bg-gray-800 p-4">
           {chartData.length > 0 ? (
@@ -634,7 +632,7 @@ const Footer = () => (
         <div className="col-span-2 md:col-span-1">
           <a href="/" className="flex items-center gap-2 mb-4">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-              <span className="text-lg font-bold text-primary-foreground">P</span>
+              <PexlyIcon className="h-5 w-5 text-primary-foreground" />
             </div>
             <span className="text-xl font-bold">Pexly Explorer</span>
           </a>
