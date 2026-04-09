@@ -755,7 +755,7 @@ const Index = () => {
         .card-interactive { background-color: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: var(--radius); transition: all 0.3s ease; }
         .card-interactive:hover { border-color: hsl(var(--primary)); box-shadow: var(--shadow-card-hover); }
         .card-flat { background-color: transparent; border: none; }
-        .container { width: 100%; max-width: 1400px; margin-left: auto; margin-right: auto; padding-left: 1.5rem; padding-right: 1.5rem; }
+        .container { width: 100%; max-width: 1200px; margin-left: auto; margin-right: auto; padding-left: 2rem; padding-right: 2rem; }
         @media (max-width: 640px) { .container { padding-left: 1rem; padding-right: 1rem; } }
       `}</style>
       <div className="min-h-screen flex flex-col explorer-wrapper bg-gray-100 dark:bg-gray-900">
