@@ -24,7 +24,7 @@ export function CTASection() {
       />
 
       <div className="max-w-6xl mx-auto px-4 lg:px-6 relative">
-        <div className="grid grid-cols-1 lg:grid-cols-2 items-center gap-10 lg:gap-16">
+        <div className="grid grid-cols-1 lg:grid-cols-2 items-center gap-1 lg:gap-16">
 
           {/* LEFT — TEXT & CTA */}
           <div className="text-center lg:text-left space-y-6">
@@ -78,7 +78,7 @@ export function CTASection() {
               alt="Pexly Mobile App"
               loading="lazy"
               decoding="async"
-              className="max-w-full h-auto max-h-[320px] lg:max-h-[580px] object-contain translate-y-10 lg:scale-110 lg:translate-y-20 origin-bottom"
+              className="max-w-full h-auto max-h-[400px] lg:max-h-[580px] object-contain translate-y-12 lg:scale-110 lg:translate-y-20 origin-bottom"
             />
           </div>
 
