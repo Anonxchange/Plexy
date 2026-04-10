@@ -192,17 +192,17 @@ export default function Blog() {
                 </div>
               </div>
 
-              {/* Text section (40%) with glass tint */}
-              <div className="flex-[2] px-5 pt-4 pb-6 md:px-7 md:pb-7 bg-gradient-to-b from-[#0f0f0f] to-[#141414]">
-                <h2 className="text-xl md:text-2xl font-bold text-white leading-snug mb-2 group-hover:text-[#B4F22E] transition-colors line-clamp-2">
+              {/* Text section (40%) */}
+              <div className="flex-[2] px-5 pt-4 pb-6 md:px-7 md:pb-7" style={{ background: "hsl(var(--card))" }}>
+                <h2 className="text-xl md:text-2xl font-bold text-card-foreground leading-snug mb-2 group-hover:text-[#B4F22E] transition-colors line-clamp-2">
                   {latest.title}
                 </h2>
                 {latest.excerpt && (
-                  <p className="text-white/50 text-sm leading-relaxed mb-3 line-clamp-2">
+                  <p className="text-card-foreground/60 text-sm leading-relaxed mb-3 line-clamp-2">
                     {latest.excerpt}
                   </p>
                 )}
-                <div className="flex items-center gap-3 text-white/30 text-xs">
+                <div className="flex items-center gap-3 text-card-foreground/35 text-xs">
                   <span className="flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
                     {latest.formattedDate}
@@ -252,8 +252,8 @@ export default function Blog() {
                         transition-all duration-300"
                       style={{ minHeight: 380 }}
                     >
-                      {/* Image — 65% */}
-                      <div className="flex-[13] overflow-hidden relative">
+                      {/* Image — 70% */}
+                      <div className="flex-[7] overflow-hidden relative">
                         {post.image_url ? (
                           <img
                             src={sanitizeImageUrl(post.image_url)}
@@ -267,15 +267,18 @@ export default function Blog() {
                         <div className="absolute inset-0 bg-gradient-to-b from-white/5 via-transparent to-black/10 pointer-events-none" />
                       </div>
 
-                      {/* Text — 35% dark glass */}
-                      <div className="flex-[7] bg-[#0f0f0f] flex flex-col justify-center px-4 py-4 relative">
-                        {/* Glass top edge shimmer */}
+                      {/* Text — 30% dark */}
+                      <div
+                        className="flex-[3] flex flex-col justify-center px-4 py-4 relative"
+                        style={{ background: "hsl(var(--card))" }}
+                      >
+                        {/* Shimmer line at top */}
                         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
-                        <h3 className="font-bold text-white text-base leading-snug line-clamp-2 group-hover:text-[#B4F22E] transition-colors duration-200">
+                        <h3 className="font-bold text-card-foreground text-base leading-snug line-clamp-2 group-hover:text-[#B4F22E] transition-colors duration-200">
                           {post.title}
                         </h3>
                         {post.excerpt && (
-                          <p className="text-white/45 text-xs leading-relaxed line-clamp-2 mt-2">
+                          <p className="text-card-foreground/50 text-sm leading-relaxed line-clamp-2 mt-1.5">
                             {post.excerpt}
                           </p>
                         )}
