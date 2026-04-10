@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase";
 import { useSchema, blogPageSchema } from "@/hooks/use-schema";
 import { sanitizeImageUrl } from "@/lib/sanitize";
 
-const BATCH = 6;
+const BATCH = 14;
 
 const gradients = [
   "from-[#B4F22E] via-[#9FD624] to-[#8BC34A]",
