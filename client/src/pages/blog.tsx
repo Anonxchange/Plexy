@@ -140,39 +140,42 @@ export default function Blog() {
         <section className="px-3 pb-2 sm:px-4 lg:px-6">
           <div className="max-w-2xl lg:max-w-4xl mx-auto">
             <div
-              className="rounded-3xl overflow-hidden bg-[#111] cursor-pointer group"
+              className="rounded-3xl bg-[#111] cursor-pointer group flex flex-col"
+              style={{ minHeight: 480 }}
               onClick={() => setLocation(`/blog/${latest.id}`)}
             >
-              {/* Image */}
-              <div className="relative w-full h-64 md:h-80 lg:h-96 overflow-hidden">
-                <span className="absolute top-5 left-5 z-10 text-white/60 text-xs font-semibold uppercase tracking-widest">
+              {/* Dark top area: "Latest" label + framed image (60%) */}
+              <div className="flex flex-col flex-[3] px-4 pt-5 pb-3 md:px-6 md:pt-6">
+                <span className="text-white/50 text-xs font-semibold uppercase tracking-widest mb-3">
                   Latest
                 </span>
-                {latest.image_url ? (
-                  <img
-                    src={sanitizeImageUrl(latest.image_url)}
-                    alt={latest.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                ) : (
-                  <GradientCard gradient={latest.gradient} className="w-full h-full" />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                {/* Image framed inside the dark container */}
+                <div className="relative flex-1 rounded-2xl overflow-hidden">
+                  {latest.image_url ? (
+                    <img
+                      src={sanitizeImageUrl(latest.image_url)}
+                      alt={latest.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <GradientCard gradient={latest.gradient} className="w-full h-full min-h-[200px]" />
+                  )}
+                </div>
               </div>
 
-              {/* Info */}
-              <div className="p-6 md:p-8">
-                <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-white leading-snug mb-3 group-hover:text-[#B4F22E] transition-colors">
+              {/* Text section (40%) */}
+              <div className="flex-[2] px-5 pt-4 pb-6 md:px-7 md:pb-7">
+                <h2 className="text-xl md:text-2xl font-bold text-white leading-snug mb-2 group-hover:text-[#B4F22E] transition-colors line-clamp-2">
                   {latest.title}
                 </h2>
                 {latest.excerpt && (
-                  <p className="text-white/60 text-sm md:text-base leading-relaxed mb-4 line-clamp-2">
+                  <p className="text-white/55 text-sm leading-relaxed mb-3 line-clamp-2">
                     {latest.excerpt}
                   </p>
                 )}
-                <div className="flex items-center gap-4 text-white/40 text-sm">
-                  <span className="flex items-center gap-1.5">
-                    <Calendar className="h-3.5 w-3.5" />
+                <div className="flex items-center gap-3 text-white/35 text-xs">
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
                     {latest.formattedDate}
                   </span>
                   {latest.author && <span>· {latest.author}</span>}
@@ -206,15 +209,16 @@ export default function Blog() {
             ) : (
               <>
                 {/* Desktop: 2-column grid. Mobile: single stack */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {whatsNew.map((post) => (
                     <div
                       key={post.id}
                       onClick={() => setLocation(`/blog/${post.id}`)}
-                      className="rounded-2xl overflow-hidden bg-background border border-border cursor-pointer hover:border-[#B4F22E]/40 hover:shadow-md transition-all group"
+                      className="rounded-2xl overflow-hidden bg-background border border-border cursor-pointer hover:border-[#B4F22E]/40 hover:shadow-md transition-all group flex flex-col"
+                      style={{ minHeight: 360 }}
                     >
-                      {/* Thumbnail */}
-                      <div className="relative w-full h-48 overflow-hidden">
+                      {/* Image — 60% */}
+                      <div className="flex-[3] overflow-hidden relative">
                         {post.image_url ? (
                           <img
                             src={sanitizeImageUrl(post.image_url)}
@@ -226,12 +230,17 @@ export default function Blog() {
                         )}
                       </div>
 
-                      {/* Card info */}
-                      <div className="p-4">
-                        <h3 className="font-bold text-foreground text-base leading-snug mb-3 line-clamp-2 group-hover:text-[#B4F22E] transition-colors">
+                      {/* Text — 40% */}
+                      <div className="flex-[2] flex flex-col justify-between p-4">
+                        <h3 className="font-bold text-foreground text-lg leading-snug line-clamp-3 group-hover:text-[#B4F22E] transition-colors mb-3">
                           {post.title}
                         </h3>
-                        <div className="flex items-center gap-2 flex-wrap">
+                        {post.excerpt && (
+                          <p className="text-muted-foreground text-xs leading-relaxed line-clamp-2 mb-3">
+                            {post.excerpt}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-2 flex-wrap mt-auto">
                           <span className="text-xs font-semibold px-3 py-1 rounded-full bg-[#B4F22E]/10 text-[#B4F22E] border border-[#B4F22E]/20">
                             {post.category}
                           </span>
