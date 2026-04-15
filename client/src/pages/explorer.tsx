@@ -194,17 +194,17 @@ const SearchBar = ({ onSearchResults }: { onSearchResults: (results: any) => voi
           <p className="text-white/55 text-lg mb-10">
             Search transactions, addresses, blocks, and more across multiple chains
           </p>
-          <div className="relative max-w-2xl mx-auto flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-1.5 shadow-2xl">
-            <Search className="h-5 w-5 text-white/50 ml-2 flex-shrink-0" />
+          <div className="relative max-w-2xl mx-auto flex items-center gap-1.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg p-1 shadow-2xl">
+            <Search className="h-4 w-4 text-white/50 ml-2 flex-shrink-0" />
             <Input
               placeholder="Search BTC, ETH, SOL, BNB, TRON addresses or Txn Hash"
-              className="flex-1 border-0 bg-transparent focus-visible:ring-0 text-white placeholder:text-white/40"
+              className="flex-1 border-0 bg-transparent focus-visible:ring-0 text-white placeholder:text-white/40 h-8 text-sm"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
             />
-            <Button onClick={handleSearch} disabled={loading} className="px-6 rounded-lg bg-primary hover:bg-primary/90 text-black font-semibold flex-shrink-0">
-              {loading ? <Loader className="h-4 w-4 animate-spin" /> : 'Search'}
+            <Button onClick={handleSearch} disabled={loading} size="sm" className="px-5 rounded-md bg-primary hover:bg-primary/90 text-black font-semibold flex-shrink-0 h-8">
+              {loading ? <Loader className="h-3.5 w-3.5 animate-spin" /> : 'Search'}
             </Button>
           </div>
           {error && <p className="text-red-400 mt-3 text-sm">{error}</p>}
@@ -770,19 +770,6 @@ const Index = () => {
 
   return (
     <>
-      <style>{`
-        .explorer-wrapper { font-family: 'Inter', system-ui, sans-serif; }
-        .ticker-scroll { animation: ticker 60s linear infinite; will-change: transform; }
-        .ticker-scroll:hover { animation-play-state: paused; }
-        .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
-        .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-33.333%); } }
-        .container { width: 100%; max-width: 1400px; margin-left: auto; margin-right: auto; padding-left: 1.5rem; padding-right: 1.5rem; }
-        @media (max-width: 640px) { .container { padding-left: 1rem; padding-right: 1rem; } }
-      `}</style>
-
       <div className="min-h-screen flex flex-col explorer-wrapper bg-background overflow-x-hidden">
         <Header />
 
