@@ -578,7 +578,7 @@
 
 /* ── Explorer page ── */
 .explorer-wrapper {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 }
 .explorer-wrapper .container {
   width: 100%;
