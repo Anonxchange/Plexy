@@ -111,7 +111,7 @@ const PriceTicker = ({ coins }: { coins: LiveCoinData[] }) => {
   if (coins.length === 0) return null;
   const items = [...coins, ...coins, ...coins];
   return (
-    <div className="w-full overflow-hidden border-b border-border bg-card/60 backdrop-blur-sm py-3">
+    <div className="w-full overflow-hidden border-b border-border bg-card/60 backdrop-blur-sm py-3" style={{ contain: 'layout' }}>
       <div className="flex ticker-scroll">
         {items.map((item, index) => (
           <div key={`${item.symbol}-${index}`} className="flex items-center gap-3 px-5 border-r border-border/30 whitespace-nowrap">
@@ -783,7 +783,7 @@ const Index = () => {
         @media (max-width: 640px) { .container { padding-left: 1rem; padding-right: 1rem; } }
       `}</style>
 
-      <div className="min-h-screen flex flex-col explorer-wrapper bg-background">
+      <div className="min-h-screen flex flex-col explorer-wrapper bg-background overflow-x-hidden">
         <Header />
 
         <main className="flex-1">
