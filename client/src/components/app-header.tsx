@@ -2,15 +2,11 @@ import { useState, lazy, Suspense, memo, useCallback, useTransition } from "reac
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
-import {
-  Zap, Menu, ChevronDown, Globe, Search,
-  Bitcoin, ArrowDownToLine, CreditCard, Smartphone, Settings,
-  HelpCircle, MessageSquare, Users, TrendingUp, Gift, Plus, List,
-} from "lucide-react";
+import { Menu, ChevronDown, Globe, Search } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { PexlyIcon } from "@/components/pexly-icon";
 import { Link, useLocation } from "wouter";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +16,13 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth-context";
+import {
+  TradeMegaMenu,
+  WalletMegaMenu,
+  ShopMegaMenu,
+  EarnMegaMenu,
+  SupportMegaMenu,
+} from "@/components/nav-mega-dropdown";
 
 import { AppSidebar } from "./app-sidebar";
 const SymbolSelector = lazy(() => import("./trading/SymbolSelector"));
@@ -96,27 +99,11 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar }: { onOpenSid
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="start"
-                className="w-56"
+                className="w-[620px] p-4"
                 onPointerEnter={() => setActiveDropdown("trade")}
               >
-                <DropdownMenuItem onClick={() => { navigate("/buy-crypto"); setActiveDropdown(null); }} className="cursor-pointer">
-                  <div className="flex items-center justify-between w-full">
-                    <span>{t("trade.buy_crypto")}</span>
-                    <Badge variant="secondary" className="text-xs">LOW FEES</Badge>
-                  </div>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { navigate("/spot"); setActiveDropdown(null); }} className="cursor-pointer">
-                  {t("trade.spot_trading")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { navigate("/perpetual"); setActiveDropdown(null); }} className="cursor-pointer">
-                  {t("trade.perpetual")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { navigate("/swap"); setActiveDropdown(null); }} className="cursor-pointer">
-                  {t("trade.swap")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { navigate("/prediction"); setActiveDropdown(null); }} className="cursor-pointer">
-                  {t("trade.prediction")}
-                </DropdownMenuItem>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground pb-3">Trade</p>
+                <TradeMegaMenu onNavigate={navigate} onClose={() => setActiveDropdown(null)} />
               </DropdownMenuContent>
             </div>
           </DropdownMenu>
@@ -159,51 +146,11 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar }: { onOpenSid
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="start"
-                className="w-72"
+                className="w-[620px] p-4"
                 onPointerEnter={() => setActiveDropdown("wallet")}
               >
-                <DropdownMenuItem onClick={() => { navigate("/wallet"); setActiveDropdown(null); }} className="cursor-pointer h-auto py-3">
-                  <Bitcoin className="h-5 w-5 mr-3 flex-shrink-0" />
-                  <div className="flex flex-col">
-                    <span className="font-semibold">{t("wallet.assets")}</span>
-                    <span className="text-xs text-muted-foreground">{t("wallet.assets_desc")}</span>
-                  </div>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { navigate("/wallet/receive"); setActiveDropdown(null); }} className="cursor-pointer h-auto py-3">
-                  <ArrowDownToLine className="h-5 w-5 mr-3 flex-shrink-0" />
-                  <div className="flex flex-col">
-                    <span className="font-semibold">{t("wallet.receive")}</span>
-                    <span className="text-xs text-muted-foreground">{t("wallet.receive_desc")}</span>
-                  </div>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { navigate("/wallet/visa-card"); setActiveDropdown(null); }} className="cursor-pointer h-auto py-3">
-                  <CreditCard className="h-5 w-5 mr-3 flex-shrink-0" />
-                  <div className="flex flex-col">
-                    <span className="font-semibold">{t("wallet.visa_card")}</span>
-                    <span className="text-xs text-muted-foreground">{t("wallet.visa_card_desc")}</span>
-                  </div>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { navigate("/wallet/lightning"); setActiveDropdown(null); }} className="cursor-pointer h-auto py-3">
-                  <Zap className="h-5 w-5 mr-3 flex-shrink-0" />
-                  <div className="flex flex-col">
-                    <span className="font-semibold">{t("wallet.lightning")}</span>
-                    <span className="text-xs text-muted-foreground">{t("wallet.lightning_desc")}</span>
-                  </div>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { navigate("/wallet/mobile-topup"); setActiveDropdown(null); }} className="cursor-pointer h-auto py-3">
-                  <Smartphone className="h-5 w-5 mr-3 flex-shrink-0" />
-                  <div className="flex flex-col">
-                    <span className="font-semibold">{t("wallet.mobile_topup")}</span>
-                    <span className="text-xs text-muted-foreground">{t("wallet.mobile_topup_desc")}</span>
-                  </div>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { navigate("/utility"); setActiveDropdown(null); }} className="cursor-pointer h-auto py-3">
-                  <Settings className="h-5 w-5 mr-3 flex-shrink-0" />
-                  <div className="flex flex-col">
-                    <span className="font-semibold">{t("wallet.utility")}</span>
-                    <span className="text-xs text-muted-foreground">{t("wallet.utility_desc")}</span>
-                  </div>
-                </DropdownMenuItem>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground pb-3">Wallet</p>
+                <WalletMegaMenu onNavigate={navigate} onClose={() => setActiveDropdown(null)} />
               </DropdownMenuContent>
             </div>
           </DropdownMenu>
@@ -237,22 +184,11 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar }: { onOpenSid
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="start"
-                className="w-56"
+                className="w-[480px] p-4"
                 onPointerEnter={() => setActiveDropdown("shop")}
               >
-                <DropdownMenuItem onClick={() => { navigate("/shop"); setActiveDropdown(null); }} className="cursor-pointer">
-                  <List className="h-4 w-4 mr-2" />
-                  {t("shop.listings")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { navigate("/shop/post"); setActiveDropdown(null); }} className="cursor-pointer">
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center">
-                      <Plus className="h-4 w-4 mr-2" />
-                      <span className="font-semibold">{t("shop.post_ad")}</span>
-                    </div>
-                    <Badge variant="secondary" className="text-xs">FREE</Badge>
-                  </div>
-                </DropdownMenuItem>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground pb-3">Shop</p>
+                <ShopMegaMenu onNavigate={navigate} onClose={() => setActiveDropdown(null)} />
               </DropdownMenuContent>
             </div>
           </DropdownMenu>
@@ -275,26 +211,11 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar }: { onOpenSid
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="start"
-                className="w-56"
+                className="w-[520px] p-4"
                 onPointerEnter={() => setActiveDropdown("earn")}
               >
-                <DropdownMenuItem onClick={() => { navigate("/wallet/stake"); setActiveDropdown(null); }} className="cursor-pointer">
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center">
-                      <TrendingUp className="h-4 w-4 mr-2" />
-                      <span>{t("earn.stake")}</span>
-                    </div>
-                    <Badge variant="secondary" className="text-xs bg-red-500 text-white hover:bg-red-600 border-none animate-pulse">HOT</Badge>
-                  </div>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { navigate("/referral"); setActiveDropdown(null); }} className="cursor-pointer">
-                  <Users className="h-4 w-4 mr-2" />
-                  {t("earn.referral_program")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { navigate("/rewards"); setActiveDropdown(null); }} className="cursor-pointer">
-                  <Gift className="h-4 w-4 mr-2" />
-                  {t("earn.rewards")}
-                </DropdownMenuItem>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground pb-3">Earn</p>
+                <EarnMegaMenu onNavigate={navigate} onClose={() => setActiveDropdown(null)} />
               </DropdownMenuContent>
             </div>
           </DropdownMenu>
@@ -317,20 +238,11 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar }: { onOpenSid
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="start"
-                className="w-56"
+                className="w-[480px] p-4"
                 onPointerEnter={() => setActiveDropdown("support")}
               >
-                <DropdownMenuItem onClick={() => { navigate("/contact"); setActiveDropdown(null); }} className="cursor-pointer">
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  {t("support.contact_support")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => { window.open("https://help.pexly.app", "_blank"); setActiveDropdown(null); }}
-                  className="cursor-pointer"
-                >
-                  <HelpCircle className="h-4 w-4 mr-2" />
-                  {t("support.help_center")}
-                </DropdownMenuItem>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground pb-3">Support</p>
+                <SupportMegaMenu onNavigate={(href) => { if (href.startsWith('http')) window.open(href, '_blank'); else navigate(href); setActiveDropdown(null); }} onClose={() => setActiveDropdown(null)} />
               </DropdownMenuContent>
             </div>
           </DropdownMenu>
