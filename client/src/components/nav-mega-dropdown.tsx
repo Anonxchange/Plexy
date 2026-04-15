@@ -276,7 +276,7 @@ interface FeatureCard {
   sub: string;
   href: string;
   bg: string;              // gradient or solid bg class
-  illustration: React.ReactNode;
+  illustration?: React.ReactNode;
   badge?: string;
   badgeClass?: string;
 }
@@ -304,35 +304,20 @@ function Card({ card, onNavigate, onClose }: { card: FeatureCard; onNavigate: (h
         else onNavigate(card.href);
         onClose();
       }}
-      className={`group relative overflow-hidden rounded-2xl text-left h-[136px] w-full transition-all duration-200 hover:scale-[1.025] hover:shadow-2xl focus:outline-none ${card.bg}`}
+      className="group flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-accent focus:outline-none"
     >
-      {/* Illustration — top-right */}
-      <div className="absolute right-0 top-0 opacity-90 group-hover:scale-105 transition-transform duration-300 origin-top-right pointer-events-none select-none">
-        {card.illustration}
-      </div>
-
-      {/* Bottom-left text */}
-      <div className="absolute bottom-0 left-0 p-4">
-        <div className="flex items-center gap-2 mb-0.5">
-          <span className="text-white font-bold text-[15px] leading-tight drop-shadow">{card.label}</span>
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-foreground">{card.label}</span>
           {card.badge && (
-            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none ${card.badgeClass ?? "bg-white/20 text-white"}`}>
+            <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold leading-none ${card.badgeClass ?? "bg-primary/10 text-primary"}`}>
               {card.badge}
             </span>
           )}
         </div>
-        <span className="text-white/65 text-[11px] leading-snug block">{card.sub}</span>
+        <span className="mt-0.5 block truncate text-xs text-muted-foreground">{card.sub}</span>
       </div>
-
-      {/* Hover arrow */}
-      <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-        <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-          <ArrowRight className="h-3 w-3 text-white" />
-        </div>
-      </div>
-
-      {/* Subtle inner glow on hover */}
-      <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 ring-1 ring-inset ring-white/20" />
+      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
     </button>
   );
 }
@@ -341,20 +326,20 @@ function Card({ card, onNavigate, onClose }: { card: FeatureCard; onNavigate: (h
 export function MegaPanel({ cards, cols = 2, side, onNavigate, onClose }: MegaPanelProps) {
   const gridCols = cols === 3 ? "grid-cols-3" : "grid-cols-2";
   return (
-    <div className="flex gap-5">
-      <div className={`grid ${gridCols} gap-2.5 flex-1`}>
+    <div className="flex gap-4">
+      <div className={`grid ${gridCols} flex-1 gap-1`}>
         {cards.map((c) => (
           <Card key={c.href} card={c} onNavigate={onNavigate} onClose={onClose} />
         ))}
       </div>
 
       {side && side.length > 0 && (
-        <div className="border-l border-border/40 pl-5 min-w-[148px] flex flex-col justify-between">
-          <div className="flex flex-col gap-5">
+        <div className="min-w-[148px] border-l border-border/40 pl-4">
+          <div className="flex flex-col gap-4">
             {side.map((sec) => (
               <div key={sec.heading}>
-                <p className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground mb-2.5">{sec.heading}</p>
-                <ul className="space-y-1.5">
+                <p className="mb-2 text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">{sec.heading}</p>
+                <ul className="space-y-1">
                   {sec.links.map((link) => (
                     <li key={link.label}>
                       <button
@@ -363,7 +348,7 @@ export function MegaPanel({ cards, cols = 2, side, onNavigate, onClose }: MegaPa
                           else onNavigate(link.href);
                           onClose();
                         }}
-                        className="text-[13px] font-medium text-foreground hover:text-primary transition-colors text-left w-full"
+                        className="w-full text-left text-xs font-medium text-foreground transition-colors hover:text-primary"
                       >
                         {link.label}
                       </button>
@@ -423,25 +408,7 @@ export function TradeMegaMenu({ onNavigate, onClose }: { onNavigate: (h: string)
     },
   ];
 
-  const side: SideSection[] = [
-    {
-      heading: "Markets",
-      links: [
-        { label: "Live Prices", href: "/markets" },
-        { label: "Explorer", href: "/explorer" },
-        { label: "Analysis", href: "/analysis" },
-      ],
-    },
-    {
-      heading: "Learn",
-      links: [
-        { label: "Blog", href: "/blog" },
-        { label: "Help Center", href: "https://help.pexly.app", external: true },
-      ],
-    },
-  ];
-
-  return <MegaPanel cards={cards} cols={2} side={side} onNavigate={onNavigate} onClose={onClose} />;
+  return <MegaPanel cards={cards} cols={2} onNavigate={onNavigate} onClose={onClose} />;
 }
 
 export function WalletMegaMenu({ onNavigate, onClose }: { onNavigate: (h: string) => void; onClose: () => void }) {
@@ -491,18 +458,7 @@ export function WalletMegaMenu({ onNavigate, onClose }: { onNavigate: (h: string
     },
   ];
 
-  const side: SideSection[] = [
-    {
-      heading: "Quick Access",
-      links: [
-        { label: "Transaction History", href: "/wallet" },
-        { label: "Security", href: "/settings" },
-        { label: "Whitelist", href: "/settings" },
-      ],
-    },
-  ];
-
-  return <MegaPanel cards={cards} cols={2} side={side} onNavigate={onNavigate} onClose={onClose} />;
+  return <MegaPanel cards={cards} cols={2} onNavigate={onNavigate} onClose={onClose} />;
 }
 
 export function ShopMegaMenu({ onNavigate, onClose }: { onNavigate: (h: string) => void; onClose: () => void }) {
