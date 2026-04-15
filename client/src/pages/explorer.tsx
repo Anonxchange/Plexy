@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Menu, X, TrendingUp, TrendingDown, Box, ArrowRightLeft, ArrowRight, Github, Twitter, Database, Loader } from "lucide-react";
+import { Search, Menu, X, TrendingUp, TrendingDown, Box, ArrowRightLeft, ArrowRight, Github, Twitter, Database, Loader, Zap, Activity } from "lucide-react";
 import { PexlyIcon } from "@/components/pexly-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,7 +45,7 @@ const Header = () => {
   const currentChain = getBlockchain();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-card/80 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl">
       <div className="container flex h-16 items-center justify-between">
         <a href="/" className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
@@ -58,12 +58,12 @@ const Header = () => {
           {navLinks.map((link) => (
             link.href.startsWith('/') ? (
               <Link key={link.name} href={link.href}>
-                <span className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-secondary cursor-pointer">
+                <span className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-muted cursor-pointer">
                   {link.name}
                 </span>
               </Link>
             ) : (
-              <a key={link.name} href={link.href} className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-secondary">
+              <a key={link.name} href={link.href} className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-muted">
                 {link.name}
               </a>
             )
@@ -71,13 +71,12 @@ const Header = () => {
         </nav>
 
         <div className="flex items-center gap-3">
-          <div className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg border border-border/50">
-            <span className="text-xs text-muted-foreground">Chain:</span>
-            <Button variant={currentChain === 'BTC' ? 'default' : 'ghost'} size="sm" className="h-7 px-2" onClick={() => { setBlockchain('BTC'); window.location.reload(); }}>BTC</Button>
-            <Button variant={currentChain === 'ETH' ? 'default' : 'ghost'} size="sm" className="h-7 px-2" onClick={() => { setBlockchain('ETH'); window.location.reload(); }}>ETH</Button>
+          <div className="hidden md:flex items-center gap-1 px-2 py-1.5 rounded-lg border border-border bg-muted/40">
+            <span className="text-xs text-muted-foreground px-1">Chain:</span>
+            <Button variant={currentChain === 'BTC' ? 'default' : 'ghost'} size="sm" className="h-7 px-2.5 text-xs" onClick={() => { setBlockchain('BTC'); window.location.reload(); }}>BTC</Button>
+            <Button variant={currentChain === 'ETH' ? 'default' : 'ghost'} size="sm" className="h-7 px-2.5 text-xs" onClick={() => { setBlockchain('ETH'); window.location.reload(); }}>ETH</Button>
           </div>
-          <Button variant="outline" size="icon" className="hidden md:flex"><Search className="h-4 w-4" /></Button>
-          <Button variant="default" className="hidden md:flex">Connect Wallet</Button>
+          <Button variant="default" className="hidden md:flex h-9 text-sm">Connect Wallet</Button>
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileOpen(!mobileOpen)}>
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
@@ -85,17 +84,17 @@ const Header = () => {
       </div>
 
       {mobileOpen && (
-        <div className="md:hidden border-t border-border bg-card animate-slide-up">
-          <nav className="container py-4 flex flex-col gap-2">
+        <div className="md:hidden border-t border-border bg-background animate-slide-up">
+          <nav className="container py-4 flex flex-col gap-1">
             {navLinks.map((link) => (
               link.href.startsWith('/') ? (
                 <Link key={link.name} href={link.href}>
-                  <span className="px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-secondary block cursor-pointer" onClick={() => setMobileOpen(false)}>
+                  <span className="px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-muted block cursor-pointer" onClick={() => setMobileOpen(false)}>
                     {link.name}
                   </span>
                 </Link>
               ) : (
-                <a key={link.name} href={link.href} className="px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-secondary" onClick={() => setMobileOpen(false)}>
+                <a key={link.name} href={link.href} className="px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-muted" onClick={() => setMobileOpen(false)}>
                   {link.name}
                 </a>
               )
@@ -112,16 +111,15 @@ const PriceTicker = ({ coins }: { coins: LiveCoinData[] }) => {
   if (coins.length === 0) return null;
   const items = [...coins, ...coins, ...coins];
   return (
-    <div className="w-full overflow-hidden border-b border-border bg-white dark:bg-gray-800 py-4 shadow-sm">
+    <div className="w-full overflow-hidden border-b border-border bg-card/60 backdrop-blur-sm py-3">
       <div className="flex ticker-scroll">
         {items.map((item, index) => (
-          <div key={`${item.symbol}-${index}`} className="flex items-center gap-4 px-6 border-r border-border/20 whitespace-nowrap">
-            <span className="font-semibold text-foreground">{item.symbol}</span>
-            <span className="text-muted-foreground text-sm">{item.name}</span>
-            <span className="font-medium text-foreground">
+          <div key={`${item.symbol}-${index}`} className="flex items-center gap-3 px-5 border-r border-border/30 whitespace-nowrap">
+            <span className="font-semibold text-sm text-foreground">{item.symbol}</span>
+            <span className="font-medium text-sm text-foreground">
               ${item.price > 0 ? item.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: item.price < 1 ? 4 : 2 }) : '—'}
             </span>
-            <span className={`flex items-center gap-1 font-medium ${item.change24h >= 0 ? 'text-success' : 'text-destructive'}`}>
+            <span className={`flex items-center gap-0.5 text-xs font-medium ${item.change24h >= 0 ? 'text-[#B4F22E]' : 'text-destructive'}`}>
               {item.change24h >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
               {item.change24h >= 0 ? '+' : ''}{item.change24h.toFixed(2)}%
             </span>
@@ -168,10 +166,10 @@ const SearchBar = ({ onSearchResults }: { onSearchResults: (results: any) => voi
           if (data) navigate(`/explorer/address/${query.trim()}`);
           else setError('Address not found');
         } else {
-          setError(`Detected ${chain} address. Pexly Explorer currently supports Bitcoin. Multi-chain support is coming soon!`);
+          setError(`Detected ${chain} address. Pexly Explorer currently supports Bitcoin. Multi-chain support coming soon!`);
         }
       } else {
-        setError('Invalid search query. Please enter a valid block hash, transaction hash, or address');
+        setError('Invalid search query. Please enter a valid block hash, transaction hash, or address.');
       }
     } catch (err: any) {
       setError(`Search error: ${err.message}`);
@@ -181,29 +179,35 @@ const SearchBar = ({ onSearchResults }: { onSearchResults: (results: any) => voi
   };
 
   return (
-    <section className="py-12 md:py-16 bg-gray-100 dark:bg-gray-900">
-      <div className="container">
+    <section className="relative overflow-hidden rounded-b-[2.5rem] md:rounded-b-[3.5rem]" style={{ background: "linear-gradient(135deg, #0a0a0a 0%, #0f1208 50%, #0a1400 100%)" }}>
+      {/* Ambient glows */}
+      <div className="pointer-events-none absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-[#B4F22E]/10 blur-3xl -translate-y-1/2 translate-x-1/4" />
+      <div className="pointer-events-none absolute bottom-0 left-1/4 w-80 h-80 rounded-full bg-[#B4F22E]/6 blur-3xl" />
+      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
+      <div className="relative z-10 container py-16 md:py-20">
         <div className="max-w-3xl mx-auto text-center animate-fade-in">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
-            Explore the <span className="gradient-text">Blockchain</span>
+          <p className="text-[#B4F22E]/70 text-xs font-semibold uppercase tracking-widest mb-4">Pexly Explorer</p>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight">
+            Explore the Blockchain
           </h1>
-          <p className="text-lg text-muted-foreground mb-8">
+          <p className="text-white/55 text-lg mb-10">
             Search transactions, addresses, blocks, and more across multiple chains
           </p>
-          <div className="relative max-w-2xl mx-auto flex items-center gap-2 bg-white dark:bg-gray-800 rounded-lg p-1 shadow-md">
-            <Search className="h-5 w-5 text-muted-foreground ml-3" />
+          <div className="relative max-w-2xl mx-auto flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-1.5 shadow-2xl">
+            <Search className="h-5 w-5 text-white/50 ml-2 flex-shrink-0" />
             <Input
               placeholder="Search BTC, ETH, SOL, BNB, TRON addresses or Txn Hash"
-              className="flex-1 border-0 bg-transparent focus-visible:ring-0"
+              className="flex-1 border-0 bg-transparent focus-visible:ring-0 text-white placeholder:text-white/40"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
             />
-            <Button onClick={handleSearch} disabled={loading} className="px-8 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
+            <Button onClick={handleSearch} disabled={loading} className="px-6 rounded-lg bg-primary hover:bg-primary/90 text-black font-semibold flex-shrink-0">
               {loading ? <Loader className="h-4 w-4 animate-spin" /> : 'Search'}
             </Button>
           </div>
-          {error && <p className="text-destructive mt-3 text-sm">{error}</p>}
+          {error && <p className="text-red-400 mt-3 text-sm">{error}</p>}
         </div>
       </div>
     </section>
@@ -220,32 +224,32 @@ const CryptoCard = ({ name, symbol, price, change24h, chartData, color, icon }: 
     ? `$${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     : '—';
   const formattedChange = price > 0 ? `${isPositive ? '+' : ''}${change24h.toFixed(2)}%` : '—';
-  const changeValue = price > 0 ? `${Math.abs(price * change24h / 100).toLocaleString('en-US', { maximumFractionDigits: 2 })}` : '';
 
   return (
-    <Card className="overflow-hidden hover:border-primary/50 transition-colors cursor-pointer">
+    <Card className="overflow-hidden border-border hover:border-primary/40 transition-all duration-200 hover:shadow-lg hover:shadow-primary/5">
       <CardContent className="p-0">
         <div className="p-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {iconUrl ? (
-              <img src={iconUrl} alt={symbol} className="w-12 h-12 rounded-full" />
+              <img src={iconUrl} alt={symbol} className="w-11 h-11 rounded-full" />
             ) : (
-              <div className={`w-12 h-12 rounded-full ${color} flex items-center justify-center text-white text-xl font-bold`}>
+              <div className={`w-11 h-11 rounded-full ${color} flex items-center justify-center text-white text-lg font-bold`}>
                 {icon}
               </div>
             )}
             <div>
-              <span className="font-bold text-lg">{name}</span>
+              <span className="font-bold text-base text-foreground">{name}</span>
               <span className="text-muted-foreground text-sm ml-2">{symbol}</span>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <span className="font-bold text-xl">{formattedPrice}</span>
-            <span className={`text-sm font-medium ${isPositive ? 'text-success' : 'text-destructive'}`}>{formattedChange}</span>
-            <ArrowRight className="h-5 w-5 text-muted-foreground" />
+            <span className="font-bold text-xl text-foreground">{formattedPrice}</span>
+            <span className={`text-sm font-semibold px-2.5 py-1 rounded-full ${isPositive ? 'bg-[#B4F22E]/15 text-[#B4F22E]' : 'bg-destructive/10 text-destructive'}`}>
+              {formattedChange}
+            </span>
           </div>
         </div>
-        <div className="h-40 w-full bg-white dark:bg-gray-800 p-4">
+        <div className="h-40 w-full bg-muted/20 px-2 pb-2">
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
@@ -273,34 +277,45 @@ const CryptoCard = ({ name, symbol, price, change24h, chartData, color, icon }: 
 };
 
 const NetworkStatsGrid = ({ stats, chartData }: { stats: LiveNetworkStat[]; chartData: { value: number }[] }) => (
-  <Card className="overflow-hidden">
+  <Card className="overflow-hidden border-border">
+    <CardHeader className="pb-0 border-b border-border">
+      <div className="flex items-center gap-2 pb-4">
+        <div className="w-8 h-8 rounded-lg bg-[#B4F22E]/15 flex items-center justify-center">
+          <Activity className="h-4 w-4 text-[#B4F22E]" />
+        </div>
+        <div>
+          <CardTitle className="text-base">Network Stats</CardTitle>
+          <p className="text-xs text-muted-foreground">Live Bitcoin network data</p>
+        </div>
+      </div>
+    </CardHeader>
     <CardContent className="p-0">
-      <div className="h-40 w-full bg-gradient-to-b from-success/20 to-transparent relative">
+      <div className="h-36 w-full relative bg-gradient-to-b from-[#B4F22E]/10 to-transparent">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData.length > 0 ? chartData : [{ value: 0 }]} margin={{ top: 20, right: 0, left: 0, bottom: 0 }}>
+          <AreaChart data={chartData.length > 0 ? chartData : [{ value: 0 }]} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="networkGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(var(--success))" stopOpacity={0.4} />
-                <stop offset="100%" stopColor="hsl(var(--success))" stopOpacity={0} />
+                <stop offset="0%" stopColor="#B4F22E" stopOpacity={0.4} />
+                <stop offset="100%" stopColor="#B4F22E" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <Area type="monotone" dataKey="value" stroke="hsl(var(--success))" strokeWidth={2} fill="url(#networkGradient)" />
+            <Area type="monotone" dataKey="value" stroke="#B4F22E" strokeWidth={2} fill="url(#networkGradient)" />
           </AreaChart>
         </ResponsiveContainer>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-px bg-border">
         {stats.length > 0 ? stats.map((stat) => (
-          <div key={stat.label} className="bg-card p-4 hover:bg-secondary/50 transition-colors">
-            <p className="text-2xl font-bold">{stat.value}</p>
-            <p className="text-sm text-muted-foreground">
+          <div key={stat.label} className="bg-card p-4 hover:bg-muted/40 transition-colors">
+            <p className="text-xl font-bold text-foreground">{stat.value}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
               {stat.label}
-              {stat.sub && <span className="ml-1">• {stat.sub}</span>}
+              {stat.sub && <span className="ml-1">· {stat.sub}</span>}
             </p>
           </div>
         )) : Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="bg-card p-4">
-            <div className="h-8 w-24 bg-muted/50 rounded animate-pulse mb-2" />
-            <div className="h-4 w-32 bg-muted/30 rounded animate-pulse" />
+            <div className="h-6 w-20 bg-muted/50 rounded animate-pulse mb-2" />
+            <div className="h-3 w-28 bg-muted/30 rounded animate-pulse" />
           </div>
         ))}
       </div>
@@ -309,21 +324,25 @@ const NetworkStatsGrid = ({ stats, chartData }: { stats: LiveNetworkStat[]; char
 );
 
 const HashrateChart = ({ distribution }: { distribution: PoolEntry[] }) => (
-  <Card>
-    <CardHeader className="flex-row items-center justify-between">
-      <div>
-        <CardTitle>Charts</CardTitle>
-        <p className="text-sm text-muted-foreground">Bitcoin Hashrate Distribution (7d)</p>
+  <Card className="border-border hover:border-border/80 transition-colors">
+    <CardHeader className="flex-row items-center justify-between border-b border-border">
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center">
+          <Database className="h-4 w-4 text-purple-500" />
+        </div>
+        <div>
+          <CardTitle className="text-base">Hashrate Distribution</CardTitle>
+          <p className="text-xs text-muted-foreground">Bitcoin — 7 day average</p>
+        </div>
       </div>
-      <ArrowRight className="h-5 w-5 text-muted-foreground" />
     </CardHeader>
-    <CardContent>
+    <CardContent className="pt-6">
       {distribution.length > 0 ? (
         <div className="flex flex-col items-center">
-          <div className="w-64 h-64">
+          <div className="w-56 h-56">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={distribution} cx="50%" cy="50%" innerRadius={0} outerRadius={100} paddingAngle={1} dataKey="value">
+                <Pie data={distribution} cx="50%" cy="50%" innerRadius={45} outerRadius={100} paddingAngle={2} dataKey="value">
                   {distribution.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
@@ -331,17 +350,17 @@ const HashrateChart = ({ distribution }: { distribution: PoolEntry[] }) => (
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="flex flex-wrap justify-center gap-3 mt-4">
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-4">
             {distribution.map((item) => (
               <div key={item.name} className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                <span className="text-xs text-muted-foreground">{item.name} {item.value}%</span>
+                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                <span className="text-xs text-muted-foreground">{item.name} <span className="font-medium text-foreground">{item.value}%</span></span>
               </div>
             ))}
           </div>
         </div>
       ) : (
-        <div className="flex justify-center items-center h-64">
+        <div className="flex justify-center items-center h-56">
           <Loader className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       )}
@@ -350,75 +369,84 @@ const HashrateChart = ({ distribution }: { distribution: PoolEntry[] }) => (
 );
 
 const QuickStats = ({ fastestFee, pendingCount }: { fastestFee: number; pendingCount: number }) => (
-  <Card className="border-0 bg-transparent shadow-none">
-    <CardContent className="p-0 flex items-center gap-8">
-      <div className="flex items-center gap-2">
-        <span className="text-2xl font-bold">
-          {fastestFee > 0 ? `${fastestFee} sat/vB` : '—'}
-        </span>
-        <span className="text-muted-foreground text-sm">Fastest Fee</span>
+  <div className="flex flex-wrap items-center gap-6 md:gap-10">
+    <div className="flex items-center gap-3">
+      <div className="w-9 h-9 rounded-xl bg-[#B4F22E]/15 flex items-center justify-center flex-shrink-0">
+        <Zap className="h-4 w-4 text-[#B4F22E]" />
       </div>
-      <div className="flex items-center gap-2">
-        <span className="text-2xl font-bold">
-          {pendingCount > 0 ? pendingCount.toLocaleString() : '—'}
-        </span>
-        <a href="/explorer/transactions" className="text-muted-foreground text-sm underline hover:text-foreground">Pending Transactions</a>
+      <div>
+        <p className="text-xl font-bold text-foreground">{fastestFee > 0 ? `${fastestFee} sat/vB` : '—'}</p>
+        <p className="text-xs text-muted-foreground">Fastest Fee</p>
       </div>
-    </CardContent>
-  </Card>
+    </div>
+    <div className="w-px h-10 bg-border hidden md:block" />
+    <div className="flex items-center gap-3">
+      <div className="w-9 h-9 rounded-xl bg-orange-500/15 flex items-center justify-center flex-shrink-0">
+        <ArrowRightLeft className="h-4 w-4 text-orange-500" />
+      </div>
+      <div>
+        <p className="text-xl font-bold text-foreground">{pendingCount > 0 ? pendingCount.toLocaleString() : '—'}</p>
+        <a href="/explorer/transactions" className="text-xs text-muted-foreground hover:text-primary transition-colors">Pending Transactions</a>
+      </div>
+    </div>
+  </div>
 );
 
 const PriceBarsChart = ({ coins }: { coins: LiveCoinData[] }) => (
-  <Card>
-    <CardHeader className="flex-row items-center justify-between">
-      <div>
-        <CardTitle>Prices</CardTitle>
-        <p className="text-sm text-muted-foreground">Live Market Data</p>
+  <Card className="border-border">
+    <CardHeader className="flex-row items-center justify-between border-b border-border">
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center">
+          <TrendingUp className="h-4 w-4 text-primary" />
+        </div>
+        <div>
+          <CardTitle className="text-base">Live Prices</CardTitle>
+          <p className="text-xs text-muted-foreground">Real-time market data</p>
+        </div>
       </div>
-      <ArrowRight className="h-5 w-5 text-muted-foreground" />
+      <Link href="/explorer/prices">
+        <span className="text-xs text-muted-foreground hover:text-primary transition-colors cursor-pointer flex items-center gap-1">
+          View all <ArrowRight className="h-3 w-3" />
+        </span>
+      </Link>
     </CardHeader>
     <CardContent className="p-0">
       {coins.length > 0 ? (
-        <div className="space-y-0">
+        <div>
           {coins.map((coin) => {
             const iconUrl = cryptoIconUrls[coin.symbol as keyof typeof cryptoIconUrls] || '';
             const isPositive = coin.change24h >= 0;
             return (
-              <div key={coin.symbol} className="flex items-center justify-between p-4 border-b border-border last:border-0 hover:bg-secondary/50 transition-colors">
+              <div key={coin.symbol} className="flex items-center justify-between px-5 py-3.5 border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                 <div className="flex items-center gap-3 flex-1">
                   {iconUrl ? (
-                    <img src={iconUrl} alt={coin.symbol} className="w-10 h-10 rounded-full" />
+                    <img src={iconUrl} alt={coin.symbol} className="w-9 h-9 rounded-full" />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-primary/30 flex items-center justify-center text-sm font-bold">
+                    <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">
                       {coin.symbol[0]}
                     </div>
                   )}
                   <div>
-                    <p className="font-semibold text-sm">{coin.name}</p>
+                    <p className="font-semibold text-sm text-foreground">{coin.name}</p>
                     <p className="text-xs text-muted-foreground">{coin.symbol}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <span className="font-bold text-sm min-w-24 text-right">
+                <div className="flex items-center gap-3">
+                  <span className="font-bold text-sm text-foreground min-w-[90px] text-right">
                     {coin.price > 0
-                      ? (coin.price < 10
-                        ? `$${coin.price.toFixed(4)}`
-                        : `$${coin.price.toLocaleString('en-US', { maximumFractionDigits: 2 })}`)
+                      ? (coin.price < 10 ? `$${coin.price.toFixed(4)}` : `$${coin.price.toLocaleString('en-US', { maximumFractionDigits: 2 })}`)
                       : '—'}
                   </span>
-                  <span className={`text-sm font-medium min-w-16 text-right ${isPositive ? 'text-success' : 'text-destructive'}`}>
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full min-w-[60px] text-center ${isPositive ? 'bg-[#B4F22E]/15 text-[#B4F22E]' : 'bg-destructive/10 text-destructive'}`}>
                     {coin.price > 0 ? `${isPositive ? '+' : ''}${coin.change24h.toFixed(2)}%` : '—'}
                   </span>
-                  <div className="w-8 h-8 rounded-full bg-secondary/50 flex items-center justify-center">
-                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                  </div>
                 </div>
               </div>
             );
           })}
         </div>
       ) : (
-        <div className="p-8 flex justify-center">
+        <div className="p-10 flex justify-center">
           <Loader className="h-6 w-6 animate-spin text-primary" />
         </div>
       )}
@@ -427,37 +455,46 @@ const PriceBarsChart = ({ coins }: { coins: LiveCoinData[] }) => (
 );
 
 const LatestBlocksSection = ({ blocks }: { blocks: FormattedBlock[] }) => (
-  <Card className="h-full">
+  <Card className="h-full border-border">
     <CardHeader className="flex-row items-center justify-between border-b border-border">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold">₿</div>
+        <div className="w-9 h-9 rounded-xl bg-orange-500/15 flex items-center justify-center">
+          <Box className="h-4 w-4 text-orange-500" />
+        </div>
         <div>
-          <CardTitle>Latest Blocks</CardTitle>
-          <p className="text-sm text-muted-foreground">Bitcoin</p>
+          <CardTitle className="text-base">Latest Blocks</CardTitle>
+          <p className="text-xs text-muted-foreground">Bitcoin</p>
         </div>
       </div>
-      <ArrowRight className="h-5 w-5 text-muted-foreground" />
+      <Link href="/explorer/blocks">
+        <span className="text-xs text-muted-foreground hover:text-primary transition-colors cursor-pointer flex items-center gap-1">
+          View all <ArrowRight className="h-3 w-3" />
+        </span>
+      </Link>
     </CardHeader>
     <CardContent className="p-0">
       {blocks.length > 0 ? blocks.map((block, index) => (
-        <div key={block.number || index} className="flex items-center gap-4 p-4 border-b border-border last:border-0 hover:bg-secondary/50 transition-colors">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-200 to-orange-100 flex items-center justify-center">
-            <Box className="h-5 w-5 text-orange-600" />
+        <div key={block.number || index} className="flex items-center gap-4 px-5 py-3.5 border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+          <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center flex-shrink-0">
+            <Box className="h-4 w-4 text-orange-500" />
           </div>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <Link href={`/explorer/block/${block.number || block.hash}`}>
-              <p className="font-bold text-primary hover:underline cursor-pointer">{block.number}</p>
+              <p className="font-bold text-primary hover:underline cursor-pointer text-sm">{block.number}</p>
             </Link>
-            <p className="text-sm text-muted-foreground">{block.date} • {block.time}</p>
-            <p className="text-sm text-muted-foreground">{typeof block.txns === 'number' ? block.txns.toLocaleString() : block.txns} Txs • {block.size}</p>
+            <p className="text-xs text-muted-foreground">{block.date} · {block.time}</p>
+          </div>
+          <div className="text-right flex-shrink-0">
+            <p className="text-sm font-medium text-foreground">{typeof block.txns === 'number' ? block.txns.toLocaleString() : block.txns} txns</p>
+            <p className="text-xs text-muted-foreground">{block.size}</p>
           </div>
         </div>
       )) : Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-4 p-4 border-b border-border last:border-0">
-          <div className="w-12 h-12 rounded-xl bg-muted/30 animate-pulse" />
-          <div className="flex-1 space-y-2">
-            <div className="h-4 w-20 bg-muted/50 rounded animate-pulse" />
-            <div className="h-3 w-40 bg-muted/30 rounded animate-pulse" />
+        <div key={i} className="flex items-center gap-4 px-5 py-3.5 border-b border-border last:border-0">
+          <div className="w-10 h-10 rounded-xl bg-muted/30 animate-pulse flex-shrink-0" />
+          <div className="flex-1 space-y-1.5">
+            <div className="h-3.5 w-16 bg-muted/50 rounded animate-pulse" />
+            <div className="h-3 w-32 bg-muted/30 rounded animate-pulse" />
           </div>
         </div>
       ))}
@@ -468,60 +505,58 @@ const LatestBlocksSection = ({ blocks }: { blocks: FormattedBlock[] }) => (
 const SearchResultsSection = ({ results }: { results: any }) => {
   if (!results) return null;
   return (
-    <Card className="border-success/50 bg-success/5">
-      <CardHeader className="flex-row items-center justify-between border-b">
+    <Card className="border-[#B4F22E]/30 bg-[#B4F22E]/5">
+      <CardHeader className="flex-row items-center justify-between border-b border-[#B4F22E]/20">
         <CardTitle className="flex items-center gap-2">
-          <Database className="h-5 w-5 text-success" />
+          <Database className="h-5 w-5 text-[#B4F22E]" />
           Search Results
         </CardTitle>
-        <span className="text-sm font-medium text-success">{results.type}</span>
+        <span className="text-sm font-medium text-[#B4F22E] px-2.5 py-0.5 rounded-full bg-[#B4F22E]/15">{results.type}</span>
       </CardHeader>
       <CardContent className="pt-6">
         {results.type === 'block' && results.data && (
-          <div className="space-y-3">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm text-muted-foreground">Block Hash</p>
-                <Link href={`/explorer/block/${results.data.hash}`}>
-                  <code className="text-primary font-mono text-sm break-all hover:underline cursor-pointer">{results.data.hash}</code>
-                </Link>
-              </div>
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Block Hash</p>
+              <Link href={`/explorer/block/${results.data.hash}`}>
+                <code className="text-primary font-mono text-sm break-all hover:underline cursor-pointer">{results.data.hash}</code>
+              </Link>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div><p className="text-sm text-muted-foreground">Height</p><p className="font-bold text-lg">{results.data.height}</p></div>
-              <div><p className="text-sm text-muted-foreground">Transactions</p><p className="font-bold text-lg">{results.data.n_tx || 0}</p></div>
-              <div><p className="text-sm text-muted-foreground">Size</p><p className="font-bold text-lg">{((results.data.size || 0) / 1024).toFixed(2)} KB</p></div>
-              <div><p className="text-sm text-muted-foreground">Time</p><p className="font-bold text-sm">{formatTimestamp(results.data.time)}</p></div>
+              <div><p className="text-xs text-muted-foreground mb-0.5">Height</p><p className="font-bold">{results.data.height}</p></div>
+              <div><p className="text-xs text-muted-foreground mb-0.5">Transactions</p><p className="font-bold">{results.data.n_tx || 0}</p></div>
+              <div><p className="text-xs text-muted-foreground mb-0.5">Size</p><p className="font-bold">{((results.data.size || 0) / 1024).toFixed(2)} KB</p></div>
+              <div><p className="text-xs text-muted-foreground mb-0.5">Time</p><p className="font-bold text-sm">{formatTimestamp(results.data.time)}</p></div>
             </div>
           </div>
         )}
         {results.type === 'transaction' && results.data && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div>
-              <p className="text-sm text-muted-foreground">Transaction Hash</p>
+              <p className="text-xs text-muted-foreground mb-1">Transaction Hash</p>
               <Link href={`/explorer/transaction/${results.data.hash}`}>
                 <code className="text-primary font-mono text-sm break-all hover:underline cursor-pointer">{results.data.hash}</code>
               </Link>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div><p className="text-sm text-muted-foreground">Inputs</p><p className="font-bold text-lg">{results.data.inputs?.length || 0}</p></div>
-              <div><p className="text-sm text-muted-foreground">Outputs</p><p className="font-bold text-lg">{results.data.out?.length || 0}</p></div>
-              <div><p className="text-sm text-muted-foreground">Total</p><p className="font-bold text-lg">{(results.data.total / 100000000).toFixed(8)} BTC</p></div>
-              <div><p className="text-sm text-muted-foreground">Block Height</p><p className="font-bold text-lg">{results.data.block_height || 'N/A'}</p></div>
+              <div><p className="text-xs text-muted-foreground mb-0.5">Inputs</p><p className="font-bold">{results.data.inputs?.length || 0}</p></div>
+              <div><p className="text-xs text-muted-foreground mb-0.5">Outputs</p><p className="font-bold">{results.data.out?.length || 0}</p></div>
+              <div><p className="text-xs text-muted-foreground mb-0.5">Total</p><p className="font-bold">{(results.data.total / 100000000).toFixed(8)} BTC</p></div>
+              <div><p className="text-xs text-muted-foreground mb-0.5">Block Height</p><p className="font-bold">{results.data.block_height || 'N/A'}</p></div>
             </div>
           </div>
         )}
         {results.type === 'address' && results.data && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div>
-              <p className="text-sm text-muted-foreground">Address</p>
+              <p className="text-xs text-muted-foreground mb-1">Address</p>
               <code className="text-primary font-mono text-sm break-all">{results.data.address}</code>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div><p className="text-sm text-muted-foreground">Transactions</p><p className="font-bold text-lg">{results.data.n_tx || 0}</p></div>
-              <div><p className="text-sm text-muted-foreground">Total Received</p><p className="font-bold text-lg">{(results.data.total_received / 100000000).toFixed(4)} BTC</p></div>
-              <div><p className="text-sm text-muted-foreground">Total Sent</p><p className="font-bold text-lg">{(results.data.total_sent / 100000000).toFixed(4)} BTC</p></div>
-              <div><p className="text-sm text-muted-foreground">Balance</p><p className="font-bold text-lg text-success">{(results.data.final_balance / 100000000).toFixed(8)} BTC</p></div>
+              <div><p className="text-xs text-muted-foreground mb-0.5">Transactions</p><p className="font-bold">{results.data.n_tx || 0}</p></div>
+              <div><p className="text-xs text-muted-foreground mb-0.5">Total Received</p><p className="font-bold">{(results.data.total_received / 100000000).toFixed(4)} BTC</p></div>
+              <div><p className="text-xs text-muted-foreground mb-0.5">Total Sent</p><p className="font-bold">{(results.data.total_sent / 100000000).toFixed(4)} BTC</p></div>
+              <div><p className="text-xs text-muted-foreground mb-0.5">Balance</p><p className="font-bold text-[#B4F22E]">{(results.data.final_balance / 100000000).toFixed(8)} BTC</p></div>
             </div>
           </div>
         )}
@@ -546,13 +581,13 @@ const LatestTransactionsSection = ({ initialTxns = [] }: { initialTxns?: any[] }
               if (timeVal > 1000000000) {
                 const now = Math.floor(Date.now() / 1000);
                 const diff = now - timeVal;
-                if (diff < 60) timeStr = `${Math.max(0, diff)} secs ago`;
-                else if (diff < 3600) timeStr = `${Math.floor(diff / 60)} mins ago`;
-                else timeStr = `${Math.floor(diff / 3600)} hrs ago`;
+                if (diff < 60) timeStr = `${Math.max(0, diff)}s ago`;
+                else if (diff < 3600) timeStr = `${Math.floor(diff / 60)}m ago`;
+                else timeStr = `${Math.floor(diff / 3600)}h ago`;
               } else {
-                if (timeVal < 60) timeStr = `${timeVal} secs ago`;
-                else if (timeVal < 3600) timeStr = `${Math.floor(timeVal / 60)} mins ago`;
-                else timeStr = `${Math.floor(timeVal / 3600)} hrs ago`;
+                if (timeVal < 60) timeStr = `${timeVal}s ago`;
+                else if (timeVal < 3600) timeStr = `${Math.floor(timeVal / 60)}m ago`;
+                else timeStr = `${Math.floor(timeVal / 3600)}h ago`;
               }
             }
             return {
@@ -579,43 +614,42 @@ const LatestTransactionsSection = ({ initialTxns = [] }: { initialTxns?: any[] }
   }, []);
 
   return (
-    <Card className="h-full">
+    <Card className="h-full border-border">
       <CardHeader className="flex-row items-center justify-between border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold">
-            <ArrowRightLeft className="h-5 w-5" />
+          <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center">
+            <ArrowRightLeft className="h-4 w-4 text-primary" />
           </div>
           <div>
-            <CardTitle>Latest Transactions</CardTitle>
-            <p className="text-sm text-muted-foreground">Bitcoin</p>
+            <CardTitle className="text-base">Latest Transactions</CardTitle>
+            <p className="text-xs text-muted-foreground">Bitcoin · Live</p>
           </div>
         </div>
-        <ArrowRight className="h-5 w-5 text-muted-foreground" />
+        <Link href="/explorer/transactions">
+          <span className="text-xs text-muted-foreground hover:text-primary transition-colors cursor-pointer flex items-center gap-1">
+            View all <ArrowRight className="h-3 w-3" />
+          </span>
+        </Link>
       </CardHeader>
       <CardContent className="p-0">
         {loading && txns.length === 0 ? (
-          <div className="p-8 flex justify-center">
+          <div className="p-10 flex justify-center">
             <Loader className="h-6 w-6 animate-spin text-primary" />
           </div>
         ) : (
           txns.map((tx, index) => (
-            <div key={tx.fullHash || index} className="flex items-center gap-4 p-4 border-b border-border last:border-0 hover:bg-secondary/50 transition-colors">
-              <div className="w-12 h-12 rounded-xl bg-secondary/50 flex items-center justify-center">
-                <ArrowRightLeft className="h-5 w-5 text-primary" />
+            <div key={tx.fullHash || index} className="flex items-center gap-4 px-5 py-3.5 border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
+                <ArrowRightLeft className="h-4 w-4 text-primary" />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <Link href={`/explorer/transaction/${tx.fullHash}`}>
-                  <p className="font-bold text-primary truncate max-w-[150px] hover:underline cursor-pointer">{tx.hash}</p>
+                  <p className="font-bold text-primary text-sm truncate hover:underline cursor-pointer">{tx.hash}</p>
                 </Link>
-                <p className="text-sm text-muted-foreground">{tx.time}</p>
+                <p className="text-xs text-muted-foreground">{tx.time}</p>
               </div>
-              <div className="text-right">
-                <p className="font-bold">{tx.amount}</p>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <span>From: {tx.from}</span>
-                  <ArrowRight className="h-3 w-3" />
-                  <span>To: {tx.to}</span>
-                </div>
+              <div className="text-right flex-shrink-0">
+                <p className="font-bold text-sm text-foreground">{tx.amount}</p>
               </div>
             </div>
           ))
@@ -626,7 +660,7 @@ const LatestTransactionsSection = ({ initialTxns = [] }: { initialTxns?: any[] }
 };
 
 const Footer = () => (
-  <footer className="border-t border-border bg-card py-12">
+  <footer className="border-t border-border bg-card/50 py-12">
     <div className="container">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
         <div className="col-span-2 md:col-span-1">
@@ -636,11 +670,11 @@ const Footer = () => (
             </div>
             <span className="text-xl font-bold">Pexly Explorer</span>
           </a>
-          <p className="text-sm text-muted-foreground">Explore blockchain data across multiple networks with powerful search and analytics.</p>
+          <p className="text-sm text-muted-foreground leading-relaxed">Explore blockchain data across multiple networks with powerful search and analytics.</p>
         </div>
         <div>
-          <h4 className="font-semibold mb-4">Explore</h4>
-          <ul className="space-y-2 text-sm text-muted-foreground">
+          <h4 className="font-semibold mb-4 text-sm">Explore</h4>
+          <ul className="space-y-2.5 text-sm text-muted-foreground">
             <li><a href="/explorer/blocks" className="hover:text-foreground transition-colors">Blocks</a></li>
             <li><a href="/explorer/transactions" className="hover:text-foreground transition-colors">Transactions</a></li>
             <li><a href="#" className="hover:text-foreground transition-colors">Tokens</a></li>
@@ -648,8 +682,8 @@ const Footer = () => (
           </ul>
         </div>
         <div>
-          <h4 className="font-semibold mb-4">Resources</h4>
-          <ul className="space-y-2 text-sm text-muted-foreground">
+          <h4 className="font-semibold mb-4 text-sm">Resources</h4>
+          <ul className="space-y-2.5 text-sm text-muted-foreground">
             <li><a href="#" className="hover:text-foreground transition-colors">API Docs</a></li>
             <li><a href="#" className="hover:text-foreground transition-colors">Charts</a></li>
             <li><a href="#" className="hover:text-foreground transition-colors">Status</a></li>
@@ -657,12 +691,12 @@ const Footer = () => (
           </ul>
         </div>
         <div>
-          <h4 className="font-semibold mb-4">Company</h4>
-          <ul className="space-y-2 text-sm text-muted-foreground">
+          <h4 className="font-semibold mb-4 text-sm">Company</h4>
+          <ul className="space-y-2.5 text-sm text-muted-foreground">
             <li><a href="/about" className="hover:text-foreground transition-colors">About</a></li>
             <li><a href="/privacy" className="hover:text-foreground transition-colors">Privacy</a></li>
             <li><a href="/terms" className="hover:text-foreground transition-colors">Terms</a></li>
-            <li><a href="#" className="hover:text-foreground transition-colors">Contact</a></li>
+            <li><a href="/contact" className="hover:text-foreground transition-colors">Contact</a></li>
           </ul>
         </div>
       </div>
@@ -738,41 +772,36 @@ const Index = () => {
     <>
       <style>{`
         .explorer-wrapper { font-family: 'Inter', system-ui, sans-serif; }
-        .glass-card { background-color: hsl(var(--card) / 0.8); backdrop-filter: blur(12px); border: 1px solid hsl(var(--border) / 0.5); box-shadow: var(--shadow-card); }
-        .glass-card:hover { box-shadow: var(--shadow-card-hover); }
-        .gradient-text { background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-image: linear-gradient(135deg, hsl(var(--primary)), #a855f7); }
         .ticker-scroll { animation: ticker 60s linear infinite; will-change: transform; }
         .ticker-scroll:hover { animation-play-state: paused; }
-        .animate-float { animation: float 6s ease-in-out infinite; }
-        .animate-pulse-slow { animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-        .animate-slide-up { animation: slideUp 0.5s ease-out forwards; }
+        .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
         .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; }
-        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-33.333%); } }
-        .card-default { background-color: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: var(--radius); box-shadow: var(--shadow-card); }
-        .card-interactive { background-color: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: var(--radius); transition: all 0.3s ease; }
-        .card-interactive:hover { border-color: hsl(var(--primary)); box-shadow: var(--shadow-card-hover); }
-        .card-flat { background-color: transparent; border: none; }
         .container { width: 100%; max-width: 1400px; margin-left: auto; margin-right: auto; padding-left: 1.5rem; padding-right: 1.5rem; }
         @media (max-width: 640px) { .container { padding-left: 1rem; padding-right: 1rem; } }
       `}</style>
-      <div className="min-h-screen flex flex-col explorer-wrapper bg-gray-100 dark:bg-gray-900">
+
+      <div className="min-h-screen flex flex-col explorer-wrapper bg-background">
         <Header />
 
         <main className="flex-1">
+          {/* Hero / Search */}
           <SearchBar onSearchResults={setSearchResults} />
 
+          {/* Ticker */}
           <PriceTicker coins={liveCoins} />
 
-          <section className="py-6 border-b border-border bg-gray-100 dark:bg-gray-900">
+          {/* Quick stats bar */}
+          <section className="py-5 border-b border-border bg-background">
             <div className="container">
               <QuickStats fastestFee={fastestFee} pendingCount={pendingCount} />
             </div>
           </section>
 
-          <section id="prices" className="py-8 bg-gray-100 dark:bg-gray-900">
+          {/* BTC Price Card */}
+          <section className="pt-8 pb-4 bg-background">
             <div className="container">
               <CryptoCard
                 name="Bitcoin"
@@ -786,28 +815,32 @@ const Index = () => {
             </div>
           </section>
 
-          <section className="py-8 bg-gray-100 dark:bg-gray-900">
+          {/* Network Stats */}
+          <section className="py-4 bg-background">
             <div className="container">
               <NetworkStatsGrid stats={networkStats} chartData={btcChartData} />
             </div>
           </section>
 
-          <section className="py-8 bg-gray-100 dark:bg-gray-900">
+          {/* Live Prices list */}
+          <section className="py-4 bg-background">
             <div className="container">
               <PriceBarsChart coins={priceListCoins} />
             </div>
           </section>
 
-          <section className="py-8 bg-gray-100 dark:bg-gray-900">
+          {/* Hashrate + Latest Blocks */}
+          <section className="py-4 bg-background">
             <div className="container">
-              <div className="grid lg:grid-cols-2 gap-6">
+              <div className="grid lg:grid-cols-2 gap-5">
                 <HashrateChart distribution={poolDistribution} />
                 <LatestBlocksSection blocks={blocks} />
               </div>
             </div>
           </section>
 
-          <section className="py-8 bg-gray-100 dark:bg-gray-900">
+          {/* ETH Price Card */}
+          <section className="py-4 bg-background">
             <div className="container">
               <CryptoCard
                 name="Ethereum"
@@ -821,15 +854,17 @@ const Index = () => {
             </div>
           </section>
 
+          {/* Search Results */}
           {searchResults && (
-            <section className="py-8 bg-gray-100 dark:bg-gray-900">
+            <section className="py-4 bg-background">
               <div className="container">
                 <SearchResultsSection results={searchResults} />
               </div>
             </section>
           )}
 
-          <section id="blocks" className="py-8 bg-gray-100 dark:bg-gray-900">
+          {/* Latest Transactions */}
+          <section className="pt-4 pb-10 bg-background">
             <div className="container">
               <LatestTransactionsSection initialTxns={[]} />
             </div>
