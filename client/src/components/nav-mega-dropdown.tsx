@@ -466,7 +466,7 @@ export function ShopMegaMenu({ onNavigate, onClose }: { onNavigate: (h: string) 
   const cards: FeatureCard[] = [
     {
       label: t("shop.listings"),
-      sub: "Browse P2P crypto ads",
+      sub: "Browse product ads",
       href: "/shop",
       bg: "bg-gradient-to-br from-[#1e3a5f] to-[#1d4ed8]",
       illustration: <ShopIllustration />,
