@@ -44,6 +44,12 @@ export interface ShopifyProduct {
       name: string;
       values: string[];
     }>;
+    metafields?: Array<{
+      namespace: string;
+      key: string;
+      value: string;
+      type: string;
+    } | null>;
   };
 }
 
