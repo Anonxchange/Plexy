@@ -59,6 +59,8 @@ export const PRODUCT_BY_HANDLE_QUERY = 'getProductByHandle';
 export const PRODUCT_TYPES_QUERY = 'getProductTypes';
 export const CART_QUERY = 'cartQuery';
 export const CART_CREATE_MUTATION = 'cartCreate';
+export const CART_CREATE_FOR_SHIPPING_MUTATION = 'cartCreateForShipping';
+export const CART_DELIVERY_GROUPS_QUERY = 'cartDeliveryGroups';
 export const CART_LINES_ADD_MUTATION = 'cartLinesAdd';
 export const CART_LINES_UPDATE_MUTATION = 'cartLinesUpdate';
 export const CART_LINES_REMOVE_MUTATION = 'cartLinesRemove';
@@ -163,6 +165,51 @@ export const shopifyService = {
       totalQuantity: cart.totalQuantity,
       checkoutUrl: cart.checkoutUrl,
       items
+    };
+  },
+
+  async createCartForShipping(variantId: string, countryCode: string) {
+    const data = await storefrontApiRequest(CART_CREATE_FOR_SHIPPING_MUTATION, {
+      input: {
+        lines: [{ quantity: 1, merchandiseId: variantId }],
+        buyerIdentity: { countryCode },
+      },
+    });
+
+    if (data?.data?.cartCreate?.userErrors?.length > 0) {
+      devLog.error('Cart for shipping failed:', data.data.cartCreate.userErrors);
+      return null;
+    }
+
+    const cart = data?.data?.cartCreate?.cart;
+    if (!cart) return null;
+
+    const deliveryGroups: Array<{
+      handle: string;
+      title: string;
+      amount: string;
+      currencyCode: string;
+      deliveryMethodType: string;
+    }> = [];
+
+    const groups = cart.deliveryGroups?.edges || [];
+    for (const edge of groups) {
+      const options = edge.node?.deliveryOptions || [];
+      for (const opt of options) {
+        deliveryGroups.push({
+          handle: opt.handle,
+          title: opt.title,
+          amount: opt.estimatedCost?.amount ?? '0',
+          currencyCode: opt.estimatedCost?.currencyCode ?? 'USD',
+          deliveryMethodType: opt.deliveryMethodType ?? 'SHIPPING',
+        });
+      }
+    }
+
+    return {
+      cartId: cart.id,
+      checkoutUrl: formatCheckoutUrl(cart.checkoutUrl),
+      deliveryGroups,
     };
   },
 
