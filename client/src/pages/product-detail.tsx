@@ -13,13 +13,22 @@ import {
   Share2,
   Heart
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 import { shopifyService } from "@/lib/shopify-service";
 import { devLog } from "@/lib/dev-logger";
 import { useCart } from "@/hooks/use-shopify-cart";
 import { toast } from "sonner";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { CartSheet } from "@/components/shop/CartSheet";
+
+function shuffleArray<T>(items: T[]): T[] {
+  const shuffled = [...items];
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
 
 interface Listing {
   id: string;
@@ -153,8 +162,7 @@ export function ProductDetail() {
             availableForSale: p.variants.edges[0]?.node?.availableForSale,
           });
 
-          const related = result.products
-            .filter((edge: any) => edge.node.id !== decodedId)
+          const related = shuffleArray(result.products.filter((edge: any) => edge.node.id !== decodedId))
             .slice(0, 4)
             .map((edge: any) => {
               const rp = edge.node;
@@ -180,6 +188,7 @@ export function ProductDetail() {
 
       if (fetchId !== id) return;
 
+      const supabase = await getSupabase();
       const { data, error } = await supabase
         .from('shop_listings')
         .select('*')
