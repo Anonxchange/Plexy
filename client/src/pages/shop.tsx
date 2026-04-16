@@ -29,8 +29,8 @@ import {
 import { Search, ShoppingCart, Star, Filter, Package, Plus, Loader2, Store } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useLocation } from "wouter";
-import { supabase } from "@/lib/supabase";
-import { shopifyService, type ShopifyProduct } from "@/lib/shopify-service";
+import { getSupabase } from "@/lib/supabase";
+import { shopifyService } from "@/lib/shopify-service";
 import { ShopSkeleton } from "@/components/shop/ShopSkeleton";
 import { CartSheet } from "@/components/shop/CartSheet";
 import { toast } from "sonner";
@@ -39,6 +39,21 @@ import { useCart } from "@/hooks/use-shopify-cart";
 import { devLog } from "@/lib/dev-logger";
 
 const ShopItemCard = lazy(() => import("@/components/shop/ShopItemCard").then(m => ({ default: m.ShopItemCard })));
+
+const SHOPIFY_INITIAL_PRODUCT_COUNT = 80;
+
+function shuffleArray<T>(items: T[]): T[] {
+  const shuffled = [...items];
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+function escapeShopifySearchValue(value: string): string {
+  return `'${value.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
+}
 
 interface Listing {
   id: string;
@@ -63,7 +78,7 @@ export function Shop() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [sortBy, setSortBy] = useState("newest");
+  const [sortBy, setSortBy] = useState("shuffle");
   const [selectedProduct, setSelectedProduct] = useState<Listing | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
   const [shopifyProducts, setShopifyProducts] = useState<Listing[]>([]);
@@ -88,16 +103,18 @@ export function Shop() {
   useEffect(() => {
     if (activeTab === "shopify") {
       fetchShopifyProducts();
+      fetchShopifyCategories();
     }
   }, [selectedCategory, activeTab]);
 
   // Background refresh every 5 minutes
   useEffect(() => {
+    if (activeTab !== "shopify") return;
     const interval = setInterval(() => {
       fetchShopifyProducts(undefined, true);
     }, 300000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activeTab, selectedCategory]);
 
   // Update Marketplace categories
   useEffect(() => {
@@ -113,6 +130,15 @@ export function Shop() {
     setSelectedCategory("All");
   }, [activeTab]);
 
+  const fetchShopifyCategories = async () => {
+    try {
+      const types = await shopifyService.getProductTypes();
+      setShopifyCategories(["All", ...Array.from(new Set(types)).sort((a, b) => a.localeCompare(b))]);
+    } catch (error) {
+      devLog.error('Error fetching Shopify categories:', error);
+    }
+  };
+
   const fetchShopifyProducts = async (after?: string, isBackground = false) => {
     // Increment fetch ID so any in-flight stale fetch knows to discard its result
     const fetchId = ++shopifyFetchIdRef.current;
@@ -125,8 +151,13 @@ export function Shop() {
       }
     }
     try {
-      const shopifyQuery = selectedCategory !== "All" ? `product_type:${selectedCategory}` : undefined;
-      const result = await shopifyService.getProducts(35, after, shopifyQuery);
+      const shopifyQuery = selectedCategory !== "All" ? `product_type:${escapeShopifySearchValue(selectedCategory)}` : undefined;
+      const result = await shopifyService.getProducts(
+        after ? 35 : SHOPIFY_INITIAL_PRODUCT_COUNT,
+        after,
+        shopifyQuery,
+        !after && !isBackground
+      );
 
       // Discard result if a newer fetch has already started
       if (fetchId !== shopifyFetchIdRef.current) return;
@@ -149,21 +180,20 @@ export function Shop() {
         };
       });
 
+      const nextProducts = !after && !isBackground ? shuffleArray(transformed) : transformed;
+
       if (after) {
         setShopifyProducts(prev => {
-          const merged = [...prev, ...transformed];
-          // Derive categories from full merged list
-          const types = new Set<string>(["All"]);
-          merged.forEach(p => { if (p.category) types.add(p.category); });
-          setShopifyCategories(Array.from(types).sort());
-          return merged;
+          return [...prev, ...nextProducts];
         });
       } else {
-        setShopifyProducts(transformed);
-        // Derive categories from fresh product list
-        const types = new Set<string>(["All"]);
-        transformed.forEach(p => { if (p.category) types.add(p.category); });
-        setShopifyCategories(Array.from(types).sort());
+        setShopifyProducts(nextProducts);
+        setShopifyCategories(prev => {
+          if (prev.length > 1) return prev;
+          const types = new Set<string>(["All"]);
+          nextProducts.forEach(p => { if (p.category) types.add(p.category); });
+          return Array.from(types).sort();
+        });
       }
 
       setCursor(result.pageInfo?.endCursor || null);
@@ -192,6 +222,7 @@ export function Shop() {
   const fetchListings = async () => {
     setIsMarketplaceLoading(true);
     try {
+      const supabase = await getSupabase();
       const { data, error } = await supabase
         .from('shop_listings')
         .select('*');
@@ -261,6 +292,8 @@ export function Shop() {
           return a.price - b.price;
         case "price-high":
           return b.price - a.price;
+        case "shuffle":
+          return 0;
         case "newest":
           // @ts-ignore
           return new Date(b.created_at || b.createdAt || 0).getTime() - new Date(a.created_at || a.createdAt || 0).getTime();
@@ -342,6 +375,7 @@ export function Shop() {
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="shuffle">Shuffle</SelectItem>
                 <SelectItem value="newest">Newest</SelectItem>
                 <SelectItem value="price-low">Price: Low to High</SelectItem>
                 <SelectItem value="price-high">Price: High to Low</SelectItem>
