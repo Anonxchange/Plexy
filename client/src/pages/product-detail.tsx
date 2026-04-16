@@ -11,7 +11,11 @@ import {
   Store, 
   Loader2,
   Share2,
-  Heart
+  Heart,
+  MapPin,
+  Truck,
+  Clock,
+  CreditCard
 } from "lucide-react";
 import { getSupabase } from "@/lib/supabase";
 import { shopifyService } from "@/lib/shopify-service";
@@ -44,6 +48,43 @@ interface Listing {
   variantId?: string;
   availableForSale?: boolean;
   inventoryQuantity?: number;
+  shipping?: ShippingInfo;
+}
+
+interface ShippingInfo {
+  shipTo: string;
+  shipsFrom: string;
+  method: string;
+  processingTime: string;
+  deliveryTime: string;
+  fee: string;
+}
+
+const DEFAULT_SHIPPING_INFO: ShippingInfo = {
+  shipTo: "Select at checkout",
+  shipsFrom: "Supplier warehouse",
+  method: "Available options shown at checkout",
+  processingTime: "Calculated at checkout",
+  deliveryTime: "Calculated at checkout",
+  fee: "Calculated at checkout",
+};
+
+function getMetafieldValue(productData: any, keys: string[]) {
+  const metafields = Array.isArray(productData?.metafields) ? productData.metafields : [];
+  const keySet = new Set(keys);
+  const match = metafields.find((field: any) => field && keySet.has(field.key) && typeof field.value === "string" && field.value.trim());
+  return match?.value?.trim();
+}
+
+function buildShippingInfo(productData: any, fallback?: Partial<ShippingInfo>): ShippingInfo {
+  return {
+    shipTo: getMetafieldValue(productData, ["ship_to", "ships_to"]) || fallback?.shipTo || DEFAULT_SHIPPING_INFO.shipTo,
+    shipsFrom: getMetafieldValue(productData, ["ships_from", "shipping_from", "origin"]) || fallback?.shipsFrom || DEFAULT_SHIPPING_INFO.shipsFrom,
+    method: getMetafieldValue(productData, ["shipping_method", "method"]) || fallback?.method || DEFAULT_SHIPPING_INFO.method,
+    processingTime: getMetafieldValue(productData, ["processing_time", "estimate_processing_time"]) || fallback?.processingTime || DEFAULT_SHIPPING_INFO.processingTime,
+    deliveryTime: getMetafieldValue(productData, ["delivery_time", "estimated_delivery", "estimate_delivery"]) || fallback?.deliveryTime || DEFAULT_SHIPPING_INFO.deliveryTime,
+    fee: getMetafieldValue(productData, ["shipping_fee", "fee"]) || fallback?.fee || DEFAULT_SHIPPING_INFO.fee,
+  };
 }
 
 export function ProductDetail() {
@@ -153,13 +194,14 @@ export function ProductDetail() {
             description: p.description,
             price: parseFloat(p.priceRange.minVariantPrice.amount),
             currency: p.priceRange.minVariantPrice.currencyCode,
-            category: "Shopify",
+            category: p.productType || "Shopify",
             images: p.images.edges.map((e: any) => e.node.url),
             location: "Online",
             user_id: "shopify",
             status: "active",
             variantId: p.variants.edges[0]?.node?.id,
             availableForSale: p.variants.edges[0]?.node?.availableForSale,
+            shipping: buildShippingInfo(p),
           });
 
           const related = shuffleArray(result.products.filter((edge: any) => edge.node.id !== decodedId))
@@ -210,7 +252,7 @@ export function ProductDetail() {
             imageUrls = [data.images];
           }
         }
-        setProduct({ ...data, images: imageUrls });
+        setProduct({ ...data, images: imageUrls, shipping: buildShippingInfo(data, data.shipping) });
       } else {
         toast.error("Product not found");
         navigate("/shop");
@@ -424,6 +466,55 @@ export function ProductDetail() {
               </div>
 
               <Separator />
+
+              <div className="rounded-2xl border border-border/70 bg-card/60 overflow-hidden">
+                <div className="grid grid-cols-2 sm:grid-cols-3 divide-x divide-y sm:divide-y-0 divide-border/60">
+                  <div className="p-4 space-y-1">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                      <MapPin className="h-4 w-4" />
+                      Ship to
+                    </div>
+                    <p className="text-sm font-semibold">{product.shipping?.shipTo || DEFAULT_SHIPPING_INFO.shipTo}</p>
+                  </div>
+                  <div className="p-4 space-y-1">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                      <Truck className="h-4 w-4" />
+                      Shipping method
+                    </div>
+                    <p className="text-sm font-semibold">{product.shipping?.method || DEFAULT_SHIPPING_INFO.method}</p>
+                  </div>
+                  <div className="p-4 space-y-1 col-span-2 sm:col-span-1">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                      <Package className="h-4 w-4" />
+                      Ships from
+                    </div>
+                    <p className="text-sm font-semibold">{product.shipping?.shipsFrom || DEFAULT_SHIPPING_INFO.shipsFrom}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 border-t border-border/60 divide-y sm:divide-y-0 sm:divide-x divide-border/60">
+                  <div className="p-4 space-y-1">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                      <Clock className="h-4 w-4" />
+                      Estimated processing
+                    </div>
+                    <p className="text-sm font-semibold">{product.shipping?.processingTime || DEFAULT_SHIPPING_INFO.processingTime}</p>
+                  </div>
+                  <div className="p-4 space-y-1">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                      <Truck className="h-4 w-4" />
+                      Estimated delivery
+                    </div>
+                    <p className="text-sm font-semibold">{product.shipping?.deliveryTime || DEFAULT_SHIPPING_INFO.deliveryTime}</p>
+                  </div>
+                  <div className="p-4 space-y-1">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                      <CreditCard className="h-4 w-4" />
+                      Shipping fee
+                    </div>
+                    <p className="text-sm font-semibold">{product.shipping?.fee || DEFAULT_SHIPPING_INFO.fee}</p>
+                  </div>
+                </div>
+              </div>
 
               <div className="space-y-2">
                 <p className="text-sm font-semibold">Description</p>
