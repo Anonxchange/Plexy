@@ -26,7 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, ShoppingCart, Star, Filter, Package, Plus, Loader2, Store } from "lucide-react";
+import { Search, Filter, Package, Plus, Store } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useLocation } from "wouter";
 import { getSupabase } from "@/lib/supabase";
@@ -40,7 +40,8 @@ import { devLog } from "@/lib/dev-logger";
 
 const ShopItemCard = lazy(() => import("@/components/shop/ShopItemCard").then(m => ({ default: m.ShopItemCard })));
 
-const SHOPIFY_INITIAL_PRODUCT_COUNT = 80;
+const SHOPIFY_FETCH_SIZE = 250;
+const SHOPIFY_DISPLAY_PAGE_SIZE = 60;
 
 function shuffleArray<T>(items: T[]): T[] {
   const shuffled = [...items];
@@ -87,9 +88,7 @@ export function Shop() {
   const [activeTab, setActiveTab] = useState("shopify");
   const [isShopifyLoading, setIsShopifyLoading] = useState(true);
   const [isMarketplaceLoading, setIsMarketplaceLoading] = useState(true);
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [hasNextPage, setHasNextPage] = useState(false);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(SHOPIFY_DISPLAY_PAGE_SIZE);
 
   // Ref to cancel stale Shopify fetches when a newer one starts
   const shopifyFetchIdRef = useRef(0);
@@ -111,7 +110,7 @@ export function Shop() {
   useEffect(() => {
     if (activeTab !== "shopify") return;
     const interval = setInterval(() => {
-      fetchShopifyProducts(undefined, true);
+      fetchShopifyProducts(true);
     }, 300000);
     return () => clearInterval(interval);
   }, [activeTab, selectedCategory]);
@@ -130,6 +129,11 @@ export function Shop() {
     setSelectedCategory("All");
   }, [activeTab]);
 
+  // Reset visible count when filters change
+  useEffect(() => {
+    setVisibleCount(SHOPIFY_DISPLAY_PAGE_SIZE);
+  }, [selectedCategory, searchQuery, sortBy]);
+
   const fetchShopifyCategories = async () => {
     try {
       const types = await shopifyService.getProductTypes();
@@ -139,84 +143,79 @@ export function Shop() {
     }
   };
 
-  const fetchShopifyProducts = async (after?: string, isBackground = false) => {
-    // Increment fetch ID so any in-flight stale fetch knows to discard its result
+  const fetchShopifyProducts = async (isBackground = false) => {
     const fetchId = ++shopifyFetchIdRef.current;
 
-    if (after) {
-      setIsLoadingMore(true);
-    } else if (!isBackground) {
-      if (shopifyProducts.length === 0) {
-        setIsShopifyLoading(true);
-      }
-    }
-    try {
-      const shopifyQuery = selectedCategory !== "All" ? `product_type:${escapeShopifySearchValue(selectedCategory)}` : undefined;
-      const result = await shopifyService.getProducts(
-        after ? 35 : SHOPIFY_INITIAL_PRODUCT_COUNT,
-        after,
-        shopifyQuery,
-        !after && !isBackground
-      );
+    if (!isBackground) setIsShopifyLoading(true);
 
-      // Discard result if a newer fetch has already started
+    try {
+      const shopifyQuery = selectedCategory !== "All"
+        ? `product_type:${escapeShopifySearchValue(selectedCategory)}`
+        : undefined;
+
+      let allProducts: Listing[] = [];
+      let after: string | undefined = undefined;
+      let hasMore = true;
+      let page = 0;
+      const MAX_PAGES = 40; // safety cap: 40 × 250 = 10,000 products max
+
+      while (hasMore && page < MAX_PAGES) {
+        if (fetchId !== shopifyFetchIdRef.current) return;
+
+        const result = await shopifyService.getProducts(SHOPIFY_FETCH_SIZE, after, shopifyQuery, false);
+
+        if (fetchId !== shopifyFetchIdRef.current) return;
+
+        const fetched: Listing[] = (result.products || []).map((edge: any) => {
+          const p = edge.node;
+          return {
+            id: p.id,
+            title: p.title,
+            description: p.description,
+            price: parseFloat(p.priceRange.minVariantPrice.amount),
+            currency: p.priceRange.minVariantPrice.currencyCode,
+            category: p.productType || "All",
+            images: p.images.edges.map((e: any) => e.node.url),
+            location: "Online",
+            user_id: "shopify",
+            status: "active",
+            metadata: [],
+            variantId: p.variants.edges[0]?.node?.id,
+          };
+        });
+
+        allProducts = [...allProducts, ...fetched];
+        hasMore = result.pageInfo?.hasNextPage || false;
+        after = result.pageInfo?.endCursor || undefined;
+        page++;
+      }
+
       if (fetchId !== shopifyFetchIdRef.current) return;
 
-      const transformed: Listing[] = result.products.map((edge: any) => {
-        const p = edge.node;
-        return {
-          id: p.id,
-          title: p.title,
-          description: p.description,
-          price: parseFloat(p.priceRange.minVariantPrice.amount),
-          currency: p.priceRange.minVariantPrice.currencyCode,
-          category: p.productType || "All",
-          images: p.images.edges.map((e: any) => e.node.url),
-          location: "Online",
-          user_id: "shopify",
-          status: "active",
-          metadata: [],
-          variantId: p.variants.edges[0]?.node?.id
-        };
+      const finalProducts = !isBackground ? shuffleArray(allProducts) : allProducts;
+
+      setShopifyProducts(finalProducts);
+      setVisibleCount(SHOPIFY_DISPLAY_PAGE_SIZE);
+
+      setShopifyCategories(prev => {
+        if (prev.length > 1) return prev;
+        const types = new Set<string>(["All"]);
+        finalProducts.forEach(p => { if (p.category) types.add(p.category); });
+        return Array.from(types).sort();
       });
-
-      const nextProducts = !after && !isBackground ? shuffleArray(transformed) : transformed;
-
-      if (after) {
-        setShopifyProducts(prev => {
-          return [...prev, ...nextProducts];
-        });
-      } else {
-        setShopifyProducts(nextProducts);
-        setShopifyCategories(prev => {
-          if (prev.length > 1) return prev;
-          const types = new Set<string>(["All"]);
-          nextProducts.forEach(p => { if (p.category) types.add(p.category); });
-          return Array.from(types).sort();
-        });
-      }
-
-      setCursor(result.pageInfo?.endCursor || null);
-      setHasNextPage(result.pageInfo?.hasNextPage || false);
     } catch (error) {
       if (fetchId === shopifyFetchIdRef.current) {
         devLog.error('Error fetching Shopify products:', error);
       }
     } finally {
-      if (fetchId === shopifyFetchIdRef.current) {
-        if (after) {
-          setIsLoadingMore(false);
-        } else if (!isBackground) {
-          setIsShopifyLoading(false);
-        }
+      if (fetchId === shopifyFetchIdRef.current && !isBackground) {
+        setIsShopifyLoading(false);
       }
     }
   };
 
   const handleLoadMore = () => {
-    if (cursor && hasNextPage) {
-      fetchShopifyProducts(cursor);
-    }
+    setVisibleCount(prev => prev + SHOPIFY_DISPLAY_PAGE_SIZE);
   };
 
   const fetchListings = async () => {
@@ -294,13 +293,27 @@ export function Shop() {
           return b.price - a.price;
         case "shuffle":
           return 0;
-        case "newest":
-          // @ts-ignore
-          return new Date(b.created_at || b.createdAt || 0).getTime() - new Date(a.created_at || a.createdAt || 0).getTime();
+        case "newest": {
+          // Shopify GIDs are sequential: gid://shopify/Product/123456789
+          // Higher numeric ID = newer product. Marketplace items use created_at.
+          const shopifyId = (p: Listing) => {
+            const match = p.id.match(/\/(\d+)$/);
+            return match ? parseInt(match[1], 10) : 0;
+          };
+          const aVal = a.user_id === "shopify" ? shopifyId(a) : new Date((a as any).created_at || 0).getTime();
+          const bVal = b.user_id === "shopify" ? shopifyId(b) : new Date((b as any).created_at || 0).getTime();
+          return bVal - aVal;
+        }
         default:
           return 0;
       }
     });
+
+  const visibleProducts = activeTab === "shopify"
+    ? filteredProducts.slice(0, visibleCount)
+    : filteredProducts;
+
+  const hasMoreToShow = activeTab === "shopify" && visibleCount < filteredProducts.length;
 
   const handleAddToCart = async (product: Listing) => {
     if (product.user_id !== 'shopify' || !product.variantId) {
@@ -410,7 +423,7 @@ export function Shop() {
             <>
               <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
                 <Suspense fallback={<ShopSkeleton />}>
-                  {filteredProducts.map((product) => (
+                  {visibleProducts.map((product) => (
                     <ShopItemCard 
                       key={product.id} 
                       product={product} 
@@ -421,24 +434,19 @@ export function Shop() {
                 </Suspense>
               </div>
 
-              {activeTab === "shopify" && hasNextPage && (
-                <div className="mt-12 flex justify-center pb-12">
+              {hasMoreToShow && (
+                <div className="mt-12 flex flex-col items-center gap-2 pb-12">
                   <Button 
                     variant="outline" 
                     size="lg" 
                     onClick={handleLoadMore}
-                    disabled={isLoadingMore}
                     className="min-w-[200px]"
                   >
-                    {isLoadingMore ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Loading more...
-                      </>
-                    ) : (
-                      "Load More Products"
-                    )}
+                    Load More Products
                   </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Showing {visibleProducts.length} of {filteredProducts.length} products
+                  </p>
                 </div>
               )}
             </>
