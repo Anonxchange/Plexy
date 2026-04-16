@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { supabase } from "./supabase";
+import { getSupabase } from "./supabase";
 import { devLog } from "./dev-logger";
 
 export interface ShopifyProduct {
@@ -50,6 +50,7 @@ export interface ShopifyProduct {
 // Query name constants matching server-side allowlist
 export const PRODUCTS_QUERY = 'getProducts';
 export const PRODUCT_BY_HANDLE_QUERY = 'getProductByHandle';
+export const PRODUCT_TYPES_QUERY = 'getProductTypes';
 export const CART_QUERY = 'cartQuery';
 export const CART_CREATE_MUTATION = 'cartCreate';
 export const CART_LINES_ADD_MUTATION = 'cartLinesAdd';
@@ -58,6 +59,7 @@ export const CART_LINES_REMOVE_MUTATION = 'cartLinesRemove';
 
 export async function storefrontApiRequest(queryName: string, variables: Record<string, unknown> = {}) {
   try {
+    const supabase = await getSupabase();
     const { data, error } = await supabase.functions.invoke('shopify-storefront', {
       body: { queryName, variables }
     });
@@ -107,12 +109,20 @@ function isCartNotFoundError(userErrors: Array<{ field: string[] | null; message
 }
 
 export const shopifyService = {
-  async getProducts(first: number = 250, after?: string, query?: string) {
-    const data = await storefrontApiRequest(PRODUCTS_QUERY, { first, after, query });
+  async getProducts(first: number = 250, after?: string, query?: string, randomize = false) {
+    const data = await storefrontApiRequest(PRODUCTS_QUERY, { first, after, query, randomize });
     return {
       products: data?.data?.products?.edges || [],
       pageInfo: data?.data?.products?.pageInfo
     };
+  },
+
+  async getProductTypes(first: number = 250) {
+    const data = await storefrontApiRequest(PRODUCT_TYPES_QUERY, { first });
+    const edges = data?.data?.productTypes?.edges || data?.data?.products?.edges || [];
+    return edges
+      .map((edge: any) => typeof edge.node === 'string' ? edge.node : edge.node?.productType)
+      .filter((type: unknown): type is string => typeof type === 'string' && type.trim().length > 0);
   },
 
   async getProductByHandle(handle: string) {
