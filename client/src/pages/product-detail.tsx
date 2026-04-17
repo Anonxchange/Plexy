@@ -229,10 +229,6 @@ export function ProductDetail() {
           const p = found.node;
           shopifyDataRef.current = p;
 
-          // Log raw metafields so we can verify CJ metafield keys in the console
-          devLog.info('[product-detail] raw Shopify metafields:', JSON.stringify(p.metafields ?? []));
-          devLog.info('[product-detail] first variant sku:', p.variants?.edges?.[0]?.node?.sku);
-
           const options = p.options || [];
           const sizeOption = options.find((opt: any) =>
             opt.name.toLowerCase() === 'size' || opt.name.toLowerCase() === 'taille'
@@ -264,11 +260,7 @@ export function ProductDetail() {
             variantId: p.variants.edges[0]?.node?.id,
             availableForSale: p.variants.edges[0]?.node?.availableForSale,
             shipping: buildShippingInfo(p),
-            cjVid: (() => {
-              const v = getMetafieldValue(p, ["cj_vid", "cj_variant_id", "cj_product_id", "cj_sku", "cj_spu"]);
-              devLog.info('[product-detail] resolved product-level cjVid from metafields:', v ?? '(none)');
-              return v;
-            })(),
+            cjVid: getMetafieldValue(p, ["cj_vid", "cj_variant_id", "cj_sku"]),
           });
 
           const related = shuffleArray(result.products.filter((edge: any) => edge.node.id !== decodedId))
