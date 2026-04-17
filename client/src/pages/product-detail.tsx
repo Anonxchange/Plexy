@@ -300,7 +300,7 @@ export function ProductDetail() {
         navigate("/shop");
       }
     } catch (error) {
-      devLog.error('Error fetching product:', error);
+      devLog.error('[ProductDetail] fetchProduct failed for id:', fetchId, error);
       if (fetchId === id) {
         toast.error("Error loading product");
         navigate("/shop");
