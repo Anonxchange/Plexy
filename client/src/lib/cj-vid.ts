@@ -45,7 +45,7 @@ export function resolveCjVid(
         m.value.trim() &&
         !m.value.startsWith("gid://shopify/")
       ) {
-        devLog.log("[cj-vid] resolved from variant metafield:", m.key, "→", m.value.trim());
+        devLog.info("[cj-vid] resolved from variant metafield:", m.key, "→", m.value.trim());
         return m.value.trim();
       }
     }
@@ -53,7 +53,7 @@ export function resolveCjVid(
 
   // 2. Product-level cjVid already resolved from Shopify product metafields
   if (productCjVid && productCjVid.trim()) {
-    devLog.log("[cj-vid] resolved from product metafield →", productCjVid.trim());
+    devLog.info("[cj-vid] resolved from product metafield →", productCjVid.trim());
     return productCjVid.trim();
   }
 
@@ -61,11 +61,11 @@ export function resolveCjVid(
   //    so any non-empty SKU is a valid input to send to the freight API.
   const sku = variant?.sku;
   if (sku && sku.trim()) {
-    devLog.log("[cj-vid] resolved from variant SKU →", sku.trim());
+    devLog.info("[cj-vid] resolved from variant SKU →", sku.trim());
     return sku.trim();
   }
 
-  devLog.log("[cj-vid] no cjVid could be resolved for this product/variant");
+  devLog.info("[cj-vid] no cjVid could be resolved for this product/variant");
   return undefined;
 }
 
