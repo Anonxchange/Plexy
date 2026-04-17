@@ -14,20 +14,21 @@
  * The CJ API must NEVER be called with "", null, or undefined.
  */
 
-import { devLog } from "@/lib/dev-logger";
-
 export interface CjVidVariantShape {
   metafields?: Array<{ namespace?: string; key: string; value: string } | null> | null;
   sku?: string | null;
 }
 
-/** All Shopify metafield keys we search for the CJ identifier. Must be CJ-specific — never generic keys like "vid". */
+/**
+ * Shopify metafield keys that contain a CJ *variant* VID — the exact value the CJ freight API expects.
+ * DO NOT include generic product-level identifiers like "vid" (CJ SPU/product VID).
+ * A product VID bypasses the edge function's SKU→variantVID resolution and causes "product not found".
+ * Use the Shopify variant SKU instead — the edge function resolves SKU to the correct variant VID.
+ */
 const CJ_METAFIELD_KEYS = new Set([
   "cj_vid",
   "cj_variant_id",
-  "cj_product_id",
   "cj_sku",
-  "cj_spu",
 ]);
 
 export function resolveCjVid(
@@ -44,7 +45,6 @@ export function resolveCjVid(
         m.value.trim() &&
         !m.value.startsWith("gid://shopify/")
       ) {
-        devLog.info("[cj-vid] resolved from variant metafield:", m.key, "→", m.value.trim());
         return m.value.trim();
       }
     }
@@ -52,7 +52,6 @@ export function resolveCjVid(
 
   // 2. Product-level cjVid already resolved from Shopify product metafields
   if (productCjVid && productCjVid.trim()) {
-    devLog.info("[cj-vid] resolved from product metafield →", productCjVid.trim());
     return productCjVid.trim();
   }
 
@@ -60,11 +59,9 @@ export function resolveCjVid(
   //    so any non-empty SKU is a valid input to send to the freight API.
   const sku = variant?.sku;
   if (sku && sku.trim()) {
-    devLog.info("[cj-vid] resolved from variant SKU →", sku.trim());
     return sku.trim();
   }
 
-  devLog.info("[cj-vid] no cjVid could be resolved for this product/variant");
   return undefined;
 }
 
