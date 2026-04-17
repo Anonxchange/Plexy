@@ -1,4 +1,4 @@
-import { User, Globe, Bell, Shield, Smartphone, CheckCircle2, Link2, HeadphonesIcon } from "lucide-react";
+import { User, Globe, Bell, Shield, Smartphone, CheckCircle2, Link2, HeadphonesIcon, ShoppingBag } from "lucide-react";
 import { useLocation } from "wouter";
 
 const settingsSections = [
@@ -9,6 +9,7 @@ const settingsSections = [
   { id: "devices", label: "Devices", icon: Smartphone },
   { id: "verification", label: "Verification", icon: CheckCircle2 },
   { id: "connected", label: "Connected Apps & Websites", icon: Link2 },
+  { id: "shop-history", label: "Shop History", icon: ShoppingBag },
 ];
 
 const socialLinks = [
