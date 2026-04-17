@@ -12,6 +12,7 @@ import { MapPin, Truck, Clock, CreditCard, ShoppingCart, Loader2, Package, Alert
 import { shopifyService, formatPrice } from "@/lib/shopify-service";
 import { useCart } from "@/hooks/use-shopify-cart";
 import { useShippingRates } from "@/hooks/use-shipping-rates";
+import { isValidCjVid } from "@/lib/cj-vid";
 import { toast } from "sonner";
 import type { ShippingInfo } from "./shipping-types";
 
@@ -153,9 +154,11 @@ export function ShippingEstimator({
   const { addToCart } = useCart();
   const { rates, isLoading: isLoadingRates, error: ratesError, calculate, reset } = useShippingRates();
 
-  // Fetch live rates whenever country or cjVid changes
+  // Fetch live rates whenever country or cjVid changes.
+  // CJ is OPTIONAL — only called when a valid, non-empty cjVid is available.
+  // Never sends empty string, undefined, or null to the CJ freight API.
   useEffect(() => {
-    if (!cjVid || !selectedCountry) {
+    if (!isValidCjVid(cjVid) || !selectedCountry) {
       reset();
       return;
     }
@@ -288,10 +291,15 @@ export function ShippingEstimator({
             <Loader2 className="h-4 w-4 animate-spin" />
             Fetching shipping rates…
           </div>
-        ) : ratesError && cjVid ? (
+        ) : ratesError && isValidCjVid(cjVid) ? (
           <div className="flex items-center gap-2 text-xs text-muted-foreground py-1">
             <AlertCircle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
             <span>Could not load live rates. Showing estimated data.</span>
+          </div>
+        ) : !isValidCjVid(cjVid) && parsed.methods.length === 1 && parsed.methods[0] === "Standard Shipping" && !parsed.fees[0] ? (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground py-1">
+            <AlertCircle className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+            <span>Shipping estimate not available for this product.</span>
           </div>
         ) : displayMethods.length > 1 ? (
           <div className="space-y-1.5">
