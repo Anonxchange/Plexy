@@ -20,6 +20,7 @@ import { LocalizationSection } from "@/components/settings/LocalizationSection";
 import { NotificationsSection } from "@/components/settings/NotificationsSection";
 import { ConnectedAppsSection } from "@/components/settings/ConnectedAppsSection";
 import { VerificationSection } from "@/components/settings/VerificationSection";
+import { ShopHistorySection } from "@/components/settings/ShopHistorySection";
 
 export default function AccountSettings() {
   useHead({
@@ -63,6 +64,8 @@ export default function AccountSettings() {
         return <VerificationSection />;
       case "connected":
         return <ConnectedAppsSection />;
+      case "shop-history":
+        return <ShopHistorySection />;
       default:
         return (
           <Card>
