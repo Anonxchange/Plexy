@@ -208,13 +208,13 @@ export function ProductDetail() {
     // Always decode — URL params may be percent-encoded (e.g. gid%3A%2F%2F...)
     const decodedId = decodeURIComponent(fetchId || '');
 
-    devLog.info('[ProductDetail] fetchProduct called', { rawId: fetchId, decodedId });
+    console.log('[ProductDetail] fetchProduct called', { rawId: fetchId, decodedId });
 
     try {
       if (decodedId.startsWith('gid://shopify/Product/')) {
         const result = await shopifyService.getProducts(250);
 
-        devLog.info('[ProductDetail] Shopify getProducts returned', {
+        console.log('[ProductDetail] Shopify getProducts returned', {
           count: result.products.length,
           ids: result.products.slice(0, 5).map((e: any) => e.node.id),
         });
@@ -224,7 +224,7 @@ export function ProductDetail() {
 
         const found = result.products.find((edge: any) => edge.node.id === decodedId);
 
-        devLog.info('[ProductDetail] Product match result', {
+        console.log('[ProductDetail] Product match result', {
           decodedId,
           found: !!found,
           metafields: found?.node?.metafields,
