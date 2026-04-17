@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Select,
   SelectContent,
@@ -8,9 +8,10 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { MapPin, Truck, Clock, CreditCard, ShoppingCart, Loader2, Package } from "lucide-react";
+import { MapPin, Truck, Clock, CreditCard, ShoppingCart, Loader2, Package, AlertCircle } from "lucide-react";
 import { shopifyService, formatPrice } from "@/lib/shopify-service";
 import { useCart } from "@/hooks/use-shopify-cart";
+import { useShippingRates } from "@/hooks/use-shipping-rates";
 import { toast } from "sonner";
 import type { ShippingInfo } from "./shipping-types";
 
@@ -82,7 +83,6 @@ function parseShipping(shipping: ShippingInfo | undefined): ParsedShipping {
   const rawFees = parseMultiValue(shipping?.fee);
   const fees = rawFees.length ? rawFees.map((f) => parseFee(f)) : [parseFee(shipping?.fee)];
 
-  // Parse ship_to into country codes or names
   const shipToRaw = shipping?.shipTo || "";
   let availableCountryCodes: string[] = [];
   if (
@@ -96,9 +96,7 @@ function parseShipping(shipping: ShippingInfo | undefined): ParsedShipping {
     availableCountryCodes = tokens
       .map((t) => {
         const upper = t.toUpperCase().trim();
-        // Try as code first
         if (ALL_COUNTRIES.some((c) => c.code === upper)) return upper;
-        // Try as name
         const byName = ALL_COUNTRIES.find(
           (c) => c.name.toLowerCase() === t.toLowerCase()
         );
@@ -128,6 +126,7 @@ interface ShippingEstimatorProps {
   variantId: string | undefined;
   productTitle: string;
   productImage?: string;
+  cjVid?: string;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -138,6 +137,7 @@ export function ShippingEstimator({
   variantId,
   productTitle,
   productImage,
+  cjVid,
 }: ShippingEstimatorProps) {
   const parsed = useMemo(() => parseShipping(shipping), [shipping]);
   const availableCountries = ALL_COUNTRIES.filter((c) =>
@@ -151,27 +151,65 @@ export function ShippingEstimator({
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   const { addToCart } = useCart();
+  const { rates, isLoading: isLoadingRates, error: ratesError, calculate, reset } = useShippingRates();
 
-  const method = parsed.methods[selectedMethodIdx] ?? parsed.methods[0];
-  const processingTime =
-    parsed.processingTimes[selectedMethodIdx] ??
-    parsed.processingTimes[0] ??
-    "Calculated at checkout";
-  const deliveryTime =
-    parsed.deliveryTimes[selectedMethodIdx] ??
-    parsed.deliveryTimes[0] ??
-    "Calculated at checkout";
-  const fee =
-    parsed.fees[selectedMethodIdx] ?? parsed.fees[0];
+  // Fetch live rates whenever country or cjVid changes
+  useEffect(() => {
+    if (!cjVid || !selectedCountry) {
+      reset();
+      return;
+    }
+    calculate({
+      endCountryCode: selectedCountry,
+      products: [{ vid: cjVid, quantity: 1 }],
+    });
+  }, [selectedCountry, cjVid]);
+
+  // Reset method selection when live rates change
+  useEffect(() => {
+    setSelectedMethodIdx(0);
+  }, [rates]);
+
+  const handleCountryChange = (code: string) => {
+    setSelectedCountry(code);
+  };
+
+  // ─── Resolve display values from live rates or static data ───────────────
+  const useLiveRates = rates.length > 0;
+
+  const displayMethods = useLiveRates
+    ? rates.map((r) => r.logisticAftName || r.logisticName)
+    : parsed.methods;
+
+  const selectedRate = useLiveRates ? rates[selectedMethodIdx] ?? rates[0] : null;
+
+  const deliveryTime = useLiveRates && selectedRate
+    ? selectedRate.minDeliveryTime != null && selectedRate.maxDeliveryTime != null
+      ? `${selectedRate.minDeliveryTime}–${selectedRate.maxDeliveryTime} days`
+      : "Varies by carrier"
+    : parsed.deliveryTimes[selectedMethodIdx] ?? parsed.deliveryTimes[0] ?? "Calculated at checkout";
+
+  const processingTime = parsed.processingTimes[selectedMethodIdx] ?? parsed.processingTimes[0] ?? "Calculated at checkout";
+
+  const fee = useLiveRates && selectedRate
+    ? selectedRate.logisticPrice
+    : parsed.fees[selectedMethodIdx] ?? parsed.fees[0];
+
+  const feeCurrency = useLiveRates && selectedRate
+    ? (selectedRate.logisticPriceCur || currency)
+    : currency;
 
   const shippingCostDisplay =
     fee === null || fee === undefined
       ? "Calculated at checkout"
       : fee === 0
       ? "Free"
-      : formatPrice(fee, currency);
+      : formatPrice(fee as number, feeCurrency);
 
-  const total = fee != null ? productPrice + fee : null;
+  const total = fee != null ? productPrice + (fee as number) : null;
+
+  const selectedCountryName =
+    ALL_COUNTRIES.find((c) => c.code === selectedCountry)?.name ?? "";
 
   const handleCheckout = async () => {
     if (!variantId) {
@@ -207,15 +245,17 @@ export function ShippingEstimator({
     });
   };
 
-  const selectedCountryName =
-    ALL_COUNTRIES.find((c) => c.code === selectedCountry)?.name ?? "";
-
   return (
     <div className="rounded-2xl border border-border/70 bg-card/60 overflow-hidden space-y-0">
       {/* Header */}
       <div className="px-4 pt-4 pb-3 flex items-center gap-2">
         <Truck className="h-4 w-4 text-primary" />
         <p className="text-sm font-semibold">Shipping Estimator</p>
+        {useLiveRates && (
+          <span className="ml-auto text-xs text-muted-foreground bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+            Live rates
+          </span>
+        )}
       </div>
 
       <Separator />
@@ -228,7 +268,7 @@ export function ShippingEstimator({
             <MapPin className="h-3.5 w-3.5" />
             Ship to
           </label>
-          <Select value={selectedCountry} onValueChange={setSelectedCountry}>
+          <Select value={selectedCountry} onValueChange={handleCountryChange}>
             <SelectTrigger className="w-full h-10 text-sm">
               <SelectValue placeholder="Select country" />
             </SelectTrigger>
@@ -243,14 +283,24 @@ export function ShippingEstimator({
         </div>
 
         {/* Shipping Method */}
-        {parsed.methods.length > 1 && (
+        {isLoadingRates ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground py-1">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Fetching shipping rates…
+          </div>
+        ) : ratesError && cjVid ? (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground py-1">
+            <AlertCircle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
+            <span>Could not load live rates. Showing estimated data.</span>
+          </div>
+        ) : displayMethods.length > 1 ? (
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
               <Truck className="h-3.5 w-3.5" />
               Shipping method
             </label>
             <div className="flex flex-wrap gap-2">
-              {parsed.methods.map((m, i) => (
+              {displayMethods.map((m, i) => (
                 <button
                   key={m}
                   onClick={() => setSelectedMethodIdx(i)}
@@ -265,14 +315,13 @@ export function ShippingEstimator({
               ))}
             </div>
           </div>
-        )}
-        {parsed.methods.length === 1 && (
+        ) : (
           <div className="space-y-1.5">
             <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
               <Truck className="h-3.5 w-3.5" />
               Shipping method
             </p>
-            <p className="text-sm font-semibold">{method}</p>
+            <p className="text-sm font-semibold">{displayMethods[0]}</p>
           </div>
         )}
       </div>
@@ -300,7 +349,11 @@ export function ShippingEstimator({
             <Truck className="h-3.5 w-3.5" />
             Est. delivery
           </div>
-          <p className="text-sm font-semibold">{deliveryTime}</p>
+          {isLoadingRates ? (
+            <div className="h-5 w-24 bg-muted animate-pulse rounded" />
+          ) : (
+            <p className="text-sm font-semibold">{deliveryTime}</p>
+          )}
           {selectedCountryName && (
             <p className="text-xs text-muted-foreground">to {selectedCountryName}</p>
           )}
@@ -320,17 +373,19 @@ export function ShippingEstimator({
             <CreditCard className="h-3.5 w-3.5" />
             Shipping fee
           </span>
-          <span className="font-semibold">
-            {shippingCostDisplay}
-          </span>
+          {isLoadingRates ? (
+            <div className="h-5 w-20 bg-muted animate-pulse rounded" />
+          ) : (
+            <span className="font-semibold">{shippingCostDisplay}</span>
+          )}
         </div>
-        {total !== null && (
+        {!isLoadingRates && total !== null && (
           <>
             <Separator />
             <div className="flex justify-between items-center">
               <span className="font-bold text-sm">Total</span>
               <span className="font-bold text-lg text-primary">
-                {formatPrice(total, currency)}
+                {formatPrice(total, feeCurrency)}
               </span>
             </div>
           </>
