@@ -18,10 +18,12 @@ import { getSupabase } from "@/lib/supabase";
 import { shopifyService } from "@/lib/shopify-service";
 import { devLog } from "@/lib/dev-logger";
 import { useCart } from "@/hooks/use-shopify-cart";
+import { useAuth } from "@/lib/auth-context";
 import { toast } from "sonner";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { CartSheet } from "@/components/shop/CartSheet";
 import { ShippingEstimator } from "@/components/shop/ShippingEstimator";
+import { ReviewSection } from "@/components/shop/ReviewSection";
 import type { ShippingInfo } from "@/components/shop/shipping-types";
 
 function shuffleArray<T>(items: T[]): T[] {
@@ -118,6 +120,7 @@ export function ProductDetail() {
   const shopifyDataRef = useRef<any>(null);
   
   const { addToCart, isLoading: isAddingToCart } = useCart();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (id) {
@@ -128,6 +131,27 @@ export function ProductDetail() {
       shopifyDataRef.current = null;
     };
   }, [id]);
+
+  // Record view in shop history for authenticated users
+  useEffect(() => {
+    if (!user || !product) return;
+    const record = async () => {
+      try {
+        const supabase = await getSupabase();
+        await supabase.from("shop_history").insert({
+          user_id: user.id,
+          product_id: product.id,
+          product_title: product.title,
+          product_image: product.images[0] || null,
+          price: product.price,
+          currency: product.currency,
+        });
+      } catch {
+        // silently ignore — history is non-critical
+      }
+    };
+    record();
+  }, [user?.id, product?.id]);
 
   // Derive the selected variant from cached Shopify data + selected options
   const selectedVariant = useMemo(() => {
@@ -585,6 +609,11 @@ export function ProductDetail() {
             </div>
           </div>
         </div>}
+
+        {/* Reviews */}
+        {!isLoading && product && (
+          <ReviewSection productId={product.id} />
+        )}
 
         {/* Related Products */}
         {relatedProducts.length > 0 && (
