@@ -21,14 +21,13 @@ export interface CjVidVariantShape {
   sku?: string | null;
 }
 
-/** All Shopify metafield keys we search for the CJ identifier. */
+/** All Shopify metafield keys we search for the CJ identifier. Must be CJ-specific — never generic keys like "vid". */
 const CJ_METAFIELD_KEYS = new Set([
   "cj_vid",
   "cj_variant_id",
   "cj_product_id",
   "cj_sku",
   "cj_spu",
-  "vid",
 ]);
 
 export function resolveCjVid(
