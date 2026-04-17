@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
 import { getSupabase } from '@/lib/supabase';
-import { devLog } from '@/lib/dev-logger';
 
 export interface ShippingRate {
   logisticName: string;
@@ -31,22 +30,22 @@ export function useShippingRates() {
     setIsLoading(true);
     setError(null);
     try {
-      devLog.info('[ShippingRates] Calling cj-freight with', input);
+      console.log('[ShippingRates] Calling cj-freight with', input);
       const supabase = await getSupabase();
       const { data, error: fnError } = await supabase.functions.invoke('cj-freight', {
         body: input,
       });
-      devLog.info('[ShippingRates] cj-freight raw response', { data, fnError });
+      console.log('[ShippingRates] cj-freight raw response', { data, fnError });
       if (fnError) throw fnError;
       if (data?.error) throw new Error(data.error);
 
       const list: ShippingRate[] = data?.data || [];
-      devLog.info('[ShippingRates] Parsed rates', list);
+      console.log('[ShippingRates] Parsed rates', list);
       list.sort((a, b) => a.logisticPrice - b.logisticPrice);
       setRates(list);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to fetch shipping rates';
-      devLog.error('[ShippingRates] Error:', err);
+      console.error('[ShippingRates] Error:', err);
       setError(msg);
       setRates([]);
     } finally {
