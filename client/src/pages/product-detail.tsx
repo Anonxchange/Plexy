@@ -56,6 +56,7 @@ interface Listing {
   availableForSale?: boolean;
   inventoryQuantity?: number;
   shipping?: ShippingInfo;
+  cjVid?: string;
 }
 
 function parseMedia(p: any): MediaItem[] | undefined {
@@ -242,6 +243,7 @@ export function ProductDetail() {
             variantId: p.variants.edges[0]?.node?.id,
             availableForSale: p.variants.edges[0]?.node?.availableForSale,
             shipping: buildShippingInfo(p),
+            cjVid: getMetafieldValue(p, ["cj_vid", "cj_variant_id", "cj_product_id"]),
           });
 
           const related = shuffleArray(result.products.filter((edge: any) => edge.node.id !== decodedId))
@@ -563,6 +565,7 @@ export function ProductDetail() {
                   variantId={selectedVariant?.id || product.variantId}
                   productTitle={product.title}
                   productImage={product.images[0]}
+                  cjVid={product.cjVid}
                 />
               ) : (
                 <div className="rounded-2xl border border-border/70 bg-card/60 overflow-hidden">
