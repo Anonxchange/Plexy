@@ -265,7 +265,7 @@ export function ProductDetail() {
             availableForSale: p.variants.edges[0]?.node?.availableForSale,
             shipping: buildShippingInfo(p),
             cjVid: (() => {
-              const v = getMetafieldValue(p, ["cj_vid", "cj_variant_id", "cj_product_id", "cj_sku", "cj_spu", "vid"]);
+              const v = getMetafieldValue(p, ["cj_vid", "cj_variant_id", "cj_product_id", "cj_sku", "cj_spu"]);
               devLog.info('[product-detail] resolved product-level cjVid from metafields:', v ?? '(none)');
               return v;
             })(),
