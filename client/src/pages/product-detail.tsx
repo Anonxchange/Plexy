@@ -208,14 +208,28 @@ export function ProductDetail() {
     // Always decode — URL params may be percent-encoded (e.g. gid%3A%2F%2F...)
     const decodedId = decodeURIComponent(fetchId || '');
 
+    devLog.info('[ProductDetail] fetchProduct called', { rawId: fetchId, decodedId });
+
     try {
       if (decodedId.startsWith('gid://shopify/Product/')) {
         const result = await shopifyService.getProducts(250);
+
+        devLog.info('[ProductDetail] Shopify getProducts returned', {
+          count: result.products.length,
+          ids: result.products.slice(0, 5).map((e: any) => e.node.id),
+        });
 
         // Guard against stale fetch
         if (fetchId !== id) return;
 
         const found = result.products.find((edge: any) => edge.node.id === decodedId);
+
+        devLog.info('[ProductDetail] Product match result', {
+          decodedId,
+          found: !!found,
+          metafields: found?.node?.metafields,
+          cjVid: found ? getMetafieldValue(found.node, ["cj_vid", "cj_variant_id", "cj_product_id", "cj_sku", "cj_spu"]) : null,
+        });
 
         if (found) {
           const p = found.node;
