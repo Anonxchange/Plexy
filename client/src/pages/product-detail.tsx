@@ -79,11 +79,11 @@ function parseMedia(p: any): MediaItem[] | undefined {
 }
 
 const DEFAULT_SHIPPING_INFO: ShippingInfo = {
-  shipTo: "Select at checkout",
-  shipsFrom: "Supplier warehouse",
-  method: "Available options shown at checkout",
-  processingTime: "Calculated at checkout",
-  deliveryTime: "Calculated at checkout",
+  shipTo: "Worldwide",
+  shipsFrom: "China",
+  method: "Standard Shipping",
+  processingTime: "1–3 business days",
+  deliveryTime: "7–20 business days",
   fee: "Calculated at checkout",
 };
 
