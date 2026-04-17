@@ -30,22 +30,18 @@ export function useShippingRates() {
     setIsLoading(true);
     setError(null);
     try {
-      console.log('[ShippingRates] Calling cj-freight with', input);
       const supabase = await getSupabase();
       const { data, error: fnError } = await supabase.functions.invoke('cj-freight', {
         body: input,
       });
-      console.log('[ShippingRates] cj-freight raw response', { data, fnError });
       if (fnError) throw fnError;
       if (data?.error) throw new Error(data.error);
 
       const list: ShippingRate[] = data?.data || [];
-      console.log('[ShippingRates] Parsed rates', list);
       list.sort((a, b) => a.logisticPrice - b.logisticPrice);
       setRates(list);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to fetch shipping rates';
-      console.error('[ShippingRates] Error:', err);
       setError(msg);
       setRates([]);
     } finally {
