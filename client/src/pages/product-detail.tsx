@@ -17,6 +17,7 @@ import {
 import { getSupabase } from "@/lib/supabase";
 import { shopifyService } from "@/lib/shopify-service";
 import { devLog } from "@/lib/dev-logger";
+import { resolveCjVid } from "@/lib/cj-vid";
 import { useCart } from "@/hooks/use-shopify-cart";
 import { useAuth } from "@/lib/auth-context";
 import { toast } from "sonner";
@@ -187,6 +188,13 @@ export function ProductDetail() {
 
     return match?.node || null;
   }, [selectedSize, selectedColor, availableSizes, availableColors]);
+
+  // Resolve cjVid safely: variant metafield → product-level fallback → variant SKU.
+  // Never passes an empty string to the shipping estimator.
+  const resolvedCjVid = useMemo(
+    () => resolveCjVid(selectedVariant, product?.cjVid),
+    [selectedVariant, product?.cjVid]
+  );
 
   // Update price and availability when variant changes
   const currentPrice = selectedVariant
@@ -579,7 +587,7 @@ export function ProductDetail() {
                   variantId={selectedVariant?.id || product.variantId}
                   productTitle={product.title}
                   productImage={product.images[0]}
-                  cjVid={product.cjVid}
+                  cjVid={resolvedCjVid}
                 />
               ) : (
                 <div className="rounded-2xl border border-border/70 bg-card/60 overflow-hidden">
