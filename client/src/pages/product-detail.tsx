@@ -197,10 +197,11 @@ export function ProductDetail() {
     
     // Stale closure guard
     const fetchId = id;
+    // Always decode — URL params may be percent-encoded (e.g. gid%3A%2F%2F...)
+    const decodedId = decodeURIComponent(fetchId || '');
 
     try {
-      if (fetchId?.includes('Product') || fetchId?.startsWith('gid://shopify/Product/')) {
-        const decodedId = decodeURIComponent(fetchId);
+      if (decodedId.startsWith('gid://shopify/Product/')) {
         const result = await shopifyService.getProducts(250);
 
         // Guard against stale fetch
@@ -268,6 +269,11 @@ export function ProductDetail() {
           setIsLoading(false);
           return;
         }
+
+        // It's a Shopify GID but wasn't found in the product list — don't fall through to Supabase
+        toast.error("Product not found");
+        navigate("/shop");
+        return;
       }
 
       if (fetchId !== id) return;
@@ -300,7 +306,7 @@ export function ProductDetail() {
         navigate("/shop");
       }
     } catch (error) {
-      devLog.error('[ProductDetail] fetchProduct failed for id:', fetchId, error);
+      devLog.error('Error fetching product:', error);
       if (fetchId === id) {
         toast.error("Error loading product");
         navigate("/shop");
