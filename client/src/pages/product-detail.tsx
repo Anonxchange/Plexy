@@ -12,6 +12,7 @@ import {
   Loader2,
   Share2,
   Heart,
+  PlayCircle,
 } from "lucide-react";
 import { getSupabase } from "@/lib/supabase";
 import { shopifyService } from "@/lib/shopify-service";
@@ -32,6 +33,11 @@ function shuffleArray<T>(items: T[]): T[] {
   return shuffled;
 }
 
+type MediaItem =
+  | { type: 'image'; url: string; altText?: string }
+  | { type: 'video'; sources: { url: string; mimeType: string }[]; previewUrl?: string }
+  | { type: 'external'; embedUrl: string; previewUrl?: string };
+
 interface Listing {
   id: string;
   title: string;
@@ -40,6 +46,7 @@ interface Listing {
   currency: string;
   category: string;
   images: string[];
+  media?: MediaItem[];
   location: string;
   user_id: string;
   status: string;
@@ -47,6 +54,25 @@ interface Listing {
   availableForSale?: boolean;
   inventoryQuantity?: number;
   shipping?: ShippingInfo;
+}
+
+function parseMedia(p: any): MediaItem[] | undefined {
+  const edges = p?.media?.edges;
+  if (!Array.isArray(edges) || edges.length === 0) return undefined;
+  const items: MediaItem[] = [];
+  for (const edge of edges) {
+    const node = edge?.node;
+    if (!node) continue;
+    const contentType: string = node.mediaContentType || '';
+    if (contentType === 'IMAGE' && node.image?.url) {
+      items.push({ type: 'image', url: node.image.url, altText: node.image.altText ?? undefined });
+    } else if (contentType === 'VIDEO' && Array.isArray(node.sources) && node.sources.length > 0) {
+      items.push({ type: 'video', sources: node.sources, previewUrl: node.previewImage?.url });
+    } else if (contentType === 'EXTERNAL_VIDEO' && node.embeddedUrl) {
+      items.push({ type: 'external', embedUrl: node.embeddedUrl, previewUrl: node.previewImage?.url });
+    }
+  }
+  return items.length > 0 ? items : undefined;
 }
 
 const DEFAULT_SHIPPING_INFO: ShippingInfo = {
@@ -185,6 +211,7 @@ export function ProductDetail() {
             currency: p.priceRange.minVariantPrice.currencyCode,
             category: p.productType || "Shopify",
             images: p.images.edges.map((e: any) => e.node.url),
+            media: parseMedia(p),
             location: "Online",
             user_id: "shopify",
             status: "active",
@@ -310,41 +337,89 @@ export function ProductDetail() {
         )}
 
         {!isLoading && product && <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
-          {/* Left: Images */}
-          <div className="space-y-4">
-            <div className="relative aspect-square rounded-xl overflow-hidden bg-muted">
-              {product.images.length > 0 ? (
-                <img
-                  src={product.images[selectedImage]}
-                  alt={product.title}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Package className="h-16 w-16 text-muted-foreground" />
-                </div>
-              )}
-              <Button variant="ghost" size="icon" className="absolute top-3 right-3 bg-background/80 backdrop-blur-sm">
-                <Share2 className="h-4 w-4" />
-              </Button>
-            </div>
+          {/* Left: Media (images + video) */}
+          {(() => {
+            const mediaItems: MediaItem[] = product.media && product.media.length > 0
+              ? product.media
+              : product.images.map(url => ({ type: 'image' as const, url }));
+            const selected = mediaItems[selectedImage] ?? mediaItems[0];
 
-            {product.images.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-2">
-                {product.images.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setSelectedImage(idx)}
-                    className={`relative w-20 aspect-square rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${
-                      selectedImage === idx ? 'border-primary' : 'border-transparent opacity-70 hover:opacity-100'
-                    }`}
-                  >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
-                  </button>
-                ))}
+            return (
+              <div className="space-y-4">
+                <div className="relative aspect-square rounded-xl overflow-hidden bg-muted">
+                  {mediaItems.length === 0 ? (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Package className="h-16 w-16 text-muted-foreground" />
+                    </div>
+                  ) : selected?.type === 'video' ? (
+                    <video
+                      key={selectedImage}
+                      className="w-full h-full object-cover"
+                      controls
+                      autoPlay={false}
+                      playsInline
+                      poster={selected.previewUrl}
+                    >
+                      {selected.sources.map((s, i) => (
+                        <source key={i} src={s.url} type={s.mimeType} />
+                      ))}
+                    </video>
+                  ) : selected?.type === 'external' ? (
+                    <iframe
+                      key={selectedImage}
+                      src={selected.embedUrl}
+                      className="w-full h-full"
+                      allow="autoplay; encrypted-media"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <img
+                      src={(selected as any).url ?? product.images[selectedImage]}
+                      alt={product.title}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                  <Button variant="ghost" size="icon" className="absolute top-3 right-3 bg-background/80 backdrop-blur-sm">
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {mediaItems.length > 1 && (
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {mediaItems.map((item, idx) => {
+                      const thumbSrc = item.type === 'image' ? item.url
+                        : item.type === 'video' ? item.previewUrl
+                        : item.type === 'external' ? item.previewUrl
+                        : undefined;
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => setSelectedImage(idx)}
+                          className={`relative w-20 aspect-square rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${
+                            selectedImage === idx ? 'border-primary' : 'border-transparent opacity-70 hover:opacity-100'
+                          }`}
+                        >
+                          {thumbSrc ? (
+                            <img src={thumbSrc} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-muted flex items-center justify-center">
+                              <Package className="h-6 w-6 text-muted-foreground" />
+                            </div>
+                          )}
+                          {(item.type === 'video' || item.type === 'external') && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                              <PlayCircle className="h-6 w-6 text-white" />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            );
+          })()}
+
 
           {/* Right: Info */}
           <div className="space-y-6">
