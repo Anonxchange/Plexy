@@ -90,7 +90,15 @@ const DEFAULT_SHIPPING_INFO: ShippingInfo = {
 function getMetafieldValue(productData: any, keys: string[]) {
   const metafields = Array.isArray(productData?.metafields) ? productData.metafields : [];
   const keySet = new Set(keys);
-  const match = metafields.find((field: any) => field && keySet.has(field.key) && typeof field.value === "string" && field.value.trim());
+  const match = metafields.find((field: any) => {
+    if (!field) return false;
+    if (!keySet.has(field.key)) return false;
+    if (typeof field.value !== "string" || !field.value.trim()) return false;
+    // Skip metaobject references — their value is a Shopify GID, not the actual content.
+    // Use a plain single_line_text_field metafield instead.
+    if (field.value.startsWith("gid://shopify/") || field.type === "metaobject_reference" || field.type === "list.metaobject_reference") return false;
+    return true;
+  });
   return match?.value?.trim();
 }
 
@@ -244,7 +252,7 @@ export function ProductDetail() {
             variantId: p.variants.edges[0]?.node?.id,
             availableForSale: p.variants.edges[0]?.node?.availableForSale,
             shipping: buildShippingInfo(p),
-            cjVid: getMetafieldValue(p, ["cj_vid", "cj_variant_id", "cj_product_id"]),
+            cjVid: getMetafieldValue(p, ["cj_vid", "cj_variant_id", "cj_product_id", "cj_sku", "cj_spu"]),
           });
 
           const related = shuffleArray(result.products.filter((edge: any) => edge.node.id !== decodedId))
