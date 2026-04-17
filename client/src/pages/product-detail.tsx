@@ -610,11 +610,6 @@ export function ProductDetail() {
           </div>
         </div>}
 
-        {/* Reviews */}
-        {!isLoading && product && (
-          <ReviewSection productId={product.id} />
-        )}
-
         {/* Related Products */}
         {relatedProducts.length > 0 && (
           <div className="mt-16 space-y-6">
@@ -646,6 +641,11 @@ export function ProductDetail() {
               ))}
             </div>
           </div>
+        )}
+
+        {/* Reviews */}
+        {!isLoading && product && (
+          <ReviewSection productId={product.id} />
         )}
       </div>
       <PexlyFooter />
