@@ -65,32 +65,40 @@ interface CategoryNode {
 }
 
 function buildCategoryTree(categories: string[]): CategoryNode[] {
-  const parentMap = new Map<string, Set<string>>();
-
+  // Expand every full taxonomy path into all its intermediate paths so the tree
+  // has proper parent nodes even when only leaf-level strings are in the input.
+  // e.g. "A > B > C" → adds "A", "A > B", "A > B > C"
+  const allPaths = new Set<string>();
   for (const cat of categories) {
-    if (cat === "All") continue;
-    const idx = cat.indexOf(CAT_SEPARATOR);
-    if (idx !== -1) {
-      const parent = cat.slice(0, idx);
-      if (!parentMap.has(parent)) parentMap.set(parent, new Set());
-      parentMap.get(parent)!.add(cat);
-    } else {
-      if (!parentMap.has(cat)) parentMap.set(cat, new Set());
+    if (!cat || cat === "All") continue;
+    const parts = cat.split(CAT_SEPARATOR);
+    for (let i = 1; i <= parts.length; i++) {
+      allPaths.add(parts.slice(0, i).join(CAT_SEPARATOR));
     }
   }
 
-  return Array.from(parentMap.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([name, childSet]) => ({
-      name,
-      fullPath: name,
-      children: Array.from(childSet)
-        .sort((a, b) => a.localeCompare(b))
-        .map(childPath => ({
-          name: childPath.slice(name.length + CAT_SEPARATOR.length),
-          fullPath: childPath,
-          children: [],
-        })),
+  const buildChildren = (parentPath: string, depth: number): CategoryNode[] => {
+    if (depth > 6) return [];
+    return Array.from(allPaths)
+      .filter(p => {
+        const lastSep = p.lastIndexOf(CAT_SEPARATOR);
+        return lastSep !== -1 && p.slice(0, lastSep) === parentPath;
+      })
+      .sort((a, b) => a.localeCompare(b))
+      .map(childPath => ({
+        name: childPath.slice(parentPath.length + CAT_SEPARATOR.length),
+        fullPath: childPath,
+        children: buildChildren(childPath, depth + 1),
+      }));
+  };
+
+  return Array.from(allPaths)
+    .filter(p => !p.includes(CAT_SEPARATOR))
+    .sort((a, b) => a.localeCompare(b))
+    .map(root => ({
+      name: root,
+      fullPath: root,
+      children: buildChildren(root, 1),
     }));
 }
 
@@ -153,10 +161,16 @@ export function Shop() {
 
         const fetched: Listing[] = (result.products || []).map((edge: any) => {
           const p = edge.node;
-          // Use Shopify's standard taxonomy category (fullName has the full hierarchy path
-          // using " > " as separator, e.g. "Vehicle Waxes, Polishes & Protectants > Car Wax").
-          // Fall back to productType for products that haven't been assigned a taxonomy category.
-          const taxonomyCategory: string = p.category?.fullName?.trim() || p.productType || "";
+          // Build the full taxonomy path from ancestors + leaf name.
+          // Storefront API exposes category.ancestors (root→parent) and category.name (leaf).
+          // e.g. ancestors=["Vehicles & Parts","Vehicle Care"] + name="Car Wax"
+          //   → "Vehicles & Parts > Vehicle Care > Car Wax"
+          const buildTaxonomyPath = (cat: any): string => {
+            if (!cat) return "";
+            const parts: string[] = [...(cat.ancestors || []).map((a: any) => a.name), cat.name];
+            return parts.filter(Boolean).join(CAT_SEPARATOR);
+          };
+          const taxonomyCategory: string = buildTaxonomyPath(p.category);
           return {
             id: p.id,
             handle: p.handle,
@@ -280,11 +294,11 @@ export function Shop() {
     const counts: Record<string, number> = { All: currentListings.length };
     currentListings.forEach(p => {
       if (!p.category) return;
-      counts[p.category] = (counts[p.category] || 0) + 1;
-      const idx = p.category.indexOf(CAT_SEPARATOR);
-      if (idx !== -1) {
-        const parent = p.category.slice(0, idx);
-        counts[parent] = (counts[parent] || 0) + 1;
+      // Increment every ancestor path so parent nodes show cumulative counts
+      const parts = p.category.split(CAT_SEPARATOR);
+      for (let i = 1; i <= parts.length; i++) {
+        const path = parts.slice(0, i).join(CAT_SEPARATOR);
+        counts[path] = (counts[path] || 0) + 1;
       }
     });
     return counts;
