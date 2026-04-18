@@ -49,6 +49,7 @@ interface Listing {
   price: number;
   currency: string;
   category: string;
+  tags?: string[];
   images: string[];
   location: string;
   user_id: string;
@@ -152,6 +153,10 @@ export function Shop() {
 
         const fetched: Listing[] = (result.products || []).map((edge: any) => {
           const p = edge.node;
+          // Use Shopify's standard taxonomy category (fullName has the full hierarchy path
+          // using " > " as separator, e.g. "Vehicle Waxes, Polishes & Protectants > Car Wax").
+          // Fall back to productType for products that haven't been assigned a taxonomy category.
+          const taxonomyCategory: string = p.category?.fullName?.trim() || p.productType || "";
           return {
             id: p.id,
             handle: p.handle,
@@ -159,7 +164,8 @@ export function Shop() {
             description: p.description,
             price: parseFloat(p.priceRange.minVariantPrice.amount),
             currency: p.priceRange.minVariantPrice.currencyCode,
-            category: p.productType || "",
+            category: taxonomyCategory,
+            tags: Array.isArray(p.tags) ? p.tags.filter((t: string) => t.trim().length > 0) : [],
             images: p.images.edges.map((e: any) => e.node.url),
             location: "Online",
             user_id: "shopify",
@@ -169,6 +175,7 @@ export function Shop() {
           };
         });
 
+        // Collect all taxonomy category paths — buildCategoryTree splits on " > " automatically
         const newCats = fetched.map(p => p.category).filter((c): c is string => c.trim().length > 0);
         if (newCats.length > 0) {
           setShopifyCategories(prev => {
@@ -245,10 +252,12 @@ export function Shop() {
       .filter(p => {
         const q = searchQuery.toLowerCase();
         const matchesSearch = !q || p.title.toLowerCase().includes(q) || p.description.toLowerCase().includes(q);
+
         const matchesCategory =
           selectedCategory === "All" ||
           p.category === selectedCategory ||
           p.category.startsWith(selectedCategory + CAT_SEPARATOR);
+
         return matchesSearch && matchesCategory;
       })
       .sort((a, b) => {
@@ -289,7 +298,8 @@ export function Shop() {
   const handleCategoryClick = (fullPath: string, hasChildren: boolean) => {
     setSelectedCategory(fullPath);
     if (hasChildren) {
-      setExpandedCategory(prev => prev === fullPath ? null : fullPath);
+      // Always expand when clicking a parent — children appear beneath it in the sidebar
+      setExpandedCategory(fullPath);
     } else {
       setExpandedCategory(null);
     }
@@ -368,7 +378,7 @@ export function Shop() {
               <span className="ml-1 text-xs opacity-60">({productCountByCategory["All"]})</span>
             ) : null}
           </button>
-          {categories.filter(c => c !== "All").map(cat => (
+          {categories.filter(c => c !== "All" && !c.includes(CAT_SEPARATOR)).map(cat => (
             <button
               key={cat}
               onClick={() => { setSelectedCategory(cat); setExpandedCategory(null); }}
@@ -378,7 +388,7 @@ export function Shop() {
                   : "bg-background text-foreground border-border hover:border-primary/50"
               }`}
             >
-              {cat.includes(CAT_SEPARATOR) ? cat.split(CAT_SEPARATOR).pop() : cat}
+              {cat}
               {productCountByCategory[cat] ? (
                 <span className="ml-1 text-xs opacity-60">({productCountByCategory[cat]})</span>
               ) : null}
