@@ -58,6 +58,7 @@ function escapeShopifySearchValue(value: string): string {
 
 interface Listing {
   id: string;
+  handle?: string;
   title: string;
   description: string;
   price: number;
@@ -146,18 +147,22 @@ export function Shop() {
   const fetchShopifyProducts = async (isBackground = false) => {
     const fetchId = ++shopifyFetchIdRef.current;
 
-    if (!isBackground) setIsShopifyLoading(true);
+    if (!isBackground) {
+      setIsShopifyLoading(true);
+      setShopifyProducts([]);
+    }
+
+    let firstPageDone = false;
 
     try {
       const shopifyQuery = selectedCategory !== "All"
         ? `product_type:${escapeShopifySearchValue(selectedCategory)}`
         : undefined;
 
-      let allProducts: Listing[] = [];
       let after: string | undefined = undefined;
       let hasMore = true;
       let page = 0;
-      const MAX_PAGES = 40; // safety cap: 40 × 250 = 10,000 products max
+      const MAX_PAGES = 40;
 
       while (hasMore && page < MAX_PAGES) {
         if (fetchId !== shopifyFetchIdRef.current) return;
@@ -170,6 +175,7 @@ export function Shop() {
           const p = edge.node;
           return {
             id: p.id,
+            handle: p.handle,
             title: p.title,
             description: p.description,
             price: parseFloat(p.priceRange.minVariantPrice.amount),
@@ -184,25 +190,28 @@ export function Shop() {
           };
         });
 
-        allProducts = [...allProducts, ...fetched];
+        const batch = !isBackground ? shuffleArray(fetched) : fetched;
+
+        if (!firstPageDone) {
+          // Show first page immediately — don't wait for remaining pages
+          setShopifyProducts(batch);
+          if (!isBackground) {
+            setIsShopifyLoading(false);
+            setVisibleCount(SHOPIFY_DISPLAY_PAGE_SIZE);
+          }
+          firstPageDone = true;
+        } else {
+          // Silently append subsequent pages while user browses
+          setShopifyProducts(prev => {
+            if (fetchId !== shopifyFetchIdRef.current) return prev;
+            return [...prev, ...batch];
+          });
+        }
+
         hasMore = result.pageInfo?.hasNextPage || false;
         after = result.pageInfo?.endCursor || undefined;
         page++;
       }
-
-      if (fetchId !== shopifyFetchIdRef.current) return;
-
-      const finalProducts = !isBackground ? shuffleArray(allProducts) : allProducts;
-
-      setShopifyProducts(finalProducts);
-      setVisibleCount(SHOPIFY_DISPLAY_PAGE_SIZE);
-
-      setShopifyCategories(prev => {
-        if (prev.length > 1) return prev;
-        const types = new Set<string>(["All"]);
-        finalProducts.forEach(p => { if (p.category) types.add(p.category); });
-        return Array.from(types).sort();
-      });
     } catch (error) {
       if (fetchId === shopifyFetchIdRef.current) {
         devLog.error('Error fetching Shopify products:', error);
@@ -273,7 +282,11 @@ export function Shop() {
   };
 
   const handleViewDetails = (product: Listing) => {
-    navigate(`/shop/product/${encodeURIComponent(product.id)}`);
+    if (product.user_id === 'shopify' && product.handle) {
+      navigate(`/shop/product/${product.handle}`);
+    } else {
+      navigate(`/shop/product/${encodeURIComponent(product.id)}`);
+    }
   };
 
   const currentListings = activeTab === "marketplace" ? listings : shopifyProducts;
