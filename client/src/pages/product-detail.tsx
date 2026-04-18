@@ -207,6 +207,46 @@ export function ProductDetail() {
     ? selectedVariant.availableForSale
     : product?.availableForSale ?? true;
 
+  const applyShopifyProduct = (p: any) => {
+    shopifyDataRef.current = p;
+
+    const options = p.options || [];
+    const sizeOption = options.find((opt: any) =>
+      opt.name.toLowerCase() === 'size' || opt.name.toLowerCase() === 'taille'
+    );
+    const colorOption = options.find((opt: any) =>
+      opt.name.toLowerCase() === 'color' || opt.name.toLowerCase() === 'couleur' || opt.name.toLowerCase() === 'colour'
+    );
+
+    const sizes = sizeOption?.values || [];
+    const colors = colorOption?.values || [];
+
+    setAvailableSizes(sizes);
+    setAvailableColors(colors);
+    if (sizes.length > 0) setSelectedSize(sizes[0]);
+    if (colors.length > 0) setSelectedColor(colors[0]);
+
+    setProduct({
+      id: p.id,
+      title: p.title,
+      description: p.description,
+      price: parseFloat(p.priceRange.minVariantPrice.amount),
+      currency: p.priceRange.minVariantPrice.currencyCode,
+      category: p.productType || "Shopify",
+      images: p.images.edges.map((e: any) => e.node.url),
+      media: parseMedia(p),
+      location: "Online",
+      user_id: "shopify",
+      status: "active",
+      variantId: p.variants.edges[0]?.node?.id,
+      availableForSale: p.variants.edges[0]?.node?.availableForSale,
+      shipping: buildShippingInfo(p),
+      cjVid: getMetafieldValue(p, ["cj_vid", "cj_variant_id", "cj_sku"]),
+    });
+  };
+
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
   const fetchProduct = async () => {
     setIsLoading(true);
     shopifyDataRef.current = null;
@@ -217,51 +257,33 @@ export function ProductDetail() {
     const decodedId = decodeURIComponent(fetchId || '');
 
     try {
+      // --- Path 1: Shopify handle (preferred, most efficient) ---
+      if (!decodedId.startsWith('gid://') && !UUID_RE.test(decodedId)) {
+        const p = await shopifyService.getProductByHandle(decodedId);
+
+        if (fetchId !== id) return;
+
+        if (p) {
+          applyShopifyProduct(p);
+          setIsLoading(false);
+          return;
+        }
+
+        toast.error("Product not found");
+        navigate("/shop");
+        return;
+      }
+
+      // --- Path 2: Legacy Shopify GID (backward compat for old URLs) ---
       if (decodedId.startsWith('gid://shopify/Product/')) {
         const result = await shopifyService.getProducts(250);
 
-        // Guard against stale fetch
         if (fetchId !== id) return;
 
         const found = result.products.find((edge: any) => edge.node.id === decodedId);
 
         if (found) {
-          const p = found.node;
-          shopifyDataRef.current = p;
-
-          const options = p.options || [];
-          const sizeOption = options.find((opt: any) =>
-            opt.name.toLowerCase() === 'size' || opt.name.toLowerCase() === 'taille'
-          );
-          const colorOption = options.find((opt: any) =>
-            opt.name.toLowerCase() === 'color' || opt.name.toLowerCase() === 'couleur' || opt.name.toLowerCase() === 'colour'
-          );
-
-          const sizes = sizeOption?.values || [];
-          const colors = colorOption?.values || [];
-
-          setAvailableSizes(sizes);
-          setAvailableColors(colors);
-          if (sizes.length > 0) setSelectedSize(sizes[0]);
-          if (colors.length > 0) setSelectedColor(colors[0]);
-
-          setProduct({
-            id: p.id,
-            title: p.title,
-            description: p.description,
-            price: parseFloat(p.priceRange.minVariantPrice.amount),
-            currency: p.priceRange.minVariantPrice.currencyCode,
-            category: p.productType || "Shopify",
-            images: p.images.edges.map((e: any) => e.node.url),
-            media: parseMedia(p),
-            location: "Online",
-            user_id: "shopify",
-            status: "active",
-            variantId: p.variants.edges[0]?.node?.id,
-            availableForSale: p.variants.edges[0]?.node?.availableForSale,
-            shipping: buildShippingInfo(p),
-            cjVid: getMetafieldValue(p, ["cj_vid", "cj_variant_id", "cj_sku"]),
-          });
+          applyShopifyProduct(found.node);
 
           const related = shuffleArray(result.products.filter((edge: any) => edge.node.id !== decodedId))
             .slice(0, 4)
@@ -286,12 +308,13 @@ export function ProductDetail() {
           return;
         }
 
-        // It's a Shopify GID but wasn't found in the product list — don't fall through to Supabase
+        // GID not found in first 250 — don't fall through to Supabase
         toast.error("Product not found");
         navigate("/shop");
         return;
       }
 
+      // --- Path 3: Supabase marketplace listing (UUID) ---
       if (fetchId !== id) return;
 
       const supabase = await getSupabase();
