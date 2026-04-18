@@ -266,6 +266,34 @@ export function ProductDetail() {
         if (p) {
           applyShopifyProduct(p);
           setIsLoading(false);
+
+          // Fetch related products in the background (same product type for relevance)
+          const typeQuery = p.productType ? `product_type:${p.productType}` : undefined;
+          shopifyService.getProducts(8, undefined, typeQuery).then(({ products }) => {
+            if (fetchId !== id) return;
+            const related = shuffleArray(
+              products.filter((edge: any) => edge.node.handle !== decodedId)
+            )
+              .slice(0, 4)
+              .map((edge: any) => {
+                const rp = edge.node;
+                return {
+                  id: rp.handle ?? rp.id,
+                  title: rp.title,
+                  description: rp.description,
+                  price: parseFloat(rp.priceRange.minVariantPrice.amount),
+                  currency: rp.priceRange.minVariantPrice.currencyCode,
+                  category: "Shopify",
+                  images: rp.images.edges.map((e: any) => e.node.url),
+                  location: "Online",
+                  user_id: "shopify",
+                  status: "active",
+                  variantId: rp.variants.edges[0]?.node?.id,
+                };
+              });
+            setRelatedProducts(related);
+          }).catch(() => { /* non-critical — silently ignore */ });
+
           return;
         }
 
