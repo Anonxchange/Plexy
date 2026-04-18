@@ -1,6 +1,5 @@
 import { useHead } from "@unhead/react";
-import { useState, useEffect, useRef, lazy, Suspense } from "react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect, useRef, lazy, Suspense, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -14,27 +13,16 @@ import {
 } from "@/components/ui/select";
 import {
   Tabs,
-  TabsContent,
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Search, Filter, Package, Plus, Store } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { Search, Package, Plus, Store, ChevronRight, ChevronDown, LayoutGrid } from "lucide-react";
 import { useLocation } from "wouter";
 import { getSupabase } from "@/lib/supabase";
 import { shopifyService } from "@/lib/shopify-service";
 import { ShopSkeleton } from "@/components/shop/ShopSkeleton";
 import { CartSheet } from "@/components/shop/CartSheet";
 import { toast } from "sonner";
-
 import { useCart } from "@/hooks/use-shopify-cart";
 import { devLog } from "@/lib/dev-logger";
 
@@ -42,6 +30,7 @@ const ShopItemCard = lazy(() => import("@/components/shop/ShopItemCard").then(m 
 
 const SHOPIFY_FETCH_SIZE = 250;
 const SHOPIFY_DISPLAY_PAGE_SIZE = 60;
+const CAT_SEPARATOR = " > ";
 
 function shuffleArray<T>(items: T[]): T[] {
   const shuffled = [...items];
@@ -50,10 +39,6 @@ function shuffleArray<T>(items: T[]): T[] {
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   return shuffled;
-}
-
-function escapeShopifySearchValue(value: string): string {
-  return `'${value.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
 }
 
 interface Listing {
@@ -72,16 +57,50 @@ interface Listing {
   variantId?: string;
 }
 
+interface CategoryNode {
+  name: string;
+  fullPath: string;
+  children: CategoryNode[];
+}
+
+function buildCategoryTree(categories: string[]): CategoryNode[] {
+  const parentMap = new Map<string, Set<string>>();
+
+  for (const cat of categories) {
+    if (cat === "All") continue;
+    const idx = cat.indexOf(CAT_SEPARATOR);
+    if (idx !== -1) {
+      const parent = cat.slice(0, idx);
+      if (!parentMap.has(parent)) parentMap.set(parent, new Set());
+      parentMap.get(parent)!.add(cat);
+    } else {
+      if (!parentMap.has(cat)) parentMap.set(cat, new Set());
+    }
+  }
+
+  return Array.from(parentMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, childSet]) => ({
+      name,
+      fullPath: name,
+      children: Array.from(childSet)
+        .sort((a, b) => a.localeCompare(b))
+        .map(childPath => ({
+          name: childPath.slice(name.length + CAT_SEPARATOR.length),
+          fullPath: childPath,
+          children: [],
+        })),
+    }));
+}
 
 export function Shop() {
   useHead({ title: "Crypto Shop | Pexly", meta: [{ name: "description", content: "Discover products and services available for direct cryptocurrency purchase." }] });
   const [, navigate] = useLocation();
-  const { addToCart, isLoading: isAddingToCart } = useCart();
+  const { addToCart } = useCart();
   const [searchQuery, setSearchQuery] = useState("");
-
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState("shuffle");
-  const [selectedProduct, setSelectedProduct] = useState<Listing | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
   const [shopifyProducts, setShopifyProducts] = useState<Listing[]>([]);
   const [marketplaceCategories, setMarketplaceCategories] = useState<string[]>(["All"]);
@@ -91,84 +110,44 @@ export function Shop() {
   const [isMarketplaceLoading, setIsMarketplaceLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(SHOPIFY_DISPLAY_PAGE_SIZE);
 
-  // Ref to cancel stale Shopify fetches when a newer one starts
   const shopifyFetchIdRef = useRef(0);
 
-  // On mount: fetch marketplace listings once
-  useEffect(() => {
-    fetchListings();
-  }, []);
+  useEffect(() => { fetchListings(); }, []);
 
-  // Fetch Shopify products when category or tab changes (covers initial mount too)
   useEffect(() => {
-    if (activeTab === "shopify") {
-      fetchShopifyProducts();
-      fetchShopifyCategories();
-    }
-  }, [selectedCategory, activeTab]);
+    if (activeTab === "shopify") fetchShopifyProducts();
+  }, [activeTab]);
 
-  // Background refresh every 5 minutes
   useEffect(() => {
     if (activeTab !== "shopify") return;
-    const interval = setInterval(() => {
-      fetchShopifyProducts(true);
-    }, 300000);
-    return () => clearInterval(interval);
-  }, [activeTab, selectedCategory]);
+    const id = setInterval(() => fetchShopifyProducts(true), 300_000);
+    return () => clearInterval(id);
+  }, [activeTab]);
 
-  // Update Marketplace categories
   useEffect(() => {
     const cats = new Set<string>(["All"]);
-    listings.forEach(p => {
-      if (p.category) cats.add(p.category);
-    });
+    listings.forEach(p => { if (p.category) cats.add(p.category); });
     setMarketplaceCategories(Array.from(cats).sort());
   }, [listings]);
 
-  // Reset category filter when switching tabs
-  useEffect(() => {
-    setSelectedCategory("All");
-  }, [activeTab]);
-
-  // Reset visible count when filters change
-  useEffect(() => {
-    setVisibleCount(SHOPIFY_DISPLAY_PAGE_SIZE);
-  }, [selectedCategory, searchQuery, sortBy]);
-
-  const fetchShopifyCategories = async () => {
-    try {
-      const types = await shopifyService.getProductTypes();
-      setShopifyCategories(["All", ...Array.from(new Set(types)).sort((a, b) => a.localeCompare(b))]);
-    } catch (error) {
-      devLog.error('Error fetching Shopify categories:', error);
-    }
-  };
+  useEffect(() => { setSelectedCategory("All"); setExpandedCategory(null); }, [activeTab]);
+  useEffect(() => { setVisibleCount(SHOPIFY_DISPLAY_PAGE_SIZE); }, [selectedCategory, searchQuery, sortBy]);
 
   const fetchShopifyProducts = async (isBackground = false) => {
     const fetchId = ++shopifyFetchIdRef.current;
-
     if (!isBackground) {
       setIsShopifyLoading(true);
       setShopifyProducts([]);
+      setShopifyCategories(["All"]);
     }
-
     let firstPageDone = false;
-
     try {
-      const shopifyQuery = selectedCategory !== "All"
-        ? `product_type:${escapeShopifySearchValue(selectedCategory)}`
-        : undefined;
-
-      let after: string | undefined = undefined;
+      let after: string | undefined;
       let hasMore = true;
       let page = 0;
-      const MAX_PAGES = 40;
-
-      while (hasMore && page < MAX_PAGES) {
+      while (hasMore && page < 40) {
         if (fetchId !== shopifyFetchIdRef.current) return;
-
-        const result = await shopifyService.getProducts(SHOPIFY_FETCH_SIZE, after, shopifyQuery, false);
-
+        const result = await shopifyService.getProducts(SHOPIFY_FETCH_SIZE, after, undefined, false);
         if (fetchId !== shopifyFetchIdRef.current) return;
 
         const fetched: Listing[] = (result.products || []).map((edge: any) => {
@@ -180,7 +159,7 @@ export function Shop() {
             description: p.description,
             price: parseFloat(p.priceRange.minVariantPrice.amount),
             currency: p.priceRange.minVariantPrice.currencyCode,
-            category: p.productType || "All",
+            category: p.productType || "",
             images: p.images.edges.map((e: any) => e.node.url),
             location: "Online",
             user_id: "shopify",
@@ -190,18 +169,22 @@ export function Shop() {
           };
         });
 
-        const batch = !isBackground ? shuffleArray(fetched) : fetched;
+        const newCats = fetched.map(p => p.category).filter((c): c is string => c.trim().length > 0);
+        if (newCats.length > 0) {
+          setShopifyCategories(prev => {
+            if (fetchId !== shopifyFetchIdRef.current) return prev;
+            const merged = new Set(prev);
+            newCats.forEach(c => merged.add(c));
+            return Array.from(merged).sort((a, b) => a === "All" ? -1 : b === "All" ? 1 : a.localeCompare(b));
+          });
+        }
 
+        const batch = !isBackground ? shuffleArray(fetched) : fetched;
         if (!firstPageDone) {
-          // Show first page immediately — don't wait for remaining pages
           setShopifyProducts(batch);
-          if (!isBackground) {
-            setIsShopifyLoading(false);
-            setVisibleCount(SHOPIFY_DISPLAY_PAGE_SIZE);
-          }
+          if (!isBackground) { setIsShopifyLoading(false); setVisibleCount(SHOPIFY_DISPLAY_PAGE_SIZE); }
           firstPageDone = true;
         } else {
-          // Silently append subsequent pages while user browses
           setShopifyProducts(prev => {
             if (fetchId !== shopifyFetchIdRef.current) return prev;
             return [...prev, ...batch];
@@ -212,258 +195,360 @@ export function Shop() {
         after = result.pageInfo?.endCursor || undefined;
         page++;
       }
-    } catch (error) {
-      if (fetchId === shopifyFetchIdRef.current) {
-        devLog.error('Error fetching Shopify products:', error);
-      }
+    } catch (err) {
+      if (fetchId === shopifyFetchIdRef.current) devLog.error("Error fetching Shopify products:", err);
     } finally {
-      if (fetchId === shopifyFetchIdRef.current && !isBackground) {
-        setIsShopifyLoading(false);
-      }
+      if (fetchId === shopifyFetchIdRef.current && !isBackground) setIsShopifyLoading(false);
     }
-  };
-
-  const handleLoadMore = () => {
-    setVisibleCount(prev => prev + SHOPIFY_DISPLAY_PAGE_SIZE);
   };
 
   const fetchListings = async () => {
     setIsMarketplaceLoading(true);
     try {
       const supabase = await getSupabase();
-      const { data, error } = await supabase
-        .from('shop_listings')
-        .select('*');
-
+      const { data, error } = await supabase.from("shop_listings").select("*");
       if (error) throw error;
-      
-      const transformedData = (data || []).map(item => {
+      const transformed = (data || []).map(item => {
         let imageUrls: string[] = [];
-        
         if (Array.isArray(item.images)) {
-          imageUrls = item.images.filter(img => typeof img === 'string' && img.startsWith('http'));
-        } else if (typeof item.images === 'string' && item.images.trim() !== '') {
+          imageUrls = item.images.filter((img: any) => typeof img === "string" && img.startsWith("http"));
+        } else if (typeof item.images === "string" && item.images.trim()) {
           try {
             const parsed = JSON.parse(item.images);
-            imageUrls = Array.isArray(parsed) ? parsed.filter(img => typeof img === 'string' && img.startsWith('http')) : [item.images];
-          } catch (e) {
-            if (item.images.startsWith('http')) {
-              imageUrls = [item.images];
-            }
-          }
+            imageUrls = Array.isArray(parsed) ? parsed.filter((img: any) => typeof img === "string" && img.startsWith("http")) : [item.images];
+          } catch { if (item.images.startsWith("http")) imageUrls = [item.images]; }
         }
-        
-        if (imageUrls.length === 0 && item.metadata) {
-          try {
-            const metadata = typeof item.metadata === 'string' ? JSON.parse(item.metadata) : item.metadata;
-            if (Array.isArray(metadata)) {
-              const firstWithUrl = metadata.find(m => m && m.url && typeof m.url === 'string' && m.url.startsWith('http'));
-              if (firstWithUrl) {
-                imageUrls = [firstWithUrl.url];
-              }
-            }
-          } catch (e) {
-            devLog.error('Error parsing metadata for image fallback:', e);
-          }
-        }
-        
-        return {
-          ...item,
-          images: imageUrls
-        };
+        return { ...item, images: imageUrls };
       });
-
-      setListings(transformedData);
-    } catch (error) {
-      devLog.error('Error fetching listings:', error);
-    } finally {
-      setIsMarketplaceLoading(false);
-    }
+      setListings(transformed);
+    } catch (err) { devLog.error("Error fetching listings:", err); }
+    finally { setIsMarketplaceLoading(false); }
   };
 
   const handleViewDetails = (product: Listing) => {
-    if (product.user_id === 'shopify' && product.handle) {
-      navigate(`/shop/product/${product.handle}`);
-    } else {
-      navigate(`/shop/product/${encodeURIComponent(product.id)}`);
+    if (product.user_id === "shopify" && product.handle) navigate(`/shop/product/${product.handle}`);
+    else navigate(`/shop/product/${encodeURIComponent(product.id)}`);
+  };
+
+  const handleAddToCart = async (product: Listing) => {
+    if (product.user_id !== "shopify" || !product.variantId) {
+      toast.info("Marketplace checkout coming soon.");
+      return;
     }
+    await addToCart(product.variantId, { variantId: product.variantId, title: product.title, price: product.price, currency: product.currency, image: product.images[0] });
   };
 
   const currentListings = activeTab === "marketplace" ? listings : shopifyProducts;
 
-  const filteredProducts = currentListings
-    .filter(product => {
-      const matchesSearch = product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          product.description.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
-      return matchesSearch && matchesCategory;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "price-low":
-          return a.price - b.price;
-        case "price-high":
-          return b.price - a.price;
-        case "shuffle":
-          return 0;
-        case "newest": {
-          // Shopify GIDs are sequential: gid://shopify/Product/123456789
-          // Higher numeric ID = newer product. Marketplace items use created_at.
-          const shopifyId = (p: Listing) => {
-            const match = p.id.match(/\/(\d+)$/);
-            return match ? parseInt(match[1], 10) : 0;
-          };
-          const aVal = a.user_id === "shopify" ? shopifyId(a) : new Date((a as any).created_at || 0).getTime();
-          const bVal = b.user_id === "shopify" ? shopifyId(b) : new Date((b as any).created_at || 0).getTime();
-          return bVal - aVal;
+  const filteredProducts = useMemo(() => {
+    return currentListings
+      .filter(p => {
+        const q = searchQuery.toLowerCase();
+        const matchesSearch = !q || p.title.toLowerCase().includes(q) || p.description.toLowerCase().includes(q);
+        const matchesCategory =
+          selectedCategory === "All" ||
+          p.category === selectedCategory ||
+          p.category.startsWith(selectedCategory + CAT_SEPARATOR);
+        return matchesSearch && matchesCategory;
+      })
+      .sort((a, b) => {
+        if (sortBy === "price-low") return a.price - b.price;
+        if (sortBy === "price-high") return b.price - a.price;
+        if (sortBy === "newest") {
+          const gidNum = (p: Listing) => { const m = p.id.match(/\/(\d+)$/); return m ? parseInt(m[1], 10) : 0; };
+          const av = a.user_id === "shopify" ? gidNum(a) : new Date((a as any).created_at || 0).getTime();
+          const bv = b.user_id === "shopify" ? gidNum(b) : new Date((b as any).created_at || 0).getTime();
+          return bv - av;
         }
-        default:
-          return 0;
-      }
-    });
+        return 0;
+      });
+  }, [currentListings, searchQuery, selectedCategory, sortBy]);
 
-  const visibleProducts = activeTab === "shopify"
-    ? filteredProducts.slice(0, visibleCount)
-    : filteredProducts;
-
+  const visibleProducts = activeTab === "shopify" ? filteredProducts.slice(0, visibleCount) : filteredProducts;
   const hasMoreToShow = activeTab === "shopify" && visibleCount < filteredProducts.length;
 
-  const handleAddToCart = async (product: Listing) => {
-    if (product.user_id !== 'shopify' || !product.variantId) {
-      toast.info("Marketplace checkout coming soon. Only Shopify items can be added to cart currently.");
-      return;
-    }
-
-    await addToCart(product.variantId, {
-      variantId: product.variantId,
-      title: product.title,
-      price: product.price,
-      currency: product.currency,
-      image: product.images[0]
+  const productCountByCategory = useMemo(() => {
+    const counts: Record<string, number> = { All: currentListings.length };
+    currentListings.forEach(p => {
+      if (!p.category) return;
+      counts[p.category] = (counts[p.category] || 0) + 1;
+      const idx = p.category.indexOf(CAT_SEPARATOR);
+      if (idx !== -1) {
+        const parent = p.category.slice(0, idx);
+        counts[parent] = (counts[parent] || 0) + 1;
+      }
     });
-    setSelectedProduct(null);
+    return counts;
+  }, [currentListings]);
+
+  const categoryTree = useMemo(
+    () => buildCategoryTree(activeTab === "shopify" ? shopifyCategories : marketplaceCategories),
+    [shopifyCategories, marketplaceCategories, activeTab]
+  );
+
+  const handleCategoryClick = (fullPath: string, hasChildren: boolean) => {
+    setSelectedCategory(fullPath);
+    if (hasChildren) {
+      setExpandedCategory(prev => prev === fullPath ? null : fullPath);
+    } else {
+      setExpandedCategory(null);
+    }
   };
 
+  const isLoading = activeTab === "shopify" ? isShopifyLoading : isMarketplaceLoading;
+  const categories = activeTab === "shopify" ? shopifyCategories : marketplaceCategories;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <main className="flex-1 container mx-auto px-4 py-6 max-w-7xl">
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Shop</h1>
-              <p className="text-muted-foreground">Discover amazing products for every need</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button 
-                onClick={() => navigate("/shop/post")}
-                className="gap-2 bg-primary hover:bg-primary/90"
-              >
-                <Plus className="h-5 w-5" />
-                Post an Ad
-              </Button>
-              <CartSheet />
-            </div>
-          </div>
 
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                placeholder="Search products..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                {activeTab === "marketplace" 
-                  ? marketplaceCategories.map((category) => (
-                      <SelectItem key={`market-${category}`} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))
-                  : shopifyCategories.map((category) => (
-                      <SelectItem key={`shop-${category}`} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))
-                }
-              </SelectContent>
-            </Select>
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="shuffle">Shuffle</SelectItem>
-                <SelectItem value="newest">Newest</SelectItem>
-                <SelectItem value="price-low">Price: Low to High</SelectItem>
-                <SelectItem value="price-high">Price: High to Low</SelectItem>
-              </SelectContent>
-            </Select>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h1 className="text-3xl font-bold">Shop</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">Discover amazing products for every need</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => navigate("/shop/post")} className="gap-2 bg-primary hover:bg-primary/90">
+              <Plus className="h-4 w-4" />
+              Post an Ad
+            </Button>
+            <CartSheet />
           </div>
         </div>
 
-        <div className="min-h-[600px]">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-            <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
-              <TabsTrigger value="shopify" className="gap-2">
-                <Store className="h-4 w-4" />
-                Shopify Store
+        {/* Search + Sort + Tabs row */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="shuffle">Shuffle</SelectItem>
+              <SelectItem value="newest">Newest</SelectItem>
+              <SelectItem value="price-low">Price: Low to High</SelectItem>
+              <SelectItem value="price-high">Price: High to Low</SelectItem>
+            </SelectContent>
+          </Select>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList>
+              <TabsTrigger value="shopify" className="gap-1.5">
+                <Store className="h-3.5 w-3.5" />
+                Store
               </TabsTrigger>
-              <TabsTrigger value="marketplace" className="gap-2">
-                <Package className="h-4 w-4" />
+              <TabsTrigger value="marketplace" className="gap-1.5">
+                <Package className="h-3.5 w-3.5" />
                 Marketplace
               </TabsTrigger>
             </TabsList>
           </Tabs>
+        </div>
 
-          {(activeTab === "shopify" ? isShopifyLoading : isMarketplaceLoading) ? (
-            <ShopSkeleton />
-          ) : filteredProducts.length === 0 ? (
-            <div className="text-center py-24 bg-card/30 rounded-3xl border border-dashed border-border/60">
-              <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground/40" />
-              <h3 className="text-xl font-semibold mb-2">No products found</h3>
-              <p className="text-muted-foreground">Try adjusting your search or filters</p>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-                <Suspense fallback={<ShopSkeleton />}>
-                  {visibleProducts.map((product) => (
-                    <ShopItemCard 
-                      key={product.id} 
-                      product={product} 
-                      onViewDetails={handleViewDetails}
-                      onAddToCart={handleAddToCart}
-                    />
-                  ))}
-                </Suspense>
+        {/* Mobile: horizontal category pills */}
+        <div className="lg:hidden mb-4 flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          <button
+            onClick={() => { setSelectedCategory("All"); setExpandedCategory(null); }}
+            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+              selectedCategory === "All"
+                ? "bg-foreground text-background border-foreground"
+                : "bg-background text-foreground border-border hover:border-primary/50"
+            }`}
+          >
+            All
+            {productCountByCategory["All"] ? (
+              <span className="ml-1 text-xs opacity-60">({productCountByCategory["All"]})</span>
+            ) : null}
+          </button>
+          {categories.filter(c => c !== "All").map(cat => (
+            <button
+              key={cat}
+              onClick={() => { setSelectedCategory(cat); setExpandedCategory(null); }}
+              className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                selectedCategory === cat || selectedCategory.startsWith(cat + CAT_SEPARATOR)
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-background text-foreground border-border hover:border-primary/50"
+              }`}
+            >
+              {cat.includes(CAT_SEPARATOR) ? cat.split(CAT_SEPARATOR).pop() : cat}
+              {productCountByCategory[cat] ? (
+                <span className="ml-1 text-xs opacity-60">({productCountByCategory[cat]})</span>
+              ) : null}
+            </button>
+          ))}
+        </div>
+
+        {/* Main content: sidebar + grid */}
+        <div className="flex gap-6">
+
+          {/* Desktop sidebar */}
+          <aside className="hidden lg:flex flex-col w-52 flex-shrink-0">
+            <div className="sticky top-6">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3 px-2">
+                Categories
+              </p>
+              <div className="space-y-0.5">
+
+                {/* All */}
+                <button
+                  onClick={() => { setSelectedCategory("All"); setExpandedCategory(null); }}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
+                    selectedCategory === "All"
+                      ? "bg-foreground text-background font-semibold"
+                      : "hover:bg-muted text-foreground"
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <LayoutGrid className="h-3.5 w-3.5 flex-shrink-0" />
+                    All
+                  </span>
+                  {productCountByCategory["All"] ? (
+                    <span className={`text-xs ${selectedCategory === "All" ? "opacity-70" : "text-muted-foreground"}`}>
+                      {productCountByCategory["All"]}
+                    </span>
+                  ) : null}
+                </button>
+
+                {/* Category tree */}
+                {categoryTree.map(node => {
+                  const isSelected = selectedCategory === node.fullPath || selectedCategory.startsWith(node.fullPath + CAT_SEPARATOR);
+                  const isExpanded = expandedCategory === node.fullPath;
+                  const hasChildren = node.children.length > 0;
+
+                  return (
+                    <div key={node.fullPath}>
+                      <button
+                        onClick={() => handleCategoryClick(node.fullPath, hasChildren)}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
+                          isSelected
+                            ? "bg-foreground text-background font-semibold"
+                            : "hover:bg-muted text-foreground"
+                        }`}
+                      >
+                        <span className="flex items-center gap-2 text-left leading-snug">
+                          {hasChildren ? (
+                            isExpanded
+                              ? <ChevronDown className="h-3.5 w-3.5 flex-shrink-0" />
+                              : <ChevronRight className="h-3.5 w-3.5 flex-shrink-0" />
+                          ) : (
+                            <span className="w-3.5" />
+                          )}
+                          {node.name}
+                        </span>
+                        {productCountByCategory[node.fullPath] ? (
+                          <span className={`text-xs flex-shrink-0 ml-1 ${isSelected ? "opacity-70" : "text-muted-foreground"}`}>
+                            {productCountByCategory[node.fullPath]}
+                          </span>
+                        ) : null}
+                      </button>
+
+                      {/* Children */}
+                      {hasChildren && isExpanded && (
+                        <div className="ml-5 mt-0.5 space-y-0.5 border-l border-border pl-3">
+                          {node.children.map(child => {
+                            const childSelected = selectedCategory === child.fullPath;
+                            return (
+                              <button
+                                key={child.fullPath}
+                                onClick={() => { setSelectedCategory(child.fullPath); }}
+                                className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-sm transition-colors ${
+                                  childSelected
+                                    ? "bg-foreground text-background font-semibold"
+                                    : "hover:bg-muted text-foreground"
+                                }`}
+                              >
+                                <span className="text-left leading-snug">{child.name}</span>
+                                {productCountByCategory[child.fullPath] ? (
+                                  <span className={`text-xs flex-shrink-0 ml-1 ${childSelected ? "opacity-70" : "text-muted-foreground"}`}>
+                                    {productCountByCategory[child.fullPath]}
+                                  </span>
+                                ) : null}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
+            </div>
+          </aside>
 
-              {hasMoreToShow && (
-                <div className="mt-12 flex flex-col items-center gap-2 pb-12">
-                  <Button 
-                    variant="outline" 
-                    size="lg" 
-                    onClick={handleLoadMore}
-                    className="min-w-[200px]"
-                  >
-                    Load More Products
-                  </Button>
-                  <p className="text-xs text-muted-foreground">
-                    Showing {visibleProducts.length} of {filteredProducts.length} products
-                  </p>
+          {/* Product area */}
+          <div className="flex-1 min-w-0">
+            {/* Active filter breadcrumb */}
+            {selectedCategory !== "All" && (
+              <div className="flex items-center gap-2 mb-4">
+                <button
+                  onClick={() => { setSelectedCategory("All"); setExpandedCategory(null); }}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  All
+                </button>
+                {selectedCategory.split(CAT_SEPARATOR).map((part, i, arr) => (
+                  <span key={i} className="flex items-center gap-2">
+                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                    {i < arr.length - 1 ? (
+                      <button
+                        onClick={() => setSelectedCategory(arr.slice(0, i + 1).join(CAT_SEPARATOR))}
+                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {part}
+                      </button>
+                    ) : (
+                      <span className="text-sm font-semibold">{part}</span>
+                    )}
+                  </span>
+                ))}
+                <Badge variant="secondary" className="text-xs">{filteredProducts.length}</Badge>
+              </div>
+            )}
+
+            {isLoading ? (
+              <ShopSkeleton />
+            ) : filteredProducts.length === 0 ? (
+              <div className="text-center py-24 bg-card/30 rounded-3xl border border-dashed border-border/60">
+                <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground/40" />
+                <h3 className="text-xl font-semibold mb-2">No products found</h3>
+                <p className="text-muted-foreground">Try adjusting your search or category</p>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                  <Suspense fallback={<ShopSkeleton />}>
+                    {visibleProducts.map(product => (
+                      <ShopItemCard
+                        key={product.id}
+                        product={product}
+                        onViewDetails={handleViewDetails}
+                        onAddToCart={handleAddToCart}
+                      />
+                    ))}
+                  </Suspense>
                 </div>
-              )}
-            </>
-          )}
+
+                {hasMoreToShow && (
+                  <div className="mt-10 flex flex-col items-center gap-2 pb-10">
+                    <Button variant="outline" size="lg" onClick={() => setVisibleCount(v => v + SHOPIFY_DISPLAY_PAGE_SIZE)} className="min-w-[200px]">
+                      Load More Products
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                      Showing {visibleProducts.length} of {filteredProducts.length} products
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </main>
 
