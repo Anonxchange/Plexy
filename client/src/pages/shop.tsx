@@ -108,7 +108,7 @@ export function Shop() {
   const { addToCart } = useCart();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState("shuffle");
   const [listings, setListings] = useState<Listing[]>([]);
   const [shopifyProducts, setShopifyProducts] = useState<Listing[]>([]);
@@ -139,7 +139,7 @@ export function Shop() {
     setMarketplaceCategories(Array.from(cats).sort());
   }, [listings]);
 
-  useEffect(() => { setSelectedCategory("All"); setExpandedCategory(null); }, [activeTab]);
+  useEffect(() => { setSelectedCategory("All"); setExpandedCategories(new Set()); }, [activeTab]);
   useEffect(() => { setVisibleCount(SHOPIFY_DISPLAY_PAGE_SIZE); }, [selectedCategory, searchQuery, sortBy]);
 
   const fetchShopifyProducts = async (isBackground = false) => {
@@ -312,10 +312,16 @@ export function Shop() {
   const handleCategoryClick = (fullPath: string, hasChildren: boolean) => {
     setSelectedCategory(fullPath);
     if (hasChildren) {
-      // Always expand when clicking a parent — children appear beneath it in the sidebar
-      setExpandedCategory(fullPath);
-    } else {
-      setExpandedCategory(null);
+      setExpandedCategories(prev => {
+        const next = new Set(prev);
+        if (next.has(fullPath)) {
+          // Collapse this node and all its descendants
+          next.forEach(p => { if (p === fullPath || p.startsWith(fullPath + CAT_SEPARATOR)) next.delete(p); });
+        } else {
+          next.add(fullPath);
+        }
+        return next;
+      });
     }
   };
 
@@ -380,7 +386,7 @@ export function Shop() {
         {/* Mobile: horizontal category pills */}
         <div className="lg:hidden mb-4 flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
           <button
-            onClick={() => { setSelectedCategory("All"); setExpandedCategory(null); }}
+            onClick={() => { setSelectedCategory("All"); setExpandedCategories(new Set()); }}
             className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
               selectedCategory === "All"
                 ? "bg-foreground text-background border-foreground"
@@ -395,7 +401,7 @@ export function Shop() {
           {categories.filter(c => c !== "All" && !c.includes(CAT_SEPARATOR)).map(cat => (
             <button
               key={cat}
-              onClick={() => { setSelectedCategory(cat); setExpandedCategory(null); }}
+              onClick={() => { setSelectedCategory(cat); }}
               className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                 selectedCategory === cat || selectedCategory.startsWith(cat + CAT_SEPARATOR)
                   ? "bg-foreground text-background border-foreground"
@@ -423,7 +429,7 @@ export function Shop() {
 
                 {/* All */}
                 <button
-                  onClick={() => { setSelectedCategory("All"); setExpandedCategory(null); }}
+                  onClick={() => { setSelectedCategory("All"); setExpandedCategories(new Set()); }}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
                     selectedCategory === "All"
                       ? "bg-foreground text-background font-semibold"
@@ -441,68 +447,51 @@ export function Shop() {
                   ) : null}
                 </button>
 
-                {/* Category tree */}
-                {categoryTree.map(node => {
-                  const isSelected = selectedCategory === node.fullPath || selectedCategory.startsWith(node.fullPath + CAT_SEPARATOR);
-                  const isExpanded = expandedCategory === node.fullPath;
-                  const hasChildren = node.children.length > 0;
+                {/* Category tree — recursive so L1→L2→L3→L4 all render */}
+                {(function renderNodes(nodes: CategoryNode[], depth: number) {
+                  return nodes.map(node => {
+                    const isSelected = selectedCategory === node.fullPath || selectedCategory.startsWith(node.fullPath + CAT_SEPARATOR);
+                    const isExpanded = expandedCategories.has(node.fullPath);
+                    const hasChildren = node.children.length > 0;
+                    const indent = depth * 20;
 
-                  return (
-                    <div key={node.fullPath}>
-                      <button
-                        onClick={() => handleCategoryClick(node.fullPath, hasChildren)}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
-                          isSelected
-                            ? "bg-foreground text-background font-semibold"
-                            : "hover:bg-muted text-foreground"
-                        }`}
-                      >
-                        <span className="flex items-center gap-2 text-left leading-snug">
-                          {hasChildren ? (
-                            isExpanded
-                              ? <ChevronDown className="h-3.5 w-3.5 flex-shrink-0" />
-                              : <ChevronRight className="h-3.5 w-3.5 flex-shrink-0" />
-                          ) : (
-                            <span className="w-3.5" />
-                          )}
-                          {node.name}
-                        </span>
-                        {productCountByCategory[node.fullPath] ? (
-                          <span className={`text-xs flex-shrink-0 ml-1 ${isSelected ? "opacity-70" : "text-muted-foreground"}`}>
-                            {productCountByCategory[node.fullPath]}
+                    return (
+                      <div key={node.fullPath}>
+                        <button
+                          onClick={() => handleCategoryClick(node.fullPath, hasChildren)}
+                          style={{ paddingLeft: `${(depth === 0 ? 12 : 8) + indent}px` }}
+                          className={`w-full flex items-center justify-between pr-3 py-1.5 rounded-lg text-sm transition-colors ${
+                            isSelected
+                              ? "bg-foreground text-background font-semibold"
+                              : "hover:bg-muted text-foreground"
+                          }`}
+                        >
+                          <span className="flex items-center gap-1.5 text-left leading-snug">
+                            {hasChildren ? (
+                              isExpanded
+                                ? <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                                : <ChevronRight className="h-3 w-3 flex-shrink-0" />
+                            ) : (
+                              <span className="w-3" />
+                            )}
+                            <span className={depth > 0 ? "text-xs" : ""}>{node.name}</span>
                           </span>
-                        ) : null}
-                      </button>
+                          {productCountByCategory[node.fullPath] ? (
+                            <span className={`text-xs flex-shrink-0 ml-1 ${isSelected ? "opacity-70" : "text-muted-foreground"}`}>
+                              {productCountByCategory[node.fullPath]}
+                            </span>
+                          ) : null}
+                        </button>
 
-                      {/* Children */}
-                      {hasChildren && isExpanded && (
-                        <div className="ml-5 mt-0.5 space-y-0.5 border-l border-border pl-3">
-                          {node.children.map(child => {
-                            const childSelected = selectedCategory === child.fullPath;
-                            return (
-                              <button
-                                key={child.fullPath}
-                                onClick={() => { setSelectedCategory(child.fullPath); }}
-                                className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-sm transition-colors ${
-                                  childSelected
-                                    ? "bg-foreground text-background font-semibold"
-                                    : "hover:bg-muted text-foreground"
-                                }`}
-                              >
-                                <span className="text-left leading-snug">{child.name}</span>
-                                {productCountByCategory[child.fullPath] ? (
-                                  <span className={`text-xs flex-shrink-0 ml-1 ${childSelected ? "opacity-70" : "text-muted-foreground"}`}>
-                                    {productCountByCategory[child.fullPath]}
-                                  </span>
-                                ) : null}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                        {hasChildren && isExpanded && (
+                          <div className="mt-0.5 space-y-0.5 border-l border-border" style={{ marginLeft: `${indent + 20}px` }}>
+                            {renderNodes(node.children, depth + 1)}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  });
+                })(categoryTree, 0)}
               </div>
             </div>
           </aside>
@@ -513,7 +502,7 @@ export function Shop() {
             {selectedCategory !== "All" && (
               <div className="flex items-center gap-2 mb-4">
                 <button
-                  onClick={() => { setSelectedCategory("All"); setExpandedCategory(null); }}
+                  onClick={() => { setSelectedCategory("All"); setExpandedCategories(new Set()); }}
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   All
