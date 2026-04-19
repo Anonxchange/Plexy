@@ -7,9 +7,7 @@ import {
   Wallet,
   Building2,
   ShoppingCart,
-  Zap,
   Shield,
-  Clock,
   ChevronDown,
   ChevronUp,
   Tag,
@@ -273,20 +271,76 @@ export function GiftCardDetail() {
 
             {/* Trust badges */}
             <div className="grid grid-cols-3 gap-3">
-              {[
-                { icon: Zap, label: "Instant delivery", sub: "5–15 min" },
-                { icon: Shield, label: "Secure payment", sub: "Encrypted" },
-                { icon: Clock, label: "24/7 support", sub: "Always on" },
-              ].map(({ icon: Icon, label, sub }) => (
-                <div
-                  key={label}
-                  className="rounded-xl border border-border/60 bg-card p-4 text-center space-y-1"
-                >
-                  <Icon className="h-5 w-5 mx-auto text-primary" />
-                  <p className="text-xs font-semibold">{label}</p>
-                  <p className="text-xs text-muted-foreground">{sub}</p>
-                </div>
-              ))}
+
+              {/* Instant delivery */}
+              <div className="rounded-xl border border-border/60 bg-card p-4 text-center space-y-1.5">
+                <svg viewBox="0 0 28 28" fill="none" className="h-7 w-7 mx-auto" aria-hidden="true">
+                  {/* Speed arcs */}
+                  <path d="M5 20C3.2 17.8 2.5 15 3 12.3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" className="text-primary opacity-30"/>
+                  <path d="M7 22C4.5 19.2 3.5 15.5 4.2 12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" className="text-primary opacity-20"/>
+                  {/* Spark dots */}
+                  <circle cx="21" cy="5" r="1.4" fill="currentColor" className="text-primary opacity-60"/>
+                  <circle cx="24" cy="9" r="1" fill="currentColor" className="text-primary opacity-40"/>
+                  <circle cx="23" cy="4" r="0.7" fill="currentColor" className="text-primary opacity-30"/>
+                  {/* Outer glow ring */}
+                  <circle cx="14" cy="14" r="11" stroke="currentColor" strokeWidth="0.8" className="text-primary opacity-10"/>
+                  {/* Lightning bolt */}
+                  <path d="M16 3L7 15.5H13.5L12 25L21 12.5H14.5L16 3Z" fill="currentColor" className="text-primary"/>
+                  {/* Inner highlight */}
+                  <path d="M16 3L14.5 12.5H18L16 3Z" fill="white" opacity="0.18"/>
+                </svg>
+                <p className="text-xs font-semibold">Instant delivery</p>
+                <p className="text-xs text-muted-foreground">5–15 min</p>
+              </div>
+
+              {/* Secure payment */}
+              <div className="rounded-xl border border-border/60 bg-card p-4 text-center space-y-1.5">
+                <svg viewBox="0 0 28 28" fill="none" className="h-7 w-7 mx-auto" aria-hidden="true">
+                  {/* Corner circuit dots */}
+                  <circle cx="4" cy="4" r="1" fill="currentColor" className="text-primary opacity-30"/>
+                  <circle cx="24" cy="4" r="1" fill="currentColor" className="text-primary opacity-30"/>
+                  <circle cx="4" cy="24" r="1" fill="currentColor" className="text-primary opacity-20"/>
+                  <circle cx="24" cy="24" r="1" fill="currentColor" className="text-primary opacity-20"/>
+                  {/* Shield fill */}
+                  <path d="M14 2.5L5 6V13C5 18.5 8.8 23.5 14 25C19.2 23.5 23 18.5 23 13V6L14 2.5Z" fill="currentColor" className="text-primary opacity-15"/>
+                  {/* Shield outline */}
+                  <path d="M14 2.5L5 6V13C5 18.5 8.8 23.5 14 25C19.2 23.5 23 18.5 23 13V6L14 2.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" className="text-primary"/>
+                  {/* Lock shackle */}
+                  <path d="M10.5 12.5V10.5C10.5 8.6 12.1 7 14 7C15.9 7 17.5 8.6 17.5 10.5V12.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="text-primary"/>
+                  {/* Lock body */}
+                  <rect x="10" y="12.5" width="8" height="6" rx="1.5" fill="currentColor" className="text-primary"/>
+                  {/* Keyhole */}
+                  <circle cx="14" cy="15" r="1.2" fill="white" opacity="0.5"/>
+                  <rect x="13.4" y="15" width="1.2" height="2" rx="0.6" fill="white" opacity="0.5"/>
+                </svg>
+                <p className="text-xs font-semibold">Secure payment</p>
+                <p className="text-xs text-muted-foreground">Encrypted</p>
+              </div>
+
+              {/* 24/7 support */}
+              <div className="rounded-xl border border-border/60 bg-card p-4 text-center space-y-1.5">
+                <svg viewBox="0 0 28 28" fill="none" className="h-7 w-7 mx-auto" aria-hidden="true">
+                  {/* Outer pulse rings */}
+                  <circle cx="14" cy="14" r="12" stroke="currentColor" strokeWidth="0.8" className="text-primary opacity-15"/>
+                  <circle cx="14" cy="14" r="9" stroke="currentColor" strokeWidth="0.8" className="text-primary opacity-25"/>
+                  {/* Headband arc */}
+                  <path d="M6.5 14C6.5 9.8 9.8 6.5 14 6.5C18.2 6.5 21.5 9.8 21.5 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-primary"/>
+                  {/* Left ear cup */}
+                  <rect x="4.5" y="13.5" width="3.5" height="6" rx="1.75" fill="currentColor" className="text-primary"/>
+                  {/* Right ear cup */}
+                  <rect x="20" y="13.5" width="3.5" height="6" rx="1.75" fill="currentColor" className="text-primary"/>
+                  {/* Mic arm */}
+                  <path d="M20 19.5C20 21.5 17.5 23 14 23" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-primary"/>
+                  {/* Mic dot */}
+                  <circle cx="14" cy="23.5" r="1.2" fill="currentColor" className="text-primary"/>
+                  {/* Ear cup inner highlights */}
+                  <rect x="5.3" y="14.8" width="1.8" height="2.5" rx="0.9" fill="white" opacity="0.25"/>
+                  <rect x="20.8" y="14.8" width="1.8" height="2.5" rx="0.9" fill="white" opacity="0.25"/>
+                </svg>
+                <p className="text-xs font-semibold">24/7 support</p>
+                <p className="text-xs text-muted-foreground">Always on</p>
+              </div>
+
             </div>
           </div>
 
