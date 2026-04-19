@@ -16,12 +16,13 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { Search, Package, Plus, Store, ChevronRight, ChevronDown, LayoutGrid } from "lucide-react";
+import { Search, Package, Plus, Store, LayoutGrid, ChevronRight } from "lucide-react";
 import { useLocation } from "wouter";
 import { getSupabase } from "@/lib/supabase";
 import { shopifyService } from "@/lib/shopify-service";
 import { ShopSkeleton } from "@/components/shop/ShopSkeleton";
 import { CartSheet } from "@/components/shop/CartSheet";
+import { CategoryBrowserModal } from "@/components/shop/CategoryBrowserModal";
 import { toast } from "sonner";
 import { useCart } from "@/hooks/use-shopify-cart";
 import { devLog } from "@/lib/dev-logger";
@@ -118,6 +119,8 @@ export function Shop() {
   const [isShopifyLoading, setIsShopifyLoading] = useState(true);
   const [isMarketplaceLoading, setIsMarketplaceLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(SHOPIFY_DISPLAY_PAGE_SIZE);
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [modalInitialL1, setModalInitialL1] = useState<string | null>(null);
 
   const shopifyFetchIdRef = useRef(0);
 
@@ -309,20 +312,23 @@ export function Shop() {
     [shopifyCategories, marketplaceCategories, activeTab]
   );
 
-  const handleCategoryClick = (fullPath: string, hasChildren: boolean) => {
-    setSelectedCategory(fullPath);
-    if (hasChildren) {
-      setExpandedCategories(prev => {
-        const next = new Set(prev);
-        if (next.has(fullPath)) {
-          // Collapse this node and all its descendants
-          next.forEach(p => { if (p === fullPath || p.startsWith(fullPath + CAT_SEPARATOR)) next.delete(p); });
-        } else {
-          next.add(fullPath);
-        }
-        return next;
-      });
-    }
+  // Map each category path to the first product image found in that subtree
+  const categoryImages = useMemo(() => {
+    const map: Record<string, string> = {};
+    currentListings.forEach(p => {
+      if (!p.category || !p.images[0]) return;
+      const parts = p.category.split(CAT_SEPARATOR);
+      for (let i = 1; i <= parts.length; i++) {
+        const path = parts.slice(0, i).join(CAT_SEPARATOR);
+        if (!map[path]) map[path] = p.images[0];
+      }
+    });
+    return map;
+  }, [currentListings]);
+
+  const openCategoryModal = (l1Path: string | null) => {
+    setModalInitialL1(l1Path);
+    setCategoryModalOpen(true);
   };
 
   const isLoading = activeTab === "shopify" ? isShopifyLoading : isMarketplaceLoading;
@@ -383,7 +389,7 @@ export function Shop() {
           </Tabs>
         </div>
 
-        {/* Mobile: horizontal category pills */}
+        {/* Mobile: horizontal category pills — L1 only, clicking opens modal */}
         <div className="lg:hidden mb-4 flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
           <button
             onClick={() => { setSelectedCategory("All"); setExpandedCategories(new Set()); }}
@@ -398,19 +404,19 @@ export function Shop() {
               <span className="ml-1 text-xs opacity-60">({productCountByCategory["All"]})</span>
             ) : null}
           </button>
-          {categories.filter(c => c !== "All" && !c.includes(CAT_SEPARATOR)).map(cat => (
+          {categoryTree.map(node => (
             <button
-              key={cat}
-              onClick={() => { setSelectedCategory(cat); }}
+              key={node.fullPath}
+              onClick={() => openCategoryModal(node.fullPath)}
               className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                selectedCategory === cat || selectedCategory.startsWith(cat + CAT_SEPARATOR)
+                selectedCategory === node.fullPath || selectedCategory.startsWith(node.fullPath + CAT_SEPARATOR)
                   ? "bg-foreground text-background border-foreground"
                   : "bg-background text-foreground border-border hover:border-primary/50"
               }`}
             >
-              {cat}
-              {productCountByCategory[cat] ? (
-                <span className="ml-1 text-xs opacity-60">({productCountByCategory[cat]})</span>
+              {node.name}
+              {productCountByCategory[node.fullPath] ? (
+                <span className="ml-1 text-xs opacity-60">({productCountByCategory[node.fullPath]})</span>
               ) : null}
             </button>
           ))}
@@ -419,7 +425,7 @@ export function Shop() {
         {/* Main content: sidebar + grid */}
         <div className="flex gap-6">
 
-          {/* Desktop sidebar */}
+          {/* Desktop sidebar — L1 only, clicking opens category modal */}
           <aside className="hidden lg:flex flex-col w-52 flex-shrink-0">
             <div className="sticky top-6">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3 px-2">
@@ -447,51 +453,31 @@ export function Shop() {
                   ) : null}
                 </button>
 
-                {/* Category tree — recursive so L1→L2→L3→L4 all render */}
-                {(function renderNodes(nodes: CategoryNode[], depth: number) {
-                  return nodes.map(node => {
-                    const isSelected = selectedCategory === node.fullPath || selectedCategory.startsWith(node.fullPath + CAT_SEPARATOR);
-                    const isExpanded = expandedCategories.has(node.fullPath);
-                    const hasChildren = node.children.length > 0;
-                    const indent = depth * 20;
-
-                    return (
-                      <div key={node.fullPath}>
-                        <button
-                          onClick={() => handleCategoryClick(node.fullPath, hasChildren)}
-                          style={{ paddingLeft: `${(depth === 0 ? 12 : 8) + indent}px` }}
-                          className={`w-full flex items-center justify-between pr-3 py-1.5 rounded-lg text-sm transition-colors ${
-                            isSelected
-                              ? "bg-foreground text-background font-semibold"
-                              : "hover:bg-muted text-foreground"
-                          }`}
-                        >
-                          <span className="flex items-center gap-1.5 text-left leading-snug">
-                            {hasChildren ? (
-                              isExpanded
-                                ? <ChevronDown className="h-3 w-3 flex-shrink-0" />
-                                : <ChevronRight className="h-3 w-3 flex-shrink-0" />
-                            ) : (
-                              <span className="w-3" />
-                            )}
-                            <span className={depth > 0 ? "text-xs" : ""}>{node.name}</span>
-                          </span>
-                          {productCountByCategory[node.fullPath] ? (
-                            <span className={`text-xs flex-shrink-0 ml-1 ${isSelected ? "opacity-70" : "text-muted-foreground"}`}>
-                              {productCountByCategory[node.fullPath]}
-                            </span>
-                          ) : null}
-                        </button>
-
-                        {hasChildren && isExpanded && (
-                          <div className="mt-0.5 space-y-0.5 border-l border-border" style={{ marginLeft: `${indent + 20}px` }}>
-                            {renderNodes(node.children, depth + 1)}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  });
-                })(categoryTree, 0)}
+                {/* L1 categories — click opens modal */}
+                {categoryTree.map(node => {
+                  const isSelected = selectedCategory === node.fullPath || selectedCategory.startsWith(node.fullPath + CAT_SEPARATOR);
+                  return (
+                    <button
+                      key={node.fullPath}
+                      onClick={() => openCategoryModal(node.fullPath)}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
+                        isSelected
+                          ? "bg-foreground text-background font-semibold"
+                          : "hover:bg-muted text-foreground"
+                      }`}
+                    >
+                      <span className="flex items-center gap-1.5 text-left leading-snug">
+                        <ChevronRight className="h-3 w-3 flex-shrink-0 opacity-50" />
+                        {node.name}
+                      </span>
+                      {productCountByCategory[node.fullPath] ? (
+                        <span className={`text-xs flex-shrink-0 ml-1 ${isSelected ? "opacity-70" : "text-muted-foreground"}`}>
+                          {productCountByCategory[node.fullPath]}
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </aside>
@@ -566,6 +552,20 @@ export function Shop() {
       </main>
 
       <PexlyFooter />
+
+      {/* Category browser modal */}
+      <CategoryBrowserModal
+        open={categoryModalOpen}
+        onClose={() => setCategoryModalOpen(false)}
+        categoryTree={categoryTree}
+        initialL1={modalInitialL1}
+        productCountByCategory={productCountByCategory}
+        categoryImages={categoryImages}
+        onSelectCategory={cat => {
+          setSelectedCategory(cat);
+          setExpandedCategories(new Set());
+        }}
+      />
     </div>
   );
 }
