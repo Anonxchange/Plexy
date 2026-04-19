@@ -2,19 +2,13 @@ import { useHead } from "@unhead/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Search, ChevronDown, LayoutGrid, Coffee, MoreHorizontal, Gamepad2, ShoppingBag, Music, Check, ChevronsUpDown, UtensilsCrossed, Zap, Home, Globe, Smartphone, Coins, Gift, Heart, Dumbbell, Lightbulb, Lock, Package, ShoppingCart } from "lucide-react";
+import { Search, ChevronDown, LayoutGrid, Coffee, MoreHorizontal, Gamepad2, ShoppingBag, Music, Check, ChevronsUpDown, UtensilsCrossed, Zap, Home, Globe, Smartphone, Coins, Gift, Heart, Dumbbell, Lightbulb, Lock, Package, ShoppingCart, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -256,6 +250,48 @@ const CATEGORY_ICON_MAP: Record<string, ComponentType<{ className?: string }>> =
 
 function getCategoryIcon(name: string): ComponentType<{ className?: string }> {
   return CATEGORY_ICON_MAP[name.toLowerCase()] ?? Package;
+}
+
+function FaqItem({ question, answer, index }: { question: string; answer: string; index: number }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div
+      className={`rounded-2xl border transition-colors duration-300 overflow-hidden ${
+        open
+          ? "border-primary/30 bg-primary/5"
+          : "border-border/60 bg-card hover:border-border"
+      }`}
+    >
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-3.5 px-5 py-4 text-left"
+      >
+        <span
+          className={`flex-shrink-0 h-7 w-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-colors duration-300 ${
+            open ? "bg-primary text-black" : "bg-secondary text-muted-foreground"
+          }`}
+        >
+          {String(index + 1).padStart(2, "0")}
+        </span>
+        <span className="flex-1 text-sm font-semibold leading-snug">{question}</span>
+        <span
+          className={`flex-shrink-0 h-6 w-6 rounded-full border flex items-center justify-center transition-all duration-300 ${
+            open ? "border-primary/40 bg-primary/10 rotate-45" : "border-border rotate-0"
+          }`}
+        >
+          <Plus className="h-3 w-3" />
+        </span>
+      </button>
+      <div
+        className="transition-all duration-300 ease-in-out"
+        style={{ maxHeight: open ? "400px" : "0px", overflow: "hidden" }}
+      >
+        <p className="text-sm text-muted-foreground leading-relaxed px-5 pb-5 ml-[42px]">
+          {answer}
+        </p>
+      </div>
+    </div>
+  );
 }
 
 export function GiftCards() {
@@ -563,16 +599,16 @@ export function GiftCards() {
           </div>
 
 
-          <div className="mt-8">
-            <h3 className="text-lg font-semibold text-foreground mb-6">Frequently asked questions</h3>
-            <Accordion type="single" collapsible className="w-full">
-              {faqs.map((faq, index) => (
-                <AccordionItem key={index} value={`item-${index}`}>
-                  <AccordionTrigger className="text-left text-sm">{faq.question}</AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground text-sm">{faq.answer}</AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
+          <div className="mt-10 space-y-3">
+            <div className="flex items-center gap-3 mb-5">
+              <span className="text-[11px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-2.5 py-1 rounded-full">
+                FAQ
+              </span>
+              <h3 className="font-bold text-base">Frequently asked questions</h3>
+            </div>
+            {faqs.map((faq, i) => (
+              <FaqItem key={i} index={i} question={faq.question} answer={faq.answer} />
+            ))}
           </div>
         </div>
       </div>
