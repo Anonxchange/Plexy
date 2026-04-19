@@ -231,8 +231,9 @@ export function GiftCardDetail() {
       <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-8">
 
-          {/* ── LEFT COLUMN ─────────────────────────────────────── */}
-          <div className="space-y-6">
+          {/* ── LEFT COLUMN TOP (Hero, Title, Trust badges) ──────── */}
+          {/* On mobile: renders 1st. On desktop: col-1 row-1        */}
+          <div className="space-y-6 lg:col-start-1 lg:row-start-1">
 
             {/* Hero card */}
             <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-secondary/60 to-secondary/20 border border-border/60 shadow-sm">
@@ -287,49 +288,12 @@ export function GiftCardDetail() {
                 </div>
               ))}
             </div>
-
-            {/* How to redeem */}
-            {fullInstructions && (
-              <div className="rounded-xl border border-border/60 bg-card p-5 space-y-2">
-                <h3 className="font-semibold text-sm">How to redeem</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{fullInstructions}</p>
-              </div>
-            )}
-
-            {/* Accepted networks */}
-            <div className="space-y-3">
-              <p className="text-sm font-semibold">Pay with crypto</p>
-              <div className="flex items-center gap-3">
-                {[
-                  { src: cryptoIconUrls.BTC, alt: "Bitcoin" },
-                  { src: cryptoIconUrls.ETH, alt: "Ethereum" },
-                  { src: cryptoIconUrls.USDT, alt: "USDT" },
-                ].map(({ src, alt }) => (
-                  <div key={alt} className="flex items-center gap-1.5 bg-secondary/60 rounded-full px-3 py-1.5">
-                    <img src={src} alt={alt} className="h-5 w-5 rounded-full" />
-                    <span className="text-xs font-medium">{alt}</span>
-                  </div>
-                ))}
-                <div className="flex items-center gap-1.5 bg-secondary/60 rounded-full px-3 py-1.5">
-                  <div className="h-5 w-5 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">+</div>
-                  <span className="text-xs font-medium">More</span>
-                </div>
-              </div>
-            </div>
-
-            {/* FAQ */}
-            <div className="rounded-xl border border-border/60 bg-card p-5">
-              <h3 className="font-semibold mb-1">Frequently asked questions</h3>
-              <div className="divide-y divide-border/60">
-                {faqs.map((faq, i) => (
-                  <FaqItem key={i} question={faq.question} answer={faq.answer} />
-                ))}
-              </div>
-            </div>
           </div>
 
-          {/* ── RIGHT COLUMN ─────────────────────────────────────── */}
-          <div className="space-y-4">
+          {/* ── RIGHT COLUMN (Purchase card + Security note) ─────── */}
+          {/* On mobile: renders 2nd (after trust badges, before     */}
+          {/* how-to-redeem). On desktop: col-2 spanning both rows.  */}
+          <div className="space-y-4 lg:col-start-2 lg:row-start-1 lg:row-span-2">
             <div className="sticky top-20 space-y-4">
 
               {/* Purchase card */}
@@ -438,6 +402,52 @@ export function GiftCardDetail() {
               </div>
             </div>
           </div>
+
+          {/* ── LEFT COLUMN BOTTOM (How to redeem, Networks, FAQ) ─── */}
+          {/* On mobile: renders 3rd (after purchase card).           */}
+          {/* On desktop: col-1 row-2, below trust badges.            */}
+          <div className="space-y-6 lg:col-start-1 lg:row-start-2">
+
+            {/* How to redeem */}
+            {fullInstructions && (
+              <div className="rounded-xl border border-border/60 bg-card p-5 space-y-2">
+                <h3 className="font-semibold text-sm">How to redeem</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{fullInstructions}</p>
+              </div>
+            )}
+
+            {/* Accepted networks */}
+            <div className="space-y-3">
+              <p className="text-sm font-semibold">Pay with crypto</p>
+              <div className="flex items-center gap-3">
+                {[
+                  { src: cryptoIconUrls.BTC, alt: "Bitcoin" },
+                  { src: cryptoIconUrls.ETH, alt: "Ethereum" },
+                  { src: cryptoIconUrls.USDT, alt: "USDT" },
+                ].map(({ src, alt }) => (
+                  <div key={alt} className="flex items-center gap-1.5 bg-secondary/60 rounded-full px-3 py-1.5">
+                    <img src={src} alt={alt} className="h-5 w-5 rounded-full" />
+                    <span className="text-xs font-medium">{alt}</span>
+                  </div>
+                ))}
+                <div className="flex items-center gap-1.5 bg-secondary/60 rounded-full px-3 py-1.5">
+                  <div className="h-5 w-5 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">+</div>
+                  <span className="text-xs font-medium">More</span>
+                </div>
+              </div>
+            </div>
+
+            {/* FAQ */}
+            <div className="rounded-xl border border-border/60 bg-card p-5">
+              <h3 className="font-semibold mb-1">Frequently asked questions</h3>
+              <div className="divide-y divide-border/60">
+                {faqs.map((faq, i) => (
+                  <FaqItem key={i} question={faq.question} answer={faq.answer} />
+                ))}
+              </div>
+            </div>
+          </div>
+
         </div>
       </main>
 
