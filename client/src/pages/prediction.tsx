@@ -177,7 +177,7 @@ function FeaturedCard({ market, allMarkets }: { market: PolymarketMarket; allMar
   return (
     <div
       className="grid lg:grid-cols-5 rounded-2xl overflow-hidden border border-border bg-background shadow-sm cursor-pointer"
-      onClick={() => setLocation(`/prediction/${market.conditionId}`)}
+      onClick={() => setLocation(`/prediction/${market.id}`)}
     >
       {/* Left — main market */}
       <div className="lg:col-span-3 p-6 md:p-8 flex flex-col gap-5">
@@ -228,13 +228,13 @@ function FeaturedCard({ market, allMarkets }: { market: PolymarketMarket; allMar
         {/* Action buttons */}
         <div className="flex gap-3 mt-auto pt-2">
           <button
-            onClick={e => { e.stopPropagation(); setLocation(`/prediction/${market.conditionId}`); }}
+            onClick={e => { e.stopPropagation(); setLocation(`/prediction/${market.id}`); }}
             className="flex-1 h-11 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-sm transition-all"
           >
             Yes · {yesChance}¢
           </button>
           <button
-            onClick={e => { e.stopPropagation(); setLocation(`/prediction/${market.conditionId}`); }}
+            onClick={e => { e.stopPropagation(); setLocation(`/prediction/${market.id}`); }}
             className="flex-1 h-11 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-600 dark:text-red-400 font-bold text-sm transition-all"
           >
             No · {noChance}¢
@@ -291,7 +291,7 @@ function RelatedMarketRow({ market, index }: { market: PolymarketMarket; index: 
   return (
     <button
       className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-background/60 transition-colors text-left group"
-      onClick={() => setLocation(`/prediction/${market.conditionId}`)}
+      onClick={() => setLocation(`/prediction/${market.id}`)}
     >
       <span className="text-xs font-bold text-muted-foreground w-4 shrink-0 pt-0.5">{index}</span>
       {market.image && (
@@ -336,7 +336,7 @@ function MarketCard({ market }: { market: PolymarketMarket }) {
   return (
     <div
       className="group flex flex-col bg-background border border-border rounded-2xl overflow-hidden cursor-pointer hover:border-border/80 hover:shadow-md transition-all duration-200"
-      onClick={() => setLocation(`/prediction/${market.conditionId}`)}
+      onClick={() => setLocation(`/prediction/${market.id}`)}
     >
       {/* Card top */}
       <div className="p-4 flex-1 flex flex-col gap-3">
@@ -394,13 +394,13 @@ function MarketCard({ market }: { market: PolymarketMarket }) {
         {/* Yes / No buttons */}
         <div className="grid grid-cols-2 gap-2">
           <button
-            onClick={e => { e.stopPropagation(); setLocation(`/prediction/${market.conditionId}`); }}
+            onClick={e => { e.stopPropagation(); setLocation(`/prediction/${market.id}`); }}
             className="h-9 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold transition-all"
           >
             Yes · {yesChance}¢
           </button>
           <button
-            onClick={e => { e.stopPropagation(); setLocation(`/prediction/${market.conditionId}`); }}
+            onClick={e => { e.stopPropagation(); setLocation(`/prediction/${market.id}`); }}
             className="h-9 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-bold transition-all"
           >
             No · {noChance}¢
