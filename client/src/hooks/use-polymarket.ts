@@ -56,11 +56,11 @@ export function useEvents(params?: { limit?: number; offset?: number; tag?: stri
   });
 }
 
-export function useMarketDetail(conditionId: string | undefined) {
+export function useMarketDetail(marketId: string | undefined) {
   return useQuery({
-    queryKey: ['polymarket', 'market', conditionId],
-    queryFn: () => polymarketRequest('getMarket', { conditionId }),
-    enabled: !!conditionId,
+    queryKey: ['polymarket', 'market', marketId],
+    queryFn: () => polymarketRequest('getMarket', { conditionId: marketId }),
+    enabled: !!marketId,
     staleTime: 30000,
   });
 }
@@ -104,15 +104,6 @@ export function useOrderbook(tokenId: string | undefined) {
     queryFn: () => polymarketRequest('getOrderbook', { tokenId }),
     enabled: !!tokenId,
     refetchInterval: 10000,
-  });
-}
-
-export function useBalance() {
-  return useQuery({
-    queryKey: ['polymarket', 'balance'],
-    queryFn: () => polymarketRequest('getBalance'),
-    staleTime: 15000,
-    retry: false,
   });
 }
 
