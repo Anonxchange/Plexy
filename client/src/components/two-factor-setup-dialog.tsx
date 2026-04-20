@@ -15,12 +15,14 @@ import { useToast } from "@/hooks/use-toast";
 import { RefreshCw, Shield } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 
+const FRIENDLY_NAME = "Pexly Authenticator";
+
 // sessionStorage key — scoped per user so multi-account scenarios don't cross
 const enrollmentKey = (userId: string) => `pexly_mfa_enrollment_${userId}`;
 
 interface SavedEnrollment {
   factorId: string;
-  qrSvg: string;
+  qrCode: string;
   secret: string;
 }
 
@@ -45,6 +47,31 @@ function clearEnrollment(userId: string) {
   } catch {}
 }
 
+/** Detect whether a data URL is an image (PNG, JPEG, etc.) or SVG */
+function isImageDataUrl(url: string) {
+  return url.startsWith("data:image/png") ||
+    url.startsWith("data:image/jpeg") ||
+    url.startsWith("data:image/gif") ||
+    url.startsWith("data:image/webp");
+}
+
+/** Decode an SVG data URL to raw SVG markup for safe inline rendering */
+function decodeSvgDataUrl(url: string): string {
+  if (url.startsWith("data:image/svg+xml;utf-8,")) {
+    return decodeURIComponent(url.slice("data:image/svg+xml;utf-8,".length));
+  }
+  if (url.startsWith("data:image/svg+xml;base64,")) {
+    return atob(url.slice("data:image/svg+xml;base64,".length));
+  }
+  // Bare SVG string (no data URL prefix)
+  if (url.trimStart().startsWith("<svg")) {
+    return url;
+  }
+  return "";
+}
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
 interface TwoFactorSetupDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -62,7 +89,7 @@ export function TwoFactorSetupDialog({
 }: TwoFactorSetupDialogProps) {
   const [step, setStep] = useState(1);
   const [factorId, setFactorId] = useState("");
-  const [qrSvg, setQrSvg] = useState<string>("");
+  const [qrCode, setQrCode] = useState<string>("");
   const [manualSecret, setManualSecret] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -76,7 +103,6 @@ export function TwoFactorSetupDialog({
   const enrollmentId = useRef(0);
 
   // Refs that mirror volatile state — used inside event listeners
-  // so we never need to re-register them on every state change
   const stepRef = useRef(step);
   const enrollingRef = useRef(enrolling);
   const factorIdRef = useRef(factorId);
@@ -84,27 +110,41 @@ export function TwoFactorSetupDialog({
   useEffect(() => { enrollingRef.current = enrolling; }, [enrolling]);
   useEffect(() => { factorIdRef.current = factorId; }, [factorId]);
 
-  const sanitizedQrSvg = useMemo(() => {
-    if (!qrSvg) return "";
-    let svg = qrSvg;
-    if (svg.startsWith("data:image/svg+xml;utf-8,")) {
-      svg = decodeURIComponent(svg.slice("data:image/svg+xml;utf-8,".length));
-    } else if (svg.startsWith("data:image/svg+xml;base64,")) {
-      svg = atob(svg.slice("data:image/svg+xml;base64,".length));
+  /**
+   * Render the QR code. Supabase can return either:
+   *   - data:image/svg+xml;utf-8,... or data:image/svg+xml;base64,...
+   *   - data:image/png;base64,...  (less common but valid)
+   *   - a bare SVG string
+   * We inline SVG for crispness, and fall back to <img> for PNG/other formats.
+   */
+  const qrDisplay = useMemo(() => {
+    if (!qrCode) return null;
+    if (isImageDataUrl(qrCode)) {
+      return { type: "img" as const, src: qrCode };
     }
-    return DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } });
-  }, [qrSvg]);
+    const raw = decodeSvgDataUrl(qrCode);
+    if (raw) {
+      const sanitized = DOMPurify.sanitize(raw, { USE_PROFILES: { svg: true, svgFilters: true } });
+      if (sanitized) return { type: "svg" as const, html: sanitized };
+    }
+    // Last resort: render as-is via <img>
+    return { type: "img" as const, src: qrCode };
+  }, [qrCode]);
 
-  /** Apply enrollment data to state and persist it so mobile tab resumes work */
+  /** Apply enrollment data to state and persist so mobile tab resumes work */
   const applyEnrollment = useCallback((data: SavedEnrollment) => {
     setFactorId(data.factorId);
-    setQrSvg(data.qrSvg);
+    setQrCode(data.qrCode);
     setManualSecret(data.secret);
     saveEnrollment(userId, data);
   }, [userId]);
 
-  /** Unenroll all unverified TOTP factors, ignoring "not found" errors only */
-  const purgeUnverified = useCallback(async (id: number) => {
+  /**
+   * Remove all unverified TOTP factors, including any with our specific
+   * friendly name (Supabase enforces unique friendly names per user).
+   * Waits `delayMs` after unenrolling to let Supabase propagate the change.
+   */
+  const purgeUnverified = useCallback(async (id: number, delayMs = 0) => {
     const { data, error } = await supabase.auth.mfa.listFactors();
     if (id !== enrollmentId.current) return;
     if (error) throw error;
@@ -116,6 +156,11 @@ export function TwoFactorSetupDialog({
       // Swallow "not found" — a concurrent call already removed it. Re-throw anything else.
       if (ue && !ue.message?.toLowerCase().includes("not found")) throw ue;
     }
+
+    if (delayMs > 0 && unverified.length > 0) {
+      await sleep(delayMs);
+      if (id !== enrollmentId.current) return;
+    }
   }, [supabase]);
 
   const runEnroll = useCallback(async (id: number) => {
@@ -126,8 +171,8 @@ export function TwoFactorSetupDialog({
       if (id !== enrollmentId.current) return;
       if (listError) throw listError;
 
-      // 2. Check if a saved enrollment from a previous run is still valid on Supabase.
-      //    Key recovery path: mobile OS discarded JS memory while user was in authenticator app.
+      // 2. Recover a previous enrollment if the factor still exists on Supabase
+      //    (mobile OS may have discarded JS memory while user was in authenticator app)
       const saved = loadEnrollment(userId);
       if (saved) {
         const stillExists = existingFactors?.totp?.some(
@@ -141,26 +186,29 @@ export function TwoFactorSetupDialog({
         clearEnrollment(userId);
       }
 
-      // 3. Remove all stale unverified factors before enrolling
-      await purgeUnverified(id);
+      // 3. Remove all stale unverified factors before enrolling.
+      //    Pass a 500 ms delay so Supabase has time to propagate the deletion
+      //    before we immediately try to enroll with the same friendly name.
+      await purgeUnverified(id, 500);
       if (id !== enrollmentId.current) return;
 
       // 4. Enroll a fresh TOTP factor
       let { data, error } = await supabase.auth.mfa.enroll({
         factorType: "totp",
-        friendlyName: `Pexly (${userEmail})`,
+        friendlyName: FRIENDLY_NAME,
       });
       if (id !== enrollmentId.current) return;
 
-      // 5. If Supabase says the name already exists, a stale unenroll silently failed.
-      //    Do a targeted second purge and retry once.
+      // 5. If Supabase still says the name exists (Supabase sometimes takes longer
+      //    to propagate deletions), do a second targeted purge with a longer wait
+      //    and retry once more.
       if (error?.message?.toLowerCase().includes("already exists")) {
-        await purgeUnverified(id);
+        await purgeUnverified(id, 1000);
         if (id !== enrollmentId.current) return;
 
         const retry = await supabase.auth.mfa.enroll({
           factorType: "totp",
-          friendlyName: `Pexly (${userEmail})`,
+          friendlyName: FRIENDLY_NAME,
         });
         if (id !== enrollmentId.current) return;
         data = retry.data;
@@ -169,7 +217,7 @@ export function TwoFactorSetupDialog({
 
       if (error) throw error;
 
-      applyEnrollment({ factorId: data.id, qrSvg: data.totp.qr_code, secret: data.totp.secret });
+      applyEnrollment({ factorId: data.id, qrCode: data.totp.qr_code, secret: data.totp.secret });
     } catch (err: any) {
       if (id !== enrollmentId.current) return;
       toast({
@@ -180,7 +228,7 @@ export function TwoFactorSetupDialog({
     } finally {
       if (id === enrollmentId.current) setEnrolling(false);
     }
-  }, [userId, userEmail, applyEnrollment, purgeUnverified, supabase, toast]);
+  }, [userId, applyEnrollment, purgeUnverified, supabase, toast]);
 
   const triggerEnroll = useCallback(() => {
     const id = ++enrollmentId.current;
@@ -194,9 +242,7 @@ export function TwoFactorSetupDialog({
   }, [open, triggerEnroll]);
 
   // When the user switches to their authenticator app and comes back:
-  // 1. Refresh the Supabase session so the access token isn't stale
-  // 2. If state was lost (mobile tab reload), re-trigger enrollment —
-  //    which will recover from sessionStorage if the factor still exists
+  // Refresh the Supabase session and re-trigger enrollment if state was lost
   useEffect(() => {
     if (!open) return;
 
@@ -206,7 +252,7 @@ export function TwoFactorSetupDialog({
       // Always refresh the session — the token may have gone stale
       await supabase.auth.refreshSession().catch(() => {});
 
-      // Only re-trigger if on step 1 and the enrollment state was lost
+      // Re-trigger if on step 1 and the enrollment state was lost
       if (stepRef.current === 1 && !enrollingRef.current && !factorIdRef.current) {
         triggerEnroll();
       }
@@ -260,7 +306,7 @@ export function TwoFactorSetupDialog({
     setStep(1);
     setVerificationCode("");
     setFactorId("");
-    setQrSvg("");
+    setQrCode("");
     setManualSecret("");
     setEnrolling(false);
   };
@@ -295,13 +341,19 @@ export function TwoFactorSetupDialog({
             <div className="p-3 rounded-xl border border-border bg-white shadow-sm min-h-[192px] min-w-[192px] flex items-center justify-center">
               {enrolling ? (
                 <RefreshCw className="h-8 w-8 text-muted-foreground animate-spin" />
-              ) : sanitizedQrSvg ? (
+              ) : qrDisplay?.type === "svg" ? (
                 <div
                   className="w-[192px] h-[192px] [&>svg]:w-full [&>svg]:h-full"
-                  dangerouslySetInnerHTML={{ __html: sanitizedQrSvg }}
+                  dangerouslySetInnerHTML={{ __html: qrDisplay.html }}
+                />
+              ) : qrDisplay?.type === "img" ? (
+                <img
+                  src={qrDisplay.src}
+                  alt="2FA QR code"
+                  className="w-[192px] h-[192px] object-contain"
                 />
               ) : (
-                <span className="text-xs text-muted-foreground">Loading…</span>
+                <span className="text-xs text-muted-foreground">Tap "Regenerate" to load QR code</span>
               )}
             </div>
 
