@@ -73,11 +73,11 @@ export function useOrderbook(tokenId: string | undefined) {
   });
 }
 
-export function usePriceHistory(conditionId: string | undefined, interval: string) {
+export function usePriceHistory(tokenId: string | undefined, interval: string) {
   return useQuery({
-    queryKey: ['polymarket', 'priceHistory', conditionId, interval],
-    queryFn: () => polymarketRequest('getPriceHistory', { conditionId, interval }),
-    enabled: !!conditionId,
+    queryKey: ['polymarket', 'priceHistory', tokenId, interval],
+    queryFn: () => polymarketRequest('getPriceHistory', { tokenId, interval }),
+    enabled: !!tokenId,
     staleTime: 60000,
   });
 }
