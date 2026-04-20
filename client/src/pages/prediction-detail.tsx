@@ -27,9 +27,19 @@ const CHART_INTERVALS = ["1H", "6H", "1D", "1W", "1M"] as const;
 type Interval = (typeof CHART_INTERVALS)[number];
 
 /* ───────────────────────────── helpers */
-function safeJsonParse<T>(str: string | undefined | null, fallback: T): T {
-  try { const r = JSON.parse(str || ""); return Array.isArray(r) ? r as T : fallback; }
+function safeJsonParse<T>(str: unknown, fallback: T): T {
+  if (Array.isArray(str)) return str as T;
+  if (typeof str !== 'string' || !str) return fallback;
+  try { const r = JSON.parse(str); return Array.isArray(r) ? r as T : fallback; }
   catch { return fallback; }
+}
+function tagLabel(t: unknown): string {
+  if (typeof t === 'string') return t;
+  if (t && typeof t === 'object') {
+    const o = t as Record<string, unknown>;
+    return String(o.label ?? o.name ?? o.slug ?? '');
+  }
+  return '';
 }
 function fmtVol(n: number) {
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
@@ -502,12 +512,12 @@ export default function PredictionDetailPage() {
                 {/* Top row: tags + actions */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex flex-wrap items-center gap-2">
-                    {market.tags?.[0] && (
+                    {market.tags?.[0] && tagLabel(market.tags[0]) && (
                       <span className={cn(
                         "text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full",
                         market.image ? "bg-white/20 text-white" : "bg-muted text-muted-foreground",
                       )}>
-                        {market.tags[0]}
+                        {tagLabel(market.tags[0])}
                       </span>
                     )}
                     {market.active && !market.closed && (
@@ -896,8 +906,8 @@ export default function PredictionDetailPage() {
                       <div className="flex items-start justify-between gap-4">
                         <span className="text-muted-foreground shrink-0">Tags</span>
                         <div className="flex flex-wrap justify-end gap-1">
-                          {market.tags.map((tag: string) => (
-                            <span key={tag} className="px-2 py-0.5 rounded-full bg-muted text-xs font-medium">{tag}</span>
+                          {market.tags.map((tag: unknown, i: number) => (
+                            <span key={i} className="px-2 py-0.5 rounded-full bg-muted text-xs font-medium">{tagLabel(tag)}</span>
                           ))}
                         </div>
                       </div>
