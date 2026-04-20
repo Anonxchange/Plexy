@@ -1,6 +1,6 @@
 import {
   useMarketDetail, useOrderbook, usePriceHistory,
-  useBalance, useOpenOrders, usePlaceOrder, useCancelOrder,
+  useOpenOrders, usePlaceOrder, useCancelOrder,
 } from "@/hooks/use-polymarket";
 import { PolymarketImage } from "@/components/polymarket-image";
 import { useRoute, useLocation } from "wouter";
@@ -317,7 +317,6 @@ export default function PredictionDetailPage() {
   const [amount,             setAmount]             = useState("");
   const [orderBookOpen,      setOrderBookOpen]      = useState(true);
   const [mobileSheetOpen,    setMobileSheetOpen]    = useState(false);
-  const [mobileBuyIntent,    setMobileBuyIntent]    = useState<0 | 1>(0);
 
   /* ── Outcomes ── */
   const outcomes = useMemo(() => {
@@ -354,7 +353,7 @@ export default function PredictionDetailPage() {
   const { data: historyData, isLoading: histLoading} = usePriceHistory(selectedOutcome?.tokenId, chartInterval);
   const yesOutcome                                   = outcomes.find(o => o.name.toLowerCase() === "yes");
   const { data: dailyHistory }                       = usePriceHistory(yesOutcome?.tokenId ?? selectedOutcome?.tokenId, "1D");
-  const { data: balanceData }                        = useBalance();
+  const balanceData                                  = undefined;
   const { data: openOrders }                         = useOpenOrders();
   const placeOrder  = usePlaceOrder();
   const cancelOrder = useCancelOrder();
@@ -414,7 +413,6 @@ export default function PredictionDetailPage() {
 
   /* ── Open mobile sheet ── */
   function openMobileBuy(idx: 0 | 1) {
-    setMobileBuyIntent(idx);
     setSelectedOutcomeIdx(idx);
     setMobileSheetOpen(true);
   }
