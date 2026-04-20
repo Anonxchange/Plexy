@@ -61,6 +61,40 @@ export function useMarketDetail(conditionId: string | undefined) {
     queryKey: ['polymarket', 'market', conditionId],
     queryFn: () => polymarketRequest('getMarket', { conditionId }),
     enabled: !!conditionId,
+    staleTime: 30000,
+  });
+}
+
+/**
+ * Price history via the edge function.
+ * The edge function uses: GET /prices-history?market={tokenId}&interval={iv}&fidelity={f}
+ * So we pass tokenId (not conditionId) and the interval as-is.
+ *
+ * Interval fidelity map:
+ *   1H → interval=max, fidelity=1
+ *   6H → interval=max, fidelity=5
+ *   1D → interval=1d,  fidelity=60
+ *   1W → interval=1w,  fidelity=60
+ *   1M → interval=1m,  fidelity=1440
+ */
+const INTERVAL_API: Record<string, string> = {
+  '1H': 'max', '6H': 'max', '1D': '1d', '1W': '1w', '1M': '1m',
+};
+const FIDELITY_API: Record<string, number> = {
+  '1H': 1, '6H': 5, '1D': 60, '1W': 60, '1M': 1440,
+};
+
+export function usePriceHistory(tokenId: string | undefined, interval: string) {
+  return useQuery({
+    queryKey: ['polymarket', 'priceHistory', tokenId, interval],
+    queryFn: () =>
+      polymarketRequest('getPriceHistory', {
+        tokenId,
+        interval: INTERVAL_API[interval] ?? '1d',
+        fidelity: FIDELITY_API[interval] ?? 60,
+      }),
+    enabled: !!tokenId,
+    staleTime: 60000,
   });
 }
 
@@ -70,15 +104,6 @@ export function useOrderbook(tokenId: string | undefined) {
     queryFn: () => polymarketRequest('getOrderbook', { tokenId }),
     enabled: !!tokenId,
     refetchInterval: 10000,
-  });
-}
-
-export function usePriceHistory(tokenId: string | undefined, interval: string) {
-  return useQuery({
-    queryKey: ['polymarket', 'priceHistory', tokenId, interval],
-    queryFn: () => polymarketRequest('getPriceHistory', { tokenId, interval }),
-    enabled: !!tokenId,
-    staleTime: 60000,
   });
 }
 
