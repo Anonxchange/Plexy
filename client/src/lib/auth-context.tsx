@@ -33,6 +33,9 @@ export interface AuthContextType {
     requiresTOTP?: boolean;
     totpFactorId?: string;
     totpChallengeId?: string;
+    requiresSMS2FA?: boolean;
+    requiresEmail2FA?: boolean;
+    pendingUserId?: string;
   }>;
   signOut: () => Promise<void>;
   completeOTPVerification: () => Promise<void>;
@@ -784,11 +787,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (data.user && data.session) {
       await trackDevice(data.user.id);
 
-      // Check for a verified TOTP factor immediately while we have the
-      // authenticated Supabase instance — avoids proxy and timing issues
-      // that arise when the check is done in the caller.
+      // ── 1. Supabase native MFA (TOTP authenticator app) ──────────────────
       try {
-        const { data: factorsData } = await supabase.auth.mfa.listFactors();
+        const { data: factorsData, error: listErr } = await supabase.auth.mfa.listFactors();
+        console.log('[MFA] listFactors →', JSON.stringify(factorsData), 'err:', listErr?.message);
         const verifiedTotp = factorsData?.totp?.find((f: any) => f.status === "verified");
         if (verifiedTotp) {
           const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
@@ -801,11 +803,74 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               requiresTOTP: true,
               totpFactorId: verifiedTotp.id,
               totpChallengeId: challengeData.id,
+              pendingUserId: data.user.id,
             };
           }
         }
-      } catch {
-        // If MFA check fails, fall through to normal login — don't block sign-in
+      } catch (e) {
+        console.error('[MFA] TOTP check threw:', e);
+      }
+
+      // ── 2. Legacy Email / SMS 2FA stored in user_profiles ─────────────────
+      try {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('sms_two_factor_enabled, email_two_factor_enabled, phone_number')
+          .eq('id', data.user.id)
+          .single();
+
+        console.log('[2FA] profile flags →', JSON.stringify(profile));
+
+        if (profile?.sms_two_factor_enabled) {
+          // Generate a 6-digit code and send it via SMS
+          const arr = new Uint32Array(1);
+          crypto.getRandomValues(arr);
+          const code = (100000 + (arr[0] % 900000)).toString();
+          const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+          await supabase
+            .from('user_profiles')
+            .update({ sms_verification_code: code, sms_code_expires_at: expiresAt })
+            .eq('id', data.user.id);
+
+          // Best-effort send — don't block login if function is unavailable
+          supabase.functions.invoke('send-sms', {
+            body: { phone: profile.phone_number, code },
+          }).catch((e) => console.error('[2FA] send-sms failed:', e));
+
+          return { error: null, data, requiresSMS2FA: true, pendingUserId: data.user.id };
+        }
+
+        if (profile?.email_two_factor_enabled) {
+          // Generate a 6-digit code and send it via email
+          const arr = new Uint32Array(1);
+          crypto.getRandomValues(arr);
+          const code = (100000 + (arr[0] % 900000)).toString();
+          const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+          await supabase
+            .from('user_profiles')
+            .update({ email_verification_code: code, email_code_expires_at: expiresAt })
+            .eq('id', data.user.id);
+
+          // Best-effort send
+          fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-verification-email`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${data.session.access_token}`,
+                apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+              },
+              body: JSON.stringify({ email: data.user.email, type: '2fa_login', code }),
+            }
+          ).catch((e) => console.error('[2FA] send-verification-email failed:', e));
+
+          return { error: null, data, requiresEmail2FA: true, pendingUserId: data.user.id };
+        }
+      } catch (e) {
+        console.error('[2FA] Legacy 2FA profile check threw:', e);
       }
     }
 
