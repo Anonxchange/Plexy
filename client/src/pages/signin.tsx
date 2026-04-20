@@ -26,6 +26,9 @@ export function SignIn() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [show2FAInput, setShow2FAInput] = useState(false);
+  const [showSMS2FA, setShowSMS2FA] = useState(false);
+  const [showEmail2FA, setShowEmail2FA] = useState(false);
+  const [pending2FAUserId, setPending2FAUserId] = useState<string | null>(null);
   const [showPhoneVerification, setShowPhoneVerification] = useState(false);
   const [showDeviceVerification, setShowDeviceVerification] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState("");
@@ -126,7 +129,7 @@ export function SignIn() {
   }, []);
 
   useEffect(() => {
-    if (user && !checking2FA && !show2FAInput) {
+    if (user && !checking2FA && !show2FAInput && !showSMS2FA && !showEmail2FA) {
       setLocation("/dashboard");
     }
 
@@ -151,7 +154,7 @@ export function SignIn() {
         variant: "destructive",
       });
     }
-  }, [user, setLocation, checking2FA, show2FAInput]);
+  }, [user, setLocation, checking2FA, show2FAInput, showSMS2FA, showEmail2FA]);
 
   useEffect(() => {
     const value = inputValue.trim();
@@ -214,13 +217,33 @@ export function SignIn() {
       return;
     }
 
-    // 2FA (TOTP) required — challenge was already created inside signIn()
+    // 2FA (TOTP authenticator app) — challenge already created inside signIn()
     if (authResult.requiresTOTP && authResult.totpFactorId && authResult.totpChallengeId) {
       setTotpFactorId(authResult.totpFactorId);
       setTotpChallengeId(authResult.totpChallengeId);
       setShow2FAInput(true);
       setLoading(false);
       setChecking2FA(false);
+      return;
+    }
+
+    // SMS 2FA — code already sent to the user's phone
+    if (authResult.requiresSMS2FA) {
+      setPending2FAUserId(authResult.pendingUserId ?? null);
+      setShowSMS2FA(true);
+      setLoading(false);
+      setChecking2FA(false);
+      toast({ title: "SMS Code Sent", description: "A 6-digit verification code was sent to your phone." });
+      return;
+    }
+
+    // Email 2FA — code already sent to the user's email
+    if (authResult.requiresEmail2FA) {
+      setPending2FAUserId(authResult.pendingUserId ?? null);
+      setShowEmail2FA(true);
+      setLoading(false);
+      setChecking2FA(false);
+      toast({ title: "Email Code Sent", description: "A 6-digit verification code was sent to your email." });
       return;
     }
 
@@ -399,6 +422,102 @@ export function SignIn() {
     }
   };
 
+  const handleVerifySMS2FA = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pending2FAUserId) return;
+    setLoading(true);
+
+    try {
+      const { data: profile, error } = await supabase
+        .from('user_profiles')
+        .select('sms_verification_code, sms_code_expires_at')
+        .eq('id', pending2FAUserId)
+        .single();
+
+      if (error || !profile?.sms_verification_code) {
+        toast({ title: "Error", description: "Verification code not found. Please sign in again.", variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+      if (new Date(profile.sms_code_expires_at) < new Date()) {
+        toast({ title: "Code Expired", description: "The code has expired. Please sign in again.", variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+      if (profile.sms_verification_code !== twoFactorCode) {
+        toast({ title: "Invalid Code", description: "The verification code is incorrect. Please try again.", variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+
+      // Clear the code from DB
+      await supabase.from('user_profiles').update({
+        sms_verification_code: null,
+        sms_code_expires_at: null,
+      }).eq('id', pending2FAUserId);
+
+      try { await deviceFingerprint.registerDeviceAsTrusted(pending2FAUserId); } catch { /* ignore */ }
+
+      setShowSMS2FA(false);
+      setTwoFactorCode("");
+      setPending2FAUserId(null);
+      setChecking2FA(false);
+      toast({ title: "Success!", description: "You have successfully signed in with SMS 2FA" });
+      setTimeout(() => { setLoading(false); setLocation("/dashboard"); }, 100);
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message || "Failed to verify code", variant: "destructive" });
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyEmail2FA = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pending2FAUserId) return;
+    setLoading(true);
+
+    try {
+      const { data: profile, error } = await supabase
+        .from('user_profiles')
+        .select('email_verification_code, email_code_expires_at')
+        .eq('id', pending2FAUserId)
+        .single();
+
+      if (error || !profile?.email_verification_code) {
+        toast({ title: "Error", description: "Verification code not found. Please sign in again.", variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+      if (new Date(profile.email_code_expires_at) < new Date()) {
+        toast({ title: "Code Expired", description: "The code has expired. Please sign in again.", variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+      if (profile.email_verification_code !== twoFactorCode) {
+        toast({ title: "Invalid Code", description: "The verification code is incorrect. Please try again.", variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+
+      // Clear the code from DB
+      await supabase.from('user_profiles').update({
+        email_verification_code: null,
+        email_code_expires_at: null,
+      }).eq('id', pending2FAUserId);
+
+      try { await deviceFingerprint.registerDeviceAsTrusted(pending2FAUserId); } catch { /* ignore */ }
+
+      setShowEmail2FA(false);
+      setTwoFactorCode("");
+      setPending2FAUserId(null);
+      setChecking2FA(false);
+      toast({ title: "Success!", description: "You have successfully signed in with Email 2FA" });
+      setTimeout(() => { setLoading(false); setLocation("/dashboard"); }, 100);
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message || "Failed to verify code", variant: "destructive" });
+      setLoading(false);
+    }
+  };
+
   const handlePhonePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -508,6 +627,82 @@ export function SignIn() {
               Back to Sign In
             </button>
           </div>
+        ) : showSMS2FA ? (
+          <form onSubmit={handleVerifySMS2FA}>
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-lime-400/10 mb-4">
+                <ShieldCheck className="h-8 w-8 text-lime-400" />
+              </div>
+              <h1 className={`text-3xl mb-3 ${isDark ? 'text-white' : 'text-black'}`} style={{ fontWeight: 200, letterSpacing: '-0.01em' }}>
+                SMS Verification
+              </h1>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Enter the 6-digit code sent to your registered phone number.
+              </p>
+            </div>
+            <div className="mb-6">
+              <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Verification Code<span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="000000"
+                maxLength={6}
+                value={twoFactorCode}
+                onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ""))}
+                className={`w-full px-4 py-4 rounded-xl text-center text-2xl tracking-widest font-mono ${isDark ? 'bg-gray-900 text-white border border-gray-800 focus:border-lime-400' : 'bg-gray-50 text-black border border-gray-200 focus:border-lime-500'} focus:outline-none transition-colors`}
+                autoFocus
+              />
+            </div>
+            <button type="submit" disabled={loading || twoFactorCode.length < 6}
+              className="w-full bg-lime-400 hover:bg-lime-500 text-black font-medium py-4 rounded-full text-lg transition-colors disabled:opacity-50 mb-4"
+              style={{ fontWeight: 500 }}>
+              {loading ? "Verifying..." : "Verify & Sign In"}
+            </button>
+            <button type="button" onClick={() => { setShowSMS2FA(false); setTwoFactorCode(""); setPending2FAUserId(null); setChecking2FA(false); }}
+              className={`w-full py-4 rounded-full text-base transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-900' : 'text-gray-600 hover:text-black hover:bg-gray-50'}`}>
+              Back to Login
+            </button>
+          </form>
+        ) : showEmail2FA ? (
+          <form onSubmit={handleVerifyEmail2FA}>
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-lime-400/10 mb-4">
+                <ShieldCheck className="h-8 w-8 text-lime-400" />
+              </div>
+              <h1 className={`text-3xl mb-3 ${isDark ? 'text-white' : 'text-black'}`} style={{ fontWeight: 200, letterSpacing: '-0.01em' }}>
+                Email Verification
+              </h1>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Enter the 6-digit code sent to your email address.
+              </p>
+            </div>
+            <div className="mb-6">
+              <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Verification Code<span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="000000"
+                maxLength={6}
+                value={twoFactorCode}
+                onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ""))}
+                className={`w-full px-4 py-4 rounded-xl text-center text-2xl tracking-widest font-mono ${isDark ? 'bg-gray-900 text-white border border-gray-800 focus:border-lime-400' : 'bg-gray-50 text-black border border-gray-200 focus:border-lime-500'} focus:outline-none transition-colors`}
+                autoFocus
+              />
+            </div>
+            <button type="submit" disabled={loading || twoFactorCode.length < 6}
+              className="w-full bg-lime-400 hover:bg-lime-500 text-black font-medium py-4 rounded-full text-lg transition-colors disabled:opacity-50 mb-4"
+              style={{ fontWeight: 500 }}>
+              {loading ? "Verifying..." : "Verify & Sign In"}
+            </button>
+            <button type="button" onClick={() => { setShowEmail2FA(false); setTwoFactorCode(""); setPending2FAUserId(null); setChecking2FA(false); }}
+              className={`w-full py-4 rounded-full text-base transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-900' : 'text-gray-600 hover:text-black hover:bg-gray-50'}`}>
+              Back to Login
+            </button>
+          </form>
         ) : !show2FAInput ? (
           <>
             <h1 className={`text-4xl mb-8 ${isDark ? 'text-white' : 'text-black'}`} style={{ fontWeight: 200, letterSpacing: '-0.01em' }}>
