@@ -425,6 +425,48 @@ export async function getAnnouncements(): Promise<Announcement[]> {
   return data || [];
 }
 
+export interface WalletTx {
+  id: string;
+  type: 'deposit' | 'withdrawal';
+  crypto_symbol: string;
+  amount: number;
+  status: 'pending' | 'completed' | 'failed' | 'cancelled';
+  tx_hash: string | null;
+  from_address: string | null;
+  to_address: string | null;
+  created_at: string;
+}
+
+export async function getDeposits(): Promise<WalletTx[]> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data, error } = await supabase
+    .from('wallet_transactions')
+    .select('id, type, crypto_symbol, amount, status, tx_hash, from_address, to_address, created_at')
+    .eq('user_id', user.id)
+    .eq('type', 'deposit')
+    .order('created_at', { ascending: false })
+    .limit(50);
+  if (error) { console.error('Error fetching deposits:', error); return []; }
+  return (data || []) as WalletTx[];
+}
+
+export async function getWithdrawals(): Promise<WalletTx[]> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data, error } = await supabase
+    .from('wallet_transactions')
+    .select('id, type, crypto_symbol, amount, status, tx_hash, from_address, to_address, created_at')
+    .eq('user_id', user.id)
+    .eq('type', 'withdrawal')
+    .order('created_at', { ascending: false })
+    .limit(50);
+  if (error) { console.error('Error fetching withdrawals:', error); return []; }
+  return (data || []) as WalletTx[];
+}
+
 export function subscribeToAnnouncements(
   callback: (announcement: Announcement) => void
 ) {
