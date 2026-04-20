@@ -30,6 +30,9 @@ export interface AuthContextType {
     data: any;
     requiresOTP?: boolean;
     pendingAuth?: PendingAuth;
+    requiresTOTP?: boolean;
+    totpFactorId?: string;
+    totpChallengeId?: string;
   }>;
   signOut: () => Promise<void>;
   completeOTPVerification: () => Promise<void>;
@@ -780,7 +783,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (data.user && data.session) {
       await trackDevice(data.user.id);
-      
+
+      // Check for a verified TOTP factor immediately while we have the
+      // authenticated Supabase instance — avoids proxy and timing issues
+      // that arise when the check is done in the caller.
+      try {
+        const { data: factorsData } = await supabase.auth.mfa.listFactors();
+        const verifiedTotp = factorsData?.totp?.find((f: any) => f.status === "verified");
+        if (verifiedTotp) {
+          const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
+            factorId: verifiedTotp.id,
+          });
+          if (!challengeError && challengeData) {
+            return {
+              error: null,
+              data,
+              requiresTOTP: true,
+              totpFactorId: verifiedTotp.id,
+              totpChallengeId: challengeData.id,
+            };
+          }
+        }
+      } catch {
+        // If MFA check fails, fall through to normal login — don't block sign-in
+      }
     }
 
     return { error, data };
