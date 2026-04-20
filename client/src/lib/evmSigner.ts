@@ -115,11 +115,11 @@ export async function getEVMBalance(
   const address = await deriveAddress(mnemonic);
   const config = CHAIN_CONFIGS[currency] || CHAIN_CONFIGS["ETH"];
 
-  if (currency.includes("USDT") || currency.includes("USDC")) {
-    const token = TOKEN_CONTRACTS[currency];
+  const tokenEntry = TOKEN_CONTRACTS[currency];
+  if (tokenEntry) {
     const data = "0x70a08231" + address.replace("0x", "").padStart(64, "0");
-    const result = await rpcCall(config.rpcUrl, "eth_call", [{ to: token.address, data }, "latest"]);
-    return (BigInt(result) / BigInt(10 ** token.decimals)).toString();
+    const result = await rpcCall(config.rpcUrl, "eth_call", [{ to: tokenEntry.address, data }, "latest"]);
+    return (BigInt(result) / BigInt(10 ** tokenEntry.decimals)).toString();
   }
 
   const balance = await rpcCall(config.rpcUrl, "eth_getBalance", [address, "latest"]);
@@ -150,11 +150,13 @@ export async function signEVMTransaction(
   let value = BigInt(0);
   let data = "0x";
 
-  if (request.currency.includes("USDT") || request.currency.includes("USDC")) {
-    const token = TOKEN_CONTRACTS[request.currency];
-    const amount = BigInt(Math.floor(Number(request.amount) * 10 ** token.decimals));
+  // If the currency key exists in TOKEN_CONTRACTS it's an ERC-20 token,
+  // regardless of naming convention (handles dynamically injected keys too).
+  const tokenEntry = TOKEN_CONTRACTS[request.currency];
+  if (tokenEntry) {
+    const amount = BigInt(Math.floor(Number(request.amount) * 10 ** tokenEntry.decimals));
     data = encodeERC20Transfer(request.to, amount);
-    to = token.address;
+    to = tokenEntry.address;
     gasLimit = BigInt(60000); // Default ERC20 gas
     value = BigInt(0);
   } else {
