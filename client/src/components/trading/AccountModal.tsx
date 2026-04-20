@@ -7,7 +7,12 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { asterTrading, asterWallet, asterGetNonce, asterCreateApiKey, asterGetDepositAddress, asterGetChainAssets, CoinInfo } from "@/lib/asterdex-service";
+import {
+  asterTrading, asterWallet,
+  asterGetNonce, asterCreateApiKey,
+  asterGetNonceV3, asterCreateApiKeyV3, asterGenerateSignerWallet,
+  asterGetDepositAddress, asterGetChainAssets, CoinInfo,
+} from "@/lib/asterdex-service";
 import { supabase } from "@/lib/supabase";
 import { nonCustodialWalletManager, NonCustodialWallet } from "@/lib/non-custodial-wallet";
 import { signEVMMessage } from "@/lib/evmSigner";
@@ -211,7 +216,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
   // stored in their Supabase metadata. localStorage is a local cache only.
   useEffect(() => {
     if (user) {
-      const hasApiKey = !!user.user_metadata?.aster_api_key;
+      const hasApiKey = !!(user.user_metadata?.aster_api_key || user.user_metadata?.aster_signer_key);
       setIsAsterRegistered(hasApiKey);
       // Keep localStorage in sync so the deposit address query re-runs when needed
       if (hasApiKey) {
@@ -250,18 +255,43 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
       if (!walletPassword) throw new Error("Enter your wallet password to sign.");
       const mnemonic = await nonCustodialWalletManager.getWalletMnemonic(userEvmWallet.id, walletPassword, user.id);
       if (!mnemonic) throw new Error("Incorrect password or wallet not found.");
-      // Step 1: Get a one-time signing challenge from AsterDEX
-      const nonce = await asterGetNonce(userEvmWallet.address);
+
+      // Generate a dedicated signer keypair for V3 EIP-712 authentication
+      const signerWallet = asterGenerateSignerWallet();
+
+      // Step 1: Get a one-time signing challenge from AsterDEX (V3 endpoint, fall back to V1)
+      let nonce: string;
+      try {
+        nonce = await asterGetNonceV3(userEvmWallet.address);
+      } catch {
+        nonce = await asterGetNonce(userEvmWallet.address);
+      }
+
       const message = `You are signing into Astherus ${nonce}`;
-      // Step 2: Sign the challenge — proves wallet ownership without exposing the key
+      // Step 2: Sign the challenge with the user's main wallet — proves ownership
       const signature = await signEVMMessage(mnemonic, message);
-      // Step 3: Exchange signature for an API key tied to this wallet
-      const { apiKey, apiSecret } = await asterCreateApiKey(userEvmWallet.address, signature);
-      // Step 4: Persist API credentials in Supabase profile (used for all future AsterDEX calls)
-      const { error: updateError } = await supabase.auth.updateUser({
-        data: { aster_api_key: apiKey, aster_api_secret: apiSecret },
-      });
-      if (updateError) throw new Error("Wallet linked but failed to save credentials: " + updateError.message);
+
+      // Step 3: Register the signer with AsterDEX (V3) — links signerWallet to this account
+      try {
+        await asterCreateApiKeyV3(userEvmWallet.address, signature, signerWallet.address);
+        // Step 4a: Persist V3 credentials
+        const { error: updateError } = await supabase.auth.updateUser({
+          data: {
+            aster_user:       userEvmWallet.address,
+            aster_signer:     signerWallet.address,
+            aster_signer_key: signerWallet.privateKey,
+          },
+        });
+        if (updateError) throw new Error("Wallet linked but failed to save credentials: " + updateError.message);
+      } catch (v3Err) {
+        // V3 createApiKey not available — fall back to V1 HMAC key creation
+        console.warn("[AsterDEX] V3 registration failed, falling back to V1:", v3Err);
+        const { apiKey, apiSecret } = await asterCreateApiKey(userEvmWallet.address, signature);
+        const { error: updateError } = await supabase.auth.updateUser({
+          data: { aster_api_key: apiKey, aster_api_secret: apiSecret },
+        });
+        if (updateError) throw new Error("Wallet linked but failed to save credentials: " + updateError.message);
+      }
     },
     onSuccess: () => {
       if (user) localStorage.setItem(asterRegKey(user.id), "true");
@@ -353,14 +383,17 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
 
   // Chain assets — fetches coins for the selected chain on both deposit and withdraw tabs.
   // Spot and Perpetual have different coin lists per chain, so we pass accountType accordingly.
+  // Deposit and Withdraw use different endpoints (deposit/assets vs withdraw/assets) because
+  // the exchange may list different coins for each direction — so operation is passed explicitly.
   // SOL uses networks=SOL (handled in asterGetChainAssets), EVM chains use networks=EVM.
+  const chainOperation = activeTab === "deposit" ? "deposit" : "withdraw";
   const {
     data: chainAssetsData,
     isLoading: chainAssetsLoading,
     isFetching: chainAssetsFetching,
   } = useQuery({
-    queryKey: ["aster-chain-assets", network, chainAccountType],
-    queryFn: () => asterGetChainAssets(CHAIN_MAP[network]?.chainId ?? 56, chainAccountType),
+    queryKey: ["aster-chain-assets", network, chainAccountType, chainOperation],
+    queryFn: () => asterGetChainAssets(CHAIN_MAP[network]?.chainId ?? 56, chainAccountType, chainOperation),
     enabled: open && (activeTab === "deposit" || activeTab === "withdraw") && (DEPOSIT_CHAINS as readonly string[]).includes(network),
     staleTime: 5 * 60_000,
     retry: 1,
@@ -829,7 +862,19 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     setSendTxHash(null);
     setSendTxUrl(null);
     try {
-      const result = await broadcastDeposit({ coin, network, amount, mnemonic, depositAddress, walletAddress: wallet.address });
+      const result = await broadcastDeposit({
+        coin,
+        network,
+        amount,
+        mnemonic,
+        depositAddress,
+        walletAddress: wallet.address,
+        // Pass the on-chain metadata from the API so the broadcaster can handle
+        // any coin the exchange supports (USD1, ASBNB, LISUSD, etc.) correctly.
+        contractAddress: selectedCoinInfo?.contractAddress,
+        decimals: selectedCoinInfo?.decimals,
+        isNative: selectedCoinInfo?.isNative,
+      });
       setSendTxHash(result.txHash);
       setSendTxUrl(result.explorerUrl);
       setSendPassword("");
