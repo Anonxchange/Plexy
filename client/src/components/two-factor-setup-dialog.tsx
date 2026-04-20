@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import DOMPurify from "dompurify";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -47,29 +46,6 @@ function clearEnrollment(userId: string) {
   } catch {}
 }
 
-/** Detect whether a data URL is an image (PNG, JPEG, etc.) or SVG */
-function isImageDataUrl(url: string) {
-  return url.startsWith("data:image/png") ||
-    url.startsWith("data:image/jpeg") ||
-    url.startsWith("data:image/gif") ||
-    url.startsWith("data:image/webp");
-}
-
-/** Decode an SVG data URL to raw SVG markup for safe inline rendering */
-function decodeSvgDataUrl(url: string): string {
-  if (url.startsWith("data:image/svg+xml;utf-8,")) {
-    return decodeURIComponent(url.slice("data:image/svg+xml;utf-8,".length));
-  }
-  if (url.startsWith("data:image/svg+xml;base64,")) {
-    return atob(url.slice("data:image/svg+xml;base64,".length));
-  }
-  // Bare SVG string (no data URL prefix)
-  if (url.trimStart().startsWith("<svg")) {
-    return url;
-  }
-  return "";
-}
-
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 interface TwoFactorSetupDialogProps {
@@ -109,27 +85,6 @@ export function TwoFactorSetupDialog({
   useEffect(() => { stepRef.current = step; }, [step]);
   useEffect(() => { enrollingRef.current = enrolling; }, [enrolling]);
   useEffect(() => { factorIdRef.current = factorId; }, [factorId]);
-
-  /**
-   * Render the QR code. Supabase can return either:
-   *   - data:image/svg+xml;utf-8,... or data:image/svg+xml;base64,...
-   *   - data:image/png;base64,...  (less common but valid)
-   *   - a bare SVG string
-   * We inline SVG for crispness, and fall back to <img> for PNG/other formats.
-   */
-  const qrDisplay = useMemo(() => {
-    if (!qrCode) return null;
-    if (isImageDataUrl(qrCode)) {
-      return { type: "img" as const, src: qrCode };
-    }
-    const raw = decodeSvgDataUrl(qrCode);
-    if (raw) {
-      const sanitized = DOMPurify.sanitize(raw, { USE_PROFILES: { svg: true, svgFilters: true } });
-      if (sanitized) return { type: "svg" as const, html: sanitized };
-    }
-    // Last resort: render as-is via <img>
-    return { type: "img" as const, src: qrCode };
-  }, [qrCode]);
 
   /** Apply enrollment data to state and persist so mobile tab resumes work */
   const applyEnrollment = useCallback((data: SavedEnrollment) => {
@@ -341,16 +296,12 @@ export function TwoFactorSetupDialog({
             <div className="p-3 rounded-xl border border-border bg-white shadow-sm min-h-[192px] min-w-[192px] flex items-center justify-center">
               {enrolling ? (
                 <RefreshCw className="h-8 w-8 text-muted-foreground animate-spin" />
-              ) : qrDisplay?.type === "svg" ? (
-                <div
-                  className="w-[192px] h-[192px] [&>svg]:w-full [&>svg]:h-full"
-                  dangerouslySetInnerHTML={{ __html: qrDisplay.html }}
-                />
-              ) : qrDisplay?.type === "img" ? (
+              ) : qrCode ? (
                 <img
-                  src={qrDisplay.src}
-                  alt="2FA QR code"
+                  src={qrCode}
+                  alt="2FA QR code — scan with your authenticator app"
                   className="w-[192px] h-[192px] object-contain"
+                  draggable={false}
                 />
               ) : (
                 <span className="text-xs text-muted-foreground">Tap "Regenerate" to load QR code</span>
