@@ -1,4 +1,6 @@
 import { supabase } from "@/lib/supabase";
+import * as secp from "@noble/secp256k1";
+import { keccak_256 } from "@noble/hashes/sha3";
 
 // ── Types ──────────────────────────────────────────────
 
@@ -125,6 +127,11 @@ export interface CoinInfo {
     withdrawMin: string;
     depositMin: string;
   }[];
+  // On-chain metadata returned by the chain-assets endpoint.
+  // Present for coins fetched via asterGetChainAssets; absent for the fallback list.
+  contractAddress?: string;
+  decimals?: number;
+  isNative?: boolean;
 }
 
 // ── AsterDEX public REST API base URLs ─────────────────
@@ -140,6 +147,7 @@ const FUTURES_BASE = 'https://fapi.asterdex.com';
 const ASTERDEX_ALLOWED_ORIGINS = new Set([
   'https://sapi.asterdex.com',
   'https://fapi.asterdex.com',
+  'https://fapi3.asterdex.com',
   'https://www.asterdex.com',
 ]);
 
@@ -362,19 +370,29 @@ export interface AsterAsset {
   tokenVault?: string;
 }
 
-// Fetch supported deposit assets for a given chainId from the public BAPI.
+// Fetch supported assets for a given chainId from the public BAPI.
+// - operation='deposit'  → hits /deposit/assets  (coins the exchange accepts for deposit)
+// - operation='withdraw' → hits /withdraw/assets (coins the exchange allows for withdrawal)
 // Spot and Perpetual accounts list different coins per chain — always pass the correct accountType.
 // Maps them to the CoinInfo structure used throughout the modal.
-export async function asterGetChainAssets(chainId: number, accountType: 'spot' | 'perp' = 'perp'): Promise<CoinInfo[]> {
+export async function asterGetChainAssets(
+  chainId: number,
+  accountType: 'spot' | 'perp' = 'perp',
+  operation: 'deposit' | 'withdraw' = 'withdraw',
+): Promise<CoinInfo[]> {
   if (!Number.isInteger(chainId) || chainId < 0 || chainId > 2147483647) {
     throw new Error('Invalid chainId');
   }
   if (accountType !== 'spot' && accountType !== 'perp') {
     throw new Error('Invalid accountType');
   }
+  if (operation !== 'deposit' && operation !== 'withdraw') {
+    throw new Error('Invalid operation');
+  }
   // Solana is not an EVM chain — it needs networks=SOL in the query
   const networkParam = chainId === 101 ? 'SOL' : 'EVM';
-  const requestUrl = `${ASTER_BAPI_ROOT}/aster/withdraw/assets?chainIds=${chainId}&networks=${networkParam}&accountType=${accountType}`;
+  const endpoint = operation === 'deposit' ? 'deposit' : 'withdraw';
+  const requestUrl = `${ASTER_BAPI_ROOT}/aster/${endpoint}/assets?chainIds=${chainId}&networks=${networkParam}&accountType=${accountType}`;
   assertAsterOrigin(requestUrl);
   const res = await fetch(requestUrl);
   const json = await res.json();
@@ -402,6 +420,11 @@ export async function asterGetChainAssets(chainId: number, accountType: 'spot' |
         withdrawMin: '0',
         depositMin: '0',
       }],
+      // Carry through the on-chain details so the broadcaster can use the exact
+      // contract address and decimals returned by the API instead of a hardcoded table.
+      contractAddress: a.contractAddress || undefined,
+      decimals: a.decimals ?? undefined,
+      isNative: a.isNative ?? undefined,
     }));
 }
 
@@ -452,18 +475,106 @@ export async function asterCreateApiKey(
   return json.data ?? json;
 }
 
+// ── V3 Registration ────────────────────────────────────────────────────────────
+// V3 uses EIP-712 signed requests instead of HMAC. Authentication requires:
+//   user       = the user's main EVM wallet address
+//   signer     = a dedicated API signer wallet address (registered with AsterDEX)
+//   signerKey  = the private key of the signer wallet (stored in Supabase user_metadata)
+//
+// The signer keypair is generated locally and registered by calling /api/v3/createApiKey.
+
+// Derive an EVM address from a secp256k1 private key (EIP-55 checksum).
+function deriveEvmAddress(privateKey: Uint8Array): string {
+  const pubKey = secp.getPublicKey(privateKey, false); // uncompressed 65 bytes
+  const addressBytes = keccak_256(pubKey.slice(1)).slice(-20);
+  const hexAddr = Array.from(addressBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  // EIP-55 checksum
+  const hash = keccak_256(new TextEncoder().encode(hexAddr));
+  const checksum = hexAddr.split('').map((c, i) =>
+    (hash[Math.floor(i / 2)] >> (4 - (i % 2) * 4) & 0xf) >= 8 ? c.toUpperCase() : c
+  ).join('');
+  return '0x' + checksum;
+}
+
+// Generate a fresh Ethereum keypair to use as the AsterDEX V3 signer wallet.
+export function asterGenerateSignerWallet(): { address: string; privateKey: string } {
+  const privKey = secp.utils.randomPrivateKey();
+  const address = deriveEvmAddress(privKey);
+  const privateKey = '0x' + Array.from(privKey).map(b => b.toString(16).padStart(2, '0')).join('');
+  return { address, privateKey };
+}
+
+// V3 version of getNonce — uses /api/v3/getNonce
+export async function asterGetNonceV3(address: string): Promise<string> {
+  const body = new URLSearchParams({ address, userOperationType: 'CREATE_API_KEY' });
+  const res = await fetch(`https://sapi.asterdex.com/api/v3/getNonce`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    // Fall through to V1 nonce if V3 endpoint not found
+    let msg = 'Failed to get nonce';
+    try { msg = JSON.parse(text).msg ?? msg; } catch {}
+    throw new Error(msg);
+  }
+  return text.trim();
+}
+
+// Register a V3 signer wallet with AsterDEX via /api/v3/createApiKey.
+// The signerAddress is the address we generated locally — AsterDEX links it to the user account.
+// Returns the confirmed signer address (may differ from input if AsterDEX normalises it).
+export async function asterCreateApiKeyV3(
+  address: string,
+  signature: string,
+  signerAddress: string,
+): Promise<{ user: string; signer: string }> {
+  const body = new URLSearchParams({
+    address,
+    userOperationType: 'CREATE_API_KEY',
+    userSignature: signature,
+    signerAddress,
+    desc: 'pexly-v3',
+    timestamp: String(Date.now()),
+  });
+  const res = await fetch(`https://sapi.asterdex.com/api/v3/createApiKey`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  });
+  const json = await res.json();
+  if (!res.ok || (json.code !== undefined && json.code !== 0 && json.code !== 200)) {
+    throw new Error(json.msg ?? 'Failed to register V3 API key');
+  }
+  // Normalise response — some builds return { data: { signer } }, others return { signer } directly
+  const data = json.data ?? json;
+  return {
+    user: address,
+    signer: (data.signer ?? data.signerAddress ?? signerAddress) as string,
+  };
+}
+
 // Fetch the AsterDEX deposit address for a given chain and coin.
 // - EVM chains (ETH/BSC/ARB): shared treasury contract address from ae/deposit-address.
 // - Solana (chainId 101): per-coin program bank address from the deposit/assets endpoint.
 //   Each SPL token has its own bank; native SOL uses the shared solVault address.
-export async function asterGetDepositAddress(chainId: number, coin?: string): Promise<string> {
+export async function asterGetDepositAddress(
+  chainId: number,
+  coin?: string,
+  accountType: 'spot' | 'perp' = 'spot',
+): Promise<string> {
   if (!Number.isInteger(chainId) || chainId < 0 || chainId > 2147483647) {
     throw new Error('Invalid chainId');
   }
+  if (accountType !== 'spot' && accountType !== 'perp') {
+    throw new Error('Invalid accountType');
+  }
   if (chainId === 101) {
-    // Solana: look up the coin's bank address from the deposit assets list
+    // Solana: look up the coin's bank address from the deposit assets list.
+    // accountType distinguishes spot vs perpetual bank addresses.
     const networkParam = 'SOL';
-    const solUrl = `${ASTER_BAPI_ROOT}/aster/deposit/assets?chainIds=${chainId}&networks=${networkParam}&accountType=spot`;
+    const solUrl = `${ASTER_BAPI_ROOT}/aster/deposit/assets?chainIds=${chainId}&networks=${networkParam}&accountType=${accountType}`;
     assertAsterOrigin(solUrl);
     const res = await fetch(solUrl);
     const json = await res.json();
