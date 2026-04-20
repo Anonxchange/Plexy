@@ -214,6 +214,16 @@ export function SignIn() {
       return;
     }
 
+    // 2FA (TOTP) required — challenge was already created inside signIn()
+    if (authResult.requiresTOTP && authResult.totpFactorId && authResult.totpChallengeId) {
+      setTotpFactorId(authResult.totpFactorId);
+      setTotpChallengeId(authResult.totpChallengeId);
+      setShow2FAInput(true);
+      setLoading(false);
+      setChecking2FA(false);
+      return;
+    }
+
     if (authResult.requiresOTP) {
       setLoading(false);
       setChecking2FA(false);
@@ -231,28 +241,6 @@ export function SignIn() {
         description: "Failed to get user session",
         variant: "destructive",
       });
-      return;
-    }
-
-    // Check for a verified TOTP factor and challenge it — regardless of AAL level.
-    // Directly listing factors is more reliable than getAuthenticatorAssuranceLevel()
-    // which can silently return aal1 even when the user has 2FA set up.
-    const { data: factorsData } = await supabase.auth.mfa.listFactors();
-    const verifiedTotpFactor = factorsData?.totp?.find((f) => f.status === "verified");
-
-    if (verifiedTotpFactor) {
-      const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: verifiedTotpFactor.id });
-      if (challengeError) {
-        toast({ title: "Error", description: challengeError.message, variant: "destructive" });
-        setLoading(false);
-        setChecking2FA(false);
-        return;
-      }
-      setTotpFactorId(verifiedTotpFactor.id);
-      setTotpChallengeId(challengeData.id);
-      setShow2FAInput(true);
-      setLoading(false);
-      setChecking2FA(false);
       return;
     }
 
