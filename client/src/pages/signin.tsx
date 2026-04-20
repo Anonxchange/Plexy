@@ -234,27 +234,26 @@ export function SignIn() {
       return;
     }
 
-    const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    // Check for a verified TOTP factor and challenge it — regardless of AAL level.
+    // Directly listing factors is more reliable than getAuthenticatorAssuranceLevel()
+    // which can silently return aal1 even when the user has 2FA set up.
+    const { data: factorsData } = await supabase.auth.mfa.listFactors();
+    const verifiedTotpFactor = factorsData?.totp?.find((f) => f.status === "verified");
 
-    if (aalData?.nextLevel === 'aal2' && aalData.nextLevel !== aalData.currentLevel) {
-      const { data: factorsData } = await supabase.auth.mfa.listFactors();
-      const totpFactor = factorsData?.totp?.[0];
-
-      if (totpFactor) {
-        const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: totpFactor.id });
-        if (challengeError) {
-          toast({ title: "Error", description: challengeError.message, variant: "destructive" });
-          setLoading(false);
-          setChecking2FA(false);
-          return;
-        }
-        setTotpFactorId(totpFactor.id);
-        setTotpChallengeId(challengeData.id);
-        setShow2FAInput(true);
+    if (verifiedTotpFactor) {
+      const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: verifiedTotpFactor.id });
+      if (challengeError) {
+        toast({ title: "Error", description: challengeError.message, variant: "destructive" });
         setLoading(false);
         setChecking2FA(false);
         return;
       }
+      setTotpFactorId(verifiedTotpFactor.id);
+      setTotpChallengeId(challengeData.id);
+      setShow2FAInput(true);
+      setLoading(false);
+      setChecking2FA(false);
+      return;
     }
 
     const deviceStatus = await deviceFingerprint.checkDeviceStatus(userId);
