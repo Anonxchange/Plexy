@@ -257,6 +257,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
         amount: Math.floor(cryptoAmountNum * 1e8),
         utxos: await (await fetch(`https://blockstream.info/api/address/${targetWallet.address}/utxo`)).json(),
         feeRate: fastFee,
+        fromAddress: targetWallet.address,
       };
       await signBitcoinTransaction(mnemonic, btcTxData as any);
     } else if (selectedNetwork.includes("Ethereum") || selectedNetwork.includes("Binance")) {
