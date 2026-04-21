@@ -49,6 +49,7 @@ const ProductDetail = lazy(() => import("@/pages/product-detail").then(m => ({ d
 const GiftCards = lazy(() => import("@/pages/gift-cards").then(m => ({ default: m.GiftCards })));
 const GiftCardDetail = lazy(() => import("@/pages/gift-card-detail").then(m => ({ default: m.GiftCardDetail })));
 const Checkout = lazy(() => import("@/pages/checkout").then(m => ({ default: m.Checkout })));
+const CheckoutPayCrypto = lazy(() => import("@/pages/checkout-pay-crypto").then(m => ({ default: m.CheckoutPayCrypto })));
 const VisaCard = lazy(() => import("@/pages/visa-card"));
 const VisaCardDetails = lazy(() => import("@/pages/visa-card-details"));
 const MobileTopup = lazy(() => import("@/pages/mobile-topup"));
@@ -259,6 +260,7 @@ function AppRoutes() {
       <Route path="/medals">{() => <ProtectedRoute component={MedalsPage} />}</Route>
       <Route path="/analysis">{() => <ProtectedRoute component={Analysis} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/checkout">{() => <ProtectedRoute component={Checkout} />}</Route>
+      <Route path="/checkout/pay/crypto">{() => <ProtectedRoute component={CheckoutPayCrypto} />}</Route>
 
       {/* ── Admin pages (require session; pages enforce is_admin internally) ── */}
       <Route path="/admin">{() => <ProtectedRoute component={adminPage} skeleton={<PageSkeleton />} />}</Route>
@@ -275,8 +277,8 @@ function AppRoutes() {
 function AppContent() {
   const { user, walletImportState, setWalletImportState } = useAuth();
   const [location] = useLocation();
-  const hideAppFooter = ["/", "/about", "/spot", "/perpetual", "/swap", "/prediction", "/wallet", "/analysis", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/utility-bill", "/utility", "/wallet/stake", "/wallet/lightning", "/wallet/buy-crypto", "/gift-cards", "/dashboard", "/profile", "/shop", "/shop/post", "/account-settings", "/verification", "/admin", "/admin/verifications", "/admin/blog", "/admin/gift-cards", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/support", "/contact", "/referral", "/rewards", "/terms", "/privacy", "/cookie-policy", "/restricted-countries", "/rewards-program", "/risk-disclosure", "/submit-idea", "/explorer", "/shop/product", "/buy-crypto", "/bitcoin-calculator"].some(path => location === path || location.startsWith(path + "/")) || location.startsWith("/explorer/") || location.startsWith("/blog/") || location.startsWith("/gift-cards/");
-  const hideHeaderAndNav = ["/signin", "/signup", "/verify-email", "/support", "/contact", "/explorer"].includes(location) || location.startsWith("/explorer/") || location.startsWith("/support/");
+  const hideAppFooter = ["/", "/about", "/spot", "/perpetual", "/swap", "/prediction", "/wallet", "/analysis", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/utility-bill", "/utility", "/wallet/stake", "/wallet/lightning", "/wallet/buy-crypto", "/gift-cards", "/dashboard", "/profile", "/shop", "/shop/post", "/account-settings", "/verification", "/admin", "/admin/verifications", "/admin/blog", "/admin/gift-cards", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/support", "/contact", "/referral", "/rewards", "/terms", "/privacy", "/cookie-policy", "/restricted-countries", "/rewards-program", "/risk-disclosure", "/submit-idea", "/explorer", "/shop/product", "/buy-crypto", "/bitcoin-calculator", "/checkout"].some(path => location === path || location.startsWith(path + "/")) || location.startsWith("/explorer/") || location.startsWith("/blog/") || location.startsWith("/gift-cards/");
+  const hideHeaderAndNav = ["/signin", "/signup", "/verify-email", "/support", "/contact", "/explorer", "/checkout"].includes(location) || location.startsWith("/explorer/") || location.startsWith("/support/") || location.startsWith("/checkout/");
   const hidePageNav = ["/terms", "/explorer"].includes(location) || location.startsWith("/explorer/");
 
   return (
