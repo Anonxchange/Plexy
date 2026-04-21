@@ -16,20 +16,28 @@ import {
   TrendingUp,
   CreditCard,
   AlertTriangle,
-  Gift,
   Zap,
   Info,
   Coins,
   ArrowRight,
+  ArrowDownLeft,
+  ArrowUpRight,
+  ShoppingBag,
+  CheckCircle2,
+  XCircle,
+  Loader2,
 } from "lucide-react";
 import {
   getNotifications,
   markAsRead,
   markAllAsRead,
   getAnnouncements,
+  getDeposits,
+  getWithdrawals,
   subscribeToNotifications,
   type Notification,
   type Announcement,
+  type WalletTx,
 } from "@/lib/notifications-api";
 import { useAuth } from "@/lib/auth-context";
 import { sanitizeImageUrl, sanitizeRichText } from "@/lib/sanitize";
@@ -76,15 +84,88 @@ function RewardTaskItem({ task, onNavigate }: { task: Task; onNavigate: () => vo
   );
 }
 
-type TabId = "all" | "system" | "security" | "rewards" | "campaign";
+type TabId = "all" | "system" | "deposits" | "withdrawals" | "security" | "rewards" | "shopping" | "campaign";
 
 const TABS: { id: TabId; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "system", label: "System" },
-  { id: "security", label: "Security" },
-  { id: "rewards", label: "Rewards" },
-  { id: "campaign", label: "Campaign" },
+  { id: "all",         label: "All" },
+  { id: "system",      label: "System" },
+  { id: "deposits",    label: "Deposits" },
+  { id: "withdrawals", label: "Withdrawals" },
+  { id: "security",    label: "Security" },
+  { id: "rewards",     label: "Rewards" },
+  { id: "shopping",    label: "Shopping" },
+  { id: "campaign",    label: "Campaign" },
 ];
+
+function formatAmount(amount: number, symbol: string) {
+  const formatted = amount < 0.0001
+    ? amount.toExponential(4)
+    : amount.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 8 });
+  return `${formatted} ${symbol.toUpperCase()}`;
+}
+
+function TxStatusBadge({ status }: { status: WalletTx["status"] }) {
+  if (status === "completed") return (
+    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/15 px-1.5 py-0.5 rounded-full">
+      <CheckCircle2 className="h-2.5 w-2.5" /> Completed
+    </span>
+  );
+  if (status === "pending") return (
+    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/15 px-1.5 py-0.5 rounded-full">
+      <Loader2 className="h-2.5 w-2.5 animate-spin" /> Pending
+    </span>
+  );
+  if (status === "failed") return (
+    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-500/15 px-1.5 py-0.5 rounded-full">
+      <XCircle className="h-2.5 w-2.5" /> Failed
+    </span>
+  );
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+      {status}
+    </span>
+  );
+}
+
+function WalletTxItem({ tx, onNavigate }: { tx: WalletTx; onNavigate: () => void }) {
+  const isDeposit = tx.type === "deposit";
+  return (
+    <button
+      onClick={onNavigate}
+      className="w-full flex items-start gap-3 px-4 py-4 text-left transition-colors hover:bg-muted/50 border-b border-border last:border-0"
+    >
+      <div className={cn(
+        "flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center mt-0.5",
+        isDeposit ? "bg-emerald-100 dark:bg-emerald-900/20" : "bg-orange-100 dark:bg-orange-900/20"
+      )}>
+        {isDeposit
+          ? <ArrowDownLeft className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+          : <ArrowUpRight className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+        }
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-0.5">
+          <p className="text-sm font-semibold text-foreground">
+            {isDeposit ? "+" : "-"}{formatAmount(tx.amount, tx.crypto_symbol)}
+          </p>
+          <TxStatusBadge status={tx.status} />
+        </div>
+        {(tx.from_address || tx.to_address) && (
+          <p className="text-xs text-muted-foreground truncate">
+            {isDeposit ? "From: " : "To: "}
+            {(isDeposit ? tx.from_address : tx.to_address) ?? "Unknown"}
+          </p>
+        )}
+        {tx.tx_hash && (
+          <p className="text-xs text-muted-foreground/70 truncate mt-0.5">
+            Tx: {tx.tx_hash.slice(0, 10)}…{tx.tx_hash.slice(-6)}
+          </p>
+        )}
+        <p className="text-xs text-muted-foreground/70 mt-1">{formatTime(tx.created_at)}</p>
+      </div>
+    </button>
+  );
+}
 
 function sanitizeAnnouncementContent(content?: string, fallback?: string): string {
   const htmlContent = content?.replace(/\n/g, "<br />") || fallback || "";
@@ -257,6 +338,8 @@ export default function NotificationsPage() {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [deposits, setDeposits] = useState<WalletTx[]>([]);
+  const [withdrawals, setWithdrawals] = useState<WalletTx[]>([]);
   const [activeTab, setActiveTab] = useState<TabId>("all");
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [readAnnouncementIds, setReadAnnouncementIds] = useState<Set<string>>(() => {
@@ -280,17 +363,29 @@ export default function NotificationsPage() {
     setAnnouncements(data);
   }, []);
 
+  const loadDeposits = useCallback(async () => {
+    const data = await getDeposits();
+    setDeposits(data);
+  }, []);
+
+  const loadWithdrawals = useCallback(async () => {
+    const data = await getWithdrawals();
+    setWithdrawals(data);
+  }, []);
+
   useEffect(() => {
     if (!user) return;
     loadNotifications();
     loadAnnouncements();
+    loadDeposits();
+    loadWithdrawals();
 
     const unsubscribe = subscribeToNotifications(user.id, (newNotif) => {
       setNotifications((prev) => [newNotif, ...prev]);
     });
 
     return () => unsubscribe();
-  }, [user, loadNotifications, loadAnnouncements]);
+  }, [user, loadNotifications, loadAnnouncements, loadDeposits, loadWithdrawals]);
 
   const handleNotificationClick = async (notification: Notification) => {
     if (!notification.read) {
@@ -342,11 +437,14 @@ export default function NotificationsPage() {
   const unreadAll = notifications.filter((n) => !n.read).length + unreadAnnouncements;
 
   const badgeCounts: Record<TabId, number> = {
-    all: unreadAll,
-    system: unreadSystem,
-    security: unreadSecurity,
-    rewards: 0,
-    campaign: 0,
+    all:         unreadAll,
+    system:      unreadSystem,
+    deposits:    deposits.filter((t) => t.status === "pending").length,
+    withdrawals: withdrawals.filter((t) => t.status === "pending").length,
+    security:    unreadSecurity,
+    rewards:     0,
+    shopping:    0,
+    campaign:    0,
   };
 
   function renderItems() {
@@ -462,6 +560,28 @@ export default function NotificationsPage() {
           </div>
         </>
       );
+    }
+
+    if (activeTab === "deposits") {
+      if (deposits.length === 0) {
+        return <EmptyState icon={ArrowDownLeft} title="No deposits yet" subtitle="Your crypto deposits will appear here" />;
+      }
+      return deposits.map((tx) => (
+        <WalletTxItem key={tx.id} tx={tx} onNavigate={() => navigate("/wallet")} />
+      ));
+    }
+
+    if (activeTab === "withdrawals") {
+      if (withdrawals.length === 0) {
+        return <EmptyState icon={ArrowUpRight} title="No withdrawals yet" subtitle="Your crypto withdrawals will appear here" />;
+      }
+      return withdrawals.map((tx) => (
+        <WalletTxItem key={tx.id} tx={tx} onNavigate={() => navigate("/wallet")} />
+      ));
+    }
+
+    if (activeTab === "shopping") {
+      return <EmptyState icon={ShoppingBag} title="No shopping activity" subtitle="Your crypto purchases and gift card orders will appear here" />;
     }
 
     if (activeTab === "campaign") {
