@@ -6,6 +6,7 @@ import { keccak_256 } from "@noble/hashes/sha3";
 import { bytesToHex } from "@noble/hashes/utils";
 import { hmac } from "@noble/hashes/hmac";
 import { sha256 } from "@noble/hashes/sha256";
+import { wipeBytes, wipeHDKey } from "./secureMemory";
 
 // @noble/secp256k1 v1.7.x requires hmacSha256Sync to be configured before
 // signSync can be used. Configure it once at module level.
@@ -87,7 +88,13 @@ async function derivePrivateKey(mnemonic: string) {
   const seed = await mnemonicToSeed(mnemonic);
   const root = HDKey.fromMasterSeed(seed);
   const child = root.derive("m/44'/60'/0'/0/0");
-  return child.privateKey!;
+  const priv = child.privateKey!;
+  // Wipe intermediate material — keep only the leaf private key bytes the
+  // caller asked for. Caller is responsible for wiping `priv` after use.
+  wipeBytes(seed);
+  wipeHDKey(root);
+  wipeHDKey(child);
+  return priv;
 }
 
 async function deriveAddress(mnemonic: string) {
@@ -135,6 +142,7 @@ export async function signEVMTransaction(
   request: EVMTransactionRequest
 ): Promise<SignedEVMTransaction> {
   const privKey = await derivePrivateKey(mnemonic);
+  try {
   const from = await deriveAddress(mnemonic);
   const baseChain = request.currency.split("_")[0];
   const config = CHAIN_CONFIGS[baseChain] || CHAIN_CONFIGS["ETH"];
@@ -184,6 +192,9 @@ export async function signEVMTransaction(
     value: request.amount,
     currency: request.currency
   };
+  } finally {
+    wipeBytes(privKey);
+  }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -207,15 +218,19 @@ export async function signEVMMessage(
   message: string
 ): Promise<string> {
   const priv = await derivePrivateKey(mnemonic);
-  const prefix = `\x19Ethereum Signed Message:\n${message.length}`;
-  const msgHash = keccak_256(new TextEncoder().encode(prefix + message));
-  // signSync is safe because hmacSha256Sync is configured at module init above.
-  // der: false → compact 64-byte (r+s) output instead of DER encoding.
-  // recovered: true → returns [Uint8Array, recoveryBit] for the 65-byte
-  // Ethereum personal_sign format (r + s + v where v = 27 + recovery).
-  const [compact, recovery] = secp.signSync(msgHash, priv, { recovered: true, der: false });
-  const v = (27 + recovery).toString(16).padStart(2, "0");
-  return "0x" + bytesToHex(compact) + v;
+  try {
+    const prefix = `\x19Ethereum Signed Message:\n${message.length}`;
+    const msgHash = keccak_256(new TextEncoder().encode(prefix + message));
+    // signSync is safe because hmacSha256Sync is configured at module init above.
+    // der: false → compact 64-byte (r+s) output instead of DER encoding.
+    // recovered: true → returns [Uint8Array, recoveryBit] for the 65-byte
+    // Ethereum personal_sign format (r + s + v where v = 27 + recovery).
+    const [compact, recovery] = secp.signSync(msgHash, priv, { recovered: true, der: false });
+    const v = (27 + recovery).toString(16).padStart(2, "0");
+    return "0x" + bytesToHex(compact) + v;
+  } finally {
+    wipeBytes(priv);
+  }
 }
 
 /* -------------------------------------------------------------------------- */
