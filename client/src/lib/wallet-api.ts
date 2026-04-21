@@ -81,9 +81,10 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
       let symbol = w.chainId;
       if (w.chainId === 'Ethereum (ERC-20)' || w.chainId === 'ethereum') symbol = 'ETH';
       else if (w.chainId === 'Bitcoin (SegWit)' || w.chainId === 'bitcoin') symbol = 'BTC';
-      else if (w.chainId === 'Binance Smart Chain (BEP-20)') symbol = 'BNB';
+      else if (w.chainId === 'Binance Smart Chain (BEP-20)' || w.chainId === 'BNB' || w.chainId === 'BSC') symbol = 'BNB';
       else if (w.chainId === 'Solana') symbol = 'SOL';
       else if (w.chainId === 'Tron (TRC-20)') symbol = 'TRX';
+      else if (w.chainId === 'XRP') symbol = 'XRP';
 
       return {
         id: w.id,
