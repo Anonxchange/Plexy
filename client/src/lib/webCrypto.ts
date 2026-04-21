@@ -50,6 +50,73 @@ function getCurrentOrigin(): string | undefined {
 }
 
 /**
+ * A pre-derived AES-GCM key produced by running scrypt exactly once.
+ * Pass this to encryptVaultWithKey() to encrypt multiple vaults without
+ * paying the scrypt cost again. Each vault still gets its own random IV.
+ */
+export interface DerivedVaultKey {
+  cryptoKey: CryptoKey;
+  salt: Uint8Array;
+  kdfParams: KdfParams;
+  origin: string | undefined;
+}
+
+/**
+ * Runs scrypt once and returns a reusable key handle.
+ * Use this when you need to encrypt several vaults for the same password
+ * in a single session (e.g. multi-chain wallet creation) so scrypt only
+ * runs once instead of once per vault.
+ */
+export async function deriveVaultKey(password: string): Promise<DerivedVaultKey> {
+  const encoder = new TextEncoder();
+  const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
+  const origin = getCurrentOrigin();
+  const keyBuffer = await deriveEncryptionKey(
+    password,
+    salt,
+    DEFAULT_KDF_PARAMS
+  );
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    keyBuffer,
+    { name: "AES-GCM" },
+    false,
+    ["encrypt"]
+  );
+  return { cryptoKey, salt, kdfParams: DEFAULT_KDF_PARAMS, origin };
+}
+
+/**
+ * Encrypts data with a pre-derived key (no scrypt). Each call generates a
+ * fresh random IV so ciphertexts are independent even when the key is reused.
+ */
+export async function encryptVaultWithKey(
+  data: string,
+  vaultKey: DerivedVaultKey
+): Promise<EncryptedVault> {
+  const encoder = new TextEncoder();
+  const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
+  const gcmParams: AesGcmParams = { name: "AES-GCM", iv };
+  if (vaultKey.origin) gcmParams.additionalData = encoder.encode(vaultKey.origin);
+
+  const ciphertext = await crypto.subtle.encrypt(
+    gcmParams,
+    vaultKey.cryptoKey,
+    encoder.encode(data)
+  );
+
+  return {
+    version: 1,
+    ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
+    iv: btoa(String.fromCharCode(...iv)),
+    salt: btoa(String.fromCharCode(...vaultKey.salt)),
+    kdf: "scrypt",
+    kdfParams: vaultKey.kdfParams,
+    ...(vaultKey.origin ? { origin: vaultKey.origin } : {}),
+  };
+}
+
+/**
  * Encrypts a mnemonic into a secure vault using scrypt + AES-256-GCM.
  * The current browser origin is bound into the AES-GCM AAD so the vault can
  * only be decrypted on the same origin it was created on.
