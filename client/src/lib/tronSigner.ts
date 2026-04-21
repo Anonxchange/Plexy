@@ -5,6 +5,7 @@ import { base58 } from '@scure/base';
 import * as secp256k1 from '@noble/secp256k1';
 import { sha256 } from '@noble/hashes/sha256';
 import { ripemd160 } from '@noble/hashes/ripemd160';
+import { wipeBytes, wipeHDKey } from './secureMemory';
 
 export interface TronTransactionRequest {
   to: string;
@@ -28,10 +29,17 @@ export async function deriveTronPrivateKey(mnemonic: string): Promise<Uint8Array
   const account = root.derive("m/44'/195'/0'/0/0");
 
   if (!account.privateKey || !secp256k1.utils.isValidPrivateKey(account.privateKey)) {
+    wipeBytes(seed);
+    wipeHDKey(root);
+    wipeHDKey(account);
     throw new Error('Invalid private key derived');
   }
 
-  return account.privateKey;
+  const priv = account.privateKey;
+  wipeBytes(seed);
+  wipeHDKey(root);
+  wipeHDKey(account);
+  return priv;
 }
 
 // ===== ADDRESS DERIVATION =====
@@ -72,6 +80,7 @@ export async function signTronTransaction(
   request: TronTransactionRequest
 ): Promise<SignedTronTransaction> {
   const privKey = await deriveTronPrivateKey(mnemonic);
+  try {
   const from = await getTronAddress(mnemonic);
 
   // Minimal transaction structure
@@ -105,6 +114,9 @@ export async function signTronTransaction(
     to: request.to,
     amount: request.amount
   };
+  } finally {
+    wipeBytes(privKey);
+  }
 }
 
 // ===== BALANCE PLACEHOLDERS =====
