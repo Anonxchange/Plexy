@@ -8,6 +8,7 @@ import { ReceiveCryptoDialog } from "@/components/receive-crypto-dialog";
 import { ReceiveMethodDialog } from "@/components/receive-method-dialog";
 import { type Wallet, getUserWallets } from "@/lib/wallet-api";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
+import { getSupabase } from "@/lib/supabase";
 import { useWalletData } from "@/hooks/use-wallet-data";
 import { WalletHeader } from "@/components/wallet/WalletHeader";
 import { AssetList } from "@/components/wallet/AssetList";
@@ -28,6 +29,10 @@ export default function WalletPage() {
   const [receiveMethodDialogOpen, setReceiveMethodDialogOpen] = useState(false);
   const { data: wallet, isLoading: isWalletLoading, isError: isWalletError, isRefetching } = useWalletData();
   const [setupDialogOpen, setSetupDialogOpen] = useState(false);
+  // Address of an existing server-side wallet — when set, the dialog opens in
+  // "import / sync" mode instead of "create new" mode. Prevents the dangerous
+  // race condition of creating a duplicate wallet over an existing one.
+  const [importExpectedAddress, setImportExpectedAddress] = useState<string | null>(null);
 
   // showSkeleton is true while loading (includes live balance fetch) or fetching without existing data.
   // Only show skeleton on error when there's no cached data to fall back to.
@@ -39,18 +44,104 @@ export default function WalletPage() {
     }
   }, [user, loading, setLocation]);
 
+  // ────────────────────────────────────────────────────────────────────────
+  // Wallet existence check — race-condition safe
+  // ----------------------------------------------------------------------
+  // Old logic only checked the LOCAL browser cache, which was wrong:
+  //   • New device / cleared cache → opens "create new" → would overwrite
+  //     the user's existing server wallet, locking them out of their funds.
+  //   • Slow network / transient API error → wallet feed momentarily empty
+  //     → opens "create new" prematurely.
+  //
+  // New logic: server (Supabase user_wallets) is the source of truth.
+  //   1) Wait for the wallet feed to either succeed or stop loading entirely
+  //      (no opening the dialog while still in flight or while errored).
+  //   2) Query Supabase directly for any user_wallets row. Retry up to
+  //      3 times with backoff to absorb transient network failures.
+  //   3) If the server has wallets but local doesn't → open dialog in
+  //      IMPORT mode with the existing address as expectedAddress.
+  //   4) If neither has wallets → open dialog in CREATE mode.
+  //   5) If server check itself fails after retries → do nothing
+  //      (better to show empty wallet than to risk overwriting funds).
+  // ────────────────────────────────────────────────────────────────────────
   useEffect(() => {
-    const checkWallets = async () => {
-      if (user && !isWalletLoading && wallet?.assets.length === 0) {
-        // Check if user has non-custodial wallets locally
-        const localWallets = await (nonCustodialWalletManager as any).getWalletsFromStorage(user.id);
-        if (localWallets.length === 0) {
-          setSetupDialogOpen(true);
-        }
+    if (!user) return;
+    // Don't even consider opening the dialog while data is in flight or errored
+    if (isWalletLoading || isRefetching || isWalletError) return;
+    // Only proceed when wallet feed says definitively "no assets"
+    if (!wallet || wallet.assets.length > 0) return;
+    // Don't re-open if it's already open / dismissed
+    if (setupDialogOpen) return;
+
+    let cancelled = false;
+
+    const checkWalletsRaceSafe = async () => {
+      // Step 1: ask local cache (fast, offline-capable)
+      const localWallets = await (nonCustodialWalletManager as any).getWalletsFromStorage(user.id);
+      if (cancelled) return;
+
+      if (localWallets.length > 0) {
+        // Local wallet exists — nothing to do, no dialog needed
+        return;
       }
+
+      // Step 2: ask Supabase as the source of truth, with retry
+      const fetchServerWallets = async (): Promise<{ ok: boolean; address: string | null }> => {
+        try {
+          const supabase = await getSupabase();
+          const { data, error } = await supabase
+            .from('user_wallets')
+            .select('address, chain_id, is_active')
+            .eq('user_id', user.id)
+            .eq('is_active', 'true')
+            .limit(1);
+          if (error) return { ok: false, address: null };
+          // Prefer the ETH wallet's address as the canonical "expected" address
+          // since that's what loadWalletsFromSupabase uses for verification.
+          const eth = (data ?? []).find((r: any) =>
+            (r.chain_id || '').toLowerCase().includes('ethereum')
+          );
+          const first = (data ?? [])[0];
+          return { ok: true, address: eth?.address ?? first?.address ?? null };
+        } catch {
+          return { ok: false, address: null };
+        }
+      };
+
+      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      let attempt = 0;
+      let serverResult: { ok: boolean; address: string | null } = { ok: false, address: null };
+      while (attempt < 3) {
+        if (cancelled) return;
+        serverResult = await fetchServerWallets();
+        if (serverResult.ok) break;
+        attempt += 1;
+        await sleep(500 * attempt); // 500ms, 1000ms, 1500ms backoff
+      }
+      if (cancelled) return;
+
+      if (!serverResult.ok) {
+        // Could not confirm server state after retries — refuse to open
+        // the create dialog. Safer to leave the wallet appearing empty
+        // than to risk creating a duplicate over real funds.
+        return;
+      }
+
+      if (serverResult.address) {
+        // Server has a wallet but this device doesn't — sync flow
+        setImportExpectedAddress(serverResult.address);
+      } else {
+        // Genuinely no wallet anywhere — fresh creation flow
+        setImportExpectedAddress(null);
+      }
+      setSetupDialogOpen(true);
     };
-    checkWallets();
-  }, [user, isWalletLoading, wallet?.assets.length]);
+
+    checkWalletsRaceSafe();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, isWalletLoading, isRefetching, isWalletError, wallet, setupDialogOpen]);
 
   if (!loading && !user) {
     setLocation("/signin");
@@ -237,6 +328,7 @@ export default function WalletPage() {
           open={setupDialogOpen}
           onOpenChange={setSetupDialogOpen}
           userId={user.id}
+          expectedAddress={importExpectedAddress}
           onSuccess={() => {}}
         />
       )}
