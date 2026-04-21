@@ -88,9 +88,10 @@ async function derivePrivateKey(mnemonic: string) {
   const seed = await mnemonicToSeed(mnemonic);
   const root = HDKey.fromMasterSeed(seed);
   const child = root.derive("m/44'/60'/0'/0/0");
-  const priv = child.privateKey!;
-  // Wipe intermediate material — keep only the leaf private key bytes the
-  // caller asked for. Caller is responsible for wiping `priv` after use.
+  // Copy the private key bytes into a fresh buffer BEFORE wiping the HDKey.
+  // child.privateKey is a reference into the HDKey's internal buffer; calling
+  // wipeHDKey(child) zeroes that buffer in place, so we must snapshot it first.
+  const priv = child.privateKey!.slice();
   wipeBytes(seed);
   wipeHDKey(root);
   wipeHDKey(child);
@@ -102,6 +103,17 @@ async function deriveAddress(mnemonic: string) {
   const pub = secp.getPublicKey(priv, false);
   const hash = keccak_256(pub.slice(1));
   return "0x" + bytesToHex(hash.slice(-20));
+}
+
+/**
+ * Parses a decimal amount string into a bigint with `decimals` precision.
+ * Avoids IEEE 754 float arithmetic which loses precision for large token amounts
+ * (e.g. "1234567.89" * 10**18 overflows 53-bit mantissa).
+ */
+function parseTokenAmount(amount: string, decimals: number): bigint {
+  const [whole, fraction = ""] = amount.split(".");
+  const fracPadded = fraction.padEnd(decimals, "0").slice(0, decimals);
+  return BigInt(whole) * (10n ** BigInt(decimals)) + BigInt(fracPadded || "0");
 }
 
 function encodeERC20Transfer(to: string, amount: bigint) {
@@ -162,13 +174,13 @@ export async function signEVMTransaction(
   // regardless of naming convention (handles dynamically injected keys too).
   const tokenEntry = TOKEN_CONTRACTS[request.currency];
   if (tokenEntry) {
-    const amount = BigInt(Math.floor(Number(request.amount) * 10 ** tokenEntry.decimals));
+    const amount = parseTokenAmount(request.amount, tokenEntry.decimals);
     data = encodeERC20Transfer(request.to, amount);
     to = tokenEntry.address;
     gasLimit = BigInt(60000); // Default ERC20 gas
     value = BigInt(0);
   } else {
-    value = BigInt(Math.floor(Number(request.amount) * 1e18));
+    value = parseTokenAmount(request.amount, 18);
   }
 
   const tx = [nonce, gasPrice, gasLimit, to, value, data, config.chainId, BigInt(0), BigInt(0)];
