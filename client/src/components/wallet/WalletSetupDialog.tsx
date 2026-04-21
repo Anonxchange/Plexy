@@ -81,15 +81,28 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expec
         );
 
         const chains = ["Bitcoin (SegWit)", "Solana", "Tron (TRC-20)", "XRP", "BNB"];
+        const failed: string[] = [];
         for (const chain of chains) {
-          await nonCustodialWalletManager.generateNonCustodialWallet(
-            chain,
-            password,
-            supabase,
-            userId,
-            mnemonicPhrase,
-            vaultKey
-          );
+          try {
+            await nonCustodialWalletManager.generateNonCustodialWallet(
+              chain,
+              password,
+              supabase,
+              userId,
+              mnemonicPhrase,
+              vaultKey
+            );
+          } catch (chainErr: any) {
+            console.error(`Failed to generate ${chain} wallet:`, chainErr);
+            failed.push(chain);
+          }
+        }
+        if (failed.length > 0) {
+          toast({
+            title: "Some wallets failed to generate",
+            description: `Could not create: ${failed.join(", ")}. You can retry from settings.`,
+            variant: "destructive",
+          });
         }
       }
 
