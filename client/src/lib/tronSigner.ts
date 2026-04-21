@@ -35,7 +35,9 @@ export async function deriveTronPrivateKey(mnemonic: string): Promise<Uint8Array
     throw new Error('Invalid private key derived');
   }
 
-  const priv = account.privateKey;
+  // Copy into a fresh buffer BEFORE wiping the HDKey — account.privateKey is a
+  // reference into the HDKey's internal buffer and would be zeroed by wipeHDKey.
+  const priv = account.privateKey!.slice();
   wipeBytes(seed);
   wipeHDKey(root);
   wipeHDKey(account);
