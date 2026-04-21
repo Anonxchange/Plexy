@@ -5,6 +5,7 @@ import * as nobleEd25519 from '@noble/ed25519';
 import { hmac } from '@noble/hashes/hmac';
 import { sha512 } from '@noble/hashes/sha512';
 import { sha256 } from '@noble/hashes/sha256';
+import { wipeBytes } from './secureMemory';
 
 // noble-ed25519 v3+ requires hashes to be set on the hashes object
 // for synchronous methods to work.
@@ -82,6 +83,7 @@ export async function signSolanaTransaction(
   request: SolanaTransactionRequest
 ): Promise<SignedSolanaTransaction> {
   const privateKey = await deriveSolanaPrivateKey(mnemonic);
+  try {
   const publicKey = await nobleEd25519.getPublicKey(privateKey);
   const recentBlockhash = base58.decode(request.recentBlockhash);
 
@@ -159,6 +161,9 @@ export async function signSolanaTransaction(
     signedTx: base58.encode(transactionPacket),
     txHash
   };
+  } finally {
+    wipeBytes(privateKey);
+  }
 }
 
 const SOLANA_RPC = 'https://api.mainnet-beta.solana.com';
