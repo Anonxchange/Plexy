@@ -76,10 +76,13 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
   const [profileAvatar, setProfileAvatar] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>("");
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  // true while the Supabase avatar fetch is in-flight; prevents initials flash
+  // true while the Supabase avatar fetch is in-flight; prevents initials flash.
+  // We deliberately do NOT also gate on the <img> load event — doing so unmounts
+  // the dropdown while the image is downloading, which prevents the AvatarImage
+  // from ever firing "loaded", trapping the UI in a permanent skeleton state.
+  // The Avatar component's built-in <AvatarFallback> handles the brief image
+  // download flash by showing the user's initials.
   const [isAvatarFetching, setIsAvatarFetching] = useState(true);
-  // tracks whether the <img> itself has finished loading after we have the URL
-  const [imageLoadStatus, setImageLoadStatus] = useState<"idle" | "loading" | "loaded" | "error">("idle");
 
   const { data: walletData, isLoading: walletsLoading } = useWalletData();
   const balance = walletData?.totalBalance || 0;
@@ -126,7 +129,6 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
     if (!user) return;
     // Reset avatar state for this user session so we always show skeleton first
     setIsAvatarFetching(true);
-    setImageLoadStatus("idle");
     setProfileAvatar(null);
     fetchProfileAvatar();
     (async () => {
@@ -219,11 +221,10 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
           </div>
         </div>
 
-        {isAvatarFetching || (profileAvatar !== null && imageLoadStatus === "loading") ? (
-          /* Skeleton replaces the avatar button during both loading phases:
-             Phase 1 — Supabase fetch in-flight (isAvatarFetching)
-             Phase 2 — URL received, browser downloading the image (imageLoadStatus === "loading")
-             Once both are done the real dropdown trigger appears in the same spot. */
+        {isAvatarFetching ? (
+          /* Skeleton only shown while the Supabase fetch is in flight.
+             Once we have the URL (or know there isn't one), the dropdown
+             mounts and AvatarFallback handles any image-download flash. */
           <Skeleton className="h-9 w-9 sm:h-10 sm:w-10 rounded-full flex-shrink-0" />
         ) : (
         <DropdownMenu>
@@ -243,7 +244,6 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
                 <AvatarImage
                   src={profileAvatar || user.user_metadata?.avatar_url}
                   alt="User avatar"
-                  onLoadingStatusChange={setImageLoadStatus}
                 />
                 <AvatarFallback className="bg-primary text-primary-foreground font-semibold text-sm">
                   {user.user_metadata?.full_name?.substring(0, 2)?.toUpperCase() ??
