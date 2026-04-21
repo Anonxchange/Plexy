@@ -12,7 +12,13 @@ import { getBitcoinAddress } from "./bitcoinSigner";
 // Added deriveSolanaPrivateKey to the import below
 import { getSolanaAddress, deriveSolanaPrivateKey } from "./solanaSigner";
 import { getTronAddress } from "./tronSigner";
-import { encryptVault, decryptVault, EncryptedVault } from "./webCrypto";
+import {
+  encryptVault,
+  encryptVaultWithKey,
+  decryptVault,
+  EncryptedVault,
+  DerivedVaultKey,
+} from "./webCrypto";
 import { runWithUnlockGate } from "./security/wallet-unlock-gate";
 
 import { recordTransaction } from "./wallet-api";
@@ -152,7 +158,8 @@ class NonCustodialWalletManager {
     userPassword: string,
     supabase?: any,
     userId?: string,
-    existingMnemonic?: string
+    existingMnemonic?: string,
+    precomputedKey?: DerivedVaultKey
   ): Promise<{ wallet: NonCustodialWallet; mnemonicPhrase: string }> {
     if (!userId) throw new Error("userId is required");
     if (!userPassword) throw new Error("Password is required");
@@ -209,8 +216,8 @@ class NonCustodialWalletManager {
       // Ensure we explicitly set the assetType for tokens if needed
       const assetType = (chainId === "USDT" || chainId === "USDC") ? chainId : undefined;
       
-      const encryptedPrivateKey = await this.encryptPrivateKey(privateKey, userPassword);
-      const encryptedMnemonic = await this.encryptPrivateKey(mnemonic, userPassword);
+      const encryptedPrivateKey = await this.encryptPrivateKey(privateKey, userPassword, precomputedKey);
+      const encryptedMnemonic = await this.encryptPrivateKey(mnemonic, userPassword, precomputedKey);
       
       const newWallet: NonCustodialWallet = {
         id: crypto.randomUUID(),
@@ -259,8 +266,8 @@ class NonCustodialWalletManager {
       walletType = chainId.toLowerCase();
     }
     
-    const encryptedPrivateKey = await this.encryptPrivateKey(privateKey, userPassword);
-    const encryptedMnemonic = await this.encryptPrivateKey(mnemonic, userPassword);
+    const encryptedPrivateKey = await this.encryptPrivateKey(privateKey, userPassword, precomputedKey);
+    const encryptedMnemonic = await this.encryptPrivateKey(mnemonic, userPassword, precomputedKey);
     
     const newWallet: NonCustodialWallet = {
       id: crypto.randomUUID(),
@@ -378,8 +385,14 @@ class NonCustodialWalletManager {
     await setValue('wallets', this.getStorageKey(userId), wallets);
   }
 
-  private async encryptPrivateKey(data: string, password: string): Promise<EncryptedVault> {
-    return encryptVault(data, password);
+  private async encryptPrivateKey(
+    data: string,
+    password: string,
+    precomputedKey?: DerivedVaultKey
+  ): Promise<EncryptedVault> {
+    return precomputedKey
+      ? encryptVaultWithKey(data, precomputedKey)
+      : encryptVault(data, password);
   }
 
   async decryptPrivateKey(
