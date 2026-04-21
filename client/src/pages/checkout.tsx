@@ -20,6 +20,7 @@ import {
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { devLog } from "@/lib/dev-logger";
 import { Separator } from "@/components/ui/separator";
+import { getExchangeRates } from "@/lib/crypto-prices";
 
 type PaymentTab = "card" | "paypal" | "crypto" | "oxxo";
 
@@ -55,6 +56,15 @@ export function Checkout() {
   const { createAndCaptureOrder, loading: paypalLoading } = usePayPal();
   const [activePayment, setActivePayment] = useState<PaymentTab>("card");
   const [showOrderSummary, setShowOrderSummary] = useState(false);
+  const [rates, setRates] = useState<Record<string, number>>({ USD: 1 });
+
+  useEffect(() => {
+    let cancelled = false;
+    getExchangeRates()
+      .then((r) => { if (!cancelled) setRates(r); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -91,12 +101,23 @@ export function Checkout() {
     );
   }
 
-  const subtotal = items.reduce((acc, item) => {
+  const toUsd = (price: number, currency?: string) => {
+    const code = (currency || "USD").toUpperCase();
+    if (code === "USD") return price;
+    const rate = rates[code];
+    if (!rate || rate <= 0) return price;
+    return price / rate;
+  };
+
+  const itemsUsd = items.map((item) => {
     const price = typeof item?.price === "number" ? item.price : parseFloat(String(item?.price || 0));
     const qty = typeof item?.quantity === "number" ? item.quantity : parseInt(String(item?.quantity || 0));
-    return acc + price * qty;
-  }, 0);
-  const processingFee = 2.99;
+    const unitUsd = toUsd(price, item?.currency);
+    return { ...item, _unitUsd: unitUsd, _qty: qty, _lineUsd: unitUsd * qty };
+  });
+
+  const subtotal = itemsUsd.reduce((acc, i) => acc + i._lineUsd, 0);
+  const processingFee = 0.5;
   const total = subtotal + processingFee;
   const totalItems = items.reduce((acc, i) => acc + (i.quantity || 0), 0);
 
@@ -163,7 +184,7 @@ export function Checkout() {
         </button>
         {showOrderSummary && (
           <div className="px-4 pb-4">
-            <OrderSummaryItems items={items} updateQuantity={updateQuantity} removeItem={removeItem} subtotal={subtotal} processingFee={processingFee} total={total} />
+            <OrderSummaryItems items={itemsUsd} updateQuantity={updateQuantity} removeItem={removeItem} subtotal={subtotal} processingFee={processingFee} total={total} />
           </div>
         )}
       </div>
@@ -427,7 +448,7 @@ export function Checkout() {
               <div className="rounded-2xl border border-border/60 bg-card p-6 space-y-5">
                 <h3 className="font-semibold">Order summary</h3>
                 <OrderSummaryItems
-                  items={items}
+                  items={itemsUsd}
                   updateQuantity={updateQuantity}
                   removeItem={removeItem}
                   subtotal={subtotal}
@@ -513,7 +534,7 @@ function OrderSummaryItems({
               </div>
             </div>
             <p className="text-sm font-bold flex-shrink-0">
-              ${(Number(item.price) * Number(item.quantity || 0)).toFixed(2)}
+              ${Number(item._lineUsd ?? Number(item.price) * Number(item.quantity || 0)).toFixed(2)}
             </p>
           </div>
         ))}
