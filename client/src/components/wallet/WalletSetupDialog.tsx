@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
+import { deriveVaultKey } from "@/lib/webCrypto";
 import { createClient } from "@/lib/supabase";
 import { ShieldCheck, Lock, AlertTriangle, CheckCircle2, Loader2, X, RefreshCw } from "lucide-react";
 import securityIllustration from "@/assets/svg-image-1 20.svg";
@@ -65,12 +66,18 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expec
         // Attempt to decrypt to verify password
         await nonCustodialWalletManager.getWalletMnemonic(ethWallet.id, password, userId);
       } else {
-        // Creation flow: Generate brand new wallets and save to Supabase
+        // Creation flow: derive the scrypt key ONCE, reuse for all 6 chain wallets.
+        // Without this, scrypt would run 12 times (private key + mnemonic per chain)
+        // which takes 15–30 s on a mobile CPU. Now it runs once (~1–3 s).
+        const vaultKey = await deriveVaultKey(password);
+
         const { mnemonicPhrase } = await nonCustodialWalletManager.generateNonCustodialWallet(
           "ethereum",
           password,
           supabase,
-          userId
+          userId,
+          undefined,
+          vaultKey
         );
 
         const chains = ["Bitcoin (SegWit)", "Solana", "Tron (TRC-20)", "XRP", "BNB"];
@@ -80,7 +87,8 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expec
             password,
             supabase,
             userId,
-            mnemonicPhrase
+            mnemonicPhrase,
+            vaultKey
           );
         }
       }
