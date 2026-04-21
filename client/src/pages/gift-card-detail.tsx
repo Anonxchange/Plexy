@@ -124,11 +124,15 @@ export function GiftCardDetail() {
   }, [card, cardValue]);
 
   const handleBuyCard = () => {
-    if (!user) {
-      setShowExternalWalletDialog(true);
-    } else {
-      setShowPaymentDialog(true);
-    }
+    if (!card) return;
+    addToCart({
+      productId: String(card.productId),
+      title: card.productName,
+      price: unitFinalPrice,
+      currency: card.recipientCurrencyCode,
+      image: sanitizeImageUrl(card.logoUrls?.[0]),
+    });
+    setLocation("/checkout");
   };
 
   const handleContinueOrder = () => {
