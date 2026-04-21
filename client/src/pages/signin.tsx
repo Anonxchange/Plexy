@@ -16,10 +16,12 @@ import { useTheme } from "@/components/theme-provider";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { deviceFingerprint } from "@/lib/security/device-fingerprint";
 import { webAuthnService } from "@/lib/webauthn";
+import { ForgotPasswordDialog } from "@/components/forgot-password-dialog";
 
 export function SignIn() {
   useHead({ title: "Sign In | Pexly", meta: [{ name: "description", content: "Sign in to access your Pexly wallet, swaps, staking, gift cards, and account features." }] });
   const [inputValue, setInputValue] = useState("");
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
   const [countryCode, setCountryCode] = useState("");
   const [isPhoneNumber, setIsPhoneNumber] = useState(false);
   const [password, setPassword] = useState("");
@@ -620,9 +622,14 @@ export function SignIn() {
                       Stay logged in
                     </span>
                   </label>
-                  <a href="#" className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'} hover:underline`}>
+                  <button
+                    type="button"
+                    onClick={() => setForgotPasswordOpen(true)}
+                    className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'} hover:underline`}
+                    data-testid="link-forgot-password"
+                  >
                     Forgot password?
-                  </a>
+                  </button>
                 </div>
               )}
 
@@ -826,6 +833,13 @@ export function SignIn() {
           accessToken={session.access_token}
         />
       )}
+
+      <ForgotPasswordDialog
+        open={forgotPasswordOpen}
+        onOpenChange={setForgotPasswordOpen}
+        isDark={isDark}
+        defaultEmail={isPhoneNumber ? "" : inputValue}
+      />
     </div>
   );
 }
