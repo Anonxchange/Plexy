@@ -3,101 +3,132 @@ import { getSupabase } from '@/lib/supabase';
 import { notificationSounds } from '@/lib/notification-sounds';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { sendCoinReceivedNotification } from '@/lib/notifications-api';
-import { useWalletBalances, type Wallet } from '@/hooks/use-wallet-balances';
 
-// Minimum increase treated as a real deposit (avoids floating-point noise)
-const MIN_INCREASE_THRESHOLD = 0.000001;
+// ============================================================================
+// CROSS-DEVICE NOTIFICATION ALERT DEDUP
+// ----------------------------------------------------------------------------
+// Source of truth: `notifications.alerted_at` (TIMESTAMPTZ) in Supabase.
+//
+// Race-free flow:
+//   1) Realtime INSERT arrives on any device.
+//   2) Device tries to "claim" the alert with a conditional UPDATE:
+//        UPDATE notifications SET alerted_at = NOW()
+//        WHERE id = $1 AND alerted_at IS NULL
+//        RETURNING id
+//      Postgres guarantees only ONE concurrent updater wins (returns a row).
+//   3) The winner plays the sound + shows the toast.
+//      Losers (no row returned) stay silent.
+//   4) Other devices also receive a realtime UPDATE event and treat the
+//      notification as already-alerted going forward.
+//
+// Backlog handling (offline → online catch-up):
+//   On mount we fetch any notifications still alerted_at IS NULL and process
+//   them through the same claim path. Whichever device comes online first
+//   alerts the user once; later devices see them already claimed and stay
+//   silent.
+//
+// Local cache (defense-in-depth):
+//   We also keep an in-memory Set of IDs we've already processed this session
+//   to avoid double-handling within a single tab (e.g. INSERT + UPDATE arriving
+//   close together).
+// ============================================================================
+
+interface NotificationRow {
+  id: string;
+  user_id: string;
+  type: string;
+  title?: string | null;
+  message?: string | null;
+  read?: boolean | null;
+  alerted_at?: string | null;
+  created_at?: string | null;
+}
 
 export function GlobalNotificationListener() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const lastProcessedIds = useRef<Set<string>>(new Set());
-  const hasPlayedLoginSound = useRef(false);
+  // Per-session in-memory dedup so the same id never gets processed twice
+  // even if INSERT and a quick UPDATE both fire.
+  const seenIdsRef = useRef<Set<string>>(new Set());
 
-  // ── Non-custodial deposit detection via balance polling ────────────────────
-  // useWalletBalances already polls the monitor-deposits edge function every
-  // 60 s. We piggyback on its React Query cache — no extra network calls.
-  const { data: wallets } = useWalletBalances();
-  const prevBalancesRef = useRef<Map<string, number>>(new Map());  // key: wallet.id
-  const balanceBaselineSet = useRef(false);
-
-  // Reset baseline when the user changes (login / logout)
-  useEffect(() => {
-    prevBalancesRef.current.clear();
-    balanceBaselineSet.current = false;
-  }, [user?.id]);
-
-  useEffect(() => {
-    if (!wallets || wallets.length === 0 || !user?.id) return;
-
-    if (!balanceBaselineSet.current) {
-      // First load — record current balances as baseline so we don't fire
-      // notifications for coins the user already held before opening the app.
-      wallets.forEach((w: Wallet) => prevBalancesRef.current.set(w.id, w.balance));
-      balanceBaselineSet.current = true;
-      return;
-    }
-
-    // Subsequent polls — compare each wallet's balance against the baseline
-    wallets.forEach((w: Wallet) => {
-      const prev = prevBalancesRef.current.get(w.id) ?? 0;
-      const increase = w.balance - prev;
-
-      if (increase > MIN_INCREASE_THRESHOLD) {
-        // Deduplicate: key by wallet ID + rounded increase to avoid double-fire
-        // on back-to-back renders with the same data
-        const dedupeKey = `deposit-${w.id}-${increase.toFixed(8)}`;
-        if (!lastProcessedIds.current.has(dedupeKey)) {
-          lastProcessedIds.current.add(dedupeKey);
-          sendCoinReceivedNotification(user.id, {
-            id: dedupeKey,
-            crypto_symbol: w.crypto_symbol,
-            amount: increase,
-            type: 'deposit',
-            tx_hash: null,
-            from_address: null,
-          });
-        }
-      }
-
-      // Always advance the baseline to the latest known balance
-      prevBalancesRef.current.set(w.id, w.balance);
-    });
-  }, [wallets, user?.id]);
-
-  // ── Supabase Realtime: notifications + announcements ──────────────────────
   useEffect(() => {
     if (!user?.id) return;
 
+    seenIdsRef.current = new Set();
     let cleanupFn: (() => void) | undefined;
+    let cancelled = false;
 
-    getSupabase().then((supabase) => {
-      // On mount: silent check for unread notifications
-      const checkUnread = async () => {
-        if (hasPlayedLoginSound.current) return;
-        const { data } = await supabase
+    /**
+     * Atomically claim the right to alert for a notification.
+     * Returns true only if THIS call won the race (alerted_at was NULL and
+     * we just set it). Returns false if another device already alerted, the
+     * row doesn't exist, or anything went wrong.
+     */
+    const claimAlert = async (notificationId: string): Promise<boolean> => {
+      try {
+        const supabase = await getSupabase();
+        const { data, error } = await supabase
           .from('notifications')
+          .update({ alerted_at: new Date().toISOString() })
+          .eq('id', notificationId)
+          .is('alerted_at', null)
           .select('id')
+          .maybeSingle();
+        if (error) return false;
+        return !!data;
+      } catch {
+        return false;
+      }
+    };
+
+    const fireAlert = (n: NotificationRow) => {
+      notificationSounds.play('message_received');
+      if (n.type === 'payment') {
+        toast({
+          title: n.title ?? 'Coins Received',
+          description: n.message ?? 'Your wallet has been credited.',
+          duration: 6000,
+        });
+      }
+    };
+
+    const handleNotification = async (n: NotificationRow) => {
+      // Local dedup: never process the same id twice within this tab
+      if (seenIdsRef.current.has(n.id)) return;
+      seenIdsRef.current.add(n.id);
+
+      // Server-side claimed already → silent
+      if (n.alerted_at) return;
+
+      // Race-free server claim
+      const won = await claimAlert(n.id);
+      if (won) fireAlert(n);
+    };
+
+    getSupabase().then(async (supabase) => {
+      if (cancelled) return;
+
+      // ── 1) Catch up on any backlog the user missed while offline ─────────
+      try {
+        const { data: backlog } = await supabase
+          .from('notifications')
+          .select('id, user_id, type, title, message, read, alerted_at, created_at')
           .eq('user_id', user.id)
-          .eq('read', false)
-          .limit(1);
-        if (data && data.length > 0) {
-          hasPlayedLoginSound.current = true;
+          .is('alerted_at', null)
+          .order('created_at', { ascending: true })
+          .limit(50);
+        if (backlog && !cancelled) {
+          for (const n of backlog as NotificationRow[]) {
+            await handleNotification(n);
+          }
         }
-      };
-      checkUnread();
+      } catch {
+        // Non-critical — realtime will still cover live events
+      }
 
-      const unreadCheckInterval = setInterval(async () => {
-        await supabase
-          .from('notifications')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('read', false)
-          .limit(1);
-      }, 5 * 60 * 1000);
+      if (cancelled) return;
 
-      // notifications table — show toast on INSERT
+      // ── 2) Realtime: live INSERT events ──────────────────────────────────
       const notificationsChannel = supabase
         .channel('global-notifications')
         .on(
@@ -109,30 +140,27 @@ export function GlobalNotificationListener() {
             filter: `user_id=eq.${user.id}`,
           },
           (payload) => {
-            const n = payload.new as {
-              id: string;
-              type: string;
-              title?: string;
-              message?: string;
-            };
-
-            if (lastProcessedIds.current.has(n.id)) return;
-            lastProcessedIds.current.add(n.id);
-
-            notificationSounds.play('message_received');
-
-            if (n.type === 'payment') {
-              toast({
-                title: n.title ?? 'Coins Received',
-                description: n.message ?? 'Your wallet has been credited.',
-                duration: 6000,
-              });
-            }
+            void handleNotification(payload.new as NotificationRow);
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            // Another device claimed the alert — record it so we never
+            // accidentally re-fire if INSERT arrives later in this tab.
+            const n = payload.new as NotificationRow;
+            if (n.alerted_at) seenIdsRef.current.add(n.id);
           }
         )
         .subscribe();
 
-      // blog_posts — toast for new announcements
+      // ── 3) Announcements (no per-user state — keep simple session dedup) ─
       const announcementsChannel = supabase
         .channel('global-announcements')
         .on(
@@ -146,8 +174,8 @@ export function GlobalNotificationListener() {
           (payload) => {
             const a = payload.new as { id: string; title?: string };
             const key = `announcement-${a.id}`;
-            if (lastProcessedIds.current.has(key)) return;
-            lastProcessedIds.current.add(key);
+            if (seenIdsRef.current.has(key)) return;
+            seenIdsRef.current.add(key);
 
             notificationSounds.play('message_received');
             toast({
@@ -160,13 +188,15 @@ export function GlobalNotificationListener() {
         .subscribe();
 
       cleanupFn = () => {
-        clearInterval(unreadCheckInterval);
         supabase.removeChannel(notificationsChannel);
         supabase.removeChannel(announcementsChannel);
       };
     });
 
-    return () => cleanupFn?.();
+    return () => {
+      cancelled = true;
+      cleanupFn?.();
+    };
   }, [user?.id, toast]);
 
   return null;
