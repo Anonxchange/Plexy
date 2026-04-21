@@ -1,5 +1,4 @@
 import { mnemonicToSeed } from "@scure/bip39";
-import { wordlist } from "@scure/bip39/wordlists/english.js";
 import { base58 } from '@scure/base';
 import * as nobleEd25519 from '@noble/ed25519';
 import { hmac } from '@noble/hashes/hmac';
@@ -48,7 +47,10 @@ function encodeLength(len: number): number[] {
 
 // Derive Solana private key from mnemonic using ed25519 path
 export async function deriveSolanaPrivateKey(mnemonic: string): Promise<Uint8Array> {
-  const seed = await mnemonicToSeed(mnemonic, wordlist as any);
+  // No passphrase — standard BIP39 derivation (passphrase = "").
+  // Passing `wordlist` here was a bug: it coerced the array to a string and
+  // produced a non-standard seed incompatible with Phantom, Solflare, etc.
+  const seed = await mnemonicToSeed(mnemonic);
   let I = hmac(sha512, new TextEncoder().encode('ed25519 seed'), seed);
   let IL = I.slice(0, 32);
   let IR = I.slice(32);
