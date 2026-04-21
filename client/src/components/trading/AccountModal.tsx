@@ -893,7 +893,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     try {
       const vaultKey = wallet.encryptedMnemonic ?? wallet.encryptedPrivateKey;
       if (!vaultKey) throw new Error("Wallet data not found. Please recreate your wallet.");
-      const mnemonic = await nonCustodialWalletManager.decryptPrivateKey(vaultKey, sendPassword);
+      const mnemonic = await nonCustodialWalletManager.decryptPrivateKey(vaultKey, sendPassword, user.id);
       await handleSendFromWalletWithMnemonic(mnemonic);
     } catch (err: any) {
       setSendLoading(false);
