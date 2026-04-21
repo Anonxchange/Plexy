@@ -13,6 +13,7 @@ import { getBitcoinAddress } from "./bitcoinSigner";
 import { getSolanaAddress, deriveSolanaPrivateKey } from "./solanaSigner";
 import { getTronAddress } from "./tronSigner";
 import { encryptVault, decryptVault, EncryptedVault } from "./webCrypto";
+import { runWithUnlockGate } from "./security/wallet-unlock-gate";
 
 import { recordTransaction } from "./wallet-api";
 
@@ -156,7 +157,7 @@ class NonCustodialWalletManager {
     if (!userId) throw new Error("userId is required");
     if (!userPassword) throw new Error("Password is required");
 
-    const mnemonic = existingMnemonic || generateMnemonic(wordlist, 128);
+    const mnemonic = existingMnemonic || generateMnemonic(wordlist, 256);
     const seed = await mnemonicToSeed(mnemonic);
     const root = HDKey.fromMasterSeed(seed);
     
@@ -164,9 +165,9 @@ class NonCustodialWalletManager {
     let address: string;
     let walletType: string;
 
-    if (chainId === "bitcoin" || chainId === "Bitcoin (SegWit)") {
+    if (chainId === "bitcoin" || chainId === "Bitcoin (SegWit)" || chainId === "Bitcoin (Taproot)") {
       address = await getBitcoinAddress(mnemonic);
-      const account = root.derive("m/84'/0'/0'/0/0");
+      const account = root.derive("m/86'/0'/0'/0/0");
       privateKey = toHex(account.privateKey!);
       walletType = "bitcoin";
     } else if (chainId === "Solana") {
@@ -310,7 +311,9 @@ class NonCustodialWalletManager {
     const wallets = await this.getWalletsFromStorage(userId);
     const wallet = wallets.find(w => w.id === walletId);
     if (!wallet || !wallet.encryptedMnemonic) return null;
-    return this.decryptPrivateKey(wallet.encryptedMnemonic, password);
+    return runWithUnlockGate(userId, () =>
+      this.decryptPrivateKey(wallet.encryptedMnemonic!, password)
+    );
   }
 
   public async loadWalletsFromSupabase(supabase: any, userId: string): Promise<NonCustodialWallet[]> {
@@ -379,17 +382,26 @@ class NonCustodialWalletManager {
     return encryptVault(data, password);
   }
 
-  async decryptPrivateKey(vault: string | EncryptedVault, password: string): Promise<string> {
-    if (typeof vault === "string") {
-      // The vault arrived as a JSON string (e.g. text DB column or old serialisation path).
-      // Try to parse it into an EncryptedVault object before giving up.
-      const parsed = parseVaultField(vault);
-      if (parsed && typeof parsed === "object" && "ciphertext" in parsed) {
-        return decryptVault(parsed as EncryptedVault, password);
+  async decryptPrivateKey(
+    vault: string | EncryptedVault,
+    password: string,
+    userId?: string
+  ): Promise<string> {
+    const inner = async (): Promise<string> => {
+      if (typeof vault === "string") {
+        // The vault arrived as a JSON string (e.g. text DB column or old serialisation path).
+        // Try to parse it into an EncryptedVault object before giving up.
+        const parsed = parseVaultField(vault);
+        if (parsed && typeof parsed === "object" && "ciphertext" in parsed) {
+          return decryptVault(parsed as EncryptedVault, password);
+        }
+        throw new Error("Legacy vault string found. Please migrate your wallet.");
       }
-      throw new Error("Legacy vault string found. Please migrate your wallet.");
-    }
-    return decryptVault(vault, password);
+      return decryptVault(vault, password);
+    };
+    // When a userId is supplied, route the attempt through the server-side
+    // brute-force gate (4+ failures → escalating lockout up to 24h).
+    return userId ? runWithUnlockGate(userId, inner) : inner();
   }
 
   /**
