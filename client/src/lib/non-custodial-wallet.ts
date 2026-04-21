@@ -173,8 +173,11 @@ class NonCustodialWalletManager {
     let walletType: string;
 
     if (chainId === "bitcoin" || chainId === "Bitcoin (SegWit)" || chainId === "Bitcoin (Taproot)") {
-      address = await getBitcoinAddress(mnemonic);
-      const account = root.derive("m/86'/0'/0'/0/0");
+      // Trust Wallet standard: Native SegWit (BIP84, bc1q...) is the default.
+      // Only use Taproot when explicitly requested.
+      const isTaproot = chainId === "Bitcoin (Taproot)";
+      address = await getBitcoinAddress(mnemonic, isTaproot ? "taproot" : "segwit");
+      const account = root.derive(isTaproot ? "m/86'/0'/0'/0/0" : "m/84'/0'/0'/0/0");
       privateKey = toHex(account.privateKey!);
       walletType = "bitcoin";
     } else if (chainId === "Solana") {
