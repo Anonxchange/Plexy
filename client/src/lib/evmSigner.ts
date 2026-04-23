@@ -21,10 +21,12 @@ secp.utils.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]) => {
 /* -------------------------------------------------------------------------- */
 
 export const CHAIN_CONFIGS: Record<string, { rpcUrl: string; chainId: number; symbol: string }> = {
-  ETH: { rpcUrl: "https://eth.llamarpc.com",       chainId: 1,     symbol: "ETH" },
-  BSC: { rpcUrl: "https://binance.llamarpc.com",    chainId: 56,    symbol: "BNB" },
-  BNB: { rpcUrl: "https://binance.llamarpc.com",    chainId: 56,    symbol: "BNB" },
-  ARB: { rpcUrl: "https://arbitrum.llamarpc.com",   chainId: 42161, symbol: "ETH" },
+  ETH: { rpcUrl: "https://eth.llamarpc.com",       chainId: 1,     symbol: "ETH"   },
+  BSC: { rpcUrl: "https://binance.llamarpc.com",    chainId: 56,    symbol: "BNB"   },
+  BNB: { rpcUrl: "https://binance.llamarpc.com",    chainId: 56,    symbol: "BNB"   },
+  ARB: { rpcUrl: "https://arbitrum.llamarpc.com",   chainId: 42161, symbol: "ETH"   },
+  POL: { rpcUrl: "https://polygon.llamarpc.com",    chainId: 137,   symbol: "POL"   },
+  MATIC: { rpcUrl: "https://polygon.llamarpc.com",  chainId: 137,   symbol: "POL"   },
 };
 
 export const TOKEN_CONTRACTS: Record<string, { address: string; decimals: number }> = {
@@ -204,6 +206,78 @@ export async function signEVMTransaction(
     value: request.amount,
     currency: request.currency
   };
+  } finally {
+    wipeBytes(privKey);
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*                          GENERIC CONTRACT-CALL SIGNER                      */
+/* -------------------------------------------------------------------------- */
+
+export interface ContractCallRequest {
+  /** Chain key in CHAIN_CONFIGS — e.g. "ETH", "BSC", "POL", "ARB". */
+  chain: string;
+  /** Target contract address (0x…). */
+  to: string;
+  /** Hex-encoded calldata (0x…). Use the encoders in `lib/staking.ts`. */
+  data: string;
+  /** Native value in wei as decimal string (e.g. "1000000000000000000" = 1 ETH). */
+  valueWei?: string;
+  /** Optional explicit gas limit. If omitted, eth_estimateGas is used. */
+  gasLimit?: string;
+  /** Optional explicit gas price. If omitted, eth_gasPrice is used. */
+  gasPrice?: string;
+  /** Optional nonce override. */
+  nonce?: number;
+}
+
+/**
+ * Signs (legacy / EIP-155) a generic contract call from the wallet derived
+ * from `mnemonic`. Estimates gas via eth_estimateGas (with a 25% safety
+ * buffer) when no gasLimit is provided. Returns the signed raw tx + hash so
+ * the caller can broadcast it with `broadcastEVMTransaction(signedTx, chain)`.
+ */
+export async function signEVMContractCall(
+  mnemonic: string,
+  request: ContractCallRequest
+): Promise<{ signedTx: string; txHash: string; from: string }> {
+  const privKey = await derivePrivateKey(mnemonic);
+  try {
+    const from = await deriveAddress(mnemonic);
+    const config = CHAIN_CONFIGS[request.chain.toUpperCase()] || CHAIN_CONFIGS.ETH;
+
+    const nonce = request.nonce ??
+      parseInt(await rpcCall(config.rpcUrl, "eth_getTransactionCount", [from, "pending"]), 16);
+    const gasPrice = BigInt(request.gasPrice ?? await rpcCall(config.rpcUrl, "eth_gasPrice", []));
+    const valueWei = BigInt(request.valueWei ?? "0");
+
+    let gasLimit: bigint;
+    if (request.gasLimit) {
+      gasLimit = BigInt(request.gasLimit);
+    } else {
+      const est = await rpcCall(config.rpcUrl, "eth_estimateGas", [
+        { from, to: request.to, value: "0x" + valueWei.toString(16), data: request.data },
+      ]);
+      // 25% safety buffer; floor 60_000.
+      gasLimit = (BigInt(est) * 125n) / 100n;
+      if (gasLimit < 60_000n) gasLimit = 60_000n;
+    }
+
+    const tx = [nonce, gasPrice, gasLimit, request.to, valueWei, request.data, config.chainId, BigInt(0), BigInt(0)];
+    const encoded = RLP.encode(tx);
+    const hash = keccak_256(encoded);
+
+    const signature = await secp.sign(hash, privKey, { recovered: true });
+    const [sig, recovery] = (signature as any);
+    const v = BigInt(config.chainId * 2 + 35 + recovery);
+    const r = BigInt("0x" + bytesToHex(sig.slice(0, 32)));
+    const s = BigInt("0x" + bytesToHex(sig.slice(32, 64)));
+
+    const signedTx = RLP.encode([nonce, gasPrice, gasLimit, request.to, valueWei, request.data, v, r, s]);
+    const txHash = "0x" + bytesToHex(keccak_256(signedTx));
+
+    return { signedTx: "0x" + bytesToHex(signedTx), txHash, from };
   } finally {
     wipeBytes(privKey);
   }
