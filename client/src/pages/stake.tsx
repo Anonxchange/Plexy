@@ -8,11 +8,21 @@
  * is the wallet password (or nothing if it's already unlocked in session).
  */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useHead } from "@unhead/react";
 import { Link } from "wouter";
-import { ArrowRight, ArrowUpRight, ExternalLink, Loader2, ShieldCheck, X, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowRight, ArrowUpRight, ExternalLink, Loader2, ShieldCheck, X, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight, Lock, KeyRound, BellRing, Timer, Building2, Scale, Landmark } from "lucide-react";
 
+import securityPadlockImg from "@assets/IMG_5449.webp";
+import iconTrophyImg from "@assets/IMG_5464.webp";
+import iconResilientImg from "@assets/IMG_5434.webp";
+import iconWalletClickImg from "@assets/IMG_5435.webp";
+import iconReinvestImg from "@assets/IMG_5436.webp";
+import iconStrategiesImg from "@assets/IMG_5437.webp";
+import iconYieldsImg from "@assets/IMG_5438.webp";
+import legacyTeamImg from "@/assets/legacy_team_sand.png";
+import stakeTopBannerImg from "@/assets/stake_top_banner.png";
+import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -441,7 +451,6 @@ function ProductCard({
   return (
     <div className="group relative overflow-hidden rounded-3xl bg-card p-7 transition-all hover:shadow-[0_24px_60px_-20px_hsl(75_85%_60%/0.35)]">
       {/* Decorative corner glow */}
-      <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-lime/10 blur-3xl transition-opacity group-hover:bg-lime/20" />
 
       <div className="relative flex flex-col items-center text-center">
         <ProductArt product={product} size={150} />
@@ -861,6 +870,23 @@ export default function Stake() {
     return Array.from(new Set(STAKING_PRODUCTS.map((p) => p.chainName)));
   }, []);
 
+  // Highest live (or estimated) APY across products — used in hero copy.
+  const topApy = useMemo(() => {
+    let best = 0;
+    for (const p of STAKING_PRODUCTS) {
+      const live = liveApy[p.id];
+      if (typeof live === "number" && live > best) best = live;
+      else {
+        const est = APY_ESTIMATE[p.id];
+        if (est) {
+          const m = est.match(/([\d.]+)\s*%\s*$/);
+          if (m && Number(m[1]) > best) best = Number(m[1]);
+        }
+      }
+    }
+    return best ? best.toFixed(0) : "7";
+  }, [liveApy]);
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Local CSS keyframes used by the SVG art. */}
@@ -870,45 +896,18 @@ export default function Stake() {
       `}</style>
 
       <div className="flex-grow w-full">
-        {/* ── Hero ── */}
-        <section className="relative">
-          <div className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-8 px-4 pt-4 pb-8 md:grid-cols-2 md:pt-6 md:pb-12">
-            <div>
-              <h1 className="text-4xl md:text-5xl font-extrabold leading-tight text-foreground">
-                Earn on your crypto<br />
-                <span className="bg-gradient-to-br from-lime to-lime/60 bg-clip-text text-transparent">
-                  the simple way.
-                </span>
-              </h1>
-              <p className="mt-4 max-w-md text-sm md:text-base text-muted-foreground leading-relaxed">
-                Pexly routes your stake straight to the source — Lido, Stader, Lista DAO and Aave V3 —
-                signed locally by your non-custodial wallet. No bridges, no custodians, no surprises.
-              </p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Button
-                  className="rounded-xl bg-lime text-black hover:bg-lime/90 h-11 px-5 text-sm font-semibold"
-                  onClick={() => document.getElementById("products")?.scrollIntoView({ behavior: "smooth" })}
-                >
-                  Browse products
-                </Button>
-                <Button
-                  variant="outline"
-                  className="rounded-xl h-11 px-5 text-sm"
-                  onClick={() => document.getElementById("how")?.scrollIntoView({ behavior: "smooth" })}
-                >
-                  How it works
-                </Button>
-              </div>
-            </div>
-            <div className="flex justify-center md:justify-end">
-              <HeroVault />
-            </div>
-          </div>
+        {/* ── Hero carousel (banner image is now built into the hero card) ── */}
+        <section className="mx-auto max-w-6xl px-4 pt-4 md:pt-6">
+          <HeroCarousel
+            topApy={topApy}
+            onBrowse={() => document.getElementById("rates")?.scrollIntoView({ behavior: "smooth" })}
+            onLearn={() => document.getElementById("how")?.scrollIntoView({ behavior: "smooth" })}
+          />
         </section>
 
-        {/* ── Your positions (only visible when signed in & has balances) ── */}
+        {/* ── Your positions (only when signed in & has balances) ── */}
         {user && (positionsLoading || positions.length > 0) && (
-          <section className="mx-auto max-w-6xl px-4 pt-2 pb-6">
+          <section className="mx-auto max-w-6xl px-4 pt-6">
             <div className="rounded-3xl bg-card p-5">
               <div className="mb-4 flex items-center justify-between">
                 <div>
@@ -957,67 +956,50 @@ export default function Stake() {
           </section>
         )}
 
-        {/* ── Supported networks ── */}
-        <section className="mx-auto max-w-6xl px-4 pt-2 pb-4">
-          <p className="text-sm md:text-base font-semibold text-foreground mb-3">Supported networks:</p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <NetworkChip name="Ethereum" icon={<EthereumIcon />} />
-            <NetworkChip name="Polygon" icon={<PolygonIcon />} />
-            <NetworkChip name="BNB Chain" icon={<BnbIcon />} />
-            <NetworkChip name="Arbitrum" icon={<ArbitrumIcon />} />
-          </div>
+        {/* ── Our interest rates ── */}
+        <section id="rates" className="mx-auto max-w-6xl px-4 pt-10">
+          <InterestRatesCard
+            onStake={handleStake}
+            liveApy={liveApy}
+            liveLoading={liveLoading}
+          />
         </section>
 
-        {/* ── Stats strip ── */}
-        <section className="mx-auto max-w-6xl px-4 pt-6">
-          <div className="grid grid-cols-3 gap-3 rounded-3xl bg-card p-3 sm:gap-4 sm:p-4">
-            <Stat label="Products" value={`${STAKING_PRODUCTS.length}`} />
-            <div className="border-l border-border" />
-            <Stat label="Networks" value={`${networks.length}`} />
-          </div>
-          <p className="mt-2 text-center text-xs text-muted-foreground">
-            APY ranges shown are recent estimates published by each protocol — actual yield is variable.
-          </p>
+        {/* ── Yield generation mechanics ── */}
+        <section className="mx-auto max-w-6xl px-4 pt-10">
+          <YieldMechanicsCard />
         </section>
 
-        {/* ── Products ── */}
-        <section id="products" className="mx-auto max-w-6xl px-4 pt-12 pb-6">
-          <div className="mb-6 text-center">
-            <h2 className="text-2xl md:text-3xl font-bold text-foreground">Choose a product</h2>
-            <p className="mt-1.5 text-sm md:text-base text-muted-foreground">
-              Native staking and lending — wired directly to the protocol contracts.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {STAKING_PRODUCTS.map((p) => (
-              <ProductCard
-                key={p.id}
-                product={p}
-                onStake={handleStake}
-                liveApy={liveApy[p.id]}
-                liveLoading={liveLoading}
-              />
-            ))}
-          </div>
+        {/* ── Trust First. Earn More. (big lime CTA) ── */}
+        <section className="mx-auto max-w-6xl px-4 pt-10">
+          <TrustCta
+            onStart={() => document.getElementById("rates")?.scrollIntoView({ behavior: "smooth" })}
+          />
         </section>
 
-        {/* ── How it works ── */}
-        <section id="how" className="mx-auto max-w-6xl px-4 pt-12 pb-16">
-          <div className="mb-8 text-center">
-            <h2 className="text-2xl md:text-3xl font-bold text-foreground">How Pexly Earn works</h2>
-            <p className="mt-1.5 text-sm md:text-base text-muted-foreground">
-              Three steps. Your keys, signed locally, every time.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-            <Step n={1} title="Pick a product" body="Browse Lido, Stader, Lista or Aave. Each card shows the input, output, network and current yield range." svg={<StepPick />} />
-            <Step n={2} title="Sign locally" body="Pexly signs the contract call from your in-app wallet. Your seed phrase never leaves the browser." svg={<StepSign />} />
-            <Step n={3} title="Earn on-chain" body="Funds flow into the protocol immediately. You hold the receipt token (stETH, slisBNB, aUSDT…) and can redeem any time." svg={<StepEarn />} />
-          </div>
+        {/* ── Trusted protocols ── */}
+        <section className="mx-auto max-w-6xl px-4 pt-10">
+          <TrustedProtocols />
+        </section>
+
+        {/* ── Security ── */}
+        <section className="mx-auto max-w-6xl px-4 pt-10">
+          <SecurityCard />
+        </section>
+
+        {/* ── How it works / About cards ── */}
+        <section id="how" className="mx-auto max-w-6xl px-4 pt-12">
+          <h2 className="mb-6 text-3xl md:text-4xl font-bold text-foreground">Why Pexly Earn</h2>
+          <HowItWorksRow />
+        </section>
+
+        {/* ── Compliance / Legacy ── */}
+        <section className="mx-auto max-w-6xl px-4 pt-12">
+          <LegacyCard />
         </section>
 
         {/* ── FAQ ── */}
-        <section id="faq" className="mx-auto max-w-3xl px-4 pt-8 pb-20">
+        <section id="faq" className="mx-auto max-w-3xl px-4 pt-12 pb-20">
           <div className="mb-8 text-center">
             <h2 className="text-2xl md:text-3xl font-bold text-foreground">Frequently asked questions</h2>
             <p className="mt-1.5 text-sm md:text-base text-muted-foreground">
@@ -1051,11 +1033,798 @@ export default function Stake() {
   );
 }
 
+/* -------------------------------------------------------------------------- */
+/*                              HERO CAROUSEL                                 */
+/* -------------------------------------------------------------------------- */
+
+function HeroCarousel({
+  topApy,
+  onBrowse,
+  onLearn,
+}: {
+  topApy: string;
+  onBrowse: () => void;
+  onLearn: () => void;
+}) {
+  const [slide, setSlide] = useState(0);
+  const slides = 2;
+
+  // Auto-advance every 7s, pausable on hover.
+  const [paused, setPaused] = useState(false);
+  useEffect(() => {
+    if (paused) return;
+    const t = setInterval(() => setSlide((s) => (s + 1) % slides), 7000);
+    return () => clearInterval(t);
+  }, [paused]);
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-[28px] bg-card"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      {/* Banner image bleeds into the top of the hero card. A subtle dark
+          gradient at the bottom makes the image transition into the card
+          background, and a Wise-style white pill overlay floats on the image
+          as a credible chip showing live network coverage. */}
+      <div className="relative h-32 md:h-44 w-full">
+        <img
+          src={stakeTopBannerImg}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full object-cover"
+          loading="eager"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-card" />
+
+        <div className="absolute left-4 right-4 -bottom-5 md:left-8 md:right-8 md:-bottom-6 flex justify-center">
+          <div className="flex items-center gap-3 rounded-full bg-white text-black shadow-[0_10px_30px_-10px_rgba(0,0,0,0.6)] pl-2 pr-2 py-1.5 max-w-md w-full">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-lime/20 text-[11px] font-extrabold text-black">
+              4
+            </span>
+            <span className="text-sm font-semibold flex-1 truncate">
+              Live on Ethereum, BNB, Polygon & Arbitrum
+            </span>
+            <span className="rounded-full bg-lime px-3 py-1 text-xs font-bold text-black whitespace-nowrap">
+              Up to {topApy}%
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="relative p-6 md:p-10 pt-10 md:pt-12 min-h-[440px] md:min-h-[480px] flex flex-col">
+        {slide === 0 ? (
+          <div className="flex flex-col h-full">
+            <h1 className="text-4xl md:text-6xl font-extrabold leading-[1.05] tracking-tight text-foreground">
+              Pexly Earn<br />
+              is Now <span className="text-lime">Live!</span>
+            </h1>
+            <p className="mt-5 max-w-xl text-sm md:text-base text-muted-foreground leading-relaxed">
+              Transform your crypto journey with Pexly Earn — stake ETH, BNB and POL or supply USDT to
+              Aave V3 directly from your non-custodial wallet.
+            </p>
+
+            <div className="mt-auto pt-8 space-y-3">
+              <Button
+                onClick={onBrowse}
+                className="rounded-2xl bg-lime text-black hover:bg-lime/90 h-14 px-6 text-base font-bold w-full"
+              >
+                Start Earning Now
+              </Button>
+              <Button
+                variant="outline"
+                onClick={onLearn}
+                className="rounded-2xl h-14 px-6 text-base font-semibold w-full"
+              >
+                How it works
+              </Button>
+
+              <div className="pt-3 text-sm text-muted-foreground/80 leading-relaxed">
+                <span className="text-foreground font-semibold">{STAKING_PRODUCTS.length} products</span>,
+                fully on-chain. Trusted by <PartnerLogo name="Lido" />, <PartnerLogo name="Aave" />, <PartnerLogo name="Stader" />, part of the <PartnerLogo name="Arbitrum" /> ecosystem.
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col h-full">
+            <h1 className="text-4xl md:text-6xl font-extrabold leading-[1.05] tracking-tight text-foreground">
+              Earn rewards every day on{" "}
+              <TokenChip>ETH</TokenChip>, <TokenChip>BNB</TokenChip> and{" "}
+              <TokenChip>USDT</TokenChip> up to{" "}
+              <span className="inline-block rounded-md bg-lime px-2 py-0.5 text-black">to {topApy}%</span>{" "}
+              per year.
+            </h1>
+            <p className="mt-5 max-w-xl text-sm md:text-base text-muted-foreground leading-relaxed">
+              Yield is paid by the protocol contracts directly to your wallet — accrues block-by-block,
+              withdrawable at any time.
+            </p>
+
+            <div className="mt-auto pt-8 space-y-3">
+              <Button
+                onClick={onBrowse}
+                className="rounded-2xl bg-lime text-black hover:bg-lime/90 h-14 px-6 text-base font-bold w-full"
+              >
+                Start Earning Now
+              </Button>
+
+              <div className="pt-3 text-sm text-muted-foreground/80 leading-relaxed">
+                Routed to <PartnerLogo name="Lido" />, <PartnerLogo name="Aave" />, <PartnerLogo name="Stader" /> and <PartnerLogo name="Lista" /> on{" "}
+                <PartnerLogo name="Arbitrum" />, Ethereum, Polygon & BNB.
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Controls */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
+        {Array.from({ length: slides }).map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setSlide(i)}
+            aria-label={`Go to slide ${i + 1}`}
+            className={`h-1.5 rounded-full transition-all ${
+              slide === i ? "w-6 bg-lime" : "w-1.5 bg-muted-foreground/40 hover:bg-muted-foreground/70"
+            }`}
+          />
+        ))}
+      </div>
+      <button
+        onClick={() => setSlide((s) => (s - 1 + slides) % slides)}
+        aria-label="Previous slide"
+        className="absolute left-3 top-1/2 hidden -translate-y-1/2 rounded-full bg-background/60 p-2 text-foreground hover:bg-background md:block"
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </button>
+      <button
+        onClick={() => setSlide((s) => (s + 1) % slides)}
+        aria-label="Next slide"
+        className="absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-full bg-background/60 p-2 text-foreground hover:bg-background md:block"
+      >
+        <ChevronRight className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
+function TokenChip({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-block rounded-md bg-foreground px-2 py-0.5 text-background">
+      {children}
+    </span>
+  );
+}
+
+/**
+ * Hero "Trusted by" strip — small CoinGecko-hosted partner logos with the
+ * brand wordmark next to each one. Renders inline so it sits cleanly at the
+ * bottom of the hero card.
+ */
+const PARTNER_LOGOS: Record<string, { src: string; label: string; tone: string }> = {
+  Lido:     { src: "https://assets.coingecko.com/coins/images/13573/small/Lido_DAO.png",          label: "Lido",     tone: "text-[#00A3FF]" },
+  Aave:     { src: "https://assets.coingecko.com/coins/images/12645/small/AAVE.png",              label: "Aave",     tone: "text-[#B6509E]" },
+  Stader:   { src: "https://assets.coingecko.com/coins/images/20658/small/SD_Token_Logo.png",     label: "Stader",   tone: "text-[#07C8A3]" },
+  Lista:    { src: "https://assets.coingecko.com/coins/images/35365/small/Lista_logo.png",        label: "Lista",    tone: "text-[#F3BA2F]" },
+  Arbitrum: { src: "https://assets.coingecko.com/coins/images/16547/small/photo_2023-03-29_21.47.00.jpeg", label: "Arbitrum", tone: "text-[#28A0F0]" },
+};
+
+function PartnerLogo({ name }: { name: keyof typeof PARTNER_LOGOS }) {
+  const p = PARTNER_LOGOS[name];
+  return (
+    <span className="inline-flex items-center gap-1.5 align-middle">
+      <img
+        src={p.src}
+        alt={p.label}
+        loading="lazy"
+        className="h-5 w-5 rounded-full object-cover ring-1 ring-border"
+      />
+      <span className={`font-bold ${p.tone}`}>{p.label}</span>
+    </span>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                          INTEREST RATES CARD                               */
+/* -------------------------------------------------------------------------- */
+
+type RateTab = "All" | "Top" | "Stablecoins" | "New";
+
+function InterestRatesCard({
+  onStake,
+  liveApy,
+  liveLoading,
+}: {
+  onStake: (p: StakingProduct) => void;
+  liveApy: Record<string, number>;
+  liveLoading: boolean;
+}) {
+  const [tab, setTab] = useState<RateTab>("Top");
+
+  const filtered = useMemo(() => {
+    if (tab === "Stablecoins") return STAKING_PRODUCTS.filter((p) => p.kind === "lending");
+    if (tab === "New") return STAKING_PRODUCTS.filter((p) => p.provider === "Lista DAO" || p.provider === "Stader");
+    if (tab === "Top") return STAKING_PRODUCTS.filter((p) => p.provider === "Lido" || p.provider === "Aave V3");
+    return STAKING_PRODUCTS;
+  }, [tab]);
+
+  return (
+    <div className="rounded-[28px] bg-card p-6 md:p-10">
+      <h2 className="text-3xl md:text-4xl font-bold text-foreground">Our interest rates</h2>
+
+      <p className="mt-5 max-w-3xl text-base md:text-lg leading-relaxed text-muted-foreground">
+        Stake your crypto and start earning immediately with{" "}
+        <NumBadge n={1} /> diverse strategies, <NumBadge n={2} /> protocol-native APY and{" "}
+        <NumBadge n={3} /> fully on-chain transparency.
+      </p>
+
+      <div className="mt-8">
+        <div className="flex flex-wrap gap-2">
+          {(["All", "Top", "Stablecoins", "New"] as RateTab[]).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`rounded-xl px-4 py-2 text-base font-semibold transition-colors ${
+                tab === t
+                  ? "bg-lime/15 text-lime"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-4 divide-y divide-border">
+          {filtered.map((p) => {
+            const live = liveApy[p.id];
+            const fallback = APY_ESTIMATE[p.id] ?? "Variable";
+            const apy = typeof live === "number" ? `${live.toFixed(2)}%` : fallback.replace(/^.*?–\s*/, "");
+            const isLive = typeof live === "number";
+            return (
+              <button
+                key={p.id}
+                onClick={() => onStake(p)}
+                className="group flex w-full items-center gap-4 py-5 text-left"
+              >
+                <div className="shrink-0">
+                  <RateLogo product={p} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xl md:text-2xl font-bold text-foreground">{p.inputSymbol}</p>
+                  <p className="text-sm md:text-base text-muted-foreground truncate">
+                    {p.provider} · {p.chainName}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs uppercase tracking-widest text-muted-foreground">
+                    {isLive ? "Live" : "Up to"}
+                  </p>
+                  {liveLoading && !isLive ? (
+                    <Skeleton className="ml-auto mt-1 h-7 w-20" />
+                  ) : (
+                    <p className="text-xl md:text-2xl font-extrabold text-foreground leading-none mt-0.5">
+                      {apy}{" "}
+                      <span className="text-sm font-semibold text-muted-foreground">APY</span>
+                    </p>
+                  )}
+                </div>
+                <ArrowUpRight className="h-5 w-5 shrink-0 text-muted-foreground transition-colors group-hover:text-lime" />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NumBadge({ n }: { n: number }) {
+  return (
+    <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-foreground text-[11px] font-bold text-background align-middle">
+      {n}
+    </span>
+  );
+}
+
+/**
+ * Real crypto logo tile — uses the project's shared `cryptoIconUrls` map
+ * (CoinGecko-hosted PNGs). POL falls back to the legacy MATIC icon since
+ * Polygon's rebrand kept the same artwork.
+ */
+function RateLogo({ product }: { product: StakingProduct }) {
+  const sym = product.inputSymbol;
+  const lookup = sym === "POL" ? "MATIC" : sym;
+  const url = cryptoIconUrls[lookup as keyof typeof cryptoIconUrls];
+  return (
+    <div className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-xl bg-background/80 ring-1 ring-border overflow-hidden">
+      {url ? (
+        <img src={url} alt={sym} className="h-9 w-9 md:h-10 md:w-10 object-contain" loading="lazy" />
+      ) : (
+        <span className="text-base font-extrabold text-foreground">{sym}</span>
+      )}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                       YIELD GENERATION MECHANICS                           */
+/* -------------------------------------------------------------------------- */
+
+const MECHANICS: { title: string; body: string; apy: string; risk: string; cadence: string }[] = [
+  {
+    title: "Liquid Staking",
+    body: "Your ETH, BNB or POL is delegated to validators through Lido, Stader and Lista DAO. You receive a liquid receipt token (stETH, MaticX, slisBNB) that accrues yield in real time and remains transferable.",
+    apy: "Up to 5%",
+    risk: "Low risk",
+    cadence: "Daily rewards",
+  },
+  {
+    title: "Aave Lending",
+    body: "USDT is supplied to Aave V3's lending pool on Ethereum, Polygon or Arbitrum. Yield comes from interest paid by overcollateralised borrowers — you can withdraw at any time.",
+    apy: "Up to 7%",
+    risk: "Low risk",
+    cadence: "Block-by-block",
+  },
+  {
+    title: "Self-custody first",
+    body: "Every transaction is signed locally by your in-app wallet. Pexly never holds your seed phrase, your private keys or your receipt tokens — they live in your own wallet from the moment you stake.",
+    apy: "Always",
+    risk: "Non-custodial",
+    cadence: "On-chain",
+  },
+  {
+    title: "Multi-chain routing",
+    body: "Pexly already knows about Ethereum, Polygon, BNB Chain and Arbitrum. Pick the network that fits your gas budget and stake without manually adding RPCs or bridging assets.",
+    apy: "4 networks",
+    risk: "Native gas",
+    cadence: "Instant",
+  },
+];
+
+function YieldMechanicsCard() {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  return (
+    <div>
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground">Yield generation mechanics</h2>
+          <p className="mt-1.5 max-w-xl text-sm md:text-base text-muted-foreground">
+            Your earnings come from real on-chain activity — validator rewards and lending interest paid
+            directly by the protocols Pexly connects to.
+          </p>
+        </div>
+        <div className="hidden gap-2 md:flex">
+          <button
+            onClick={() => scrollRef.current?.scrollBy({ left: -340, behavior: "smooth" })}
+            className="rounded-full bg-card p-2 text-foreground hover:bg-card/70"
+            aria-label="Scroll left"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => scrollRef.current?.scrollBy({ left: 340, behavior: "smooth" })}
+            className="rounded-full bg-card p-2 text-foreground hover:bg-card/70"
+            aria-label="Scroll right"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+      <div
+        ref={scrollRef}
+        className="mt-6 flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {MECHANICS.map((m) => (
+          <div
+            key={m.title}
+            className="snap-start shrink-0 w-[78%] sm:w-[48%] md:w-[32%] rounded-3xl bg-card p-6 flex flex-col"
+          >
+            <h3 className="text-xl md:text-2xl font-bold text-foreground">{m.title}</h3>
+            <p className="mt-3 text-sm text-muted-foreground leading-relaxed flex-grow">{m.body}</p>
+            <div className="mt-6">
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">APY</p>
+              <p className="mt-0.5 text-2xl font-extrabold text-foreground">{m.apy}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span className="rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground">
+                  {m.risk}
+                </span>
+                <span className="rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground">
+                  {m.cadence}
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                           TRUST CTA & PROTOCOLS                            */
+/* -------------------------------------------------------------------------- */
+
+function TrustCta({ onStart }: { onStart: () => void }) {
+  return (
+    <div className="rounded-[28px] bg-lime p-7 md:p-10 text-black relative overflow-hidden">
+      <ArrowUpRight className="absolute -right-4 -top-4 h-40 w-40 text-black/85" strokeWidth={2.5} />
+      <div className="relative max-w-md">
+        <h2 className="text-3xl md:text-4xl font-extrabold leading-tight">
+          Self-custody first. Earn always.
+        </h2>
+        <p className="mt-3 text-sm md:text-base text-black/70 leading-relaxed">
+          Build digital wealth with audited blue-chip protocols. Every stake settles on-chain and you
+          stay in control of your keys, end to end.
+        </p>
+        <Button
+          onClick={onStart}
+          className="mt-6 rounded-2xl bg-black text-white hover:bg-black/90 h-12 px-6 text-sm font-bold"
+        >
+          Start earning
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+const PROTOCOLS: { name: string; cls: string }[] = [
+  { name: "Lido",      cls: "text-[#00A3FF]" },
+  { name: "Aave V3",   cls: "text-[#B6509E]" },
+  { name: "Stader",    cls: "text-[#07C8A3]" },
+  { name: "Lista DAO", cls: "text-[#F3BA2F]" },
+  { name: "Ethereum",  cls: "text-[#627EEA]" },
+  { name: "Polygon",   cls: "text-[#8247E5]" },
+  { name: "BNB Chain", cls: "text-[#F3BA2F]" },
+  { name: "Arbitrum",  cls: "text-[#28A0F0]" },
+];
+
+/**
+ * Auto-scrolling brand marquee — replaces the previous static grid. Two
+ * copies of the brand row sit side-by-side and translate left forever via the
+ * shared `animate-marquee-left` keyframes (defined in index.css). Faded edges
+ * give the strip a clean dissolve into the dark card background.
+ */
+function TrustedProtocols() {
+  // Each row is rendered twice so the loop reads as a continuous strip.
+  const row = (
+    <div className="flex shrink-0 items-center gap-10 md:gap-14 px-6">
+      {PROTOCOLS.map((p) => (
+        <span
+          key={p.name}
+          className={`whitespace-nowrap text-xl md:text-2xl font-bold tracking-tight ${p.cls}`}
+        >
+          {p.name}
+        </span>
+      ))}
+    </div>
+  );
+
+  return (
+    <div>
+      <h2 className="text-2xl md:text-3xl font-bold text-foreground">Trusted protocols</h2>
+      <p className="mt-1.5 max-w-xl text-sm md:text-base text-muted-foreground">
+        Pexly Earn routes to multi-audit, blue-chip DeFi protocols holding billions in TVL — no Pexly
+        contract sits between you and the protocol.
+      </p>
+
+      <div
+        className="relative mt-5 overflow-hidden rounded-3xl bg-card py-7"
+        style={{
+          maskImage:
+            "linear-gradient(to right, transparent 0, black 6%, black 94%, transparent 100%)",
+          WebkitMaskImage:
+            "linear-gradient(to right, transparent 0, black 6%, black 94%, transparent 100%)",
+        }}
+      >
+        <div className="flex w-max animate-marquee-left">
+          {row}
+          {row}
+        </div>
+      </div>
+
+      <div className="mt-5 rounded-2xl bg-card p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-lime/15 text-lime">
+            <ShieldCheck className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              Built on contracts you can verify yourself
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
+              Every Pexly Earn transaction calls a public protocol contract on a public chain. You can
+              audit each call on Etherscan, Polygonscan, BscScan or Arbiscan from the receipt link
+              shown right after you stake.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                SECURITY                                    */
+/* -------------------------------------------------------------------------- */
+
+const SECURITY_TABS: { label: string; bullets: { icon: React.ReactNode; title: string; body: string }[] }[] = [
+  {
+    label: "Account security",
+    bullets: [
+      { icon: <Lock className="h-4 w-4" />, title: "2FA",           body: "Two-factor authentication confirms each login attempt, withdrawal and other sensitive account action." },
+      { icon: <KeyRound className="h-4 w-4" />, title: "Wallet password", body: "Your in-app wallet is encrypted with a password only you know — Pexly cannot decrypt it on your behalf." },
+      { icon: <BellRing className="h-4 w-4" />, title: "Security alerts", body: "We email you on every login, reporting browser type and approximate location so suspicious access is obvious." },
+      { icon: <Timer className="h-4 w-4" />, title: "Auto logout", body: "Sessions auto-expire after a period of inactivity so an unattended device never stays signed in for long." },
+    ],
+  },
+  {
+    label: "Wallet management",
+    bullets: [
+      { icon: <ShieldCheck className="h-4 w-4" />, title: "Non-custodial keys", body: "Your seed phrase is generated on your device and never leaves it. Pexly servers store an encrypted blob only." },
+      { icon: <KeyRound className="h-4 w-4" />, title: "Local signing", body: "Every stake, swap and transfer is signed in the browser. The signed transaction is what reaches the chain — not your key." },
+      { icon: <Lock className="h-4 w-4" />, title: "Address book", body: "Whitelist trusted withdrawal addresses so funds can only leave to destinations you have pre-approved." },
+      { icon: <BellRing className="h-4 w-4" />, title: "On-chain receipts", body: "Every stake returns a transaction hash with an explorer link, so you can independently verify settlement." },
+    ],
+  },
+];
+
+function SecurityCard() {
+  const [tab, setTab] = useState(0);
+  const active = SECURITY_TABS[tab];
+  return (
+    <div className="rounded-[28px] bg-card p-6 md:p-10 relative overflow-hidden">
+      <div className="relative">
+        <div className="flex justify-center md:justify-start">
+          <img
+            src={securityPadlockImg}
+            alt="Padlock with fingerprint sensor"
+            className="h-44 w-44 md:h-56 md:w-56 object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.55)]"
+            loading="lazy"
+          />
+        </div>
+        <h2 className="mt-6 text-3xl md:text-4xl font-extrabold leading-tight">
+          <span className="text-foreground">Stay safe with Pexly.</span>{" "}
+          <span className="text-lime">Protecting your account is our top priority.</span>
+        </h2>
+        <div className="mt-6 flex flex-wrap gap-2">
+          {SECURITY_TABS.map((t, i) => (
+            <button
+              key={t.label}
+              onClick={() => setTab(i)}
+              className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
+                i === tab
+                  ? "border border-lime text-lime"
+                  : "border border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        <ul className="mt-6 space-y-4">
+          {active.bullets.map((b) => (
+            <li key={b.title} className="flex items-start gap-3 border-b border-border/60 pb-4 last:border-0 last:pb-0">
+              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-lime text-black">
+                {b.icon}
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-foreground">{b.title}</p>
+                <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{b.body}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                             LEGACY / COMPLIANCE                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * "Our Legacy" panel — sand-toned card with three stacked sections plus a
+ * sand-tinted illustration framed by lime corner brackets at the bottom.
+ * Mirrors the structure of an EarnPark-style trust/credentials section, but
+ * with Pexly-true claims (we are non-custodial, not a regulated broker).
+ */
+function LegacyCard() {
+  return (
+    <div
+      className="rounded-[28px] p-6 md:p-10 text-[#1a1d1c]"
+      style={{ background: "#bcc2b8" }}
+    >
+      <section>
+        <h3 className="text-3xl md:text-4xl font-bold leading-tight">Built on years of crypto rails</h3>
+        <p className="mt-3 max-w-xl text-sm md:text-base text-[#1a1d1c]/75 leading-relaxed">
+          Pexly has been shipping non-custodial wallet, swap and on-chain payment rails since 2021 — the
+          same engineering team now wires Pexly Earn directly to the protocols you already trust.
+        </p>
+      </section>
+
+      <section className="mt-10">
+        <h3 className="text-3xl md:text-4xl font-bold leading-tight">Non-custodial by design</h3>
+        <p className="mt-3 max-w-xl text-sm md:text-base text-[#1a1d1c]/75 leading-relaxed">
+          Pexly is a self-custody wallet — not a broker, not an exchange, not a money transmitter. Your
+          funds never sit on a Pexly balance sheet, and every stake settles directly between your wallet
+          and the protocol contract.
+        </p>
+      </section>
+
+      <section className="mt-10">
+        <h3 className="text-3xl md:text-4xl font-bold leading-tight">Audited counterparties</h3>
+        <p className="mt-3 max-w-xl text-sm md:text-base text-[#1a1d1c]/75 leading-relaxed">
+          Each integrated protocol — Lido, Stader, Lista DAO and Aave V3 — is multi-audit, open-source
+          and battle-tested with billions of dollars of TVL on public chains. You can verify every
+          transaction on the relevant block explorer.
+        </p>
+      </section>
+
+      {/* Sand-toned illustration with lime corner brackets */}
+      <div className="relative mt-10 rounded-2xl p-3">
+        <CornerBracket pos="tl" />
+        <CornerBracket pos="tr" />
+        <CornerBracket pos="bl" />
+        <CornerBracket pos="br" />
+        <div className="overflow-hidden rounded-xl">
+          <img
+            src={legacyTeamImg}
+            alt="The team behind Pexly Earn"
+            loading="lazy"
+            className="block w-full h-auto"
+            style={{ filter: "saturate(0.55) sepia(0.18) contrast(0.95)" }}
+          />
+        </div>
+      </div>
+
+      <div className="mt-6 space-y-2 text-sm">
+        <a
+          href="https://etherscan.io/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block underline underline-offset-4 hover:text-black"
+        >
+          Verify Lido stETH on Etherscan
+        </a>
+        <a
+          href="https://app.aave.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block underline underline-offset-4 hover:text-black"
+        >
+          Withdraw Aave deposits at app.aave.com
+        </a>
+        <a
+          href="#faq"
+          className="inline-flex items-center gap-1 mt-2 font-semibold underline underline-offset-4 hover:text-black"
+        >
+          Read more <ArrowUpRight className="h-3.5 w-3.5" />
+        </a>
+      </div>
+    </div>
+  );
+}
+
+/** Lime L-shaped bracket placed at one of the four corners of the photo frame. */
+function CornerBracket({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
+  const base = "absolute h-7 w-7 border-lime";
+  const cls =
+    pos === "tl" ? `${base} -top-1 -left-1 border-t-[6px] border-l-[6px] rounded-tl-xl` :
+    pos === "tr" ? `${base} -top-1 -right-1 border-t-[6px] border-r-[6px] rounded-tr-xl` :
+    pos === "bl" ? `${base} -bottom-1 -left-1 border-b-[6px] border-l-[6px] rounded-bl-xl` :
+                   `${base} -bottom-1 -right-1 border-b-[6px] border-r-[6px] rounded-br-xl`;
+  return <span aria-hidden="true" className={cls} />;
+}
+
+/**
+ * Stylised "team around a laptop" illustration in sand tones.
+ * No real photo — just abstract silhouettes so we never imply we have a team
+ * stock photo we don't actually own.
+ */
+function SandTeamArt() {
+  return (
+    <svg viewBox="0 0 600 320" className="w-full h-auto block" aria-hidden="true">
+      <defs>
+        <linearGradient id="sand-bg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#d8d4c7" />
+          <stop offset="100%" stopColor="#a8a695" />
+        </linearGradient>
+        <linearGradient id="sand-fig" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#7c7a6e" />
+          <stop offset="100%" stopColor="#4a4942" />
+        </linearGradient>
+      </defs>
+      <rect width="600" height="320" fill="url(#sand-bg)" />
+      {/* Sticky-note grid wall */}
+      <g opacity="0.35">
+        {[60, 110, 160, 210, 260, 310, 360, 410, 460, 510].map((x) => (
+          <rect key={x} x={x} y="20" width="34" height="34" rx="3" fill="#9b9787" />
+        ))}
+        {[60, 110, 160, 210, 260, 310, 360, 410, 460, 510].map((x, i) => (
+          <rect key={`b-${x}`} x={x} y="62" width="34" height="34" rx="3" fill={i % 2 ? "#9b9787" : "#86836f"} />
+        ))}
+      </g>
+      {/* Desk */}
+      <rect x="0" y="240" width="600" height="80" fill="#6e6c5e" />
+      <rect x="0" y="232" width="600" height="12" fill="#888574" />
+      {/* Laptop */}
+      <g transform="translate(230 200)">
+        <rect width="140" height="60" rx="4" fill="#3a3934" />
+        <rect x="6" y="6" width="128" height="44" rx="2" fill="#5a5950" />
+        <rect x="-6" y="58" width="152" height="6" rx="2" fill="#2c2b27" />
+      </g>
+      {/* Four silhouettes around the laptop */}
+      <g fill="url(#sand-fig)">
+        {/* Left figure */}
+        <circle cx="80" cy="150" r="28" />
+        <path d="M40 260 Q80 195 120 260 Z" />
+        {/* Center-left */}
+        <circle cx="200" cy="130" r="30" />
+        <path d="M150 260 Q200 175 250 260 Z" />
+        {/* Center-right */}
+        <circle cx="350" cy="120" r="30" />
+        <path d="M300 260 Q350 165 400 260 Z" />
+        {/* Right figure */}
+        <circle cx="500" cy="150" r="28" />
+        <path d="M460 260 Q500 195 540 260 Z" />
+      </g>
+      {/* Subtle lime highlight on screen */}
+      <rect x="252" y="218" width="96" height="22" rx="2" fill="#B4F22E" opacity="0.18" />
+    </svg>
+  );
+}
+
 function Stat({ label, value, loading }: { label: string; value: string; loading?: boolean }) {
   return (
     <div className="text-center">
       <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</p>
       {loading ? <Skeleton className="mx-auto mt-1 h-7 w-16" /> : <p className="mt-1 text-xl md:text-2xl font-bold text-foreground">{value}</p>}
+    </div>
+  );
+}
+
+/**
+ * Horizontal-scroll row of dark "About" cards inspired by EarnPark's About
+ * section. Six tall cards, each with a 3D icon image at top and a big bold
+ * title + small subtitle. Pexly-true copy (we don't claim AUM or fund history).
+ */
+function HowItWorksRow() {
+  const cards: { img: string; alt: string; title: string; body: string }[] = [
+    { img: iconTrophyImg,     alt: "Trophy",       title: "Proven track record", body: "Every stake settles on-chain — verifiable on Etherscan, BscScan and Arbiscan." },
+    { img: iconResilientImg,  alt: "Award ribbon", title: "Resilient by design", body: "Funds sit in audited Lido, Stader, Lista and Aave V3 contracts, not on Pexly's books." },
+    { img: iconWalletClickImg,alt: "Wallet",       title: "A few clicks to earn", body: "Pick a product, sign once from your in-app wallet, done. Withdraw whenever you need." },
+    { img: iconReinvestImg,   alt: "Reinvest",     title: "Auto-compounding",     body: "Receipt tokens like stETH and aUSDT accrue rewards in real time — no manual claiming." },
+    { img: iconYieldsImg,     alt: "Wallet cash",  title: "Yields in crypto",     body: "Earn rewards in the same asset you supplied — ETH, BNB, POL or USDT." },
+    { img: iconStrategiesImg, alt: "Magnifier",    title: "Clear strategies",     body: "Each product page explains the mechanics, the receipt token and the risks up front." },
+  ];
+
+  return (
+    <div className="-mx-4 overflow-x-auto px-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <ul className="flex gap-4 snap-x snap-mandatory pb-2">
+        {cards.map((c) => (
+          <li
+            key={c.title}
+            className="snap-start shrink-0 w-[260px] md:w-[300px] rounded-3xl bg-card p-6 flex flex-col"
+          >
+            <div className="flex h-32 md:h-40 items-center justify-center">
+              <img
+                src={c.img}
+                alt={c.alt}
+                loading="lazy"
+                className="max-h-full w-auto object-contain drop-shadow-[0_15px_25px_rgba(0,0,0,0.45)]"
+              />
+            </div>
+            <h3 className="mt-6 text-2xl md:text-3xl font-bold text-foreground leading-tight">
+              {c.title}
+            </h3>
+            <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+              {c.body}
+            </p>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
