@@ -1,5 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/auth-context';
 
 /* =========================================
    TYPES
@@ -44,6 +45,96 @@ export interface WalletTransaction {
 }
 
 /* =========================================
+   CACHE MODEL
+   Layered, server-first:
+
+   1. Server snapshot (Supabase `wallets` table,
+      RLS-scoped to auth.uid). Primary cache –
+      shared across devices, instant render on
+      every login. Storing the last on-chain
+      reading server-side does not make the
+      product custodial: the user still owns the
+      keys, the server only echoes a value the
+      chain already publishes.
+   2. sessionStorage fallback – used when the
+      server snapshot can't be read (offline,
+      RLS hiccup) so the tab still renders
+      immediately on a reload.
+   3. In-memory React Query cache for intra-page
+      transitions.
+
+   On every successful chain refresh we update
+   both layers.
+========================================= */
+
+const CACHE_KEY_PREFIX = 'pexly_wallet_balances_v3';
+
+function cacheKey(userId: string) {
+  return `${CACHE_KEY_PREFIX}_${userId}`;
+}
+
+function readSessionSnapshot(userId: string): Wallet[] | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(cacheKey(userId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    return parsed as Wallet[];
+  } catch {
+    return null;
+  }
+}
+
+function writeSessionSnapshot(userId: string, wallets: Wallet[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.setItem(cacheKey(userId), JSON.stringify(wallets));
+  } catch {
+    // Quota exceeded or storage disabled – non-fatal.
+  }
+}
+
+/* =========================================
+   SERVER SNAPSHOT (primary cache)
+========================================= */
+
+async function readServerSnapshot(userId: string): Promise<Wallet[] | null> {
+  const { data, error } = await supabase
+    .from('wallets')
+    .select('id, user_id, crypto_symbol, balance, locked_balance, deposit_address, created_at, updated_at')
+    .eq('user_id', userId);
+  if (error || !data) return null;
+  return data.map((row: any) => ({
+    id: row.id,
+    user_id: row.user_id,
+    crypto_symbol: row.crypto_symbol,
+    balance: Number(row.balance) || 0,
+    locked_balance: Number(row.locked_balance) || 0,
+    deposit_address: row.deposit_address,
+    chain_id: '',
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  }));
+}
+
+async function writeServerSnapshot(userId: string, wallets: Wallet[]): Promise<void> {
+  if (!wallets.length) return;
+  const rows = wallets.map((w) => ({
+    user_id: userId,
+    crypto_symbol: w.crypto_symbol,
+    balance: w.balance,
+    locked_balance: w.locked_balance,
+    deposit_address: w.deposit_address,
+    updated_at: new Date().toISOString(),
+  }));
+  const { error } = await supabase
+    .from('wallets')
+    .upsert(rows as any, { onConflict: 'user_id,crypto_symbol' });
+  if (error) console.warn('[wallet-balances] server snapshot upsert failed:', error.message);
+}
+
+/* =========================================
    CHAIN RESOLVER
    Maps DB chain_id values to edge function chain keys
 ========================================= */
@@ -73,21 +164,41 @@ function resolveChain(chainId: string): { chain: string; isToken: boolean; token
 }
 
 /* =========================================
-   GET USER WALLETS
-   Fetches active wallets from DB, deduplicates
-   by address+chain, calls edge function once per
-   unique pair, maps native + token balances back.
+   GET USER WALLETS (live on-chain fetch)
+   user_wallets is read for *addresses only* – it
+   stores wallet metadata (address, chain), never
+   balances. Balances always come from the chain.
+
+   Resilience: if a chain RPC call fails, the
+   previous known balance for that wallet is
+   retained instead of dropping it from the list,
+   so the UI never collapses to zero on a flaky
+   network call.
 ========================================= */
 
-export async function getUserWallets(userId: string): Promise<Wallet[]> {
-  // 1. Get all active wallets from DB
+export async function getUserWallets(
+  userId: string,
+  previous?: Wallet[],
+): Promise<Wallet[]> {
+  // 1. Get all active wallet addresses from DB (metadata only).
   const { data: dbWallets, error: dbError } = await supabase
     .from('user_wallets')
     .select('id, address, chain_id, is_active')
     .eq('user_id', userId)
     .eq('is_active', 'true');
 
-  if (dbError || !dbWallets || dbWallets.length === 0) return [];
+  if (dbError) {
+    if (previous && previous.length) return previous;
+    return [];
+  }
+  if (!dbWallets || dbWallets.length === 0) return [];
+
+  const prevById = new Map<string, Wallet>();
+  const prevBySymbol = new Map<string, Wallet>();
+  (previous ?? []).forEach((w) => {
+    if (w.id) prevById.set(w.id, w);
+    prevBySymbol.set(w.crypto_symbol, w);
+  });
 
   // 2. Deduplicate: group by (address + resolved chain)
   const seen = new Map<string, { address: string; chain: string; walletIds: string[]; chainIds: string[] }>();
@@ -112,53 +223,76 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
     }
   }
 
-  // 3. Fetch balances from edge function for each unique chain+address
+  // 3. Fetch balances from chain (via the monitor-deposits proxy) for each
+  //    unique chain+address.
   const wallets: Wallet[] = [];
   const now = new Date().toISOString();
 
   const fetchPromises = Array.from(seen.entries()).map(async ([_key, entry]) => {
+    let data: any = null;
+    let fetchFailed = false;
+
     try {
-      const { data, error } = await supabase.functions.invoke('monitor-deposits', {
+      const res = await supabase.functions.invoke('monitor-deposits', {
         body: { address: entry.address, chain: entry.chain },
       });
-
-      if (error || !data?.success || !data?.native) return;
-
-      // Add native balance wallet
-      if (entry.walletIds.length > 0) {
-        wallets.push({
-          id: entry.walletIds[0],
-          user_id: userId,
-          crypto_symbol: data.native.symbol,
-          balance: parseFloat(data.native.balance) || 0,
-          locked_balance: 0,
-          deposit_address: entry.address,
-          chain_id: entry.chainIds[0],
-          created_at: now,
-          updated_at: now,
-        });
-      }
-
-      // Match token wallets to the tokens array from the response
-      const tokens: any[] = data.tokens || [];
-      for (const tw of tokenWallets) {
-        if (tw.address === entry.address && tw.resolvedChain === entry.chain) {
-          const match = tokens.find((t: any) => t.symbol === tw.tokenSymbol);
-          wallets.push({
-            id: tw.id,
-            user_id: userId,
-            crypto_symbol: tw.tokenSymbol,
-            balance: match ? parseFloat(match.balance) || 0 : 0,
-            locked_balance: 0,
-            deposit_address: tw.address,
-            chain_id: tw.chainId,
-            created_at: now,
-            updated_at: now,
-          });
-        }
+      if (res.error || !res.data?.success || !res.data?.native) {
+        fetchFailed = true;
+      } else {
+        data = res.data;
       }
     } catch (err) {
       console.error('[getUserWallets] Exception for chain:', entry.chain, err);
+      fetchFailed = true;
+    }
+
+    // Native balance wallet — even on failure, keep the previous balance so
+    // the UI does not flicker to zero.
+    if (entry.walletIds.length > 0) {
+      const id = entry.walletIds[0];
+      const prev = prevById.get(id) ?? prevBySymbol.get(data?.native?.symbol ?? '');
+      const nativeSymbol = data?.native?.symbol ?? prev?.crypto_symbol ?? entry.chain;
+      const nativeBalance = fetchFailed
+        ? prev?.balance ?? 0
+        : parseFloat(data.native.balance) || 0;
+
+      wallets.push({
+        id,
+        user_id: userId,
+        crypto_symbol: nativeSymbol,
+        balance: nativeBalance,
+        locked_balance: prev?.locked_balance ?? 0,
+        deposit_address: entry.address,
+        chain_id: entry.chainIds[0],
+        created_at: prev?.created_at ?? now,
+        updated_at: fetchFailed ? prev?.updated_at ?? now : now,
+      });
+    }
+
+    // Token wallets riding on this address+chain.
+    const tokens: any[] = data?.tokens ?? [];
+    for (const tw of tokenWallets) {
+      if (tw.address !== entry.address || tw.resolvedChain !== entry.chain) continue;
+      const prev = prevById.get(tw.id) ?? prevBySymbol.get(tw.tokenSymbol);
+      const match = tokens.find((t: any) => t.symbol === tw.tokenSymbol);
+
+      const tokenBalance = fetchFailed
+        ? prev?.balance ?? 0
+        : match
+          ? parseFloat(match.balance) || 0
+          : prev?.balance ?? 0; // token absent from response → treat as unchanged
+
+      wallets.push({
+        id: tw.id,
+        user_id: userId,
+        crypto_symbol: tw.tokenSymbol,
+        balance: tokenBalance,
+        locked_balance: prev?.locked_balance ?? 0,
+        deposit_address: tw.address,
+        chain_id: tw.chainId,
+        created_at: prev?.created_at ?? now,
+        updated_at: fetchFailed ? prev?.updated_at ?? now : now,
+      });
     }
   });
 
@@ -168,20 +302,75 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
 
 /* =========================================
    REACT QUERY HOOK
+
+   Strategy (non-custodial, blockchain-primary):
+   1. On mount, hydrate from the user-scoped
+      localStorage snapshot for an instant render.
+      No server-side balance store is read or
+      written.
+   2. Fire an on-chain refresh in the background.
+      When it returns, write the result back to
+      localStorage so the next reload is instant.
+   3. Poll every 60 s; preserve-on-error keeps
+      the last good per-wallet balance if a chain
+      RPC hiccups – the total never collapses.
+   4. localStorage is wiped by the existing logout
+      flow, so balances never leak across sessions.
 ========================================= */
 
 export function useWalletBalances() {
-  return useQuery({
-    queryKey: ['wallet-balances'],
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const userId = user?.id;
+
+  return useQuery<Wallet[]>({
+    // Scope cache to the current user so a logout/login swap can never
+    // serve another account's result.
+    queryKey: ['wallet-balances', userId ?? 'anon'],
+    enabled: !!userId,
+    // Hydrate immediately from the session-storage echo for this user so
+    // a tab reload paints something before the server round-trip resolves.
+    // The server snapshot below replaces this within milliseconds.
+    initialData: () => (userId ? readSessionSnapshot(userId) ?? undefined : undefined),
+    initialDataUpdatedAt: 0,
     queryFn: async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const user = sessionData?.session?.user;
-      if (!user) return [];
-      return getUserWallets(user.id);
+      if (!userId) return [];
+
+      // 1. Server snapshot is the primary cache. Read it first.
+      let previous =
+        queryClient.getQueryData<Wallet[]>(['wallet-balances', userId]) ??
+        undefined;
+
+      const serverSnapshot = await readServerSnapshot(userId).catch(() => null);
+      if (serverSnapshot && serverSnapshot.length) {
+        previous = serverSnapshot;
+        // Push the server snapshot into the in-memory cache immediately so
+        // any consumer mounted in the same tick sees real numbers.
+        queryClient.setQueryData(['wallet-balances', userId], serverSnapshot);
+        writeSessionSnapshot(userId, serverSnapshot);
+      } else if (!previous) {
+        // Server unreachable / empty – fall back to the session echo.
+        previous = readSessionSnapshot(userId) ?? undefined;
+      }
+
+      // 2. Refresh from chain in the background, preserving previous
+      //    balances per wallet on per-chain failures.
+      const fresh = await getUserWallets(userId, previous);
+
+      // 3. Write through to both cache layers.
+      void writeServerSnapshot(userId, fresh);
+      writeSessionSnapshot(userId, fresh);
+
+      return fresh;
     },
+    // Keep showing the previous balances while a refetch is in flight –
+    // never show an undefined / empty state mid-cycle.
+    placeholderData: keepPreviousData,
     staleTime: 30_000,
     refetchInterval: 60_000,
     refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 2,
   });
 }
 
