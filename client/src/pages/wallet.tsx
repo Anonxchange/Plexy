@@ -194,14 +194,17 @@ export default function WalletPage() {
               <div className="px-4 sm:px-0">
                 <Tabs defaultValue="wallet" className="w-full">
                   <TabsList className="bg-transparent p-0 h-auto gap-1">
-                    <TabsTrigger value="wallet" className="rounded-lg px-6 py-2 data-[state=active]:bg-[#B4F22E] data-[state=active]:text-black font-semibold border bg-white dark:bg-card text-foreground transition-colors">
+                    <TabsTrigger
+                      value="wallet"
+                      className="rounded-lg px-6 py-2 font-semibold border border-border bg-white dark:bg-muted text-foreground transition-colors data-[state=active]:bg-[#B4F22E] data-[state=active]:text-black data-[state=active]:border-[#B4F22E] data-[state=active]:shadow-[0_0_0_2px_rgba(180,242,46,0.25)]"
+                    >
                       <WalletIcon className="h-4 w-4 mr-2" />
                       Wallet
                     </TabsTrigger>
-                    <TabsTrigger 
-                      value="visa" 
+                    <TabsTrigger
+                      value="visa"
                       onClick={() => setLocation("/wallet/visa-card")}
-                      className="rounded-lg px-6 py-2 font-semibold border bg-white dark:bg-card text-foreground opacity-60 transition-colors"
+                      className="rounded-lg px-6 py-2 font-semibold border border-border bg-white dark:bg-muted text-foreground/80 hover:text-foreground hover:bg-muted/80 transition-colors"
                     >
                       <Landmark className="h-4 w-4 mr-2" />
                       Visa card
