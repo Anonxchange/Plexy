@@ -336,32 +336,44 @@ export function useWalletBalances() {
     queryFn: async () => {
       if (!userId) return [];
 
-      // 1. Server snapshot is the primary cache. Read it first.
-      let previous =
-        queryClient.getQueryData<Wallet[]>(['wallet-balances', userId]) ??
-        undefined;
+      const queryKey = ['wallet-balances', userId] as const;
+      const inMem = queryClient.getQueryData<Wallet[]>([...queryKey]);
 
+      // 1. Try the server snapshot first – this is the fast path that makes
+      //    a fresh login paint real numbers in one round-trip instead of
+      //    waiting for the chain.
       const serverSnapshot = await readServerSnapshot(userId).catch(() => null);
-      if (serverSnapshot && serverSnapshot.length) {
-        previous = serverSnapshot;
-        // Push the server snapshot into the in-memory cache immediately so
-        // any consumer mounted in the same tick sees real numbers.
-        queryClient.setQueryData(['wallet-balances', userId], serverSnapshot);
-        writeSessionSnapshot(userId, serverSnapshot);
-      } else if (!previous) {
-        // Server unreachable / empty – fall back to the session echo.
-        previous = readSessionSnapshot(userId) ?? undefined;
+      const baseline =
+        (serverSnapshot && serverSnapshot.length ? serverSnapshot : null) ??
+        inMem ??
+        readSessionSnapshot(userId) ??
+        null;
+
+      // 2. Kick off the chain refresh in the background. It writes through
+      //    to both cache layers and updates the in-memory query cache when
+      //    it completes, so the UI upgrades from snapshot → live without
+      //    blocking the first paint.
+      const refreshPromise = getUserWallets(userId, baseline ?? undefined)
+        .then((fresh) => {
+          queryClient.setQueryData([...queryKey], fresh);
+          void writeServerSnapshot(userId, fresh);
+          writeSessionSnapshot(userId, fresh);
+          return fresh;
+        })
+        .catch((err) => {
+          console.warn('[wallet-balances] background chain refresh failed:', err);
+          return baseline ?? [];
+        });
+
+      // 3. If we have a baseline (server snapshot or any cache), return it
+      //    NOW so the UI paints instantly. Otherwise wait for the chain –
+      //    this only happens on a brand-new account with no cached data
+      //    anywhere.
+      if (baseline) {
+        if (serverSnapshot) writeSessionSnapshot(userId, serverSnapshot);
+        return baseline;
       }
-
-      // 2. Refresh from chain in the background, preserving previous
-      //    balances per wallet on per-chain failures.
-      const fresh = await getUserWallets(userId, previous);
-
-      // 3. Write through to both cache layers.
-      void writeServerSnapshot(userId, fresh);
-      writeSessionSnapshot(userId, fresh);
-
-      return fresh;
+      return await refreshPromise;
     },
     // Keep showing the previous balances while a refetch is in flight –
     // never show an undefined / empty state mid-cycle.
