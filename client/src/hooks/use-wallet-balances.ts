@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
@@ -323,6 +324,59 @@ export function useWalletBalances() {
   const queryClient = useQueryClient();
   const userId = user?.id;
 
+  // Real-time push: subscribe to changes on this user's `wallets` rows.
+  // The moment the server snapshot is updated (e.g. by the deposit-monitor
+  // backend after a confirmation), patch the cache live and trigger an
+  // immediate chain re-read so the UI doesn't have to wait for the next
+  // 60 s poll.
+  useEffect(() => {
+    if (!userId) return;
+    const queryKey = ['wallet-balances', userId] as const;
+
+    const channel = supabase
+      .channel(`wallets:${userId}`)
+      .on(
+        'postgres_changes' as any,
+        {
+          event: '*',
+          schema: 'public',
+          table: 'wallets',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload: any) => {
+          const row = payload.new ?? payload.old;
+          if (!row) return;
+
+          // Patch the in-memory cache for the affected symbol.
+          queryClient.setQueryData<Wallet[]>([...queryKey], (current) => {
+            if (!current) return current;
+            const next = current.map((w) =>
+              w.crypto_symbol === row.crypto_symbol
+                ? {
+                    ...w,
+                    balance: Number(row.balance) || 0,
+                    locked_balance: Number(row.locked_balance) || 0,
+                    deposit_address: row.deposit_address ?? w.deposit_address,
+                    updated_at: row.updated_at ?? new Date().toISOString(),
+                  }
+                : w,
+            );
+            writeSessionSnapshot(userId, next);
+            return next;
+          });
+
+          // Also re-read from chain to make sure the live value matches the
+          // server hint we just received.
+          void queryClient.invalidateQueries({ queryKey: [...queryKey] });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [userId, queryClient]);
+
   return useQuery<Wallet[]>({
     // Scope cache to the current user so a logout/login swap can never
     // serve another account's result.
@@ -379,7 +433,11 @@ export function useWalletBalances() {
     // never show an undefined / empty state mid-cycle.
     placeholderData: keepPreviousData,
     staleTime: 30_000,
-    refetchInterval: 60_000,
+    // Realtime push handles instant updates. The poll is a safety net for
+    // missed events – 90 s is the sweet spot: rare enough to avoid RPC
+    // burn, frequent enough to self-heal within ~1 block on every chain.
+    refetchInterval: 90_000,
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     retry: 2,
