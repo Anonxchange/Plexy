@@ -196,7 +196,7 @@ export default function WalletPage() {
                   <TabsList className="bg-transparent p-0 h-auto gap-1">
                     <TabsTrigger
                       value="wallet"
-                      className="rounded-lg px-6 py-2 font-semibold border border-border bg-white dark:bg-muted text-foreground transition-colors data-[state=active]:bg-[#B4F22E] data-[state=active]:text-black data-[state=active]:border-[#B4F22E] data-[state=active]:shadow-[0_0_0_2px_rgba(180,242,46,0.25)]"
+                      className="rounded-lg px-6 py-2 font-semibold border border-border bg-white text-foreground transition-colors dark:bg-muted data-[state=active]:bg-[#B4F22E] data-[state=active]:text-black data-[state=active]:border-[#B4F22E] dark:data-[state=active]:bg-[#B4F22E] dark:data-[state=active]:text-black dark:data-[state=active]:border-[#B4F22E]"
                     >
                       <WalletIcon className="h-4 w-4 mr-2" />
                       Wallet
