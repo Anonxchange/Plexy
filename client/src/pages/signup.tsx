@@ -368,6 +368,10 @@ export function SignUp() {
           phone_verified: true,
           full_name: fullName,
           country: country,
+          // Always start new accounts in USD. Country is stored above for
+          // localisation, but the displayed currency stays USD until the
+          // user explicitly picks a different one in settings/header.
+          preferred_currency: 'usd',
         }, {
           onConflict: 'id'
         });
