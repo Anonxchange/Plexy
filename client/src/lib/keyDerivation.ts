@@ -13,7 +13,7 @@ export interface KdfParams {
 }
 
 export const DEFAULT_KDF_PARAMS: KdfParams = {
-  N: 131072,
+  N: 262144,
   r: 8,
   p: 1,
   dkLen: 32
