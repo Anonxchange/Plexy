@@ -71,7 +71,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState(false);
-  const [selectedCurrency, setSelectedCurrency] = useState<string>("NGN");
+  const [selectedCurrency, setSelectedCurrency] = useState<string>("USD");
   const [amountInputMode, setAmountInputMode] = useState<"fiat" | "crypto">("fiat");
   const [cryptoAmount, setCryptoAmount] = useState<string>("");
   const [fiatAmount, setFiatAmount] = useState<string>("");
@@ -333,7 +333,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
     setFiatAmount("");
     setNotes("");
     setSelectedNetwork("");
-    setSelectedCurrency("NGN");
+    setSelectedCurrency("USD");
     setAmountInputMode("fiat");
     setCryptoPrice(0);
     setError("");
