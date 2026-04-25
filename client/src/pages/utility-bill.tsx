@@ -76,7 +76,7 @@ const ProviderCard = ({
 const UtilityBill = () => {
   const [accountNumber, setAccountNumber] = useState("");
   const [selectedCountry, setSelectedCountry] = useState<string>("");
-  const [selectedService, setSelectedService] = useState<string>("");
+  const [selectedService, setSelectedService] = useState<string>("ALL");
   const [selectedProvider, setSelectedProvider] = useState<Biller | null>(null);
   const [amount, setAmount] = useState<string>("");
   const [view, setView] = useState<"countries" | "providers" | "pay">("countries");
@@ -86,7 +86,7 @@ const UtilityBill = () => {
   const { data: countriesData, isLoading: isLoadingCountries } = useUtilityCountries();
   const { data: billersData, isLoading: isLoadingBillers } = useUtilityBillers(
     selectedCountry || undefined,
-    selectedService || undefined
+    selectedService && selectedService !== "ALL" ? selectedService : undefined
   );
   const { createAndCaptureOrder, loading: paypalLoading } = usePayPal();
 
