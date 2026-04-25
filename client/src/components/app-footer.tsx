@@ -1,4 +1,5 @@
-import { SiX, SiTelegram, SiFacebook, SiInstagram, SiLinkedin, SiYoutube, SiApple, SiGoogleplay } from "react-icons/si";
+import { SiX, SiTelegram, SiFacebook, SiInstagram, SiYoutube, SiApple, SiGoogleplay } from "react-icons/si";
+import { FaLinkedin as SiLinkedin } from "react-icons/fa";
 import { PexlyIcon } from "@/components/pexly-icon";
 import { Link } from "wouter";
 
@@ -43,6 +44,7 @@ const footerColumns = [
     heading: "Legal",
     links: [
       { label: "Terms & Conditions", href: "/terms" },
+      { label: "Refund Policy", href: "/refund-policy" },
       { label: "Risk Disclosure", href: "/risk-disclosure" },
       { label: "AML Policy", href: "/aml-policy" },
       { label: "Privacy Notice", href: "/privacy" },
