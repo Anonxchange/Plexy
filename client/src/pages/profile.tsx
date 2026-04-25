@@ -458,7 +458,7 @@ export function Profile() {
         setProfileData({ ...data, email_verified: emailVerified, positive_feedback: pos || 0, negative_feedback: neg || 0 });
       } else {
         const country = user?.user_metadata?.country || user?.user_metadata?.Country || "";
-        const def: any = { id: user?.id, username: `user_${user?.id?.substring(0, 8)}`, country, bio: null, languages: ["English"], positive_feedback: 0, negative_feedback: 0, total_trades: 0, trade_partners: 0, is_verified: false, phone_verified: false, email_verified: false, last_seen: new Date().toISOString() };
+        const def: any = { id: user?.id, username: `user_${user?.id?.substring(0, 8)}`, country, preferred_currency: "usd", bio: null, languages: ["English"], positive_feedback: 0, negative_feedback: 0, total_trades: 0, trade_partners: 0, is_verified: false, phone_verified: false, email_verified: false, last_seen: new Date().toISOString() };
         const { data: np, error: ce } = await supabase.from("user_profiles").insert(def).select().single();
         setProfileData((!ce && np) ? np : def);
       }
