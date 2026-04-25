@@ -86,10 +86,11 @@ export function PhoneVerification({ onVerified, onSkip, initialPhone = "", initi
           phone_verified: true,
         };
 
-        // Update country based on phone code
+        // Update country based on phone code, but leave preferred_currency
+        // alone — new accounts default to USD and the user can switch to
+        // their local currency from settings/header at any time.
         if (countryFromPhone) {
           updateData.country = countryFromPhone.name;
-          updateData.preferred_currency = countryFromPhone.currencyCode.toLowerCase();
         }
 
         const { error: profileError } = await supabase
