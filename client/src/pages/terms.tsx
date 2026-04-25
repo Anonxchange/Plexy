@@ -29,6 +29,7 @@ export default function Terms() {
         { text: "Privacy Policy", href: "/privacy" },
         { text: "Cookie Policy", href: "/cookie-policy" },
         { text: "AML Policy", href: "/aml-policy" },
+        { text: "Refund Policy", href: "/refund-policy" },
       ]
     },
     {
