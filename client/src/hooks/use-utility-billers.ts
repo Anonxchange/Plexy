@@ -132,7 +132,7 @@ export async function payUtilityBill(params: {
 }
 
 export const SERVICE_TYPES = [
-  { value: "", label: "All Services" },
+  { value: "ALL", label: "All Services" },
   { value: "ELECTRICITY_BILL_PAYMENT", label: "Electricity" },
   { value: "WATER_BILL_PAYMENT", label: "Water" },
   { value: "TV_BILL_PAYMENT", label: "TV / Cable" },
