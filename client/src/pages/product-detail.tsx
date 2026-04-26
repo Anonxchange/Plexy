@@ -10,11 +10,10 @@ import {
   Package, 
   Store, 
   Loader2,
-  Share2,
   Heart,
   PlayCircle,
-  Flag,
 } from "lucide-react";
+import { PiShareNetworkDuotone, PiShieldWarningDuotone } from "react-icons/pi";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -484,7 +483,7 @@ export function ProductDetail() {
             <ChevronLeft className="h-4 w-4 mr-1" />
             Back to Shop
           </Button>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             <CartSheet />
             <Button
               variant="ghost"
@@ -492,8 +491,9 @@ export function ProductDetail() {
               onClick={handleShare}
               aria-label="Share product"
               title="Share product"
+              className="h-10 w-10 rounded-full border border-border bg-card text-foreground shadow-sm transition-all hover:scale-105 hover:border-primary/40 hover:bg-primary/10 hover:text-primary active:scale-95"
             >
-              <Share2 className="h-5 w-5" />
+              <PiShareNetworkDuotone className="h-5 w-5" />
             </Button>
             <Button
               variant="ghost"
@@ -501,8 +501,9 @@ export function ProductDetail() {
               onClick={() => setReportOpen(true)}
               aria-label="Report product"
               title="Report product"
+              className="h-10 w-10 rounded-full border border-border bg-card text-foreground shadow-sm transition-all hover:scale-105 hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-600 active:scale-95"
             >
-              <Flag className="h-5 w-5" />
+              <PiShieldWarningDuotone className="h-5 w-5" />
             </Button>
           </div>
         </div>
@@ -558,7 +559,7 @@ export function ProductDetail() {
                     />
                   )}
                   <Button variant="ghost" size="icon" className="absolute top-3 right-3 bg-background/80 backdrop-blur-sm">
-                    <Share2 className="h-4 w-4" />
+                    <PiShareNetworkDuotone className="h-4 w-4" />
                   </Button>
                 </div>
 
