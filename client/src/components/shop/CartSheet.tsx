@@ -1,4 +1,4 @@
-import { ShoppingCart, Trash2, Plus, Minus, ExternalLink, Loader2, X } from "lucide-react";
+import { ShoppingCart, Trash2, Plus, Minus, ExternalLink, Loader2 } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -48,8 +48,8 @@ export function CartSheet() {
         </Button>
       </SheetTrigger>
       <SheetContent className="w-full sm:max-w-lg flex flex-col h-full p-0">
-        <div className="flex items-center justify-between p-6 pb-4">
-          <SheetHeader className="flex-1">
+        <div className="p-6 pb-4 pr-12">
+          <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
               <ShoppingCart className="h-5 w-5" />
               Your Shopping Cart
@@ -58,9 +58,6 @@ export function CartSheet() {
               {items.length} {items.length === 1 ? 'item' : 'items'} ready for checkout
             </SheetDescription>
           </SheetHeader>
-          <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
-            <X className="h-4 w-4" />
-          </Button>
         </div>
 
         <Separator />
@@ -89,7 +86,7 @@ export function CartSheet() {
             <ScrollArea className="h-full">
               <div className="p-6 space-y-4">
                 {items.map((item) => (
-                  <div key={item.id} className="flex gap-4 p-3 rounded-lg bg-secondary/50">
+                  <div key={item.id} className="flex gap-3 p-3 rounded-lg bg-secondary/50">
                     <div className="w-16 h-16 bg-muted rounded-md overflow-hidden flex-shrink-0">
                       {item.image ? (
                         <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
@@ -99,34 +96,39 @@ export function CartSheet() {
                         </div>
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start">
-                        <p className="font-medium text-sm truncate">{item.title}</p>
-                        <p className="text-sm font-semibold ml-2 flex-shrink-0">
-                          {Number(item.price).toFixed(2)} {item.currency}
-                        </p>
-                      </div>
-                      <Separator className="my-2" />
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1">
+                    <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                      {/* Row 1: title (full width, can wrap up to 2 lines) */}
+                      <p className="font-medium text-sm leading-snug line-clamp-2 break-words">
+                        {item.title}
+                      </p>
+                      {/* Row 2: price */}
+                      <p className="text-sm font-semibold">
+                        {Number(item.price).toFixed(2)} {item.currency}
+                      </p>
+                      <Separator className="my-1" />
+                      {/* Row 3: quantity stepper + delete button */}
+                      <div className="flex items-center justify-between gap-2 min-w-0">
+                        <div className="flex items-center gap-1 flex-shrink-0">
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-6 w-6"
+                            className="h-7 w-7"
                             onClick={() => updateQuantity(item.id, item.quantity - 1)}
                             disabled={isLoading || item.quantity <= 1}
+                            aria-label="Decrease quantity"
                           >
                             <Minus className="h-3 w-3" />
                           </Button>
-                          <span className="w-8 text-center text-sm">
+                          <span className="w-7 text-center text-sm tabular-nums">
                             {item.quantity}
                           </span>
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-6 w-6"
+                            className="h-7 w-7"
                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
                             disabled={isLoading}
+                            aria-label="Increase quantity"
                           >
                             <Plus className="h-3 w-3" />
                           </Button>
@@ -134,9 +136,10 @@ export function CartSheet() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          className="h-8 w-8 flex-shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                           onClick={() => removeItem(item.id)}
                           disabled={isLoading}
+                          aria-label="Remove item"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
