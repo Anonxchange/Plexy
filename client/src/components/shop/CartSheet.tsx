@@ -1,4 +1,5 @@
 import { ShoppingCart, Trash2, Plus, Minus, ExternalLink, Loader2, X } from "lucide-react";
+import { PiHandbagDuotone } from "react-icons/pi";
 import {
   Sheet,
   SheetContent,
@@ -38,10 +39,18 @@ export function CartSheet() {
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <ShoppingCart className="h-5 w-5" />
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Open cart"
+          title="Open cart"
+          className="relative h-10 w-10 rounded-full border border-border bg-card text-foreground shadow-sm transition-all hover:scale-105 hover:border-primary/40 hover:bg-primary/10 hover:text-primary active:scale-95"
+        >
+          <PiHandbagDuotone className="h-5 w-5" />
           {items.length > 0 && (
-            <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+            <Badge
+              className="absolute -top-1.5 -right-1.5 h-5 min-w-[20px] rounded-full p-0 px-1 flex items-center justify-center text-[10px] font-bold leading-none bg-primary text-primary-foreground shadow ring-2 ring-background"
+            >
               {items.reduce((acc, item) => acc + item.quantity, 0)}
             </Badge>
           )}
