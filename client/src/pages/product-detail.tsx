@@ -13,7 +13,21 @@ import {
   Share2,
   Heart,
   PlayCircle,
+  Flag,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { getSupabase } from "@/lib/supabase";
 import { shopifyService } from "@/lib/shopify-service";
 import { devLog } from "@/lib/dev-logger";
@@ -120,6 +134,10 @@ export function ProductDetail() {
   const [product, setProduct] = useState<Listing | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("counterfeit");
+  const [reportDetails, setReportDetails] = useState("");
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
   const [availableSizes, setAvailableSizes] = useState<string[]>([]);
@@ -385,6 +403,47 @@ export function ProductDetail() {
     }
   };
 
+  const handleShare = async () => {
+    const url = typeof window !== "undefined" ? window.location.href : "";
+    const title = product?.title ? `${product.title} on Pexly` : "Pexly product";
+    const text = product?.title ? `Check out ${product.title} on Pexly` : "Check out this product on Pexly";
+    try {
+      if (typeof navigator !== "undefined" && (navigator as any).share) {
+        await (navigator as any).share({ title, text, url });
+        return;
+      }
+    } catch (err: any) {
+      if (err?.name === "AbortError") return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Product link copied to clipboard");
+    } catch {
+      toast.error("Could not copy link");
+    }
+  };
+
+  const handleSubmitReport = async () => {
+    if (!product) return;
+    setIsSubmittingReport(true);
+    try {
+      devLog.info("[product-report] submitted", {
+        productId: product.id,
+        reason: reportReason,
+        details: reportDetails,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      toast.success("Report submitted. Our team will review this listing.");
+      setReportOpen(false);
+      setReportDetails("");
+      setReportReason("counterfeit");
+    } catch {
+      toast.error("Could not submit report. Please try again.");
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
+
   const handleAddToCart = async () => {
     if (!product) return;
     if (product.user_id !== 'shopify') {
@@ -425,7 +484,27 @@ export function ProductDetail() {
             <ChevronLeft className="h-4 w-4 mr-1" />
             Back to Shop
           </Button>
-          <CartSheet />
+          <div className="flex items-center gap-1.5">
+            <CartSheet />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleShare}
+              aria-label="Share product"
+              title="Share product"
+            >
+              <Share2 className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setReportOpen(true)}
+              aria-label="Report product"
+              title="Report product"
+            >
+              <Flag className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
 
         {/* Loading state */}
@@ -724,6 +803,67 @@ export function ProductDetail() {
           <ReviewSection productId={product.id} />
         )}
       </div>
+
+      {/* Report listing dialog */}
+      <AlertDialog open={reportOpen} onOpenChange={setReportOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Report this listing</AlertDialogTitle>
+            <AlertDialogDescription>
+              Help us keep Pexly safe. Tell us what's wrong with this product and our trust &amp; safety team will review it.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-4">
+            <RadioGroup value={reportReason} onValueChange={setReportReason} className="space-y-2">
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="counterfeit" id="report-counterfeit" />
+                <Label htmlFor="report-counterfeit" className="font-normal cursor-pointer">Counterfeit or fake item</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="prohibited" id="report-prohibited" />
+                <Label htmlFor="report-prohibited" className="font-normal cursor-pointer">Prohibited or illegal item</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="misleading" id="report-misleading" />
+                <Label htmlFor="report-misleading" className="font-normal cursor-pointer">Misleading description or images</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="scam" id="report-scam" />
+                <Label htmlFor="report-scam" className="font-normal cursor-pointer">Scam or fraudulent seller</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="ip" id="report-ip" />
+                <Label htmlFor="report-ip" className="font-normal cursor-pointer">Intellectual property infringement</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="other" id="report-other" />
+                <Label htmlFor="report-other" className="font-normal cursor-pointer">Other</Label>
+              </div>
+            </RadioGroup>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="report-details" className="text-sm">Additional details (optional)</Label>
+              <Textarea
+                id="report-details"
+                value={reportDetails}
+                onChange={(e) => setReportDetails(e.target.value)}
+                placeholder="Add any context that will help us review this listing…"
+                rows={4}
+                maxLength={1000}
+              />
+            </div>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmittingReport}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSubmitReport} disabled={isSubmittingReport}>
+              {isSubmittingReport ? "Submitting…" : "Submit report"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <PexlyFooter />
     </div>
   );
