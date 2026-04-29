@@ -539,7 +539,7 @@
     "wallet": "钱包",
     "support": "支持",
     "btc_calc": "Bitcoin 计算器",
-    "market_prices": "市场价格",
+    "market_prices": "市场行情",
     "terms": "条款与条件",
     "refund": "退款政策",
     "risk": "风险披露",
@@ -549,7 +549,11 @@
     "restricted": "受限国家",
     "rewards_tc": "奖励计划条款",
     "copyright": "© {{year}} Pexly, Inc. 保留所有权利。",
-    "all_operational": "所有系统正常运行"
+    "all_operational": "所有系统运行正常",
+    "download_ios": "iOS – 在 App Store 下载",
+    "download_android": "Android – 在 Google Play 下载",
+    "follow_on": "在 {{network}} 关注 Pexly",
+    "disclaimer": "“PEXLY” 是 Pexly, Inc. 的注册商标。Pexly Inc. 与 MoneyGram、Western Union、Payoneer、WorldRemit、PayPal、Skrill、Neteller、Venmo、Apple 或任何其他支付方式均无任何关系。其各自的商标归其所有者所有。"
   },
   "hero": {
     "trust_badge": "超过5000万用户的信赖之选",
@@ -573,32 +577,32 @@
     "close_aria": "关闭Cookie横幅"
   },
   "how_it_works": {
-    "badge": "简单 & 安全",
-    "title": "运作方式",
-    "subtitle": "三步即可开始",
-    "step1_title": "创建账户",
-    "step1_desc": "几秒注册即可立即使用您的非托管钱包和 DeFi 服务。",
+    "badge": "简单与安全",
+    "title": "如何运作",
+    "subtitle": "三步即可开始加密货币交易",
+    "step1_title": "创建您的账户",
+    "step1_desc": "几秒钟内注册即可即时使用您的非托管钱包和 DeFi 服务。",
     "step2_title": "获取加密货币",
-    "step2_desc": "通过受信任的第三方提供商买卖加密货币 — 快速、安全、非托管。",
-    "step3_title": "使用加密货币",
-    "step3_desc": "发送、接收、兑换、质押或充值 — 全部由去中心化协议驱动。"
+    "step2_desc": "通过可信的第三方提供商买卖加密货币——快速、安全、非托管。",
+    "step3_title": "使用您的加密货币",
+    "step3_desc": "发送、接收、兑换、质押或交易——一切由去中心化协议驱动。"
   },
   "feature": {
     "title_line1": "实时加密。",
     "title_line2": "随处支付。",
-    "title_line3": "返还 10%。",
-    "subtitle": "无缝消费加密货币,即时获得奖励,享受新一代支付体验。",
-    "cta": "加入团队"
+    "title_line3": "返现 10%。",
+    "subtitle": "无缝消费加密货币,即时获得奖励,随时随地享受新一代支付。",
+    "cta": "加入我们的团队"
   },
   "products": {
     "title": "我们的产品",
-    "subtitle": "探索全面的工具,让加密货币简单易用",
+    "subtitle": "探索我们全面的工具,让加密货币简单易用",
     "badge_new": "新",
     "badge_hot": "热门",
     "badge_best": "最佳汇率",
     "shop_name": "商店",
     "shop_desc": "发现来自创作者的独特产品和服务",
-    "giftcard_name": "礼品卡",
+    "giftcard_name": "礼品卡商店",
     "giftcard_desc": "用加密货币立即购买全球品牌礼品卡",
     "swap_name": "兑换",
     "swap_desc": "快速、低费用即时兑换加密货币",
@@ -632,27 +636,43 @@
     "pill_zk": "零知识证明",
     "pill_escrow": "链上托管保护",
     "pill_bio": "生物识别认证",
-    "pill_alerts": "实时威胁警报"
+    "pill_alerts": "实时威胁警报",
+    "p1_name": "Alex,加密货币交易员",
+    "p1_quote": "“终于可以完全掌控我的钱包,而无需交出私钥”",
+    "p1_desc": "从托管交易所迁出。现在自己保管私钥,以零平台风险进行点对点交易。",
+    "p2_name": "Priya,在线商家",
+    "p2_quote": "“没有跟踪,没有画像——只有纯粹的隐私”",
+    "p2_desc": "经营国际店铺。改用 Pexly 进行私密支付——无 IP 日志,无余额跟踪。",
+    "p3_name": "Tom,DeFi 爱好者",
+    "p3_quote": "“即时警报让我避免了一个危险的 dApp 连接”",
+    "p3_desc": "在连接任何 dApp 之前都会收到实时警报。在恶意合约耗尽他的钱包之前就将其拦截。",
+    "p4_name": "Maria,自由职业者",
+    "p4_quote": "“切换以来,我没有错过一次机会”",
+    "p4_desc": "即时收到跨境付款。没有银行延迟,也没有侵蚀她收入的兑换费用。"
   },
   "testimonials": {
     "section_label": "用户评价",
     "title_l1": "听听社区",
-    "title_l2": "成员怎么说"
+    "title_l2": "成员怎么说",
+    "t1_content": "用稳定币旅行,我可以在多哈用 @Pexly 卡支付 @limebike",
+    "t2_content": "每天都能发现 @Pexly 的新亮点。出色的 UI、出色的 UX,出入金顺畅。",
+    "t3_content": "让加密货币成为更多国家、更多人的更经济选择。很高兴能为 Pexly 出一份力。",
+    "t4_content": "我在 @Pexly 上 30 秒内就把 base 上的 eth 兑换到本地银行账户!!"
   },
   "faq": {
     "title": "还有疑问?",
-    "q1": "\"我的加密货币真的安全吗?\"",
-    "a1": "始终安全。Pexly 完全非托管 — 您的私钥永不离开设备。我们无法访问、冻结或转移您的资金。永远不会。",
-    "q2": "\"我真的拥有自己的密钥吗?\"",
-    "a2": "是的,100%。您的助记词仅在您的设备本地生成和存储。没有服务器持有副本。自我托管是默认设置,而不是附加项。",
-    "q3": "\"实际费用是多少?\"",
-    "a3": "无隐藏费用。无月费。您只需支付链上交易的标准网络费用。所见即所付,仅此而已。"
+    "q1": "“我的加密货币真的安全吗?”",
+    "a1": "始终安全。Pexly 完全非托管——您的私钥永远不会离开您的设备。我们无法访问、冻结或转移您的资金。永远不会。",
+    "q2": "“我真的拥有自己的私钥吗?”",
+    "a2": "是的,100%。您的助记词仅在本地设备上生成和存储。任何服务器都没有副本。自我保管是默认设置。",
+    "q3": "“真实的费用是多少?”",
+    "a3": "没有隐藏费用。没有月费。链上交易您只需支付标准网络费用。所见即所付——绝不多收。"
   },
   "cta_section": {
-    "title": "今天就开始使用 Pexly",
-    "subtitle": "兑换、购物、质押、充值和支付账单 — 全在一个安全的非托管钱包中。",
+    "title": "今天就在 Pexly 开始交易",
+    "subtitle": "与超过 1400 万全球用户一起交易 Bitcoin、Ethereum、Tether 等",
     "app_store": "App Store 下载",
-    "play_store": "Google Play 获取",
+    "play_store": "Google Play 下载",
     "sign_up": "立即注册"
   }
 }
