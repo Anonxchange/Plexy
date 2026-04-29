@@ -10,9 +10,10 @@ const COUNTRY_TO_LANG: Record<string, string> = {
   IN: "hi", NP: "hi",
   ID: "id",
   VN: "vi",
+  JP: "ja",
 };
 
-export const SUPPORTED_LANGS = ["en", "es", "fr", "pt", "ar", "zh", "ru", "de", "tr", "hi", "id", "vi"] as const;
+export const SUPPORTED_LANGS = ["en", "es", "fr", "pt", "ar", "zh", "ru", "de", "tr", "hi", "id", "vi", "ja"] as const;
 export type SupportedLang = typeof SUPPORTED_LANGS[number];
 
 export function isValidLang(lang: string): lang is SupportedLang {
