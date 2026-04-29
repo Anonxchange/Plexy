@@ -1,0 +1,46 @@
+import { useHead } from "@unhead/react";
+import { useState } from "react";
+import AccountBar from "@/components/trading/AccountBar";
+import PairInfo from "@/components/trading/PairInfo";
+import BottomTabs from "@/components/trading/BottomTabs";
+import DesktopTradingLayout from "@/components/trading/DesktopTradingLayout";
+import { useIsMobile } from "@/hooks/use-mobile";
+
+export const Spot = () => {
+  useHead({ title: "Spot Trading | Pexly", meta: [{ name: "description", content: "Trade cryptocurrencies on the Pexly spot market with real-time order books." }] });
+  const [chartVisible, setChartVisible] = useState(true);
+  const [pair, setPair] = useState(() => {
+    const stored = sessionStorage.getItem("pexly_initial_pair");
+    if (stored) { sessionStorage.removeItem("pexly_initial_pair"); return stored; }
+    return "ASTER/USDT";
+  });
+  const [viewMode, setViewMode] = useState<"list" | "chart">("list");
+  const isMobile = useIsMobile();
+
+  return (
+    <div className="flex flex-col flex-1 min-h-0 bg-background overflow-x-hidden w-full max-w-full">
+      {isMobile && <AccountBar />}
+      {isMobile && (
+        <PairInfo 
+          pair={pair}
+          onPairChange={setPair}
+          chartVisible={chartVisible} 
+          onToggleChart={() => setChartVisible(!chartVisible)}
+          viewMode={viewMode}
+        />
+      )}
+      {isMobile ? (
+        <BottomTabs chartVisible={chartVisible} pair={pair} viewMode={viewMode} onViewModeChange={setViewMode} />
+      ) : (
+        <DesktopTradingLayout 
+          chartVisible={chartVisible} 
+          pair={pair}
+          onPairChange={setPair}
+          onToggleChart={() => setChartVisible(!chartVisible)}
+        />
+      )}
+    </div>
+  );
+};
+
+export default Spot;

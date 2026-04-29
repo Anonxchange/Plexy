@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- Cloudflare Worker stamps the per-request CSP nonce onto this tag's `nonce`
+         attribute at the edge. main.tsx reads it and calls setNonce() so that
+         react-style-singleton (used by Radix Dialog, Dropdown, Popover, etc.)
+         automatically carries the nonce on every <style> it injects at runtime. -->
+    <meta property="csp-nonce" />
+    <!-- Cloudflare Worker stamps the user's ISO country code (e.g. "US") here at the
+         edge. Client code reads this via getCountryCode() in lib/geo.ts so no external
+         IP-geolocation API call is needed in production. -->
+    <meta name="cf-country" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Sets theme class before first paint so ThemeProvider has nothing to change,
+         eliminating the full-document style recalculation on initial load.
+         Inlined to avoid a blocking network round-trip for a 180-byte file. -->
+    <script>try{var t=localStorage.getItem('pexly-theme');if(t==='dark'||t==='light')document.documentElement.classList.add(t);else document.documentElement.classList.add('light');}catch(e){}</script>
+    <title>Pexly - Non-Custodial Decentralized Crypto Software</title>
+    <meta name="description" content="Pexly is your all-in-one decentralized market. Swap crypto, earn yield through staking, buy gift cards, top up mobile credit, pay utility bills, shop with crypto, and explore blockchain data — all without giving up custody of your assets." />
+    
+    <!-- Preconnect hints for external APIs (improves LCP by establishing early connections) -->
+    <link rel="preconnect" href="%VITE_SUPABASE_URL%" crossorigin="anonymous">
+    <link rel="dns-prefetch" href="%VITE_SUPABASE_URL%">
+    <!-- Preconnect for Google Fonts — both the CSS and the actual font file origin -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin="anonymous">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    
+    <!-- Open Graph / Social Media -->
+    <meta property="og:title" content="Pexly - Non-Custodial Decentralized Crypto Software" />
+    <meta property="og:description" content="Pexly is your all-in-one decentralized market. Swap crypto, stake for yield, buy gift cards, pay bills, shop, and explore the blockchain — all non-custodial. Your keys, your assets." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.pexly.app/" />
+    <meta property="og:image" content="https://www.pexly.app/hero-bg.webp" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Pexly - Non-Custodial Decentralized Crypto Software" />
+    <meta property="og:site_name" content="Pexly" />
+    <!-- Twitter / WhatsApp card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Pexly - Non-Custodial Decentralized Crypto Software" />
+    <meta name="twitter:description" content="Pexly is your all-in-one decentralized market. Swap crypto, stake for yield, buy gift cards, pay bills, shop, and explore the blockchain — all non-custodial. Your keys, your assets." />
+    <meta name="twitter:image" content="https://www.pexly.app/hero-bg.webp" />
+    <meta name="twitter:image:alt" content="Pexly - Non-Custodial Decentralized Crypto Software" />
+    
+    <!-- Non-blocking font load: preload downloads the CSS immediately but doesn't block rendering.
+         defer-css.js promotes this to a full stylesheet after DOMContentLoaded. -->
+    <link rel="preload" as="style" crossorigin="anonymous" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap">
+    <noscript><link rel="stylesheet" crossorigin="anonymous" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap"></noscript>
+    <script src="/defer-css.js" defer></script>
+    
+    <!-- Global JSON-LD Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://www.pexly.app/#organization",
+          "name": "Pexly",
+          "alternateName": "Pexly Software",
+          "url": "https://www.pexly.app/",
+          "description": "Pexly is a non-custodial decentralized software platform offering tools for crypto swaps, staking, gift cards, mobile top-ups, utility payments, blockchain exploration, and more. Pexly does not hold, control, or transmit user funds.",
+          "foundingDate": "2024",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://www.pexly.app/favicon.svg",
+            "width": "512",
+            "height": "512"
+          },
+          "contactPoint": [
+            {
+              "@type": "ContactPoint",
+              "contactType": "technical support",
+              "availableLanguage": ["English"],
+              "areaServed": "Worldwide"
+            }
+          ],
+          "sameAs": [],
+          "knowsAbout": ["Software Development", "Decentralized Technology", "Blockchain Technology", "Cryptocurrency Software"],
+          "slogan": "Non-Custodial Decentralized Software"
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://www.pexly.app/#website",
+          "url": "https://www.pexly.app/",
+          "name": "Pexly",
+          "description": "Pexly is an all-in-one non-custodial decentralized market. Users can swap crypto, earn staking yield, buy gift cards, pay bills, shop with crypto, and explore on-chain data — all while retaining full custody of their assets.",
+          "publisher": {
+            "@id": "https://www.pexly.app/#organization"
+          },
+          "inLanguage": "en-US",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://www.pexly.app/search?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://www.pexly.app/#software",
+          "name": "Pexly Decentralized Software",
+          "description": "Pexly is a non-custodial decentralized software application. It provides tools for crypto swaps, yield staking, gift card purchases, mobile top-ups, utility bill payments, and on-chain exploration. Pexly does not hold funds or act as an intermediary.",
+          "provider": {
+            "@id": "https://www.pexly.app/#organization"
+          },
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          }
+        }
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,142 @@
+// ===== TRON LIGHTWEIGHT WALLET =====
+import { mnemonicToSeed } from '@scure/bip39';
+import { HDKey } from '@scure/bip32';
+import { base58 } from '@scure/base';
+import * as secp256k1 from '@noble/secp256k1';
+import { sha256 } from '@noble/hashes/sha256';
+import { ripemd160 } from '@noble/hashes/ripemd160';
+import { wipeBytes, wipeHDKey } from './secureMemory';
+
+export interface TronTransactionRequest {
+  to: string;
+  amount: string; // in TRX
+  currency: 'TRX' | 'USDT_TRX';
+  tokenAddress?: string; // for TRC20
+}
+
+export interface SignedTronTransaction {
+  signedTx: string;
+  txID: string;
+  from: string;
+  to: string;
+  amount: string;
+}
+
+// ===== PRIVATE KEY DERIVATION =====
+export async function deriveTronPrivateKey(mnemonic: string): Promise<Uint8Array> {
+  const seed = await mnemonicToSeed(mnemonic);
+  const root = HDKey.fromMasterSeed(seed);
+  const account = root.derive("m/44'/195'/0'/0/0");
+
+  if (!account.privateKey || !secp256k1.utils.isValidPrivateKey(account.privateKey)) {
+    wipeBytes(seed);
+    wipeHDKey(root);
+    wipeHDKey(account);
+    throw new Error('Invalid private key derived');
+  }
+
+  // Copy into a fresh buffer BEFORE wiping the HDKey — account.privateKey is a
+  // reference into the HDKey's internal buffer and would be zeroed by wipeHDKey.
+  const priv = account.privateKey!.slice();
+  wipeBytes(seed);
+  wipeHDKey(root);
+  wipeHDKey(account);
+  return priv;
+}
+
+// ===== ADDRESS DERIVATION =====
+export async function getTronAddress(mnemonic: string): Promise<string> {
+  const privKey = await deriveTronPrivateKey(mnemonic);
+
+  // Compute public key (uncompressed, remove 0x04 prefix)
+  const pubKey = secp256k1.getPublicKey(privKey, false).slice(1);
+
+  // Tron address = 0x41 + RIPEMD160(SHA256(pubKey))
+  const sha = sha256(pubKey);
+  const ripe = ripemd160(sha);
+  const address = new Uint8Array(21);
+  address[0] = 0x41; // Mainnet prefix
+  address.set(ripe, 1);
+
+  // Double SHA256 for Base58Check checksum
+  const s1 = sha256(address);
+  const s2 = sha256(s1);
+  const checksum = s2.slice(0, 4);
+
+  const finalAddress = new Uint8Array(25);
+  finalAddress.set(address);
+  finalAddress.set(checksum, 21);
+
+  return base58.encode(finalAddress);
+}
+
+// ===== AMOUNT CONVERSION =====
+function trxToSun(amount: string): bigint {
+  const [whole, fraction = ''] = amount.split('.');
+  return BigInt(whole) * 1_000_000n + BigInt(fraction.padEnd(6, '0').slice(0, 6));
+}
+
+// ===== SIGN TRX TRANSACTION =====
+export async function signTronTransaction(
+  mnemonic: string,
+  request: TronTransactionRequest
+): Promise<SignedTronTransaction> {
+  const privKey = await deriveTronPrivateKey(mnemonic);
+  try {
+  const from = await getTronAddress(mnemonic);
+
+  // Minimal transaction structure
+  const tx: any = {
+    owner_address: from,
+    to_address: request.to,
+    amount: trxToSun(request.amount),
+    timestamp: Date.now(),
+    type: 'TransferContract'
+  };
+
+  // Serialize transaction as JSON string
+  const txBytes = new TextEncoder().encode(JSON.stringify(tx));
+
+  // Sign with secp256k1
+  const hash = sha256(txBytes);
+  const signature = await secp256k1.sign(hash, privKey, { recovered: false });
+
+  const signedTx = {
+    ...tx,
+    signature: base58.encode(signature)
+  };
+
+  // Transaction ID = SHA256 of serialized signed transaction
+  const txID = base58.encode(sha256(new TextEncoder().encode(JSON.stringify(signedTx))));
+
+  return {
+    signedTx: JSON.stringify(signedTx),
+    txID,
+    from,
+    to: request.to,
+    amount: request.amount
+  };
+  } finally {
+    wipeBytes(privKey);
+  }
+}
+
+// ===== BALANCE PLACEHOLDERS =====
+export async function getTronBalance(_mnemonic: string): Promise<string> {
+  return '0'; // placeholder
+}
+
+export async function getTRC20Balance(
+  _mnemonic: string,
+  _tokenAddress: string
+): Promise<string> {
+  return '0'; // placeholder
+}
+
+// ===== TRC20 SIGNING PLACEHOLDER =====
+export async function signTRC20Transaction(
+  _mnemonic: string,
+  _request: TronTransactionRequest
+): Promise<SignedTronTransaction> {
+  throw new Error('TRC20 signing not implemented yet');
+}

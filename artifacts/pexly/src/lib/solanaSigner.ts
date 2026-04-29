@@ -1,0 +1,200 @@
+import { mnemonicToSeed } from "@scure/bip39";
+import { base58 } from '@scure/base';
+import * as nobleEd25519 from '@noble/ed25519';
+import { hmac } from '@noble/hashes/hmac';
+import { sha512 } from '@noble/hashes/sha512';
+import { sha256 } from '@noble/hashes/sha256';
+import { wipeBytes } from './secureMemory';
+
+// noble-ed25519 v3+ requires hashes to be set on the hashes object
+// for synchronous methods to work.
+// Using Object.assign to ensure compatibility and bypass type checks
+// We set it on both hashes and utils to be safe across different versions
+if (nobleEd25519.hashes) {
+  Object.assign(nobleEd25519.hashes, {
+    sha512: sha512
+  });
+}
+if ((nobleEd25519 as any).utils) {
+  (nobleEd25519 as any).utils.sha512Sync = (...m: any[]) => sha512((nobleEd25519 as any).utils.concatBytes(...m));
+}
+
+export interface SolanaTransactionRequest {
+  to: string;
+  amount: string;
+  recentBlockhash: string;
+  currency: 'SOL' | 'USDT_SOL' | 'USDC_SOL';
+  tokenAddress?: string;
+  fromTokenAccount?: string;
+  toTokenAccount?: string;
+}
+
+export interface SignedSolanaTransaction {
+  signedTx: string;
+  txHash: string;
+}
+
+// Encode lengths in compact-u16 format
+function encodeLength(len: number): number[] {
+  const out: number[] = [];
+  while (len >= 0x80) {
+    out.push((len & 0x7f) | 0x80);
+    len >>= 7;
+  }
+  out.push(len);
+  return out;
+}
+
+// Derive Solana private key from mnemonic using ed25519 path
+export async function deriveSolanaPrivateKey(mnemonic: string): Promise<Uint8Array> {
+  // No passphrase — standard BIP39 derivation (passphrase = "").
+  // Passing `wordlist` here was a bug: it coerced the array to a string and
+  // produced a non-standard seed incompatible with Phantom, Solflare, etc.
+  const seed = await mnemonicToSeed(mnemonic);
+  let I = hmac(sha512, new TextEncoder().encode('ed25519 seed'), seed);
+  let IL = I.slice(0, 32);
+  let IR = I.slice(32);
+  const path = [44, 501, 0, 0];
+
+  for (const index of path) {
+    const data = new Uint8Array(37);
+    data[0] = 0;
+    data.set(IL, 1);
+    const hardenedIndex = index + 0x80000000;
+    data[33] = (hardenedIndex >>> 24) & 0xff;
+    data[34] = (hardenedIndex >>> 16) & 0xff;
+    data[35] = (hardenedIndex >>> 8) & 0xff;
+    data[36] = hardenedIndex & 0xff;
+    I = hmac(sha512, IR, data);
+    IL = I.slice(0, 32);
+    IR = I.slice(32);
+  }
+  return IL;
+}
+
+// Get Solana address from mnemonic
+export async function getSolanaAddress(mnemonic: string): Promise<string> {
+  const priv = await deriveSolanaPrivateKey(mnemonic);
+  const pub = await nobleEd25519.getPublicKey(priv);
+  return base58.encode(pub);
+}
+
+// Sign SOL or SPL token transaction
+export async function signSolanaTransaction(
+  mnemonic: string,
+  request: SolanaTransactionRequest
+): Promise<SignedSolanaTransaction> {
+  const privateKey = await deriveSolanaPrivateKey(mnemonic);
+  try {
+  const publicKey = await nobleEd25519.getPublicKey(privateKey);
+  const recentBlockhash = base58.decode(request.recentBlockhash);
+
+  let message: Uint8Array;
+
+  if (request.currency === 'SOL') {
+    // Native SOL transfer
+    const toPubkey = base58.decode(request.to);
+    const systemProgramId = base58.decode('11111111111111111111111111111111');
+    const [whole, fraction = ''] = request.amount.split('.');
+    const lamports = BigInt(whole) * 1_000_000_000n + BigInt(fraction.padEnd(9, '0').slice(0, 9));
+
+    const instructionData = new Uint8Array(12);
+    const view = new DataView(instructionData.buffer);
+    view.setUint32(0, 2, true); // Transfer instruction
+    view.setBigUint64(4, lamports, true);
+
+    const accountKeys = [publicKey, toPubkey, systemProgramId];
+
+    message = new Uint8Array([
+      1, 0, 1,
+      ...encodeLength(accountKeys.length),
+      ...accountKeys.flatMap((k) => Array.from(k)),
+      ...recentBlockhash,
+      ...encodeLength(1),
+      2,
+      ...encodeLength(2), 0, 1,
+      ...encodeLength(instructionData.length),
+      ...instructionData
+    ]);
+  } else {
+    // SPL token transfer
+    if (!request.fromTokenAccount || !request.toTokenAccount || !request.tokenAddress) {
+      throw new Error('Token accounts and Mint address required for SPL transfers');
+    }
+
+    const tokenProgramId = base58.decode('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+    const fromATA = base58.decode(request.fromTokenAccount);
+    const toATA = base58.decode(request.toTokenAccount);
+    const mint = base58.decode(request.tokenAddress);
+
+    const [whole, fraction = ''] = request.amount.split('.');
+    const amount = BigInt(whole) * 1_000_000n + BigInt(fraction.padEnd(6, '0').slice(0, 6));
+
+    const instructionData = new Uint8Array(10);
+    const view = new DataView(instructionData.buffer);
+    view.setUint8(0, 12); // TransferChecked
+    view.setBigUint64(1, amount, true);
+    view.setUint8(9, 6); // decimals
+
+    const accountKeys = [publicKey, fromATA, mint, toATA, tokenProgramId];
+
+    message = new Uint8Array([
+      1, 0, 3,
+      ...encodeLength(accountKeys.length),
+      ...accountKeys.flatMap((k) => Array.from(k)),
+      ...recentBlockhash,
+      ...encodeLength(1),
+      4, // Token Program
+      ...encodeLength(5),
+      0, 1, 2, 3, 4,
+      ...encodeLength(instructionData.length),
+      ...instructionData
+    ]);
+  }
+
+  // Sign transaction
+  const signature = await nobleEd25519.sign(message, privateKey);
+  const transactionPacket = new Uint8Array([1, ...signature, ...message]);
+
+  // Compute txHash (SHA256 of message)
+  const txHash = base58.encode(sha256(message));
+
+  return {
+    signedTx: base58.encode(transactionPacket),
+    txHash
+  };
+  } finally {
+    wipeBytes(privateKey);
+  }
+}
+
+const SOLANA_RPC = 'https://api.mainnet-beta.solana.com';
+
+async function solRpc(method: string, params: any[]) {
+  const res = await fetch(SOLANA_RPC, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+  });
+  const json = await res.json();
+  if (json.error) throw new Error(`Solana RPC error: ${json.error.message}`);
+  return json.result;
+}
+
+export async function getLatestBlockhash(): Promise<string> {
+  const result = await solRpc('getLatestBlockhash', []);
+  return result.value.blockhash;
+}
+
+export async function getUserTokenAccount(walletAddress: string, mint: string): Promise<string | null> {
+  const result = await solRpc('getTokenAccountsByOwner', [
+    walletAddress,
+    { mint },
+    { encoding: 'jsonParsed' },
+  ]);
+  return result?.value?.[0]?.pubkey ?? null;
+}
+
+export async function broadcastSolanaTransaction(signedTx: string): Promise<string> {
+  return solRpc('sendTransaction', [signedTx, { encoding: 'base58' }]);
+}
