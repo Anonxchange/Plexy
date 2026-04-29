@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "wouter";
 import { ArrowDown } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const BRANDS = [
   { name: "Netflix",      logo: "/logos/brands/netflix.svg"      },
@@ -55,6 +56,7 @@ function NotifCard({ logo, logoBg, title, subtitle, amount, amountColor }: Notif
 }
 
 export function HeroSection() {
+  const { t } = useTranslation();
   return (
     <section
       className="relative overflow-hidden bg-background flex flex-col lg:flex-row lg:items-stretch min-h-screen lg:min-h-0"
@@ -111,10 +113,10 @@ export function HeroSection() {
                      border border-foreground/15 bg-background"
         >
           <span className="text-[11px] font-medium text-foreground px-2.5">
-            Trusted by millions of customers
+            {t('hero.trust_badge')}
           </span>
           <span className="rounded-full bg-foreground/[0.07] px-2.5 py-0.5 text-[11px] font-medium text-foreground/60 whitespace-nowrap">
-            Since 2022
+            {t('hero.trust_since')}
           </span>
         </div>
 
@@ -123,8 +125,8 @@ export function HeroSection() {
           className="font-black uppercase tracking-tight leading-[0.9] text-foreground mb-5 lg:mb-3 max-w-3xl lg:max-w-xl"
           style={{ fontSize: "clamp(2.6rem, 7.5vw, 5.8rem)" }}
         >
-          <span className="block">Your crypto,</span>
-          <span className="block">minus the</span>
+          <span className="block">{t('hero.headline_line1')}</span>
+          <span className="block">{t('hero.headline_line2')}</span>
           <span
             className="block"
             style={{
@@ -134,13 +136,13 @@ export function HeroSection() {
               backgroundClip: "text",
             }}
           >
-            middleman.
+            {t('hero.headline_line3')}
           </span>
         </h1>
 
         {/* Subtitle */}
         <p className="text-muted-foreground text-base lg:text-lg leading-relaxed max-w-md mb-9 lg:mb-5 font-medium">
-          Buy, swap and spend crypto at top merchants worldwide — you always hold your keys.
+          {t('hero.subtitle')}
         </p>
 
         {/* CTA */}
@@ -149,7 +151,7 @@ export function HeroSection() {
             className="inline-flex items-center gap-2.5 font-black uppercase tracking-wide text-black rounded-full px-9 py-4 text-sm transition-all hover:scale-[1.03] active:scale-[0.97] mb-10 lg:mb-6"
             style={{ background: "#B4F22E", boxShadow: "0 4px 36px rgba(180,242,46,0.42)" }}
           >
-            Get started
+            {t('hero.cta')}
             <ArrowDown className="w-4 h-4" strokeWidth={3} />
           </button>
         </Link>
@@ -157,7 +159,7 @@ export function HeroSection() {
         {/* Brand logos strip */}
         <div className="flex flex-col items-center gap-3 lg:items-start">
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Spend at 500+ merchants
+            {t('hero.brands_label')}
           </p>
           <div className="grid grid-cols-7 gap-3">
             {BRANDS.map((b) => (
@@ -214,8 +216,8 @@ export function HeroSection() {
           <NotifCard
             logo="/logos/brands/bitcoin.svg"
             logoBg="#F7931A"
-            title="Crypto received"
-            subtitle="2 min ago"
+            title={t('hero.notif_crypto_received')}
+            subtitle={t('hero.notif_2min')}
             amount="+0.042 BTC"
             amountColor="#18A349"
           />
@@ -225,8 +227,8 @@ export function HeroSection() {
           <NotifCard
             logo="/logos/brands/netflix.svg"
             logoBg="#E50914"
-            title="Payment successful"
-            subtitle="5 min ago"
+            title={t('hero.notif_payment_success')}
+            subtitle={t('hero.notif_5min')}
             amount="-$15.99"
             amountColor="#F97316"
           />
@@ -275,8 +277,8 @@ export function HeroSection() {
           <NotifCard
             logo="/logos/brands/bitcoin.svg"
             logoBg="#F7931A"
-            title="Crypto received"
-            subtitle="2 min ago"
+            title={t('hero.notif_crypto_received')}
+            subtitle={t('hero.notif_2min')}
             amount="+0.042 BTC"
             amountColor="#18A349"
           />
@@ -286,8 +288,8 @@ export function HeroSection() {
           <NotifCard
             logo="/logos/brands/netflix.svg"
             logoBg="#E50914"
-            title="Payment successful"
-            subtitle="5 min ago"
+            title={t('hero.notif_payment_success')}
+            subtitle={t('hero.notif_5min')}
             amount="-$15.99"
             amountColor="#F97316"
           />
