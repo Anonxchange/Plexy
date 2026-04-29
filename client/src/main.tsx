@@ -1,4 +1,5 @@
 import "@/lib/i18n";
+import { startAutoTranslate } from "@/lib/auto-translate";
 import { setNonce } from "get-nonce";
 import { createRoot } from "react-dom/client";
 import { createHead, UnheadProvider } from "@unhead/react/client";
@@ -24,4 +25,13 @@ if (rootElement) {
       <App />
     </UnheadProvider>
   );
+  // Kick off the DOM-level translator after the first paint so it starts
+  // walking the rendered tree as soon as React has committed.
+  if (typeof window !== "undefined") {
+    if (document.readyState === "complete" || document.readyState === "interactive") {
+      queueMicrotask(startAutoTranslate);
+    } else {
+      window.addEventListener("DOMContentLoaded", () => startAutoTranslate(), { once: true });
+    }
+  }
 }
