@@ -544,5 +544,25 @@
     "subscribe": "Subscribe",
     "rights_reserved": "All rights reserved.",
     "non_custodial": "Non-Custodial & Decentralized"
+  },
+  "hero": {
+    "trust_badge": "Trusted by 50M+ users",
+    "trust_since": "Since 2015",
+    "headline_line1": "Your money",
+    "headline_line2": "minus the",
+    "headline_line3": "middleman",
+    "subtitle": "Your all in one decentralized marketplace to swap, shop, stake, top up mobile, and pay bills. Non custodial, always.",
+    "cta": "Start trading",
+    "brands_label": "Pay with what you already use",
+    "notif_crypto_received": "Crypto received",
+    "notif_2min": "2 min ago",
+    "notif_payment_success": "Payment successful",
+    "notif_5min": "5 min ago"
+  },
+  "cookies": {
+    "message": "We use cookies to enhance your experience and analyze site traffic.",
+    "privacy_link": "Privacy Policy",
+    "accept": "Accept",
+    "close_aria": "Close cookie banner"
   }
 }
