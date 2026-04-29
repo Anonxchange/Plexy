@@ -312,6 +312,9 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar }: { onOpenSid
                 { code: "hi", label: "हिन्दी",             flag: "🇮🇳" },
                 { code: "id", label: "Bahasa Indonesia",   flag: "🇮🇩" },
                 { code: "vi", label: "Tiếng Việt",         flag: "🇻🇳" },
+                { code: "ja", label: "日本語",              flag: "🇯🇵" },
+                { code: "yo", label: "Yorùbá",             flag: "🇳🇬" },
+                { code: "ha", label: "Hausa",              flag: "🇳🇬" },
               ].map((lang) => (
                 <DropdownMenuItem
                   key={lang.code}
