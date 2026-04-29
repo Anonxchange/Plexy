@@ -544,5 +544,25 @@
     "subscribe": "購読する",
     "rights_reserved": "全著作権所有。",
     "non_custodial": "ノンカストディアル & 分散型"
+  },
+  "hero": {
+    "trust_badge": "5,000万人以上のユーザーに信頼されています",
+    "trust_since": "2015年から",
+    "headline_line1": "暗号資産を",
+    "headline_line2": "あなたの方法で",
+    "headline_line3": "売買",
+    "subtitle": "140か国、500以上の支払い方法でピアツーピア取引。あなたの鍵、あなたの資産——常に。",
+    "cta": "取引を始める",
+    "brands_label": "普段使っている方法で支払う",
+    "notif_crypto_received": "暗号資産を受け取りました",
+    "notif_2min": "2分前",
+    "notif_payment_success": "支払いが完了しました",
+    "notif_5min": "5分前"
+  },
+  "cookies": {
+    "message": "体験向上とサイト分析のためCookieを使用しています。",
+    "privacy_link": "プライバシーポリシー",
+    "accept": "同意する",
+    "close_aria": "Cookieバナーを閉じる"
   }
 }
