@@ -122,8 +122,8 @@ export function HeroSection() {
 
         {/* Headline */}
         <h1
-          className="font-black uppercase tracking-tight leading-[0.9] text-foreground mb-5 lg:mb-3 max-w-3xl lg:max-w-xl"
-          style={{ fontSize: "clamp(2.6rem, 7.5vw, 5.8rem)" }}
+          className="font-black uppercase tracking-tight leading-[0.9] text-foreground mb-5 lg:mb-3 max-w-3xl lg:max-w-xl break-words"
+          style={{ fontSize: "clamp(2.4rem, 6.4vw, 5rem)" }}
         >
           <span className="block">{t('hero.headline_line1')}</span>
           <span className="block">{t('hero.headline_line2')}</span>
