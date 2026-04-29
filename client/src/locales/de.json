@@ -7,13 +7,15 @@
     "market": "Markt",
     "shop": "Shop",
     "earn": "Verdienen",
-    "support": "Support",
+    "support": "Hilfe",
     "dashboard": "Dashboard",
     "home": "Startseite",
     "prices": "Preise",
     "blog": "Blog",
     "careers": "Karriere",
-    "about": "Über uns"
+    "about": "Über uns",
+    "buy": "Kaufen",
+    "swap": "Tauschen"
   },
   "trade": {
     "buy_crypto": "Krypto kaufen",
@@ -552,12 +554,13 @@
     "headline_line2": "ohne",
     "headline_line3": "Vermittler",
     "subtitle": "Dein All in One dezentraler Marktplatz zum Tauschen, Einkaufen, Staken, Handy aufladen und Rechnungen bezahlen. Non custodial, immer.",
-    "cta": "Jetzt handeln",
+    "cta": "Loslegen",
     "brands_label": "Bezahle mit dem, was du bereits nutzt",
     "notif_crypto_received": "Krypto erhalten",
     "notif_2min": "Vor 2 Min.",
     "notif_payment_success": "Zahlung erfolgreich",
-    "notif_5min": "Vor 5 Min."
+    "notif_5min": "Vor 5 Min.",
+    "hero_cta": "Loslegen"
   },
   "cookies": {
     "message": "Wir verwenden Cookies, um dein Erlebnis zu verbessern und den Verkehr zu analysieren.",
