@@ -2,69 +2,72 @@ import { SiX, SiTelegram, SiFacebook, SiInstagram, SiYoutube, SiApple, SiGooglep
 import { FaLinkedin as SiLinkedin } from "react-icons/fa";
 import { PexlyIcon } from "@/components/pexly-icon";
 import { Link } from "wouter";
-
-const footerColumns = [
-  {
-    heading: "Buy Crypto",
-    links: [
-      { label: "Buy Bitcoin", href: "/buy-crypto?crypto=BTC" },
-      { label: "Buy Ethereum", href: "/buy-crypto?crypto=ETH" },
-      { label: "Buy Tether", href: "/buy-crypto?crypto=USDT" },
-      { label: "Buy USDC", href: "/buy-crypto?crypto=USDC" },
-    ],
-  },
-  {
-    heading: "Sell Crypto",
-    links: [
-      { label: "Sell Bitcoin", href: "/buy-crypto?mode=sell&crypto=BTC" },
-      { label: "Sell Ethereum", href: "/buy-crypto?mode=sell&crypto=ETH" },
-      { label: "Sell Tether", href: "/buy-crypto?mode=sell&crypto=USDT" },
-      { label: "Sell USDC", href: "/buy-crypto?mode=sell&crypto=USDC" },
-    ],
-  },
-  {
-    heading: "About Pexly",
-    links: [
-      { label: "About Us", href: "/about" },
-      { label: "Careers", href: "/careers" },
-      { label: "Blog", href: "/blog" },
-      { label: "Reviews", href: "/reviews" },
-    ],
-  },
-  {
-    heading: "Useful Links",
-    links: [
-      { label: "Wallet", href: "/wallet" },
-      { label: "Support", href: "https://help.pexly.app", external: true },
-      { label: "Bitcoin Calculator", href: "/bitcoin-calculator" },
-      { label: "Market Prices", href: "/markets" },
-    ],
-  },
-  {
-    heading: "Legal",
-    links: [
-      { label: "Terms & Conditions", href: "/terms" },
-      { label: "Refund Policy", href: "/refund-policy" },
-      { label: "Risk Disclosure", href: "/risk-disclosure" },
-      { label: "AML Policy", href: "/aml-policy" },
-      { label: "Privacy Notice", href: "/privacy" },
-      { label: "Cookie Policy", href: "/cookie-policy" },
-      { label: "Restricted Countries", href: "/restricted-countries" },
-      { label: "Rewards Program T&C", href: "/rewards-program" },
-    ],
-  },
-];
-
-const socials = [
-  { icon: SiX, label: "X (Twitter)", href: "#" },
-  { icon: SiLinkedin, label: "LinkedIn", href: "#" },
-  { icon: SiTelegram, label: "Telegram", href: "#" },
-  { icon: SiInstagram, label: "Instagram", href: "#" },
-  { icon: SiFacebook, label: "Facebook", href: "#" },
-  { icon: SiYoutube, label: "YouTube", href: "#" },
-];
+import { useTranslation } from "react-i18next";
 
 export function AppFooter() {
+  const { t } = useTranslation();
+
+  const footerColumns = [
+    {
+      heading: t('footer.col_buy'),
+      links: [
+        { label: t('footer.buy_btc'),  href: "/buy-crypto?crypto=BTC" },
+        { label: t('footer.buy_eth'),  href: "/buy-crypto?crypto=ETH" },
+        { label: t('footer.buy_usdt'), href: "/buy-crypto?crypto=USDT" },
+        { label: t('footer.buy_usdc'), href: "/buy-crypto?crypto=USDC" },
+      ],
+    },
+    {
+      heading: t('footer.col_sell'),
+      links: [
+        { label: t('footer.sell_btc'),  href: "/buy-crypto?mode=sell&crypto=BTC" },
+        { label: t('footer.sell_eth'),  href: "/buy-crypto?mode=sell&crypto=ETH" },
+        { label: t('footer.sell_usdt'), href: "/buy-crypto?mode=sell&crypto=USDT" },
+        { label: t('footer.sell_usdc'), href: "/buy-crypto?mode=sell&crypto=USDC" },
+      ],
+    },
+    {
+      heading: t('footer.col_about'),
+      links: [
+        { label: t('footer.about_us'), href: "/about" },
+        { label: t('footer.careers'),  href: "/careers" },
+        { label: t('footer.blog'),     href: "/blog" },
+        { label: t('footer.reviews'),  href: "/reviews" },
+      ],
+    },
+    {
+      heading: t('footer.col_useful'),
+      links: [
+        { label: t('footer.wallet'),        href: "/wallet" },
+        { label: t('footer.support'),       href: "https://help.pexly.app", external: true as const },
+        { label: t('footer.btc_calc'),      href: "/bitcoin-calculator" },
+        { label: t('footer.market_prices'), href: "/markets" },
+      ],
+    },
+    {
+      heading: t('footer.col_legal'),
+      links: [
+        { label: t('footer.terms'),         href: "/terms" },
+        { label: t('footer.refund'),        href: "/refund-policy" },
+        { label: t('footer.risk'),          href: "/risk-disclosure" },
+        { label: t('footer.aml'),           href: "/aml-policy" },
+        { label: t('footer.privacy'),       href: "/privacy" },
+        { label: t('footer.cookie_policy'), href: "/cookie-policy" },
+        { label: t('footer.restricted'),    href: "/restricted-countries" },
+        { label: t('footer.rewards_tc'),    href: "/rewards-program" },
+      ],
+    },
+  ];
+
+  const socials = [
+    { icon: SiX,         label: "X (Twitter)", href: "#" },
+    { icon: SiLinkedin,  label: "LinkedIn",    href: "#" },
+    { icon: SiTelegram,  label: "Telegram",    href: "#" },
+    { icon: SiInstagram, label: "Instagram",   href: "#" },
+    { icon: SiFacebook,  label: "Facebook",    href: "#" },
+    { icon: SiYoutube,   label: "YouTube",     href: "#" },
+  ];
+
   return (
     <footer className="relative overflow-hidden">
       {/* Frosted glass backdrop */}
@@ -95,7 +98,7 @@ export function AppFooter() {
           <div className="flex items-center gap-2">
             <a
               href="#"
-              aria-label="iOS – Download on the App Store"
+              aria-label={t('footer.download_ios')}
               className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg border border-white/10 text-sm text-white/60 hover:text-white hover:border-white/20 transition-all duration-200"
             >
               <SiApple className="h-[15px] w-[15px]" aria-hidden="true" />
@@ -103,7 +106,7 @@ export function AppFooter() {
             </a>
             <a
               href="#"
-              aria-label="Android – Get it on Google Play"
+              aria-label={t('footer.download_android')}
               className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg border border-white/10 text-sm text-white/60 hover:text-white hover:border-white/20 transition-all duration-200"
             >
               <SiGoogleplay className="h-[14px] w-[14px]" aria-hidden="true" />
@@ -122,7 +125,7 @@ export function AppFooter() {
               <ul className="space-y-4">
                 {col.links.map((link) => (
                   <li key={link.label}>
-                    {link.external ? (
+                    {('external' in link && link.external) ? (
                       <a
                         href={link.href}
                         target="_blank"
@@ -155,7 +158,7 @@ export function AppFooter() {
             <a
               key={label}
               href={href}
-              aria-label={`Follow Pexly on ${label}`}
+              aria-label={t('footer.follow_on', { network: label })}
               className="w-9 h-9 rounded-full border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:border-white/25 transition-all duration-200"
             >
               <Icon className="h-[15px] w-[15px]" />
@@ -165,16 +168,16 @@ export function AppFooter() {
 
         {/* Legal disclaimer */}
         <p className="text-[11px] text-white/20 leading-relaxed text-center max-w-3xl mx-auto mb-8">
-          "PEXLY" is a registered trademark of Pexly, Inc. Pexly Inc. has no relationship to MoneyGram, Western Union, Payoneer, WorldRemit, PayPal, Skrill, Neteller, Venmo, Apple, or any other payment method. Their respective wordmarks and trademarks belong to them alone.
+          {t('footer.disclaimer')}
         </p>
 
         {/* Bottom bar — very last line */}
         <div className="h-px w-full bg-white/[0.04] mb-6" />
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white/25">
-          <span>© {new Date().getFullYear()} Pexly, Inc. All rights reserved.</span>
+          <span>{t('footer.copyright', { year: new Date().getFullYear() })}</span>
           <div className="flex items-center gap-1.5">
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#B4F22E] shadow-[0_0_5px_rgba(180,242,46,0.9)]" />
-            <span>All systems operational</span>
+            <span>{t('footer.all_operational')}</span>
           </div>
         </div>
       </div>

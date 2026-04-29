@@ -1,8 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Smartphone } from "lucide-react";
 import { SiApple, SiGoogleplay } from "react-icons/si";
+import { useTranslation } from "react-i18next";
 
 export function CTASection() {
+  const { t } = useTranslation();
   return (
     <section className="relative z-10 -mt-16 -mb-16 rounded-3xl py-12 lg:py-20 bg-primary text-primary-foreground overflow-hidden">
 
@@ -30,10 +32,10 @@ export function CTASection() {
           <div className="text-center lg:text-left space-y-6">
             <div className="space-y-4">
               <h2 className="text-3xl lg:text-4xl font-bold">
-                Start trading on Pexly today
+                {t('cta_section.title')}
               </h2>
               <p className="text-lg text-primary-foreground/90 max-w-2xl mx-auto lg:mx-0">
-                Trade Bitcoin, Ethereum, Tether and more with over 14 million global users
+                {t('cta_section.subtitle')}
               </p>
             </div>
 
@@ -45,7 +47,7 @@ export function CTASection() {
                 data-testid="button-app-store"
               >
                 <SiApple className="h-5 w-5" />
-                Download on App Store
+                {t('cta_section.app_store')}
               </Button>
               <Button
                 size="lg"
@@ -54,7 +56,7 @@ export function CTASection() {
                 data-testid="button-play-store"
               >
                 <SiGoogleplay className="h-5 w-5" />
-                Get it on Google Play
+                {t('cta_section.play_store')}
               </Button>
             </div>
 
@@ -66,7 +68,7 @@ export function CTASection() {
                 data-testid="button-sign-up-cta"
               >
                 <Smartphone className="h-5 w-5 mr-2" />
-                Sign up now
+                {t('cta_section.sign_up')}
               </Button>
             </div>
           </div>

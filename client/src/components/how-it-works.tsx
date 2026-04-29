@@ -1,36 +1,26 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
-const steps = [
-  {
-    iconSrc: "/svgs/step1.svg",
-    title: "Create Your Account",
-    description: "Sign up in seconds and get instant access to your non-custodial wallet and DeFi services.",
-  },
-  {
-    iconSrc: "/svgs/step2.svg",
-    title: "Acquire Crypto",
-    description: "Buy or sell crypto through trusted third-party providers fast, secure, and non-custodial.",
-  },
-  {
-    iconSrc: "/svgs/step3.svg",
-    title: "Use Your Crypto",
-    description: "Send, receive, swap, stake, or trade, all powered by decentralized protocols.",
-  },
-];
+import { useTranslation } from "react-i18next";
 
 export function HowItWorks() {
+  const { t } = useTranslation();
+  const steps = [
+    { iconSrc: "/svgs/step1.svg", title: t('how_it_works.step1_title'), description: t('how_it_works.step1_desc') },
+    { iconSrc: "/svgs/step2.svg", title: t('how_it_works.step2_title'), description: t('how_it_works.step2_desc') },
+    { iconSrc: "/svgs/step3.svg", title: t('how_it_works.step3_title'), description: t('how_it_works.step3_desc') },
+  ];
+
   return (
     <section className="relative pt-8 lg:pt-10 pb-0 bg-background" id="how-it-works">
       <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" style={{ willChange: 'transform' }}></div>
       <div className="max-w-6xl mx-auto px-4 lg:px-6 relative">
         <div className="text-center space-y-6 mb-12">
-          <Badge className="text-sm px-4 py-2">Simple & Secure</Badge>
+          <Badge className="text-sm px-4 py-2">{t('how_it_works.badge')}</Badge>
           <h2 className="text-4xl lg:text-5xl font-bold text-foreground">
-            How It Works
+            {t('how_it_works.title')}
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-            Start trading cryptocurrency in three simple steps
+            {t('how_it_works.subtitle')}
           </p>
         </div>
 
@@ -66,4 +56,4 @@ export function HowItWorks() {
       </div>
     </section>
   );
-} 
+}

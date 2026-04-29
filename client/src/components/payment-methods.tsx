@@ -2,6 +2,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 
 const PaymentIcon = ({ icon, color }: { icon: string; color: string }) => {
   const icons: Record<string, JSX.Element> = {
@@ -78,29 +79,24 @@ const PaymentIcon = ({ icon, color }: { icon: string; color: string }) => {
   return icons[icon] || icons.wallet;
 };
 
-const paymentCategories = [
-  { icon: "shop", color: "#FF6B6B", name: "Shop", count: "200+", badge: "NEW", description: "Find unique products and services from creators", route: "/shop" },
-  { icon: "giftcard", color: "#FFA500", name: "Gift card store", count: "120+", badge: "HOT", description: "Use crypto to buy instant gift cards for global brands", route: "/gift-cards" },
-  { icon: "swap", color: "#4FACFE", name: "Swap", count: "100+", badge: "BEST RATE", description: "Exchange your crypto instantly with fast, low-fee swaps", route: "/swap" },
-  { icon: "wallet", color: "#A855F7", name: "Wallet", count: "90+", description: "Send and receive crypto safely in your secure Pexly wallet", route: "/wallet" },
-  { icon: "card", color: "#3B82F6", name: "Visa card", count: "80+", description: "Spend your crypto anywhere with a virtual card", route: "/visa-card" },
-  { icon: "bitcoin", color: "#F59E0B", name: "Buy crypto", count: "150+", description: "Receive your stablecoins directly in your Pexly wallet", route: "/wallet/buy-crypto" },
-  { icon: "mobile", color: "#10B981", name: "Mobile top-up", count: "60+", description: "Recharge any mobile number globally using your crypto", route: "/wallet/mobile-topup" },
-  { icon: "giftcard", color: "#06B6D4", name: "Prediction", count: "85+", description: "Bet instantly with a simple, secure Pexly link", route: "/prediction" },
-  { icon: "bank", color: "#8B5CF6", name: "Bank Transfer", count: "200+", description: "ACH, SEPA, Wire Transfer, SWIFT transfers", route: "/p2p" },
-  { icon: "card", color: "#EC4899", name: "Credit/Debit Cards", count: "80+", description: "Visa, Mastercard, Amex, Discover", route: "/p2p" },
-  { icon: "globe", color: "#14B8A6", name: "Explorer", count: "150+", description: "A web tool that lets you view and verify transactions", route: "/explorer" },
-  { icon: "receipt", color: "#F97316", name: "Utility", count: "100+", description: "Pay utility bills anywhere in the world", route: "/utility" },
-];
-
-const popularMethods = [
-  "PayPal", "Venmo", "Cash App", "Zelle", "Apple Pay", "Google Pay", "Bank Transfer", "ACH", "SEPA",
-  "M-Pesa", "MTN Mobile Money", "GCash", "Paytm", "WeChat Pay", "Alipay", "Amazon Gift Card", 
-  "Visa", "Mastercard", "Western Union", "MoneyGram", "Wise", "Revolut"
-];
-
 export function PaymentMethods() {
   const [, setLocation] = useLocation();
+  const { t } = useTranslation();
+
+  const paymentCategories = [
+    { icon: "shop",     color: "#FF6B6B", name: t('products.shop_name'),       count: "200+", badge: t('products.badge_new'),  description: t('products.shop_desc'),       route: "/shop" },
+    { icon: "giftcard", color: "#FFA500", name: t('products.giftcard_name'),   count: "120+", badge: t('products.badge_hot'),  description: t('products.giftcard_desc'),   route: "/gift-cards" },
+    { icon: "swap",     color: "#4FACFE", name: t('products.swap_name'),       count: "100+", badge: t('products.badge_best'), description: t('products.swap_desc'),       route: "/swap" },
+    { icon: "wallet",   color: "#A855F7", name: t('products.wallet_name'),     count: "90+",  description: t('products.wallet_desc'),     route: "/wallet" },
+    { icon: "card",     color: "#3B82F6", name: t('products.card_name'),       count: "80+",  description: t('products.card_desc'),       route: "/visa-card" },
+    { icon: "bitcoin",  color: "#F59E0B", name: t('products.buy_name'),        count: "150+", description: t('products.buy_desc'),        route: "/wallet/buy-crypto" },
+    { icon: "mobile",   color: "#10B981", name: t('products.topup_name'),      count: "60+",  description: t('products.topup_desc'),      route: "/wallet/mobile-topup" },
+    { icon: "giftcard", color: "#06B6D4", name: t('products.prediction_name'), count: "85+",  description: t('products.prediction_desc'), route: "/prediction" },
+    { icon: "bank",     color: "#8B5CF6", name: t('products.bank_name'),       count: "200+", description: t('products.bank_desc'),       route: "/p2p" },
+    { icon: "card",     color: "#EC4899", name: t('products.cards_name'),      count: "80+",  description: t('products.cards_desc'),      route: "/p2p" },
+    { icon: "globe",    color: "#14B8A6", name: t('products.explorer_name'),   count: "150+", description: t('products.explorer_desc'),   route: "/explorer" },
+    { icon: "receipt",  color: "#F97316", name: t('products.utility_name'),    count: "100+", description: t('products.utility_desc'),    route: "/utility" },
+  ];
 
   const handleCardClick = (route: string) => {
     setLocation(route);
@@ -111,10 +107,10 @@ export function PaymentMethods() {
       <div className="max-w-7xl mx-auto px-4 lg:px-6">
         <div className="text-center space-y-4 mb-12">
           <h2 className="text-3xl lg:text-5xl font-bold text-gray-900 dark:text-white">
-            Our products
+            {t('products.title')}
           </h2>
           <p className="text-lg lg:text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
-            Discover our full range of tools designed to make crypto easy and accessible
+            {t('products.subtitle')}
           </p>
         </div>
 

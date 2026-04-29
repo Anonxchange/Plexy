@@ -1,48 +1,10 @@
-const testimonials = [
-  {
-    handle: "@torres_k",
-    name: "Karim Torres",
-    content:
-      "Traveling with stablecoins and I was able to pay for @limebike in Doha with my @Pexly card",
-    bg: "#C8F135",
-    textColor: "#000000",
-    rotate: "-6deg",
-    avatarBg: "#000000",
-    avatarText: "#C8F135",
-  },
-  {
-    handle: "@amara.fx",
-    name: "Amara Diallo",
-    content:
-      "Everyday, I find one new thing to love about @Pexly. Great UI. Great UX. On-ramp and off-ramp is seamless.",
-    bg: "#7B5CF0",
-    textColor: "#ffffff",
-    rotate: "2deg",
-    avatarBg: "#ffffff",
-    avatarText: "#7B5CF0",
-  },
-  {
-    handle: "@lucaswei",
-    name: "Lucas Wei",
-    content:
-      "Making crypto a more economic choice for more people in more countries. So excited to play a small role in enabling Pexly.",
-    bg: "#E8E8E8",
-    textColor: "#111111",
-    rotate: "-2deg",
-    avatarBg: "#cccccc",
-    avatarText: "#111111",
-  },
-  {
-    handle: "@sofia.mkv",
-    name: "Sofia Markov",
-    content:
-      "I made an exchange from base eth to my local bank account within 30secs on @Pexly!!",
-    bg: "#F5A623",
-    textColor: "#000000",
-    rotate: "5deg",
-    avatarBg: "#000000",
-    avatarText: "#F5A623",
-  },
+import { useTranslation } from "react-i18next";
+
+const testimonialMeta = [
+  { handle: "@torres_k",  name: "Karim Torres",  bg: "#C8F135", textColor: "#000000", rotate: "-6deg", avatarBg: "#000000", avatarText: "#C8F135", contentKey: "testimonials.t1_content" },
+  { handle: "@amara.fx",  name: "Amara Diallo",  bg: "#7B5CF0", textColor: "#ffffff", rotate: "2deg",  avatarBg: "#ffffff", avatarText: "#7B5CF0", contentKey: "testimonials.t2_content" },
+  { handle: "@lucaswei",  name: "Lucas Wei",     bg: "#E8E8E8", textColor: "#111111", rotate: "-2deg", avatarBg: "#cccccc", avatarText: "#111111", contentKey: "testimonials.t3_content" },
+  { handle: "@sofia.mkv", name: "Sofia Markov",  bg: "#F5A623", textColor: "#000000", rotate: "5deg",  avatarBg: "#000000", avatarText: "#F5A623", contentKey: "testimonials.t4_content" },
 ];
 
 function TestimonialCard({
@@ -55,7 +17,17 @@ function TestimonialCard({
   avatarBg,
   avatarText,
   index,
-}: (typeof testimonials)[0] & { index: number }) {
+}: {
+  handle: string;
+  name: string;
+  content: string;
+  bg: string;
+  textColor: string;
+  rotate: string;
+  avatarBg: string;
+  avatarText: string;
+  index: number;
+}) {
   return (
     <div
       className={`relative flex-shrink-0 w-72 md:w-80 rounded-3xl p-8 flex flex-col justify-between gap-8 shadow-xl cursor-pointer
@@ -96,20 +68,32 @@ function TestimonialCard({
 }
 
 export function Testimonials() {
+  const { t } = useTranslation();
   return (
     <section className="py-12 bg-background overflow-hidden">
       <div className="max-w-3xl mx-auto px-4 text-center mb-10">
         <div className="inline-flex items-center border border-foreground/20 rounded-full px-4 py-1.5 text-xs font-semibold tracking-widest uppercase mb-6 text-foreground">
-          Testimonials
+          {t('testimonials.section_label')}
         </div>
         <h2 className="text-5xl md:text-7xl font-normal font-serif text-foreground leading-tight">
-          Hear what the community<br className="hidden md:block" /> members are saying
+          {t('testimonials.title_l1')}<br className="hidden md:block" /> {t('testimonials.title_l2')}
         </h2>
       </div>
 
       <div className="flex flex-col md:flex-row items-center justify-center px-8 md:px-16 gap-6 md:gap-0">
-        {testimonials.map((t, i) => (
-          <TestimonialCard key={i} {...t} index={i} />
+        {testimonialMeta.map((m, i) => (
+          <TestimonialCard
+            key={i}
+            handle={m.handle}
+            name={m.name}
+            content={t(m.contentKey)}
+            bg={m.bg}
+            textColor={m.textColor}
+            rotate={m.rotate}
+            avatarBg={m.avatarBg}
+            avatarText={m.avatarText}
+            index={i}
+          />
         ))}
       </div>
     </section>
