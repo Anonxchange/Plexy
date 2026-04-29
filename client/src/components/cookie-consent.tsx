@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export function CookieConsent() {
+  const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -33,12 +35,12 @@ export function CookieConsent() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex-1">
             <p className="text-sm text-foreground">
-              This website uses cookies to ensure you get the best experience on our website.{" "}
+              {t('cookies.message')}{" "}
               <a 
                 href="/privacy" 
                 className="underline font-medium text-foreground hover:opacity-70"
               >
-                Read our Privacy Policy
+                {t('cookies.privacy_link')}
               </a>
             </p>
           </div>
@@ -48,13 +50,13 @@ export function CookieConsent() {
               onClick={handleAccept}
               className="bg-primary hover:bg-primary/90 text-primary-foreground px-8"
             >
-              I accept
+              {t('cookies.accept')}
             </Button>
             <Button
               variant="ghost"
               size="icon"
               onClick={handleClose}
-              aria-label="Close cookie consent"
+              aria-label={t('cookies.close_aria')}
               className="text-muted-foreground hover:text-foreground"
             >
               <X className="h-4 w-4" />
