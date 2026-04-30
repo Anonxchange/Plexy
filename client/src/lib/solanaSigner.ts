@@ -6,29 +6,35 @@ import { sha512 } from '@noble/hashes/sha512';
 import { sha256 } from '@noble/hashes/sha256';
 import { wipeBytes } from './secureMemory';
 
-// noble-ed25519 v3+ requires hashes to be set on the hashes object
-// for synchronous methods to work.
-// Using Object.assign to ensure compatibility and bypass type checks
-// We set it on both hashes and utils to be safe across different versions
-try {
-  if ((nobleEd25519 as any).hashes) {
-    try {
-      Object.assign((nobleEd25519 as any).hashes, { sha512: sha512 });
-    } catch {
-      // hashes object is frozen in some builds — safe to ignore
-    }
-  }
-  if ((nobleEd25519 as any).utils) {
-    const utils = (nobleEd25519 as any).utils;
-    try {
-      utils.sha512Sync = (...m: any[]) => sha512(utils.concatBytes(...m));
-    } catch {
-      // utils object is frozen in @noble/ed25519 v3+ — safe to ignore,
-      // since v3 wires sha512 via the hashes object above
-    }
-  }
-} catch {
-  // Defensive: never let signer setup throw at module load time
+// noble-ed25519 needs a SHA-512 implementation supplied for its synchronous
+// API. Two release lines are in the wild:
+//   * v1/v2 — assign `utils.sha512Sync` (plain object, mutable)
+//   * v3+   — assign `hashes.sha512`     (`utils` object is frozen)
+// We do narrow, typed feature detection against both shapes so we never
+// reach for a broad `try/catch` and never silently swallow a real error:
+// if neither shape is present, the noble signer will throw a clear,
+// loud error the first time a signature is requested.
+interface NobleEd25519Internals {
+  hashes?: { sha512?: typeof sha512 };
+  utils?: {
+    sha512Sync?: (...m: Uint8Array[]) => Uint8Array;
+    concatBytes?: (...m: Uint8Array[]) => Uint8Array;
+  };
+}
+const noble = nobleEd25519 as typeof nobleEd25519 & NobleEd25519Internals;
+
+if (noble.hashes && !noble.hashes.sha512 && !Object.isFrozen(noble.hashes)) {
+  noble.hashes.sha512 = sha512;
+}
+
+if (
+  noble.utils &&
+  !noble.utils.sha512Sync &&
+  !Object.isFrozen(noble.utils) &&
+  typeof noble.utils.concatBytes === "function"
+) {
+  const concatBytes = noble.utils.concatBytes;
+  noble.utils.sha512Sync = (...m: Uint8Array[]) => sha512(concatBytes(...m));
 }
 
 export interface SolanaTransactionRequest {
