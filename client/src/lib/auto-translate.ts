@@ -20,9 +20,24 @@ const TRANSLATE_FN_URL = SUPABASE_URL
   ? `${SUPABASE_URL.replace(/\/+$/, "")}/functions/v1/translate`
   : "";
 
-const CACHE_PREFIX = "pexly-tx:v1:";
+/**
+ * Cache version. Bump whenever the sanitisation rules tighten so any
+ * previously-cached strings (which may have slipped through older, looser
+ * filters) get discarded the next time the page loads.
+ */
+const CACHE_PREFIX = "pexly-tx:v2:";
+const LEGACY_CACHE_PREFIXES = ["pexly-tx:v1:"];
 const BATCH_SIZE = 100;
-const DEBOUNCE_MS = 250;
+/** Hard cap on source text length we'll ever consider translating. */
+const MAX_SOURCE_LENGTH = 500;
+/** Coalesce mutation bursts into a single processing run. */
+const DEBOUNCE_MS = 500;
+/** PostgREST URL-length safe chunk size for `source_hash=in.(...)` lookups. */
+const DB_LOOKUP_CHUNK = 100;
+/** PostgREST endpoint for the cached translations table. */
+const TRANSLATIONS_TABLE_URL = SUPABASE_URL
+  ? `${SUPABASE_URL.replace(/\/+$/, "")}/rest/v1/translations`
+  : "";
 
 /** Tags whose text content must never be translated. */
 const SKIP_TAGS = new Set([
@@ -30,6 +45,19 @@ const SKIP_TAGS = new Set([
   "TEXTAREA", "INPUT", "SELECT", "OPTION",
   "SVG", "CANVAS", "MATH", "TEMPLATE",
 ]);
+
+/**
+ * Element-level opt-outs. Any of these on an element OR an ancestor
+ * causes the entire subtree to be skipped — never queued, never sent.
+ * Use them to mark UI areas that render PII (wallet addresses, balances,
+ * usernames, transaction hashes, KYC details, etc.).
+ */
+const SKIP_ATTRS = [
+  "data-no-translate",
+  "data-sensitive",
+  "data-private",
+  "data-pii",
+] as const;
 
 /** User-facing attributes worth translating. */
 const ATTR_TARGETS = ["placeholder", "title", "aria-label", "alt"] as const;
@@ -48,17 +76,67 @@ const VERBATIM = new Set<string>([
 /** Pure-symbol / numeric strings — nothing alphabetic to translate. */
 const NON_TRANSLATABLE = /^[\s\d.,;:!?$€£¥₹₽₩+\-*×÷=%/\\()<>[\]{}'"`~|·•…—–]+$/;
 
+/**
+ * Patterns that almost always indicate user data, not UI copy.
+ * Anything matching ANY of these is rejected before it can be hashed,
+ * cached, sent to PostgREST, or sent to the translate edge function.
+ */
+const SENSITIVE_PATTERNS: RegExp[] = [
+  // Email
+  /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i,
+  // URL (http, https, www-prefixed)
+  /(?:https?:\/\/|www\.)\S+/i,
+  // EVM addresses, transaction hashes, signatures (0x + hex)
+  /\b0x[a-fA-F0-9]{8,}\b/,
+  // Long bare hex run — block hashes, txn hashes, signatures
+  /\b[a-fA-F0-9]{16,}\b/,
+  // JWT
+  /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/,
+  // UUID
+  /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i,
+  // Long digit run — phone numbers, codes, account numbers, card numbers
+  /\d{6,}/,
+  // International phone format: + followed by 7+ digits with optional separators
+  /\+\d[\d\s().-]{6,}\d/,
+];
+
+/**
+ * Single-token strings (no whitespace) that LOOK like identifiers/keys —
+ * BTC base58 addresses, Solana addresses, API keys, refresh tokens, etc.
+ * UI button labels almost never lack whitespace beyond ~24 chars.
+ */
+function looksLikeIdentifier(s: string): boolean {
+  if (/\s/.test(s)) return false;
+  if (s.length < 24) return false;
+  // BTC legacy + bech32 + Solana base58 + generic alphanumeric tokens.
+  return /^[A-Za-z0-9]+$/.test(s) || /^[A-Za-z0-9_-]+$/.test(s);
+}
+
 /** Text contains at least one Unicode letter. */
 function hasLetters(s: string): boolean {
   return /\p{L}/u.test(s);
 }
 
+/**
+ * Final gate before a string is allowed to be hashed / stored / sent
+ * anywhere. Conservative by design — false negatives (skipping real UI
+ * copy) are recoverable; false positives (leaking PII) are not.
+ */
 function shouldTranslate(text: string): boolean {
   const trimmed = text.trim();
   if (trimmed.length < 2) return false;
+  if (trimmed.length > MAX_SOURCE_LENGTH) return false;
   if (NON_TRANSLATABLE.test(trimmed)) return false;
   if (!hasLetters(trimmed)) return false;
   if (VERBATIM.has(trimmed)) return false;
+  if (looksLikeIdentifier(trimmed)) return false;
+  for (const re of SENSITIVE_PATTERNS) {
+    if (re.test(trimmed)) return false;
+  }
+  // Heuristic: if more than half the characters are digits/symbols
+  // (very few letters), it's probably an amount/identifier mash, not copy.
+  const letterCount = (trimmed.match(/\p{L}/gu) ?? []).length;
+  if (letterCount * 2 < trimmed.length) return false;
   return true;
 }
 
@@ -67,7 +145,9 @@ function isSkippableElement(el: Element | null): boolean {
   while (cur) {
     if (SKIP_TAGS.has(cur.tagName)) return true;
     if (cur.getAttribute("translate") === "no") return true;
-    if (cur.hasAttribute("data-no-translate")) return true;
+    for (const attr of SKIP_ATTRS) {
+      if (cur.hasAttribute(attr)) return true;
+    }
     if ((cur as HTMLElement).isContentEditable) return true;
     cur = cur.parentElement;
   }
@@ -78,7 +158,31 @@ interface TranslationsCache {
   [sourceText: string]: string;
 }
 
+/**
+ * One-time housekeeping: drop any cache entries written by older versions
+ * of this module that may have been built with looser sanitisation rules.
+ */
+let legacyCleared = false;
+function clearLegacyCachesOnce() {
+  if (legacyCleared) return;
+  legacyCleared = true;
+  try {
+    const toRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      if (LEGACY_CACHE_PREFIXES.some((p) => key.startsWith(p))) {
+        toRemove.push(key);
+      }
+    }
+    for (const k of toRemove) localStorage.removeItem(k);
+  } catch {
+    // ignore — purely defensive
+  }
+}
+
 function loadCache(lang: string): TranslationsCache {
+  clearLegacyCachesOnce();
   try {
     const raw = localStorage.getItem(`${CACHE_PREFIX}${lang}`);
     return raw ? (JSON.parse(raw) as TranslationsCache) : {};
@@ -149,7 +253,98 @@ function rememberAttrTranslation(
   map.set(name, { source, translated });
 }
 
-/* ─── Batch fetch ─────────────────────────────────────────────────────────── */
+/* ─── Hashing + DB lookup ─────────────────────────────────────────────────── */
+
+/**
+ * SHA-256 hex digest of the trimmed source string.
+ * MUST match the `source_hash` algorithm used by the Supabase `translate`
+ * edge function when it inserts rows into `public.translations`.
+ */
+async function sha256Hex(s: string): Promise<string> {
+  const buf = new TextEncoder().encode(s);
+  const digest = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/**
+ * In-memory short-term cache of source-text → SHA-256 hex, so repeated
+ * translation passes for the same string don't re-hash it.
+ */
+const hashMemo = new Map<string, string>();
+
+async function hashAll(texts: string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const todo: string[] = [];
+  for (const t of texts) {
+    const cached = hashMemo.get(t);
+    if (cached) out.set(t, cached);
+    else todo.push(t);
+  }
+  if (todo.length > 0) {
+    const hashes = await Promise.all(todo.map(sha256Hex));
+    todo.forEach((t, i) => {
+      hashMemo.set(t, hashes[i]);
+      out.set(t, hashes[i]);
+    });
+  }
+  return out;
+}
+
+/**
+ * Cheap path: look up already-translated rows in the public.translations
+ * table via PostgREST. RLS allows anonymous SELECT. Saves an edge-function
+ * call (and the rate-limited LLM round-trip) for any string we've seen
+ * before from any user.
+ */
+async function dbLookup(
+  texts: string[],
+  lang: string,
+): Promise<Record<string, string>> {
+  if (!TRANSLATIONS_TABLE_URL || !SUPABASE_ANON_KEY) return {};
+  if (texts.length === 0) return {};
+
+  const hashes = await hashAll(texts);
+  const hashToText = new Map<string, string>();
+  for (const [text, hash] of hashes) hashToText.set(hash, text);
+
+  const allHashes = Array.from(hashToText.keys());
+  const result: Record<string, string> = {};
+
+  for (let i = 0; i < allHashes.length; i += DB_LOOKUP_CHUNK) {
+    const chunk = allHashes.slice(i, i + DB_LOOKUP_CHUNK);
+    const inList = chunk.map((h) => `"${h}"`).join(",");
+    const url =
+      `${TRANSLATIONS_TABLE_URL}` +
+      `?select=source_hash,translated_text` +
+      `&target_lang=eq.${encodeURIComponent(lang)}` +
+      `&source_hash=in.(${inList})`;
+    try {
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          apikey: SUPABASE_ANON_KEY,
+          Accept: "application/json",
+        },
+      });
+      if (!res.ok) continue;
+      const rows = (await res.json()) as Array<{
+        source_hash: string;
+        translated_text: string;
+      }>;
+      for (const row of rows) {
+        const text = hashToText.get(row.source_hash);
+        if (text != null) result[text] = row.translated_text;
+      }
+    } catch {
+      // network / CORS — skip; we'll still try the edge function below
+    }
+  }
+  return result;
+}
+
+/* ─── Batch fetch (edge function — last resort) ───────────────────────────── */
 
 async function fetchBatch(
   texts: string[],
@@ -273,21 +468,60 @@ function scheduleScan() {
 
 /* ─── Process queue: translate & apply ────────────────────────────────────── */
 
-async function processQueue() {
+/**
+ * Strings that have already been requested in *some* in-flight batch for the
+ * current language. Prevents two near-simultaneous queue runs from racing to
+ * translate the same string twice (which is what triggers 429s when the
+ * page mounts many lazy sections in quick succession).
+ */
+const inFlightStrings = new Map<string, Set<string>>(); // lang -> set of trimmed sources
+function inFlightFor(lang: string): Set<string> {
+  let s = inFlightStrings.get(lang);
+  if (!s) {
+    s = new Set();
+    inFlightStrings.set(lang, s);
+  }
+  return s;
+}
+
+/**
+ * Single-flight gate: one processQueue runs at a time. While it runs, any
+ * new mutations re-arm the timer; when the run finishes, the next timer
+ * picks them up. This keeps requests serialised per page.
+ */
+let processing: Promise<void> | null = null;
+
+function processQueue() {
   scanScheduled = false;
+  if (processing) {
+    // Re-schedule once the current run finishes so any newly-queued items
+    // are picked up — but don't start a parallel run.
+    processing.then(() => {
+      if (pendingNodes.length || pendingAttrs.length) scheduleScan();
+    });
+    return;
+  }
+  processing = runOnce().finally(() => {
+    processing = null;
+    if (pendingNodes.length || pendingAttrs.length) scheduleScan();
+  });
+}
+
+async function runOnce(): Promise<void> {
   if (currentLang === "en") {
     pendingNodes.length = 0;
     pendingAttrs.length = 0;
     return;
   }
 
+  const lang = currentLang;
   const nodes = pendingNodes.splice(0, pendingNodes.length);
   const attrs = pendingAttrs.splice(0, pendingAttrs.length);
 
-  const cache = loadCache(currentLang);
+  const cache = loadCache(lang);
   const need = new Set<string>();
 
-  // Pair each candidate with its source text + run cached substitutions immediately.
+  // Layer 1 — in-memory localStorage cache. Substitute immediately.
   const textJobs: { node: Text; source: string }[] = [];
   for (const node of nodes) {
     if (!node.isConnected) continue;
@@ -297,7 +531,6 @@ async function processQueue() {
     if (!shouldTranslate(trimmed)) continue;
 
     if (cache[trimmed] != null) {
-      // Preserve leading/trailing whitespace from the original node
       const leading = source.match(/^\s*/)?.[0] ?? "";
       const trailing = source.match(/\s*$/)?.[0] ?? "";
       applyTextTranslation(node, source, leading + cache[trimmed] + trailing);
@@ -326,34 +559,58 @@ async function processQueue() {
 
   if (need.size === 0) return;
 
-  // Fetch in batches.
-  const lang = currentLang;
+  // De-dupe against anything already being fetched.
+  const inFlight = inFlightFor(lang);
+  for (const t of inFlight) need.delete(t);
+  if (need.size === 0) {
+    // Anything we still want is already on the wire — re-queue everything
+    // we couldn't satisfy, and let the next timer pick it up after the
+    // current request resolves and writes to the cache.
+    for (const { node } of textJobs) pendingNodes.push(node);
+    for (const job of attrJobs) pendingAttrs.push({ el: job.el, name: job.name });
+    return;
+  }
   const all = Array.from(need);
-  const merged: Record<string, string> = {};
-  for (let i = 0; i < all.length; i += BATCH_SIZE) {
-    const batch = all.slice(i, i + BATCH_SIZE);
-    const result = await fetchBatch(batch, lang);
-    Object.assign(merged, result);
-    Object.assign(cache, result);
-  }
-  saveCache(lang, cache);
+  for (const t of all) inFlight.add(t);
 
-  // Apply to anything still needing translation.
-  for (const { node, source } of textJobs) {
-    if (!node.isConnected) continue;
-    const trimmed = source.trim();
-    const translated = merged[trimmed] ?? cache[trimmed];
-    if (translated == null) continue;
-    const leading = source.match(/^\s*/)?.[0] ?? "";
-    const trailing = source.match(/\s*$/)?.[0] ?? "";
-    applyTextTranslation(node, source, leading + translated + trailing);
-  }
-  for (const { el, name, source } of attrJobs) {
-    if (!el.isConnected) continue;
-    const trimmed = source.trim();
-    const translated = merged[trimmed] ?? cache[trimmed];
-    if (translated == null) continue;
-    applyAttrTranslation(el, name, source, translated);
+  try {
+    // Layer 2 — Supabase translations table (server-shared cache).
+    const dbHits = await dbLookup(all, lang);
+    if (Object.keys(dbHits).length > 0) {
+      Object.assign(cache, dbHits);
+    }
+
+    // Layer 3 — only call the edge function for what's still missing.
+    const stillMissing = all.filter((t) => cache[t] == null);
+    if (stillMissing.length > 0) {
+      for (let i = 0; i < stillMissing.length; i += BATCH_SIZE) {
+        const batch = stillMissing.slice(i, i + BATCH_SIZE);
+        const result = await fetchBatch(batch, lang);
+        Object.assign(cache, result);
+      }
+    }
+
+    saveCache(lang, cache);
+
+    // Apply everything we can resolve.
+    for (const { node, source } of textJobs) {
+      if (!node.isConnected) continue;
+      const trimmed = source.trim();
+      const translated = cache[trimmed];
+      if (translated == null) continue;
+      const leading = source.match(/^\s*/)?.[0] ?? "";
+      const trailing = source.match(/\s*$/)?.[0] ?? "";
+      applyTextTranslation(node, source, leading + translated + trailing);
+    }
+    for (const { el, name, source } of attrJobs) {
+      if (!el.isConnected) continue;
+      const trimmed = source.trim();
+      const translated = cache[trimmed];
+      if (translated == null) continue;
+      applyAttrTranslation(el, name, source, translated);
+    }
+  } finally {
+    for (const t of all) inFlight.delete(t);
   }
 }
 
