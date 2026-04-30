@@ -10,13 +10,25 @@ import { wipeBytes } from './secureMemory';
 // for synchronous methods to work.
 // Using Object.assign to ensure compatibility and bypass type checks
 // We set it on both hashes and utils to be safe across different versions
-if (nobleEd25519.hashes) {
-  Object.assign(nobleEd25519.hashes, {
-    sha512: sha512
-  });
-}
-if ((nobleEd25519 as any).utils) {
-  (nobleEd25519 as any).utils.sha512Sync = (...m: any[]) => sha512((nobleEd25519 as any).utils.concatBytes(...m));
+try {
+  if ((nobleEd25519 as any).hashes) {
+    try {
+      Object.assign((nobleEd25519 as any).hashes, { sha512: sha512 });
+    } catch {
+      // hashes object is frozen in some builds — safe to ignore
+    }
+  }
+  if ((nobleEd25519 as any).utils) {
+    const utils = (nobleEd25519 as any).utils;
+    try {
+      utils.sha512Sync = (...m: any[]) => sha512(utils.concatBytes(...m));
+    } catch {
+      // utils object is frozen in @noble/ed25519 v3+ — safe to ignore,
+      // since v3 wires sha512 via the hashes object above
+    }
+  }
+} catch {
+  // Defensive: never let signer setup throw at module load time
 }
 
 export interface SolanaTransactionRequest {
