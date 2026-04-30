@@ -13,6 +13,59 @@
 import i18n from "@/lib/i18n";
 import { shouldTranslate } from "@/lib/pii-filter";
 
+/**
+ * ⚠ KNOWN LIMITATIONS OF DOM-LEVEL MACHINE TRANSLATION
+ * ======================================================
+ * This module is a gap-filler for languages that don't yet have i18next JSON
+ * catalogs. It works well for static marketing copy and simple UI labels, but
+ * has hard linguistic constraints that WILL surface as awkwardness in a
+ * polished multi-language product. Do not treat it as the long-term strategy.
+ *
+ * 1. NO PLURALIZATION
+ *    "1 item" vs "5 items" — we always send the English string as-is and the
+ *    LLM may or may not infer count from context. Slavic languages (Russian,
+ *    Polish) have four plural forms; Arabic has six. These cannot be expressed
+ *    by translating an English string that embeds the number inline.
+ *    Fix: add i18next catalogs with `_one`/`_other` (or CLDR plural forms)
+ *    and drive counts through `t('key', { count })`.
+ *
+ * 2. NO GRAMMATICAL GENDER
+ *    Romance and Slavic languages inflect adjectives, articles and past-tense
+ *    verbs by noun gender. "Your offer was accepted" is grammatically different
+ *    for a male vs female subject in Spanish/French/Arabic. We have no gender
+ *    signal to pass to the LLM.
+ *
+ * 3. NO NUMBER / DATE / CURRENCY FORMATTING
+ *    Formatted values like "$1,234.56" or "Apr 30, 2026" come from JavaScript
+ *    and are never sent through the translator. Some locales use `.` as a
+ *    thousands separator and `,` as a decimal separator (Germany, France), or
+ *    display dates as DD/MM/YYYY. These need `Intl.NumberFormat` /
+ *    `Intl.DateTimeFormat` per locale — not translation.
+ *
+ * 4. NO CONTEXT DISAMBIGUATION
+ *    English reuses words across meanings: "close" (shut the modal) vs "close"
+ *    (the current BTC price is close to resistance). Without i18next `context`
+ *    keys the translator receives a bare word and may pick the wrong meaning.
+ *    Also affects "market" (noun) vs "market" (verb), "trade" (noun) vs "trade"
+ *    (verb), etc. — common in crypto UI.
+ *
+ * 5. NO RICH TEXT / EMBEDDED LINKS
+ *    "By clicking you agree to our <a>Terms</a>" cannot be translated as a
+ *    single string without breaking or duplicating the anchor element. The DOM
+ *    walker skips nodes containing mixed text+elements, so these strings are
+ *    never translated at all.
+ *
+ * RECOMMENDED PATH FORWARD
+ * Add i18next JSON catalog keys for:
+ *   - All strings with embedded counts (plurals)
+ *   - All strings with user-gender dependency
+ *   - All CTA buttons, error messages, and form labels (high-visibility copy)
+ *   - Any string containing an inline link or formatted number
+ * The auto-translator remains useful for long-tail copy (blog posts, legal
+ * pages, support articles) where the catalogue cost is high and linguistic
+ * precision is lower-stakes.
+ */
+
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as
   | string
@@ -36,8 +89,16 @@ const BATCH_SIZE = 100;
  * the same paint frame as the English DOM commit.
  */
 const DEBOUNCE_MS = 150;
-/** PostgREST URL-length safe chunk size for `source_hash=in.(...)` lookups. */
-const DB_LOOKUP_CHUNK = 100;
+/**
+ * PostgREST URL-length safe chunk size for `source_hash=in.(...)` lookups.
+ *
+ * Math: 50 hashes × (64 hex chars + 2 quotes + 1 comma) = ~3 350 chars.
+ * Add the rest of the URL path (~200 chars) → stays comfortably below the
+ * 4 KB hard limit some proxies enforce. The previous value of 100 produced
+ * ~6.5 KB URLs that would silently drop on stricter proxies in front of
+ * Supabase (e.g. Cloudflare, corporate API gateways).
+ */
+const DB_LOOKUP_CHUNK = 50;
 /** PostgREST endpoint for the cached translations table. */
 const TRANSLATIONS_TABLE_URL = SUPABASE_URL
   ? `${SUPABASE_URL.replace(/\/+$/, "")}/rest/v1/translations`
@@ -122,6 +183,26 @@ function clearLegacyCachesOnce() {
  */
 const cacheByLang = new Map<string, TranslationsCache>();
 
+/**
+ * LRU usage tracker: lang → source text → last-access timestamp (ms).
+ *
+ * Updated every time a cache entry is read. Used by `persistCache` to decide
+ * which entries to evict when localStorage's ~5 MB origin-wide limit is hit.
+ * Without eviction, `setItem` would throw a QuotaExceededError and the cache
+ * would silently stop growing — new translations would be re-fetched on every
+ * visit until the tab is closed.
+ */
+const cacheUsage = new Map<string, Map<string, number>>();
+
+function touchCacheEntry(lang: string, source: string) {
+  let m = cacheUsage.get(lang);
+  if (!m) {
+    m = new Map();
+    cacheUsage.set(lang, m);
+  }
+  m.set(source, Date.now());
+}
+
 function getCache(lang: string): TranslationsCache {
   let c = cacheByLang.get(lang);
   if (!c) {
@@ -137,13 +218,51 @@ function getCache(lang: string): TranslationsCache {
   return c;
 }
 
+/**
+ * Evict the LRU 30 % of entries from a language's cache to free quota.
+ *
+ * Entries are sorted by last-access time (oldest first). If we have no usage
+ * data for an entry it is treated as the oldest possible (t = 0) so
+ * freshly-loaded pages that haven't touched the cache yet are evicted first.
+ */
+function evictLRU(lang: string) {
+  const c = cacheByLang.get(lang);
+  if (!c) return;
+  const usage = cacheUsage.get(lang);
+  const entries = Object.keys(c);
+  if (entries.length === 0) return;
+  const dropCount = Math.max(1, Math.floor(entries.length * 0.3));
+  // Sort by last-access time ascending (LRU first).
+  entries.sort((a, b) => (usage?.get(a) ?? 0) - (usage?.get(b) ?? 0));
+  for (let i = 0; i < dropCount; i++) {
+    delete c[entries[i]];
+    usage?.delete(entries[i]);
+  }
+}
+
 function persistCache(lang: string) {
   const c = cacheByLang.get(lang);
   if (!c) return;
   try {
     localStorage.setItem(`${CACHE_PREFIX}${lang}`, JSON.stringify(c));
   } catch {
-    // ignore quota errors
+    // localStorage quota (~5 MB, shared across all origins in a tab) is full.
+    // Evict the LRU 30 % from every cached language to make room, then retry
+    // once. A second failure means even the trimmed payload won't fit (the app
+    // has an unusually large vocab in many languages); give up gracefully —
+    // in-memory cache still works for the rest of the session.
+    try {
+      for (const l of cacheByLang.keys()) {
+        evictLRU(l);
+        const lc = cacheByLang.get(l);
+        if (lc && l !== lang) {
+          localStorage.setItem(`${CACHE_PREFIX}${l}`, JSON.stringify(lc));
+        }
+      }
+      localStorage.setItem(`${CACHE_PREFIX}${lang}`, JSON.stringify(c));
+    } catch {
+      // Still no room — in-memory cache remains valid for this session.
+    }
   }
 }
 
@@ -510,6 +629,7 @@ function tryApplyTextSync(node: Text, lang: string): boolean {
   const cache = getCache(lang);
   const hit = cache[trimmed];
   if (hit == null) return false;
+  touchCacheEntry(lang, trimmed);
   const leading = source.match(/^\s*/)?.[0] ?? "";
   const trailing = source.match(/\s*$/)?.[0] ?? "";
   applyTextTranslation(node, source, leading + hit + trailing);
@@ -527,6 +647,7 @@ function tryApplyAttrSync(el: Element, name: string, lang: string): boolean {
   const cache = getCache(lang);
   const hit = cache[trimmed];
   if (hit == null) return false;
+  touchCacheEntry(lang, trimmed);
   applyAttrTranslation(el, name, source, hit);
   return true;
 }
@@ -618,6 +739,7 @@ async function runOnce(): Promise<void> {
     if (!shouldTranslate(trimmed)) continue;
 
     if (cache[trimmed] != null) {
+      touchCacheEntry(lang, trimmed);
       const leading = source.match(/^\s*/)?.[0] ?? "";
       const trailing = source.match(/\s*$/)?.[0] ?? "";
       applyTextTranslation(node, source, leading + cache[trimmed] + trailing);
@@ -637,6 +759,7 @@ async function runOnce(): Promise<void> {
     if (!shouldTranslate(trimmed)) continue;
 
     if (cache[trimmed] != null) {
+      touchCacheEntry(lang, trimmed);
       applyAttrTranslation(el, name, source, cache[trimmed]);
     } else {
       attrJobs.push({ el, name, source });
@@ -708,6 +831,7 @@ async function runOnce(): Promise<void> {
       const trimmed = source.trim();
       const translated = cache[trimmed];
       if (translated == null) continue;
+      touchCacheEntry(lang, trimmed);
       const leading = source.match(/^\s*/)?.[0] ?? "";
       const trailing = source.match(/\s*$/)?.[0] ?? "";
       applyTextTranslation(node, source, leading + translated + trailing);
@@ -717,6 +841,7 @@ async function runOnce(): Promise<void> {
       const trimmed = source.trim();
       const translated = cache[trimmed];
       if (translated == null) continue;
+      touchCacheEntry(lang, trimmed);
       applyAttrTranslation(el, name, source, translated);
     }
   } finally {
