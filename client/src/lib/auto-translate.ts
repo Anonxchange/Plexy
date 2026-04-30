@@ -11,6 +11,7 @@
  */
 
 import i18n from "@/lib/i18n";
+import { shouldTranslate } from "@/lib/pii-filter";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as
@@ -28,8 +29,6 @@ const TRANSLATE_FN_URL = SUPABASE_URL
 const CACHE_PREFIX = "pexly-tx:v3:";
 const LEGACY_CACHE_PREFIXES = ["pexly-tx:v1:", "pexly-tx:v2:"];
 const BATCH_SIZE = 100;
-/** Hard cap on source text length we'll ever consider translating. */
-const MAX_SOURCE_LENGTH = 500;
 /**
  * Coalesce mutation bursts that need a NETWORK round-trip into one run.
  * Cache hits never wait for this debounce — they're applied synchronously
@@ -68,110 +67,12 @@ const SKIP_ATTRS = [
 const ATTR_TARGETS = ["placeholder", "title", "aria-label", "alt"] as const;
 
 /**
- * Strings that must stay verbatim — brand names, ticker symbols,
- * country/currency codes, technical acronyms.
+ * NOTE: All sensitive-data filtering lives in `pii-filter.ts` and is
+ * exhaustively unit-tested. Do not duplicate regex rules here — extend
+ * them in that module, add a fixture to `pii-filter.test.ts`, and the
+ * change automatically applies to every code path that calls
+ * `shouldTranslate()`.
  */
-const VERBATIM = new Set<string>([
-  "Pexly", "P2P", "KYC", "AML", "API", "URL", "OK", "ID", "IP", "FAQ", "FAQs",
-  "BTC", "ETH", "USDT", "USDC", "BNB", "SOL", "XRP", "ADA", "DOGE", "AVAX",
-  "DOT", "MATIC", "POL", "SHIB", "LTC", "TRX", "LINK", "USD", "EUR", "GBP",
-  "JPY", "CNY", "INR", "NGN", "GMT", "UTC", "RTL", "LTR",
-]);
-
-/** Pure-symbol / numeric strings — nothing alphabetic to translate. */
-const NON_TRANSLATABLE = /^[\s\d.,;:!?$€£¥₹₽₩+\-*×÷=%/\\()<>[\]{}'"`~|·•…—–]+$/;
-
-/**
- * Patterns that almost always indicate user data, not UI copy.
- * Anything matching ANY of these is rejected before it can be hashed,
- * cached, sent to PostgREST, or sent to the translate edge function.
- *
- * NON-CUSTODIAL safety: these rules exist so that wallet addresses,
- * private keys, transaction hashes, signatures, and similar secrets
- * never leave the browser, even if they happen to render in the DOM.
- */
-const SENSITIVE_PATTERNS: RegExp[] = [
-  // Email
-  /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i,
-  // URL (http, https, www-prefixed)
-  /(?:https?:\/\/|www\.)\S+/i,
-  // EVM addresses, transaction hashes, signatures (0x + hex)
-  /\b0x[a-fA-F0-9]{8,}\b/,
-  // Long bare hex run — block hashes, txn hashes, signatures, raw private keys
-  /\b[a-fA-F0-9]{16,}\b/,
-  // JWT
-  /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/,
-  // UUID
-  /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i,
-  // Long digit run — phone numbers, codes, account numbers, card numbers
-  /\d{6,}/,
-  // International phone format: + followed by 7+ digits with optional separators
-  /\+\d[\d\s().-]{6,}\d/,
-  // Extended public/private keys (BIP32): xpub/xprv/ypub/yprv/zpub/zprv...
-  /\b[xyz](?:pub|prv)[A-Za-z0-9]{20,}\b/i,
-  // WIF private keys: 51-52 char base58 starting with 5, K, or L
-  /\b[5KL][1-9A-HJ-NP-Za-km-z]{50,51}\b/,
-];
-
-/**
- * Single-token strings (no whitespace) that LOOK like identifiers/keys —
- * BTC base58 addresses, Solana addresses, API keys, refresh tokens, etc.
- * UI button labels almost never lack whitespace beyond ~24 chars.
- */
-function looksLikeIdentifier(s: string): boolean {
-  if (/\s/.test(s)) return false;
-  if (s.length < 24) return false;
-  // BTC legacy + bech32 + Solana base58 + generic alphanumeric tokens.
-  return /^[A-Za-z0-9]+$/.test(s) || /^[A-Za-z0-9_-]+$/.test(s);
-}
-
-/**
- * BIP39 mnemonic / recovery phrase detector.
- *
- * BIP39 phrases are 12, 15, 18, 21, or 24 lowercase English words from a
- * fixed 2048-word list, each 3–8 characters, separated by single spaces.
- * If a string looks like that shape, treat it as a seed phrase and refuse
- * to translate it — under no circumstance should a recovery phrase end up
- * in localStorage, in PostgREST query params, or in an LLM prompt.
- */
-function looksLikeMnemonic(s: string): boolean {
-  const tokens = s.trim().split(/\s+/);
-  if (![12, 15, 18, 21, 24].includes(tokens.length)) return false;
-  for (const tok of tokens) {
-    if (tok.length < 3 || tok.length > 8) return false;
-    if (!/^[a-z]+$/.test(tok)) return false;
-  }
-  return true;
-}
-
-/** Text contains at least one Unicode letter. */
-function hasLetters(s: string): boolean {
-  return /\p{L}/u.test(s);
-}
-
-/**
- * Final gate before a string is allowed to be hashed / stored / sent
- * anywhere. Conservative by design — false negatives (skipping real UI
- * copy) are recoverable; false positives (leaking PII) are not.
- */
-function shouldTranslate(text: string): boolean {
-  const trimmed = text.trim();
-  if (trimmed.length < 2) return false;
-  if (trimmed.length > MAX_SOURCE_LENGTH) return false;
-  if (NON_TRANSLATABLE.test(trimmed)) return false;
-  if (!hasLetters(trimmed)) return false;
-  if (VERBATIM.has(trimmed)) return false;
-  if (looksLikeIdentifier(trimmed)) return false;
-  if (looksLikeMnemonic(trimmed)) return false;
-  for (const re of SENSITIVE_PATTERNS) {
-    if (re.test(trimmed)) return false;
-  }
-  // Heuristic: if more than half the characters are digits/symbols
-  // (very few letters), it's probably an amount/identifier mash, not copy.
-  const letterCount = (trimmed.match(/\p{L}/gu) ?? []).length;
-  if (letterCount * 2 < trimmed.length) return false;
-  return true;
-}
 
 function isSkippableElement(el: Element | null): boolean {
   let cur: Element | null = el;
