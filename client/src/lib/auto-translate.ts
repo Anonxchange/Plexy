@@ -376,11 +376,19 @@ async function dbLookup(
 
 /* ─── Batch fetch (edge function — last resort) ───────────────────────────── */
 
+/**
+ * Returns both the translation map AND whether the request actually
+ * reached the edge function and got a clean response. The caller uses
+ * `probed` to decide whether a missing entry is a "real" untranslatable
+ * (the LLM saw it and chose not to translate) or just a transient miss
+ * (network down, 5xx, no edge function configured) — only the former
+ * should poison the negative cache.
+ */
 async function fetchBatch(
   texts: string[],
   lang: string,
-): Promise<Record<string, string>> {
-  if (!TRANSLATE_FN_URL || !SUPABASE_ANON_KEY) return {};
+): Promise<{ result: Record<string, string>; probed: boolean }> {
+  if (!TRANSLATE_FN_URL || !SUPABASE_ANON_KEY) return { result: {}, probed: false };
   try {
     const res = await fetch(TRANSLATE_FN_URL, {
       method: "POST",
@@ -391,11 +399,11 @@ async function fetchBatch(
       },
       body: JSON.stringify({ texts, targetLang: lang }),
     });
-    if (!res.ok) return {};
+    if (!res.ok) return { result: {}, probed: false };
     const json = (await res.json()) as { translations?: Record<string, string> };
-    return json.translations ?? {};
+    return { result: json.translations ?? {}, probed: true };
   } catch {
-    return {};
+    return { result: {}, probed: false };
   }
 }
 
@@ -666,22 +674,32 @@ async function runOnce(): Promise<void> {
     }
 
     // Layer 3 — only call the edge function for what's still missing.
+    // Track which batches actually got a clean response from the edge
+    // function. We only poison the negative cache for strings that the
+    // edge function explicitly probed and chose not to translate;
+    // strings that hit a network/CORS/5xx error get retried on the
+    // next pass instead of being marked permanently untranslatable.
     const stillMissing = all.filter((t) => cache[t] == null);
+    const probedMisses: string[] = [];
     if (stillMissing.length > 0) {
       for (let i = 0; i < stillMissing.length; i += BATCH_SIZE) {
         const batch = stillMissing.slice(i, i + BATCH_SIZE);
-        const result = await fetchBatch(batch, lang);
+        const { result, probed } = await fetchBatch(batch, lang);
         Object.assign(cache, result);
+        if (probed) {
+          for (const t of batch) {
+            if (cache[t] == null) probedMisses.push(t);
+          }
+        }
       }
     }
 
     persistCache(lang);
 
-    // Anything still missing after both layers genuinely has no translation —
-    // record it in the negative cache so future remounts of the same source
-    // skip the network hop entirely.
-    for (const t of all) {
-      if (cache[t] == null) rememberUntranslatable(lang, t);
+    // Only strings the edge function actually saw and skipped get
+    // recorded as untranslatable. Transient failures stay retryable.
+    for (const t of probedMisses) {
+      rememberUntranslatable(lang, t);
     }
 
     // Apply everything we can resolve.
@@ -752,12 +770,15 @@ export function startAutoTranslate() {
   collectFromRoot(document.body);
 
   i18n.on("languageChanged", (lng: string) => {
+    // Capture the language we're leaving BEFORE we reassign currentLang,
+    // so restoreEnglish() has an unambiguous reverse-cache key.
+    const prevLang = currentLang;
     currentLang = lng || "en";
     if (currentLang === "en") {
       // Restore English by walking all memorised nodes via a fresh scan.
       // Each text node still has its English source in textMemory; rewrite
       // back to source.
-      restoreEnglish();
+      restoreEnglish(prevLang);
       return;
     }
     // Re-scan everything; sources are remembered per-node.
@@ -765,13 +786,16 @@ export function startAutoTranslate() {
   });
 }
 
-function restoreEnglish() {
+function restoreEnglish(prevLang: string) {
   const obs = observer;
   obs?.disconnect();
-  // The language we're switching away from. `currentLang` was reassigned to
-  // "en" before this runs, so capture the prior value for reverse lookups.
-  // The reverse map is keyed by the previous language, not "en".
-  const prevLangs = Array.from(reverseMemory.keys()).filter((l) => l !== "en");
+  // Only consult the reverse cache for the EXACT language we're leaving.
+  // Scanning every previously-seen language would risk restoring the wrong
+  // English source whenever two languages happen to translate to the same
+  // string (common for short tokens, brand names, single-letter labels).
+  const reverseFromPrev = prevLang && prevLang !== "en"
+    ? reverseMemory.get(prevLang)
+    : undefined;
   try {
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     let cur = walker.nextNode();
@@ -780,19 +804,17 @@ function restoreEnglish() {
       const mem = textMemory.get(t);
       if (mem && mem.translated === t.nodeValue && mem.source !== mem.translated) {
         t.nodeValue = mem.source;
-      } else {
+      } else if (reverseFromPrev) {
         // WeakMap lost this node (unmount/remount). Recover from the durable
-        // string-keyed reverse cache so the swap-back still happens.
+        // string-keyed reverse cache for the prior language only.
         const cur2 = t.nodeValue ?? "";
-        if (cur2.trim()) {
-          for (const lang of prevLangs) {
-            const recovered = lookupReverse(lang, cur2);
-            if (recovered && recovered !== cur2.trim()) {
-              const leading = cur2.match(/^\s*/)?.[0] ?? "";
-              const trailing = cur2.match(/\s*$/)?.[0] ?? "";
-              t.nodeValue = leading + recovered + trailing;
-              break;
-            }
+        const trimmed = cur2.trim();
+        if (trimmed) {
+          const recovered = reverseFromPrev.get(trimmed);
+          if (recovered && recovered !== trimmed) {
+            const leading = cur2.match(/^\s*/)?.[0] ?? "";
+            const trailing = cur2.match(/\s*$/)?.[0] ?? "";
+            t.nodeValue = leading + recovered + trailing;
           }
         }
       }
@@ -809,11 +831,11 @@ function restoreEnglish() {
           el.setAttribute(name, mem.source);
           continue;
         }
-        for (const lang of prevLangs) {
-          const recovered = lookupReverse(lang, cur3);
-          if (recovered && recovered !== cur3.trim()) {
+        if (reverseFromPrev) {
+          const trimmed = cur3.trim();
+          const recovered = reverseFromPrev.get(trimmed);
+          if (recovered && recovered !== trimmed) {
             el.setAttribute(name, recovered);
-            break;
           }
         }
       }
