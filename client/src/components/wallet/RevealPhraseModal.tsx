@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useId, useRef } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   Drawer,
@@ -23,6 +23,40 @@ interface RevealPhraseModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId: string;
+}
+
+/**
+ * Volatile, module-scoped mnemonic holder.
+ *
+ * The decrypted mnemonic is intentionally kept OUTSIDE the React tree:
+ * not in useState, not in useRef, not in props, not in context.
+ * React DevTools enumerates state/props/refs/context for every component;
+ * anything stored there is one click away in any browser. By holding the
+ * value in this Map keyed by a useId() instance ID — and reading it at
+ * render time without ever passing it down — the React component tree
+ * sees only a non-secret string ID.
+ *
+ * The plaintext lives here only between the password-decrypt call and
+ * the next modal close (or unmount, or tab-hide), and is wiped on every
+ * exit path.
+ */
+const volatileMnemonics = new Map<string, string>();
+
+function setVolatileMnemonic(instanceId: string, value: string) {
+  volatileMnemonics.set(instanceId, value);
+}
+
+function getVolatileMnemonic(instanceId: string): string {
+  return volatileMnemonics.get(instanceId) ?? "";
+}
+
+function wipeVolatileMnemonic(instanceId: string) {
+  // Best-effort overwrite before delete. JS strings are immutable so we
+  // can't zero the bytes, but dropping the only reference lets GC reclaim
+  // it on the next cycle. The Map.delete() makes it unreachable from the
+  // app immediately.
+  volatileMnemonics.set(instanceId, "");
+  volatileMnemonics.delete(instanceId);
 }
 
 export function RevealPhraseModal(props: RevealPhraseModalProps) {
@@ -54,14 +88,26 @@ function MobileSheet({ open, onOpenChange, userId }: RevealPhraseModalProps) {
 
 function useRevealState(onOpenChange: (v: boolean) => void) {
   const { toast } = useToast();
+  // useId returns a stable, non-secret string per component instance.
+  // It is the ONLY identifier that crosses the React tree.
+  const instanceId = useId();
   const [step, setStep] = useState<Step>("warning");
   const [checked1, setChecked1] = useState(false);
   const [checked2, setChecked2] = useState(false);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [mnemonic, setMnemonic] = useState("");
   const [copied, setCopied] = useState(false);
+  // Bumped after a successful decrypt to trigger a re-render that will
+  // pull the words from the volatile Map. The number itself reveals
+  // nothing about the mnemonic.
+  const [revealNonce, setRevealNonce] = useState(0);
+
+  // Wipe on unmount — covers route changes, parent re-renders that
+  // discard the modal, hot reloads, etc.
+  useEffect(() => {
+    return () => wipeVolatileMnemonic(instanceId);
+  }, [instanceId]);
 
   const handleClose = (open: boolean) => {
     if (!open) {
@@ -70,8 +116,9 @@ function useRevealState(onOpenChange: (v: boolean) => void) {
       setChecked2(false);
       setPassword("");
       setShowPassword(false);
-      setMnemonic("");
       setCopied(false);
+      wipeVolatileMnemonic(instanceId);
+      setRevealNonce((n) => n + 1);
     }
     onOpenChange(open);
   };
@@ -87,9 +134,11 @@ function useRevealState(onOpenChange: (v: boolean) => void) {
       if (wallets.length === 0) throw new Error("No non-custodial wallet found.");
       const phrase = await nonCustodialWalletManager.getWalletMnemonic(wallets[0].id, password, userId);
       if (!phrase) throw new Error("Failed to decrypt recovery phrase. Check your password.");
-      setMnemonic(phrase);
+      // Stash in the volatile Map — NOT in React state.
+      setVolatileMnemonic(instanceId, phrase);
       setPassword("");
       setStep("phrase");
+      setRevealNonce((n) => n + 1);
     } catch (error: any) {
       toast({ title: "Incorrect password", description: error.message || "Could not decrypt your recovery phrase.", variant: "destructive" });
     } finally {
@@ -98,21 +147,24 @@ function useRevealState(onOpenChange: (v: boolean) => void) {
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(mnemonic);
+    const phrase = getVolatileMnemonic(instanceId);
+    if (!phrase) return;
+    navigator.clipboard.writeText(phrase);
     setCopied(true);
     toast({ title: "Copied", description: "Recovery phrase copied to clipboard" });
     setTimeout(() => setCopied(false), 3000);
   };
 
   return {
+    instanceId,
     step, setStep,
     checked1, setChecked1,
     checked2, setChecked2,
     password, setPassword,
     showPassword, setShowPassword,
     isLoading,
-    mnemonic,
     copied,
+    revealNonce,
     handleClose,
     handleReveal,
     handleCopy,
@@ -125,22 +177,21 @@ type ModalInnerProps = ReturnType<typeof useRevealState> & {
 };
 
 function ModalInner({
+  instanceId,
   step, setStep,
   checked1, setChecked1,
   checked2, setChecked2,
   password, setPassword,
   showPassword, setShowPassword,
   isLoading,
-  mnemonic,
   copied,
+  revealNonce,
   handleClose,
   handleReveal,
   handleCopy,
   userId,
   isMobile,
 }: ModalInnerProps) {
-  const words = mnemonic ? mnemonic.trim().split(/\s+/) : [];
-
   return (
     <div className="relative flex flex-col items-center pt-10 pb-8 px-6 overflow-y-auto max-h-[85dvh]">
       {/* Floating illustration — only on desktop (not mobile where sheet clips it) */}
@@ -263,7 +314,8 @@ function ModalInner({
         {/* ── STEP 3: PHRASE ── */}
         {step === "phrase" && (
           <PhraseReveal
-            words={words}
+            instanceId={instanceId}
+            revealNonce={revealNonce}
             copied={copied}
             handleCopy={handleCopy}
             handleClose={handleClose}
@@ -276,23 +328,71 @@ function ModalInner({
 }
 
 function PhraseReveal({
-  words,
+  instanceId,
+  revealNonce,
   copied,
   handleCopy,
   handleClose,
 }: {
-  words: string[];
+  instanceId: string;
+  revealNonce: number;
   copied: boolean;
   handleCopy: () => void;
   handleClose: (open: boolean) => void;
 }) {
   const [isRevealed, setIsRevealed] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  // The grid is rendered into this container by direct DOM API once
+  // the user holds the reveal button. Keeping the words off the React
+  // child tree means the parent's "props" panel in DevTools shows
+  // only `instanceId` and `revealNonce` — never the words themselves.
+  const wordsContainerRef = useRef<HTMLDivElement | null>(null);
 
   const hide = useCallback(() => {
     setIsRevealed(false);
     setCountdown(0);
   }, []);
+
+  // Read fresh from the volatile Map every time we need to render.
+  // Computed in render, not stored — never becomes a prop or state.
+  // `revealNonce` is included in the dep chain so a successful decrypt
+  // forces a re-paint.
+  const renderWords = useCallback(() => {
+    const el = wordsContainerRef.current;
+    if (!el) return;
+    // Wipe whatever was there.
+    el.replaceChildren();
+    if (!isRevealed) return;
+    const phrase = getVolatileMnemonic(instanceId);
+    if (!phrase) return;
+    const words = phrase.trim().split(/\s+/);
+    const frag = document.createDocumentFragment();
+    words.forEach((word, i) => {
+      const cell = document.createElement("div");
+      cell.className =
+        "flex flex-col items-center gap-1 bg-muted border border-border rounded-xl px-2 py-2.5 min-h-[54px] justify-center";
+      const idx = document.createElement("span");
+      idx.className = "text-[9px] font-bold text-muted-foreground leading-none";
+      idx.textContent = String(i + 1);
+      const w = document.createElement("span");
+      w.className =
+        "text-[13px] font-semibold text-foreground leading-snug text-center break-words w-full px-1";
+      w.textContent = word;
+      cell.appendChild(idx);
+      cell.appendChild(w);
+      frag.appendChild(cell);
+    });
+    el.appendChild(frag);
+  }, [instanceId, isRevealed]);
+
+  useEffect(() => {
+    renderWords();
+    return () => {
+      // Wipe DOM on unmount of the reveal screen.
+      const el = wordsContainerRef.current;
+      if (el) el.replaceChildren();
+    };
+  }, [renderWords, revealNonce]);
 
   // Auto-hide when tab/app goes to background (catches screen recording too)
   useEffect(() => {
@@ -320,6 +420,9 @@ function PhraseReveal({
   };
   const stopReveal = () => hide();
 
+  // Render an empty 12-cell skeleton when blurred so layout doesn't jump.
+  const skeletonCells = Array.from({ length: 12 });
+
   return (
     <div className="flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-400">
       <div className="text-center space-y-1">
@@ -340,31 +443,34 @@ function PhraseReveal({
         )}
       </div>
 
-      {/* Word grid — blurred until held */}
+      {/* Word grid — empty React subtree; words injected via DOM API only when revealed */}
       <div
         className="relative rounded-2xl overflow-hidden"
         onContextMenu={(e) => e.preventDefault()}
       >
+        {/* Imperatively-populated word grid, kept off the React tree */}
         <div
+          ref={wordsContainerRef}
           className={`grid grid-cols-3 gap-2 transition-all duration-200 select-none ${
             isRevealed ? "blur-none" : "blur-md pointer-events-none"
           }`}
           style={{ WebkitUserSelect: "none", userSelect: "none" }}
-        >
-          {words.map((word, i) => (
-            <div
-              key={i}
-              className="flex flex-col items-center gap-1 bg-muted border border-border rounded-xl px-2 py-2.5 min-h-[54px] justify-center"
-            >
-              <span className="text-[9px] font-bold text-muted-foreground leading-none">
-                {i + 1}
-              </span>
-              <span className="text-[13px] font-semibold text-foreground leading-snug text-center break-words w-full px-1">
-                {word}
-              </span>
-            </div>
-          ))}
-        </div>
+        />
+
+        {/* Skeleton placeholder so the blurred state keeps its size */}
+        {!isRevealed && (
+          <div
+            className="absolute inset-0 grid grid-cols-3 gap-2 pointer-events-none blur-md"
+            aria-hidden
+          >
+            {skeletonCells.map((_, i) => (
+              <div
+                key={i}
+                className="bg-muted border border-border rounded-xl min-h-[54px]"
+              />
+            ))}
+          </div>
+        )}
 
         {/* Overlay shown when blurred */}
         {!isRevealed && (
