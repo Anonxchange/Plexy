@@ -25,8 +25,8 @@ const TRANSLATE_FN_URL = SUPABASE_URL
  * previously-cached strings (which may have slipped through older, looser
  * filters) get discarded the next time the page loads.
  */
-const CACHE_PREFIX = "pexly-tx:v2:";
-const LEGACY_CACHE_PREFIXES = ["pexly-tx:v1:"];
+const CACHE_PREFIX = "pexly-tx:v3:";
+const LEGACY_CACHE_PREFIXES = ["pexly-tx:v1:", "pexly-tx:v2:"];
 const BATCH_SIZE = 100;
 /** Hard cap on source text length we'll ever consider translating. */
 const MAX_SOURCE_LENGTH = 500;
@@ -80,6 +80,10 @@ const NON_TRANSLATABLE = /^[\s\d.,;:!?$€£¥₹₽₩+\-*×÷=%/\\()<>[\]{}'"`
  * Patterns that almost always indicate user data, not UI copy.
  * Anything matching ANY of these is rejected before it can be hashed,
  * cached, sent to PostgREST, or sent to the translate edge function.
+ *
+ * NON-CUSTODIAL safety: these rules exist so that wallet addresses,
+ * private keys, transaction hashes, signatures, and similar secrets
+ * never leave the browser, even if they happen to render in the DOM.
  */
 const SENSITIVE_PATTERNS: RegExp[] = [
   // Email
@@ -88,7 +92,7 @@ const SENSITIVE_PATTERNS: RegExp[] = [
   /(?:https?:\/\/|www\.)\S+/i,
   // EVM addresses, transaction hashes, signatures (0x + hex)
   /\b0x[a-fA-F0-9]{8,}\b/,
-  // Long bare hex run — block hashes, txn hashes, signatures
+  // Long bare hex run — block hashes, txn hashes, signatures, raw private keys
   /\b[a-fA-F0-9]{16,}\b/,
   // JWT
   /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/,
@@ -98,6 +102,10 @@ const SENSITIVE_PATTERNS: RegExp[] = [
   /\d{6,}/,
   // International phone format: + followed by 7+ digits with optional separators
   /\+\d[\d\s().-]{6,}\d/,
+  // Extended public/private keys (BIP32): xpub/xprv/ypub/yprv/zpub/zprv...
+  /\b[xyz](?:pub|prv)[A-Za-z0-9]{20,}\b/i,
+  // WIF private keys: 51-52 char base58 starting with 5, K, or L
+  /\b[5KL][1-9A-HJ-NP-Za-km-z]{50,51}\b/,
 ];
 
 /**
@@ -110,6 +118,25 @@ function looksLikeIdentifier(s: string): boolean {
   if (s.length < 24) return false;
   // BTC legacy + bech32 + Solana base58 + generic alphanumeric tokens.
   return /^[A-Za-z0-9]+$/.test(s) || /^[A-Za-z0-9_-]+$/.test(s);
+}
+
+/**
+ * BIP39 mnemonic / recovery phrase detector.
+ *
+ * BIP39 phrases are 12, 15, 18, 21, or 24 lowercase English words from a
+ * fixed 2048-word list, each 3–8 characters, separated by single spaces.
+ * If a string looks like that shape, treat it as a seed phrase and refuse
+ * to translate it — under no circumstance should a recovery phrase end up
+ * in localStorage, in PostgREST query params, or in an LLM prompt.
+ */
+function looksLikeMnemonic(s: string): boolean {
+  const tokens = s.trim().split(/\s+/);
+  if (![12, 15, 18, 21, 24].includes(tokens.length)) return false;
+  for (const tok of tokens) {
+    if (tok.length < 3 || tok.length > 8) return false;
+    if (!/^[a-z]+$/.test(tok)) return false;
+  }
+  return true;
 }
 
 /** Text contains at least one Unicode letter. */
@@ -130,6 +157,7 @@ function shouldTranslate(text: string): boolean {
   if (!hasLetters(trimmed)) return false;
   if (VERBATIM.has(trimmed)) return false;
   if (looksLikeIdentifier(trimmed)) return false;
+  if (looksLikeMnemonic(trimmed)) return false;
   for (const re of SENSITIVE_PATTERNS) {
     if (re.test(trimmed)) return false;
   }
@@ -256,9 +284,7 @@ function rememberAttrTranslation(
 /* ─── Hashing + DB lookup ─────────────────────────────────────────────────── */
 
 /**
- * SHA-256 hex digest of the trimmed source string.
- * MUST match the `source_hash` algorithm used by the Supabase `translate`
- * edge function when it inserts rows into `public.translations`.
+ * SHA-256 hex digest of an arbitrary string.
  */
 async function sha256Hex(s: string): Promise<string> {
   const buf = new TextEncoder().encode(s);
@@ -269,23 +295,40 @@ async function sha256Hex(s: string): Promise<string> {
 }
 
 /**
- * In-memory short-term cache of source-text → SHA-256 hex, so repeated
- * translation passes for the same string don't re-hash it.
+ * Per-(text, lang) hash key.
+ *
+ * The hash input is `${trimmed_source}\u241F${lang}` — the unit-separator
+ * codepoint U+241F can never appear inside legitimate UI copy or a BCP-47
+ * language tag, so there is no risk of "abc" + "def" colliding with
+ * "ab" + "cdef". This MUST match exactly what the `translate` edge
+ * function uses when it writes `source_hash` into `public.translations`.
+ */
+async function hashFor(text: string, lang: string): Promise<string> {
+  return sha256Hex(`${text}\u241F${lang}`);
+}
+
+/**
+ * In-memory short-term cache of `${text}::${lang}` → SHA-256 hex,
+ * so repeated translation passes for the same string don't re-hash it.
  */
 const hashMemo = new Map<string, string>();
 
-async function hashAll(texts: string[]): Promise<Map<string, string>> {
+async function hashAll(
+  texts: string[],
+  lang: string,
+): Promise<Map<string, string>> {
   const out = new Map<string, string>();
   const todo: string[] = [];
   for (const t of texts) {
-    const cached = hashMemo.get(t);
+    const memoKey = `${t}::${lang}`;
+    const cached = hashMemo.get(memoKey);
     if (cached) out.set(t, cached);
     else todo.push(t);
   }
   if (todo.length > 0) {
-    const hashes = await Promise.all(todo.map(sha256Hex));
+    const hashes = await Promise.all(todo.map((t) => hashFor(t, lang)));
     todo.forEach((t, i) => {
-      hashMemo.set(t, hashes[i]);
+      hashMemo.set(`${t}::${lang}`, hashes[i]);
       out.set(t, hashes[i]);
     });
   }
@@ -305,7 +348,7 @@ async function dbLookup(
   if (!TRANSLATIONS_TABLE_URL || !SUPABASE_ANON_KEY) return {};
   if (texts.length === 0) return {};
 
-  const hashes = await hashAll(texts);
+  const hashes = await hashAll(texts, lang);
   const hashToText = new Map<string, string>();
   for (const [text, hash] of hashes) hashToText.set(hash, text);
 
