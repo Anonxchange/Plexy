@@ -30,8 +30,13 @@ const LEGACY_CACHE_PREFIXES = ["pexly-tx:v1:", "pexly-tx:v2:"];
 const BATCH_SIZE = 100;
 /** Hard cap on source text length we'll ever consider translating. */
 const MAX_SOURCE_LENGTH = 500;
-/** Coalesce mutation bursts into a single processing run. */
-const DEBOUNCE_MS = 500;
+/**
+ * Coalesce mutation bursts that need a NETWORK round-trip into one run.
+ * Cache hits never wait for this debounce — they're applied synchronously
+ * inside the mutation callback so cached pages render translated within
+ * the same paint frame as the English DOM commit.
+ */
+const DEBOUNCE_MS = 150;
 /** PostgREST URL-length safe chunk size for `source_hash=in.(...)` lookups. */
 const DB_LOOKUP_CHUNK = 100;
 /** PostgREST endpoint for the cached translations table. */
@@ -209,19 +214,33 @@ function clearLegacyCachesOnce() {
   }
 }
 
-function loadCache(lang: string): TranslationsCache {
-  clearLegacyCachesOnce();
-  try {
-    const raw = localStorage.getItem(`${CACHE_PREFIX}${lang}`);
-    return raw ? (JSON.parse(raw) as TranslationsCache) : {};
-  } catch {
-    return {};
+/**
+ * Process-wide in-memory mirror of localStorage, keyed by language.
+ * Lazy-loaded on first access per language. All reads go through this map
+ * so we never pay the JSON.parse cost on the hot synchronous fast path.
+ */
+const cacheByLang = new Map<string, TranslationsCache>();
+
+function getCache(lang: string): TranslationsCache {
+  let c = cacheByLang.get(lang);
+  if (!c) {
+    clearLegacyCachesOnce();
+    try {
+      const raw = localStorage.getItem(`${CACHE_PREFIX}${lang}`);
+      c = raw ? (JSON.parse(raw) as TranslationsCache) : {};
+    } catch {
+      c = {};
+    }
+    cacheByLang.set(lang, c);
   }
+  return c;
 }
 
-function saveCache(lang: string, cache: TranslationsCache) {
+function persistCache(lang: string) {
+  const c = cacheByLang.get(lang);
+  if (!c) return;
   try {
-    localStorage.setItem(`${CACHE_PREFIX}${lang}`, JSON.stringify(cache));
+    localStorage.setItem(`${CACHE_PREFIX}${lang}`, JSON.stringify(c));
   } catch {
     // ignore quota errors
   }
@@ -492,13 +511,57 @@ function collectFromRoot(root: Node) {
   }
 }
 
+/**
+ * Synchronous fast-path: if this text node's source is already cached
+ * (in-memory mirror of localStorage OR populated by an earlier DB lookup),
+ * apply the translation immediately and return true. Returns false if the
+ * string needs a network round-trip — caller should enqueue it then.
+ *
+ * This is what eliminates the "flash of English" on cached pages: the
+ * mutation observer applies the swap inside the same microtask as
+ * React's commit, before the browser ever paints.
+ */
+function tryApplyTextSync(node: Text, lang: string): boolean {
+  if (!node.isConnected) return true; // nothing to do
+  const raw = node.nodeValue ?? "";
+  const source = getNodeSource(node) || raw;
+  const trimmed = source.trim();
+  if (!shouldTranslate(trimmed)) return true; // not eligible
+  const cache = getCache(lang);
+  const hit = cache[trimmed];
+  if (hit == null) return false;
+  const leading = source.match(/^\s*/)?.[0] ?? "";
+  const trailing = source.match(/\s*$/)?.[0] ?? "";
+  applyTextTranslation(node, source, leading + hit + trailing);
+  return true;
+}
+
+function tryApplyAttrSync(el: Element, name: string, lang: string): boolean {
+  if (!el.isConnected) return true;
+  const cur = el.getAttribute(name);
+  if (cur == null) return true;
+  const source = getAttrSource(el, name) || cur;
+  const trimmed = source.trim();
+  if (!shouldTranslate(trimmed)) return true;
+  const cache = getCache(lang);
+  const hit = cache[trimmed];
+  if (hit == null) return false;
+  applyAttrTranslation(el, name, source, hit);
+  return true;
+}
+
 function queueText(node: Text) {
   if (!node.nodeValue || !node.nodeValue.trim()) return;
+  if (currentLang === "en") return;
+  // Cache hit → apply right now, never enqueue, never schedule a scan.
+  if (tryApplyTextSync(node, currentLang)) return;
   pendingNodes.push(node);
   scheduleScan();
 }
 
 function queueAttr(el: Element, name: string) {
+  if (currentLang === "en") return;
+  if (tryApplyAttrSync(el, name, currentLang)) return;
   pendingAttrs.push({ el, name });
   scheduleScan();
 }
@@ -561,7 +624,7 @@ async function runOnce(): Promise<void> {
   const nodes = pendingNodes.splice(0, pendingNodes.length);
   const attrs = pendingAttrs.splice(0, pendingAttrs.length);
 
-  const cache = loadCache(lang);
+  const cache = getCache(lang);
   const need = new Set<string>();
 
   // Layer 1 — in-memory localStorage cache. Substitute immediately.
@@ -633,7 +696,7 @@ async function runOnce(): Promise<void> {
       }
     }
 
-    saveCache(lang, cache);
+    persistCache(lang);
 
     // Apply everything we can resolve.
     for (const { node, source } of textJobs) {
