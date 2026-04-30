@@ -41,7 +41,7 @@ interface SendCryptoDialogProps {
 type Step = "select" | "details";
 
 export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, onSuccess }: SendCryptoDialogProps) {
-  const { user, sessionPassword, setSessionPassword } = useAuth();
+  const { user, isWalletUnlocked, getSessionPassword, setSessionPassword } = useAuth();
   const { toast } = useToast();
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [step, setStep] = useState<Step>("select");
@@ -287,12 +287,12 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
     if (!user) return;
     const validationError = validateSendForm();
     if (validationError) { setError(validationError); return; }
-    if (!sessionPassword && !userPassword) { setError("Please enter your wallet password"); return; }
+    if (!getSessionPassword() && !userPassword) { setError("Please enter your wallet password"); return; }
 
     setError("");
     setLoading(true);
     try {
-      const passwordToUse = sessionPassword || userPassword;
+      const passwordToUse = getSessionPassword() || userPassword;
       const userWallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
       const symbolMap: Record<string, string> = {
         'BTC': 'Bitcoin (SegWit)', 'ETH': 'Ethereum', 'SOL': 'Solana',
@@ -306,7 +306,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
       if (!targetWallet) throw new Error("Local wallet not found for the selected asset");
       const mnemonic = await nonCustodialWalletManager.getWalletMnemonic(targetWallet.id, passwordToUse, user.id);
       if (!mnemonic) throw new Error("Mnemonic phrase not found for signing");
-      if (!sessionPassword && userPassword) setSessionPassword(userPassword);
+      if (!getSessionPassword() && userPassword) setSessionPassword(userPassword);
       await executeSend(mnemonic);
     } catch (err: any) {
       setError(err.message || "Failed to send crypto");
@@ -405,7 +405,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
         ) : (
           <ScrollArea className="max-h-[500px] pr-4">
           <div className="space-y-4">
-            {sessionPassword ? (
+            {isWalletUnlocked ? (
               <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 mb-4">
                 <p className="text-xs text-green-800 dark:text-green-200">
                   ✓ Password cached for session. Transaction will sign automatically.
