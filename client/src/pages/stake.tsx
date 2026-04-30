@@ -522,7 +522,7 @@ function StakeDialog({
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }) {
-  const { user, sessionPassword, setSessionPassword } = useAuth();
+  const { user, isWalletUnlocked, getSessionPassword, setSessionPassword } = useAuth();
   const { toast } = useToast();
 
   const [amount, setAmount] = useState("");
@@ -585,7 +585,7 @@ function StakeDialog({
   if (!product) return null;
 
   const needsAuth = !user;
-  const needsPassword = !!user && !sessionPassword && step === "form";
+  const needsPassword = !!user && !isWalletUnlocked && step === "form";
 
   async function handleConfirm() {
     if (!user || !product) return;
@@ -600,7 +600,7 @@ function StakeDialog({
       setError(`Minimum stake is ${product.minAmount} ${product.inputSymbol}`);
       return;
     }
-    const pwd = sessionPassword || password;
+    const pwd = getSessionPassword() || password;
     if (!pwd) {
       setError("Enter your wallet password");
       return;
@@ -616,7 +616,7 @@ function StakeDialog({
 
       const mnemonic = await nonCustodialWalletManager.getWalletMnemonic(evm.id, pwd, user.id);
       if (!mnemonic) throw new Error("Could not unlock wallet — check your password");
-      if (!sessionPassword) setSessionPassword(pwd);
+      if (!isWalletUnlocked) setSessionPassword(pwd);
 
       const stepResults: StakeStepResult[] = [];
       await executeStake(mnemonic, product, amount, evm.address, {
