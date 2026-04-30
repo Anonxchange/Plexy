@@ -163,6 +163,54 @@ interface NodeMemory {
 const textMemory = new WeakMap<Text, NodeMemory>();
 const attrMemory = new WeakMap<Element, Map<string, NodeMemory>>();
 
+/**
+ * Durable, string-keyed memory that survives node unmount.
+ *
+ * The WeakMap above is the hot path — fast O(1) lookup keyed by Node identity.
+ * But WeakMap entries die when React unmounts a section (route change, dialog
+ * close/open). On remount the new Text node is a fresh identity, so we lose:
+ *   1. The "this nodeValue is actually a translation of <source>" mapping,
+ *      which `restoreEnglish` needs to switch back to English.
+ *   2. The "we already tried to translate <source> and got nothing" knowledge,
+ *      causing `dbLookup` + `fetchBatch` to re-fire on every remount for any
+ *      string that genuinely has no translation in the DB or edge function.
+ *
+ * Both maps are scoped per-language (`lang` → inner map). Stable string keys
+ * mean a remounted node finds its translation immediately and an untranslatable
+ * source is never re-queried.
+ */
+const reverseMemory = new Map<string, Map<string, string>>(); // lang -> trimmed_translated -> trimmed_source
+const untranslatable = new Map<string, Set<string>>();        // lang -> set of trimmed sources known to have no translation
+
+function rememberReverse(lang: string, source: string, translated: string) {
+  const s = source.trim();
+  const t = translated.trim();
+  if (!s || !t || s === t) return;
+  let m = reverseMemory.get(lang);
+  if (!m) {
+    m = new Map();
+    reverseMemory.set(lang, m);
+  }
+  m.set(t, s);
+}
+
+function lookupReverse(lang: string, translated: string): string | undefined {
+  return reverseMemory.get(lang)?.get(translated.trim());
+}
+
+function isKnownUntranslatable(lang: string, trimmed: string): boolean {
+  return untranslatable.get(lang)?.has(trimmed) ?? false;
+}
+
+function rememberUntranslatable(lang: string, trimmed: string) {
+  let s = untranslatable.get(lang);
+  if (!s) {
+    s = new Set();
+    untranslatable.set(lang, s);
+  }
+  s.add(trimmed);
+}
+
 let currentLang = "en";
 const pendingNodes: Text[] = [];
 const pendingAttrs: { el: Element; name: string }[] = [];
@@ -172,7 +220,20 @@ let observer: MutationObserver | null = null;
 function getNodeSource(node: Text): string {
   const mem = textMemory.get(node);
   if (mem && mem.translated === node.nodeValue) return mem.source;
-  return node.nodeValue ?? "";
+  // WeakMap miss (likely the node was unmounted and remounted, or the entry
+  // was GC'd). Fall back to the durable string-keyed reverse cache: if the
+  // current text matches a known translation for the active language, the
+  // original English source can still be recovered.
+  const raw = node.nodeValue ?? "";
+  if (currentLang !== "en") {
+    const recovered = lookupReverse(currentLang, raw);
+    if (recovered) {
+      const leading = raw.match(/^\s*/)?.[0] ?? "";
+      const trailing = raw.match(/\s*$/)?.[0] ?? "";
+      return leading + recovered + trailing;
+    }
+  }
+  return raw;
 }
 
 function getAttrSource(el: Element, name: string): string {
@@ -180,11 +241,16 @@ function getAttrSource(el: Element, name: string): string {
   const mem = map?.get(name);
   const cur = el.getAttribute(name) ?? "";
   if (mem && mem.translated === cur) return mem.source;
+  if (currentLang !== "en") {
+    const recovered = lookupReverse(currentLang, cur);
+    if (recovered) return recovered;
+  }
   return cur;
 }
 
 function rememberTextTranslation(node: Text, source: string, translated: string) {
   textMemory.set(node, { source, translated });
+  rememberReverse(currentLang, source, translated);
 }
 
 function rememberAttrTranslation(
@@ -199,6 +265,7 @@ function rememberAttrTranslation(
     attrMemory.set(el, map);
   }
   map.set(name, { source, translated });
+  rememberReverse(currentLang, source, translated);
 }
 
 /* ─── Hashing + DB lookup ─────────────────────────────────────────────────── */
@@ -428,6 +495,10 @@ function tryApplyTextSync(node: Text, lang: string): boolean {
   const source = getNodeSource(node) || raw;
   const trimmed = source.trim();
   if (!shouldTranslate(trimmed)) return true; // not eligible
+  // Negative cache hit — we already learned there is no translation for this
+  // source, so don't enqueue it again. Prevents repeat network calls for
+  // untranslatable strings on every remount.
+  if (isKnownUntranslatable(lang, trimmed)) return true;
   const cache = getCache(lang);
   const hit = cache[trimmed];
   if (hit == null) return false;
@@ -444,6 +515,7 @@ function tryApplyAttrSync(el: Element, name: string, lang: string): boolean {
   const source = getAttrSource(el, name) || cur;
   const trimmed = source.trim();
   if (!shouldTranslate(trimmed)) return true;
+  if (isKnownUntranslatable(lang, trimmed)) return true;
   const cache = getCache(lang);
   const hit = cache[trimmed];
   if (hit == null) return false;
@@ -566,6 +638,12 @@ async function runOnce(): Promise<void> {
 
   if (need.size === 0) return;
 
+  // Drop strings we already know have no translation — avoids repeat
+  // dbLookup + fetchBatch on every remount for genuinely untranslatable copy.
+  for (const t of Array.from(need)) {
+    if (isKnownUntranslatable(lang, t)) need.delete(t);
+  }
+
   // De-dupe against anything already being fetched.
   const inFlight = inFlightFor(lang);
   for (const t of inFlight) need.delete(t);
@@ -598,6 +676,13 @@ async function runOnce(): Promise<void> {
     }
 
     persistCache(lang);
+
+    // Anything still missing after both layers genuinely has no translation —
+    // record it in the negative cache so future remounts of the same source
+    // skip the network hop entirely.
+    for (const t of all) {
+      if (cache[t] == null) rememberUntranslatable(lang, t);
+    }
 
     // Apply everything we can resolve.
     for (const { node, source } of textJobs) {
@@ -683,6 +768,10 @@ export function startAutoTranslate() {
 function restoreEnglish() {
   const obs = observer;
   obs?.disconnect();
+  // The language we're switching away from. `currentLang` was reassigned to
+  // "en" before this runs, so capture the prior value for reverse lookups.
+  // The reverse map is keyed by the previous language, not "en".
+  const prevLangs = Array.from(reverseMemory.keys()).filter((l) => l !== "en");
   try {
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     let cur = walker.nextNode();
@@ -691,18 +780,41 @@ function restoreEnglish() {
       const mem = textMemory.get(t);
       if (mem && mem.translated === t.nodeValue && mem.source !== mem.translated) {
         t.nodeValue = mem.source;
+      } else {
+        // WeakMap lost this node (unmount/remount). Recover from the durable
+        // string-keyed reverse cache so the swap-back still happens.
+        const cur2 = t.nodeValue ?? "";
+        if (cur2.trim()) {
+          for (const lang of prevLangs) {
+            const recovered = lookupReverse(lang, cur2);
+            if (recovered && recovered !== cur2.trim()) {
+              const leading = cur2.match(/^\s*/)?.[0] ?? "";
+              const trailing = cur2.match(/\s*$/)?.[0] ?? "";
+              t.nodeValue = leading + recovered + trailing;
+              break;
+            }
+          }
+        }
       }
       cur = walker.nextNode();
     }
     const elements = document.body.querySelectorAll("*");
     elements.forEach((el) => {
       const map = attrMemory.get(el);
-      if (!map) return;
       for (const name of ATTR_TARGETS) {
-        const mem = map.get(name);
-        if (!mem) continue;
-        if (el.getAttribute(name) === mem.translated && mem.source !== mem.translated) {
+        const cur3 = el.getAttribute(name);
+        if (cur3 == null) continue;
+        const mem = map?.get(name);
+        if (mem && el.getAttribute(name) === mem.translated && mem.source !== mem.translated) {
           el.setAttribute(name, mem.source);
+          continue;
+        }
+        for (const lang of prevLangs) {
+          const recovered = lookupReverse(lang, cur3);
+          if (recovered && recovered !== cur3.trim()) {
+            el.setAttribute(name, recovered);
+            break;
+          }
         }
       }
     });
