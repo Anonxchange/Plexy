@@ -66,7 +66,7 @@ const currencies = [
 export function Swap() {
   useHead({ title: "Swap Crypto | Pexly", meta: [{ name: "description", content: "Instantly swap cryptocurrencies at competitive rates directly from your wallet — no intermediaries, no custody risk." }] });
   useSchema(swapPageSchema, "swap-page-schema");
-  const { user, sessionPassword, setSessionPassword } = useAuth();
+  const { user, getSessionPassword, setSessionPassword } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [fromAmount, setFromAmount] = useState("0.00");
@@ -383,8 +383,8 @@ export function Swap() {
     }
 
     // If we have a cached session password, execute directly
-    if (sessionPassword) {
-      await performSwap(sessionPassword, finalQuote);
+    if (getSessionPassword()) {
+      await performSwap(getSessionPassword()!, finalQuote);
     } else {
       setShowPasswordDialog(true);
     }
