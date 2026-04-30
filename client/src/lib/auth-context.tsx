@@ -45,7 +45,13 @@ export interface AuthContextType {
   isWalletUnlocked: boolean;
   unlockWallet: (password: string) => void;
   lockWallet: () => void;
-  sessionPassword: string | null;
+  /**
+   * Returns the current vault password from module scope — NOT stored in
+   * the context value object so React DevTools cannot passively read it.
+   * Call this only inside event handlers / async functions, never during
+   * render so the return value never enters the component tree.
+   */
+  getSessionPassword: () => string | null;
   setSessionPassword: (password: string | null) => void;
 }
 
@@ -894,7 +900,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isWalletUnlocked,
     unlockWallet,
     lockWallet,
-    sessionPassword: _vaultPassword,
+    // Returns the vault password from module scope on demand.
+    // NEVER place _vaultPassword directly in the value object — the context
+    // value is inspectable via React DevTools and would expose the plaintext
+    // password to anyone with DevTools open. A function reference is visible
+    // in DevTools; its return value is not.
+    getSessionPassword: () => _vaultPassword,
     setSessionPassword,
   };
 
