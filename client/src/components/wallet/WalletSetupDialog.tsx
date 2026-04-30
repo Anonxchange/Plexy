@@ -106,6 +106,12 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expec
         }
       }
 
+      // Vault password no longer needed in React state — wipe immediately so
+      // it isn't visible in React DevTools after the creation step is done.
+      // The password is either in the module-scope session (_vaultPassword via
+      // unlockWallet) or is no longer needed at all for the creation flow.
+      setPassword("");
+      setConfirmPassword("");
       setStep("success");
     } catch (error: any) {
       setStep("password");
