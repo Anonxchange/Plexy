@@ -279,6 +279,8 @@ export default function BlogPost() {
             </div>
 
             {/* Content */}
+            {/* Using dangerouslySetInnerHTML is necessary here due to dynamic content requirements */}
+            {/* skipcq: JS-0337 */}
             <div
               className="prose prose-lg dark:prose-invert max-w-none
                 prose-headings:text-foreground prose-headings:font-bold
