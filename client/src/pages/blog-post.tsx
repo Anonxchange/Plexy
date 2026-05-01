@@ -279,8 +279,6 @@ export default function BlogPost() {
             </div>
 
             {/* Content */}
-            {/* Using dangerouslySetInnerHTML is necessary here due to dynamic content requirements */}
-            {/* skipcq: JS-0337 */}
             <div
               className="prose prose-lg dark:prose-invert max-w-none
                 prose-headings:text-foreground prose-headings:font-bold
@@ -290,8 +288,9 @@ export default function BlogPost() {
                 prose-img:rounded-2xl prose-img:shadow-md
                 prose-li:text-foreground/85
                 prose-blockquote:border-primary prose-blockquote:text-muted-foreground"
-              dangerouslySetInnerHTML={{ __html: sanitizeBlogHtml(formatContent(post.content)) }}
-            />
+            >
+              {sanitizeBlogHtml(formatContent(post.content))}
+            </div>
 
             {/* Updated date */}
             <p className="text-xs text-muted-foreground mt-10 pt-6 border-t border-border">
