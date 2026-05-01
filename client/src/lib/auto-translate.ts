@@ -79,8 +79,8 @@ const TRANSLATE_FN_URL = SUPABASE_URL
  * previously-cached strings (which may have slipped through older, looser
  * filters) get discarded the next time the page loads.
  */
-const CACHE_PREFIX = "pexly-tx:v3:";
-const LEGACY_CACHE_PREFIXES = ["pexly-tx:v1:", "pexly-tx:v2:"];
+const CACHE_PREFIX = "pexly-tx:v4:";
+const LEGACY_CACHE_PREFIXES = ["pexly-tx:v1:", "pexly-tx:v2:", "pexly-tx:v3:"];
 const BATCH_SIZE = 100;
 /**
  * Coalesce mutation bursts that need a NETWORK round-trip into one run.
