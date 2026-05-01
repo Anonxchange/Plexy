@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { sanitizeBlogHtml, sanitizeImageUrl } from "@/lib/sanitize";
+import parse from "html-react-parser";
 
 interface BlogPost {
   id: string;
@@ -216,17 +217,19 @@ export default function BlogPost() {
         </div>
       </div>
 
-      {/* ── HERO IMAGE (full width) ── */}
-      <div className="w-full bg-muted" style={{ maxHeight: 500, overflow: "hidden" }}>
+      {/* ── HERO IMAGE (contained, responsive) ── */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
         {post.image_url ? (
-          <img
-            src={sanitizeImageUrl(post.image_url)}
-            alt={post.title}
-            className="w-full object-cover"
-            style={{ maxHeight: 500 }}
-          />
+          <div className="w-full rounded-2xl overflow-hidden bg-muted" style={{ maxHeight: 440 }}>
+            <img
+              src={sanitizeImageUrl(post.image_url)}
+              alt={post.title}
+              className="w-full h-full object-cover"
+              style={{ maxHeight: 440 }}
+            />
+          </div>
         ) : (
-          <div className="w-full flex items-center justify-center bg-gradient-to-br from-[#B4F22E]/20 to-[#B4F22E]/5" style={{ height: 380 }}>
+          <div className="w-full rounded-2xl flex items-center justify-center bg-gradient-to-br from-[#B4F22E]/20 to-[#B4F22E]/5" style={{ height: 280 }}>
             <span className="text-7xl opacity-20">📰</span>
           </div>
         )}
@@ -272,12 +275,6 @@ export default function BlogPost() {
               </div>
             </div>
 
-            {/* Share row — visible on mobile, hidden on desktop (shown in sidebar) */}
-            <div className="lg:hidden mb-8">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Share</p>
-              {shareButtons}
-            </div>
-
             {/* Content */}
             <div
               className="prose prose-lg dark:prose-invert max-w-none
@@ -285,15 +282,21 @@ export default function BlogPost() {
                 prose-p:text-foreground/85 prose-p:leading-[1.85]
                 prose-a:text-primary prose-a:no-underline hover:prose-a:underline
                 prose-strong:text-foreground
-                prose-img:rounded-2xl prose-img:shadow-md
+                prose-img:rounded-2xl prose-img:shadow-md prose-img:w-full
                 prose-li:text-foreground/85
                 prose-blockquote:border-primary prose-blockquote:text-muted-foreground"
             >
-              {sanitizeBlogHtml(formatContent(post.content))}
+              {parse(sanitizeBlogHtml(formatContent(post.content)))}
+            </div>
+
+            {/* Share row — after content on mobile, hidden on desktop (shown in sidebar) */}
+            <div className="lg:hidden mt-10 pt-6 border-t border-border">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Share</p>
+              {shareButtons}
             </div>
 
             {/* Updated date */}
-            <p className="text-xs text-muted-foreground mt-10 pt-6 border-t border-border">
+            <p className="text-xs text-muted-foreground mt-6 pt-6 border-t border-border">
               Last updated {updatedDate}
             </p>
 
