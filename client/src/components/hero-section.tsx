@@ -192,9 +192,18 @@ export function HeroSection() {
         />
 
         <picture>
-          <source srcSet="/hero-bg.webp" type="image/webp" />
+          {/*
+           * Responsive srcset — browser picks the smallest variant that covers
+           * the rendered width (100vw on mobile). Saves ~25 KiB on phones vs
+           * serving the full 1408-px master.
+           */}
+          <source
+            type="image/webp"
+            srcSet="/hero-bg-640.webp 640w, /hero-bg-1024.webp 1024w, /hero-bg.webp 1408w"
+            sizes="100vw"
+          />
           <img
-            src="/hero-bg.png"
+            src="/hero-bg.webp"
             alt=""
             aria-hidden="true"
             className="absolute inset-0 w-full h-full object-cover object-center"
@@ -262,9 +271,19 @@ export function HeroSection() {
         />
 
         <picture>
-          <source srcSet="/hero-bg.webp" type="image/webp" />
+          {/*
+           * Desktop right panel is ~50 vw wide, so sizes="50vw" lets the
+           * browser pick the 1024-w variant on typical 1440-px screens (where
+           * the panel is ~720 px) instead of always downloading the 1408-px
+           * master. The 1408w source is kept for 4K / ultra-wide displays.
+           */}
+          <source
+            type="image/webp"
+            srcSet="/hero-bg-640.webp 640w, /hero-bg-1024.webp 1024w, /hero-bg.webp 1408w"
+            sizes="50vw"
+          />
           <img
-            src="/hero-bg.png"
+            src="/hero-bg.webp"
             alt=""
             aria-hidden="true"
             className="w-full h-full object-cover object-center"
