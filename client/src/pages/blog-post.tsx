@@ -217,24 +217,6 @@ export default function BlogPost() {
         </div>
       </div>
 
-      {/* ── HERO IMAGE (contained, responsive) ── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-        {post.image_url ? (
-          <div className="w-full rounded-2xl overflow-hidden bg-muted" style={{ maxHeight: 440 }}>
-            <img
-              src={sanitizeImageUrl(post.image_url)}
-              alt={post.title}
-              className="w-full h-full object-cover"
-              style={{ maxHeight: 440 }}
-            />
-          </div>
-        ) : (
-          <div className="w-full rounded-2xl flex items-center justify-center bg-gradient-to-br from-[#B4F22E]/20 to-[#B4F22E]/5" style={{ height: 280 }}>
-            <span className="text-7xl opacity-20">📰</span>
-          </div>
-        )}
-      </div>
-
       {/* ── MAIN LAYOUT ── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14">
         <div className="lg:grid lg:grid-cols-[1fr_320px] lg:gap-16 xl:gap-20">
@@ -243,8 +225,8 @@ export default function BlogPost() {
           <article className="min-w-0">
 
             {/* Title block */}
-            <div className="mb-8">
-              <h1 className="text-3xl md:text-4xl xl:text-5xl font-bold text-foreground leading-tight mb-5">
+            <div className="mb-6">
+              <h1 className="text-3xl md:text-4xl xl:text-5xl font-bold text-foreground leading-tight mb-4">
                 {post.title}
               </h1>
               {post.excerpt && (
@@ -275,6 +257,28 @@ export default function BlogPost() {
               </div>
             </div>
 
+            {/* Share — mobile only (desktop uses sidebar) */}
+            <div className="lg:hidden mb-6">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Share</p>
+              {shareButtons}
+            </div>
+
+            {/* Hero image — after share, before content */}
+            {post.image_url ? (
+              <div className="w-full rounded-2xl overflow-hidden bg-muted mb-8" style={{ maxHeight: 440 }}>
+                <img
+                  src={sanitizeImageUrl(post.image_url)}
+                  alt={post.title}
+                  className="w-full object-cover"
+                  style={{ maxHeight: 440 }}
+                />
+              </div>
+            ) : (
+              <div className="w-full rounded-2xl flex items-center justify-center bg-gradient-to-br from-[#B4F22E]/20 to-[#B4F22E]/5 mb-8" style={{ height: 240 }}>
+                <span className="text-7xl opacity-20">📰</span>
+              </div>
+            )}
+
             {/* Content */}
             <div
               className="prose prose-lg dark:prose-invert max-w-none
@@ -287,12 +291,6 @@ export default function BlogPost() {
                 prose-blockquote:border-primary prose-blockquote:text-muted-foreground"
             >
               {parse(sanitizeBlogHtml(formatContent(post.content)))}
-            </div>
-
-            {/* Share row — after content on mobile, hidden on desktop (shown in sidebar) */}
-            <div className="lg:hidden mt-10 pt-6 border-t border-border">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Share</p>
-              {shareButtons}
             </div>
 
             {/* Updated date */}
