@@ -38,7 +38,7 @@ export function sanitizeBlogHtml(html: string): string {
   return withNoopenerHook(() =>
     DOMPurify.sanitize(html, {
       ALLOWED_TAGS: ["p", "br", "strong", "em", "a", "ul", "ol", "li", "code", "h2", "h3", "img"],
-      ALLOWED_ATTR: ["href", "src", "alt", "rel"],
+      ALLOWED_ATTR: ["href", "src", "alt", "rel", "class"],
       ALLOW_DATA_ATTR: false,
       FORCE_BODY: false,
       ALLOWED_URI_REGEXP: SAFE_IMAGE_URL_PATTERN,
