@@ -92,6 +92,7 @@
     "@unhead/react": "^2.1.13",
     "dompurify": "^3.4.0",
     "get-nonce": "^1.0.1",
+    "html-react-parser": "^6.0.1",
     "i18next": "^26.0.8",
     "idb": "^8.0.3",
     "qrcode.react": "^4.2.0",
