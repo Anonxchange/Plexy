@@ -145,14 +145,32 @@ export function ShippingEstimator({
     parsed.availableCountryCodes.includes(c.code)
   );
 
-  const [selectedCountry, setSelectedCountry] = useState<string>(
-    availableCountries[0]?.code ?? ""
-  );
+  const [selectedCountry, setSelectedCountry] = useState<string>("");
   const [selectedMethodIdx, setSelectedMethodIdx] = useState(0);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   const { addToCart } = useCart();
   const { rates, isLoading: isLoadingRates, error: ratesError, calculate, reset } = useShippingRates();
+
+  // Auto-detect user's country via IP on mount, fall back to first available country
+  useEffect(() => {
+    let cancelled = false;
+    async function detectCountry() {
+      try {
+        const res = await fetch("https://ipapi.co/country/", { signal: AbortSignal.timeout(3000) });
+        if (!res.ok) throw new Error("failed");
+        const code = (await res.text()).trim().toUpperCase();
+        if (!cancelled) {
+          const match = availableCountries.find((c) => c.code === code);
+          setSelectedCountry(match?.code ?? availableCountries[0]?.code ?? "");
+        }
+      } catch {
+        if (!cancelled) setSelectedCountry(availableCountries[0]?.code ?? "");
+      }
+    }
+    detectCountry();
+    return () => { cancelled = true; };
+  }, []);
 
   // Fetch live rates whenever country or cjVid changes.
   // CJ is OPTIONAL — only called when a valid, non-empty cjVid is available.
