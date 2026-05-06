@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ListFilter, Loader2, XCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import CandlestickChart from "./CandlestickChart";
 import DesktopOrderBook from "./DesktopOrderBook";
 import TradePanel from "./TradePanel";
@@ -11,7 +12,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { asterTrading } from "@/lib/asterdex-service";
 import { useToast } from "@/hooks/use-toast";
 
-const orderTabs = ["Open orders", "Positions", "Assets", "TWAP", "Order history", "Position History", "Trade history", "Transaction history"];
+const orderTabs = ["Open orders", "Positions", "Assets", "TWAP", "Position History", "Trade history", "Transaction history"];
 
 interface DesktopTradingLayoutProps {
   chartVisible: boolean;
@@ -27,6 +28,7 @@ const DesktopTradingLayout = ({
   onToggleChart,
 }: DesktopTradingLayoutProps) => {
   const [activeTab, setActiveTab] = useState("Open orders");
+  const [historyOpen, setHistoryOpen] = useState(false);
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -132,7 +134,11 @@ const DesktopTradingLayout = ({
               </button>
             ))}
           </div>
-          <button className="p-1 text-muted-foreground ml-2 flex-shrink-0">
+          <button
+            onClick={() => setHistoryOpen(true)}
+            title="Order history"
+            className="p-1 text-muted-foreground ml-2 flex-shrink-0 hover:text-foreground transition-colors"
+          >
             <ListFilter className="w-4 h-4" />
           </button>
         </div>
@@ -207,41 +213,52 @@ const DesktopTradingLayout = ({
               </tbody>
             </table>
           )
-        ) : activeTab === "Order history" ? (
-          allOrdersLoading ? (
-            <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
-          ) : (
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-muted-foreground border-b border-border">
-                  <th className="text-left px-4 py-2 font-normal">Symbol</th>
-                  <th className="text-left px-4 py-2 font-normal">Side</th>
-                  <th className="text-left px-4 py-2 font-normal">Type</th>
-                  <th className="text-right px-4 py-2 font-normal">Price</th>
-                  <th className="text-right px-4 py-2 font-normal">Amount</th>
-                  <th className="text-right px-4 py-2 font-normal">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Array.isArray(allOrders) && allOrders.length > 0 ? allOrders.slice(0, 50).map((o: any) => (
-                  <tr key={o.orderId} className="border-b border-border/50 hover:bg-accent/30">
-                    <td className="px-4 py-2 text-foreground">{o.symbol}</td>
-                    <td className={`px-4 py-2 font-medium ${o.side === "BUY" ? "text-trading-green" : "text-trading-red"}`}>{o.side}</td>
-                    <td className="px-4 py-2 text-muted-foreground">{o.type}</td>
-                    <td className="px-4 py-2 text-right font-mono-num">{parseFloat(o.price).toFixed(4)}</td>
-                    <td className="px-4 py-2 text-right font-mono-num">{parseFloat(o.origQty).toFixed(4)}</td>
-                    <td className="px-4 py-2 text-right text-muted-foreground">{o.status}</td>
-                  </tr>
-                )) : (
-                  <tr><td colSpan={6} className="text-center py-4 text-muted-foreground">No order history</td></tr>
-                )}
-              </tbody>
-            </table>
-          )
         ) : (
           <div className="flex items-center justify-center py-4 text-xs text-muted-foreground">No data yet</div>
         )}
       </div>
+
+      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col p-0">
+          <DialogHeader className="px-6 pt-5 pb-3 border-b border-border flex-shrink-0">
+            <DialogTitle className="text-sm font-semibold">Order History</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto">
+            {!user ? (
+              <div className="flex justify-center py-8 text-sm text-muted-foreground">Sign in to view order history</div>
+            ) : allOrdersLoading ? (
+              <div className="flex justify-center py-8"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+            ) : (
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 bg-background">
+                  <tr className="text-muted-foreground border-b border-border">
+                    <th className="text-left px-4 py-2 font-normal">Symbol</th>
+                    <th className="text-left px-4 py-2 font-normal">Side</th>
+                    <th className="text-left px-4 py-2 font-normal">Type</th>
+                    <th className="text-right px-4 py-2 font-normal">Price</th>
+                    <th className="text-right px-4 py-2 font-normal">Amount</th>
+                    <th className="text-right px-4 py-2 font-normal">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.isArray(allOrders) && allOrders.length > 0 ? allOrders.slice(0, 50).map((o: any) => (
+                    <tr key={o.orderId} className="border-b border-border/50 hover:bg-accent/30">
+                      <td className="px-4 py-2 text-foreground">{o.symbol}</td>
+                      <td className={`px-4 py-2 font-medium ${o.side === "BUY" ? "text-trading-green" : "text-trading-red"}`}>{o.side}</td>
+                      <td className="px-4 py-2 text-muted-foreground">{o.type}</td>
+                      <td className="px-4 py-2 text-right font-mono-num">{parseFloat(o.price).toFixed(4)}</td>
+                      <td className="px-4 py-2 text-right font-mono-num">{parseFloat(o.origQty).toFixed(4)}</td>
+                      <td className="px-4 py-2 text-right text-muted-foreground">{o.status}</td>
+                    </tr>
+                  )) : (
+                    <tr><td colSpan={6} className="text-center py-8 text-muted-foreground">No order history</td></tr>
+                  )}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Account panel — rows 3–4, col 3 (below trade panel, separated by top border) ── */}
       <div className="col-start-3 row-start-3 row-end-5 border-l-[3px] border-t-[3px] border-panel-border flex flex-col">
