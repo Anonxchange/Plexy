@@ -8,6 +8,7 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { asterTrading, asterMarket } from "@/lib/asterdex-service";
 import { useToast } from "@/hooks/use-toast";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 const orderTabs = ["Open orders", "Positions", "Assets", "TWAP"];
 const chartTabs = ["Chart", "Order book", "Trades", "Depth", "Info"];
@@ -231,6 +232,7 @@ interface MobilePerpetualTabsProps {
 const MobilePerpetualTabs = ({ chartVisible, pair, viewMode, onViewModeChange: setViewMode }: MobilePerpetualTabsProps) => {
   const [activeOrderTab, setActiveOrderTab] = useState("Open orders");
   const [activeChartTab, setActiveChartTab] = useState("Chart");
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const tabs = viewMode === "list" ? orderTabs : chartTabs;
   const activeTab = viewMode === "list" ? activeOrderTab : activeChartTab;
@@ -265,6 +267,13 @@ const MobilePerpetualTabs = ({ chartVisible, pair, viewMode, onViewModeChange: s
     enabled: !!user && activeOrderTab === "Assets",
     staleTime: 15_000,
     refetchInterval: 30_000,
+  });
+
+  const { data: allOrders, isLoading: allOrdersLoading } = useQuery({
+    queryKey: ["futures-all-orders", apiSymbol],
+    queryFn: () => asterTrading.futuresOpenOrders(apiSymbol),
+    enabled: !!user && activeOrderTab === "Order history",
+    staleTime: 30_000,
   });
 
   const cancelMutation = useMutation({
@@ -489,12 +498,58 @@ const MobilePerpetualTabs = ({ chartVisible, pair, viewMode, onViewModeChange: s
             </button>
           ))}
         </div>
-        <button className="p-1 text-muted-foreground flex-shrink-0">
+        <button
+          onClick={() => setHistoryOpen(true)}
+          title="Order history"
+          className="p-1 flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+        >
           <ClipboardList className="w-5 h-5" />
         </button>
       </div>
 
       {renderTabContent()}
+
+      <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
+        <SheetContent side="bottom" className="h-[70vh] p-0 flex flex-col">
+          <SheetHeader className="px-4 pt-4 pb-2 border-b border-border flex-shrink-0">
+            <SheetTitle className="text-sm">Order History</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto">
+            {!user ? (
+              <div className="flex flex-col items-center py-10 gap-3">
+                <span className="text-sm text-muted-foreground">Sign in to view order history</span>
+              </div>
+            ) : allOrdersLoading ? (
+              <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+            ) : (Array.isArray(allOrders) && allOrders.length > 0) ? (
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 bg-background">
+                  <tr className="text-muted-foreground border-b border-border">
+                    <th className="text-left px-3 py-2 font-normal text-[10px]">Symbol</th>
+                    <th className="text-left px-3 py-2 font-normal text-[10px]">Side</th>
+                    <th className="text-right px-3 py-2 font-normal text-[10px]">Price</th>
+                    <th className="text-right px-3 py-2 font-normal text-[10px]">Size</th>
+                    <th className="text-right px-3 py-2 font-normal text-[10px]">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {allOrders.slice(0, 50).map((o: any) => (
+                    <tr key={o.orderId} className="border-b border-border/50">
+                      <td className="px-3 py-1.5 text-[11px] text-foreground">{o.symbol}</td>
+                      <td className={`px-3 py-1.5 text-[11px] font-medium ${o.side === "BUY" ? "text-trading-green" : "text-trading-red"}`}>{o.side}</td>
+                      <td className="px-3 py-1.5 text-right font-mono-num text-[11px]">{parseFloat(o.price).toFixed(4)}</td>
+                      <td className="px-3 py-1.5 text-right font-mono-num text-[11px]">{parseFloat(o.origQty).toFixed(4)}</td>
+                      <td className="px-3 py-1.5 text-right text-[11px] text-muted-foreground">{o.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="flex justify-center py-8 text-sm text-muted-foreground">No order history</div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <div className="flex justify-center py-4">
         <div className="flex items-center bg-secondary rounded-full p-1">
