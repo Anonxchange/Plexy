@@ -181,6 +181,10 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
   const [walletPassword, setWalletPassword] = useState("");
   const [showPassword, setShowPassword]     = useState(false);
 
+  // Transaction history dialog
+  const [txHistoryOpen, setTxHistoryOpen] = useState(false);
+  const [txHistoryTab, setTxHistoryTab]   = useState<"deposits" | "withdrawals">("deposits");
+
   // "Send from My Wallet" state (deposit tab one-click flow)
   const [sendPassword, setSendPassword]   = useState("");
   const [showSendPwd, setShowSendPwd]     = useState(false);
@@ -331,6 +335,21 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     enabled: !!user && open,
     staleTime: 60_000,
     retry: 1,
+  });
+
+  // Transaction history queries — only fetch when history dialog is open
+  const { data: depositHistory, isLoading: depositHistoryLoading } = useQuery({
+    queryKey: ["deposit-history", isSpot],
+    queryFn: () => isSpot ? asterWallet.depositHistory() : asterWallet.futuresDepositHistory(),
+    enabled: !!user && txHistoryOpen && txHistoryTab === "deposits",
+    staleTime: 30_000,
+  });
+
+  const { data: withdrawHistory, isLoading: withdrawHistoryLoading } = useQuery({
+    queryKey: ["withdraw-history", isSpot],
+    queryFn: () => isSpot ? asterWallet.withdrawHistory() : asterWallet.futuresWithdrawHistory(),
+    enabled: !!user && txHistoryOpen && txHistoryTab === "withdrawals",
+    staleTime: 30_000,
   });
 
   // Deposit address — keyed per network so each chain has an independent cache entry.
@@ -1019,7 +1038,13 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
               </div>
             ))}
           </div>
-          <ClipboardList className="h-5 w-5 text-muted-foreground" />
+          <button
+            onClick={() => setTxHistoryOpen(true)}
+            title="Transaction history"
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ClipboardList className="h-5 w-5" />
+          </button>
         </div>
 
         {/* ══════════════ DEPOSIT ══════════════ */}
@@ -1162,30 +1187,114 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     </>
   );
 
+  const txHistoryDialog = (
+    <Dialog open={txHistoryOpen} onOpenChange={setTxHistoryOpen}>
+      <DialogContent className="max-w-lg max-h-[80vh] flex flex-col p-0">
+        <DialogHeader className="px-5 pt-5 pb-3 border-b border-border flex-shrink-0">
+          <DialogTitle className="text-sm font-semibold">Transaction History</DialogTitle>
+          <div className="flex items-center gap-4 mt-2 text-sm">
+            {(["deposits", "withdrawals"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTxHistoryTab(t)}
+                className={`capitalize font-medium transition-colors ${txHistoryTab === t ? "text-foreground border-b-2 border-primary pb-0.5" : "text-muted-foreground"}`}
+              >
+                {t.charAt(0).toUpperCase() + t.slice(1)}
+              </button>
+            ))}
+          </div>
+        </DialogHeader>
+        <div className="flex-1 overflow-y-auto">
+          {txHistoryTab === "deposits" ? (
+            depositHistoryLoading ? (
+              <div className="flex justify-center py-8"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+            ) : Array.isArray(depositHistory) && depositHistory.length > 0 ? (
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 bg-background">
+                  <tr className="text-muted-foreground border-b border-border">
+                    <th className="text-left px-4 py-2 font-normal">Coin</th>
+                    <th className="text-right px-4 py-2 font-normal">Amount</th>
+                    <th className="text-left px-4 py-2 font-normal">Network</th>
+                    <th className="text-right px-4 py-2 font-normal">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {depositHistory.slice(0, 50).map((d: any, i: number) => (
+                    <tr key={d.id ?? i} className="border-b border-border/50 hover:bg-accent/30">
+                      <td className="px-4 py-2 font-medium text-foreground">{d.coin ?? d.asset ?? "—"}</td>
+                      <td className="px-4 py-2 text-right font-mono-num">{d.amount ?? "—"}</td>
+                      <td className="px-4 py-2 text-muted-foreground">{d.network ?? d.chain ?? "—"}</td>
+                      <td className="px-4 py-2 text-right text-muted-foreground">{d.status ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="flex justify-center py-8 text-sm text-muted-foreground">No deposit history</div>
+            )
+          ) : (
+            withdrawHistoryLoading ? (
+              <div className="flex justify-center py-8"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+            ) : Array.isArray(withdrawHistory) && withdrawHistory.length > 0 ? (
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 bg-background">
+                  <tr className="text-muted-foreground border-b border-border">
+                    <th className="text-left px-4 py-2 font-normal">Coin</th>
+                    <th className="text-right px-4 py-2 font-normal">Amount</th>
+                    <th className="text-left px-4 py-2 font-normal">Network</th>
+                    <th className="text-right px-4 py-2 font-normal">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {withdrawHistory.slice(0, 50).map((w: any, i: number) => (
+                    <tr key={w.id ?? i} className="border-b border-border/50 hover:bg-accent/30">
+                      <td className="px-4 py-2 font-medium text-foreground">{w.coin ?? w.asset ?? "—"}</td>
+                      <td className="px-4 py-2 text-right font-mono-num">{w.amount ?? "—"}</td>
+                      <td className="px-4 py-2 text-muted-foreground">{w.network ?? w.chain ?? "—"}</td>
+                      <td className="px-4 py-2 text-right text-muted-foreground">{w.status ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="flex justify-center py-8 text-sm text-muted-foreground">No withdrawal history</div>
+            )
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
   if (variant === "dialog") {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="bg-card border border-border rounded-2xl px-5 pb-8 pt-5 max-w-md w-full max-h-[90vh] overflow-y-auto [&>button.absolute]:hidden">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Account</DialogTitle>
-          </DialogHeader>
-          {modalBody}
-        </DialogContent>
-      </Dialog>
+      <>
+        <Dialog open={open} onOpenChange={onOpenChange}>
+          <DialogContent className="bg-card border border-border rounded-2xl px-5 pb-8 pt-5 max-w-md w-full max-h-[90vh] overflow-y-auto [&>button.absolute]:hidden">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Account</DialogTitle>
+            </DialogHeader>
+            {modalBody}
+          </DialogContent>
+        </Dialog>
+        {txHistoryDialog}
+      </>
     );
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="bottom"
-        className="bg-card border-t border-border rounded-t-2xl px-5 pb-10 pt-5 max-h-[90vh] overflow-y-auto"
-      >
-        <SheetHeader className="sr-only">
-          <SheetTitle>Account</SheetTitle>
-        </SheetHeader>
-        {modalBody}
-      </SheetContent>
-    </Sheet>
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent
+          side="bottom"
+          className="bg-card border-t border-border rounded-t-2xl px-5 pb-10 pt-5 max-h-[90vh] overflow-y-auto"
+        >
+          <SheetHeader className="sr-only">
+            <SheetTitle>Account</SheetTitle>
+          </SheetHeader>
+          {modalBody}
+        </SheetContent>
+      </Sheet>
+      {txHistoryDialog}
+    </>
   );
 }
