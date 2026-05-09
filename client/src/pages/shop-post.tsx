@@ -45,7 +45,7 @@ export function ShopPost() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { verificationLevel } = useVerificationGuard();
+  const { verificationLevel, isLoading: isVerificationLoading } = useVerificationGuard();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Authentication and Verification Guard
@@ -60,7 +60,9 @@ export function ShopPost() {
       return;
     }
 
-    if (parseFloat(verificationLevel || "0") < 2) {
+    if (isVerificationLoading) return;
+
+    if (verificationLevel < 2) {
       toast({
         title: "Verification required",
         description: "You must be Level 2 verified to post in the shop.",
@@ -68,7 +70,7 @@ export function ShopPost() {
       });
       navigate("/verification");
     }
-  }, [user, verificationLevel, navigate, toast]);
+  }, [user, verificationLevel, isVerificationLoading, navigate, toast]);
   const [listingType, setListingType] = useState<"fixed" | "auction">("fixed");
   const [category, setCategory] = useState("");
   const [title, setTitle] = useState("");
