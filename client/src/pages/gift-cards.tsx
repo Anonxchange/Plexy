@@ -35,17 +35,22 @@ function GiftCardComponent({ card, setLocation, index }: GiftCardProps) {
       onClick={() => setLocation(`/gift-cards/${card.id}`)}
       style={{ animationDelay: `${index * 0.03}s` }}
     >
-      <div className="rounded-xl overflow-hidden bg-white border border-border/30 aspect-[4/3] flex items-center justify-center mb-3">
+      <div className="rounded-xl overflow-hidden bg-white border border-border/30 aspect-[3/2] flex items-center justify-center mb-2">
         <img
           src={card.image}
           alt={card.name}
           loading="lazy"
           decoding="async"
-          className="w-full h-full object-contain p-3"
+          className="w-full h-full object-contain p-2"
         />
       </div>
-      <h3 className="font-semibold text-foreground text-xs sm:text-sm leading-tight line-clamp-2 mb-1">{card.name}</h3>
-      <p className="text-[11px] text-muted-foreground font-medium">{card.priceRange}</p>
+      <h3 className="font-semibold text-foreground text-xs sm:text-sm leading-tight line-clamp-2 mb-0.5">{card.name}</h3>
+      <p className="text-[11px] text-muted-foreground font-medium mb-1">{card.priceRange}</p>
+      {card.discount && card.discount !== "0%" && (
+        <span className="inline-block text-[10px] font-bold text-red-500 bg-red-50 dark:bg-red-500/10 px-1.5 py-0.5 rounded">
+          {card.discount} off
+        </span>
+      )}
     </div>
   );
 }
@@ -54,7 +59,7 @@ function GiftCardComponent({ card, setLocation, index }: GiftCardProps) {
 function GiftCardSkeleton() {
   return (
     <div className="bg-card rounded-2xl border border-border p-3">
-      <Skeleton className="w-full aspect-[4/3] rounded-xl mb-3" />
+      <Skeleton className="w-full aspect-[3/2] rounded-xl mb-2" />
       <Skeleton className="h-4 w-3/4 mb-2" />
       <Skeleton className="h-3 w-1/2" />
     </div>
