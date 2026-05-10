@@ -14,7 +14,7 @@ import {
   asterGetDepositAddress, asterGetChainAssets, CoinInfo,
 } from "@/lib/asterdex-service";
 import { supabase } from "@/lib/supabase";
-import { nonCustodialWalletManager, NonCustodialWallet } from "@/lib/non-custodial-wallet";
+import type { NonCustodialWallet } from "@/lib/non-custodial-wallet";
 import { signEVMMessage } from "@/lib/evmSigner";
 import { broadcastDeposit } from "@/lib/deposit-broadcaster";
 import { useToast } from "@/hooks/use-toast";
@@ -235,6 +235,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     if (!user) return;
     setWalletLoading(true);
     try {
+      const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
       const wallets: NonCustodialWallet[] = await nonCustodialWalletManager.getWalletsFromStorage(user.id);
       const evm = wallets.find(w =>
         ["ethereum", "eth", "bsc", "bnb", "binance", "arb", "arbitrum"].some(k =>
@@ -257,6 +258,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     mutationFn: async () => {
       if (!userEvmWallet || !user) throw new Error("No EVM wallet found. Create one in Wallet first.");
       if (!walletPassword) throw new Error("Enter your wallet password to sign.");
+      const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
       const mnemonic = await nonCustodialWalletManager.getWalletMnemonic(userEvmWallet.id, walletPassword, user.id);
       if (!mnemonic) throw new Error("Incorrect password or wallet not found.");
 
@@ -912,6 +914,7 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     try {
       const vaultKey = wallet.encryptedMnemonic ?? wallet.encryptedPrivateKey;
       if (!vaultKey) throw new Error("Wallet data not found. Please recreate your wallet.");
+      const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
       const mnemonic = await nonCustodialWalletManager.decryptPrivateKey(vaultKey, sendPassword, user.id);
       await handleSendFromWalletWithMnemonic(mnemonic);
     } catch (err: any) {
