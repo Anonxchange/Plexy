@@ -32,7 +32,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 
 import { useAuth } from "@/lib/auth-context";
-import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import {
   STAKING_PRODUCTS,
   executeStake,
@@ -552,6 +551,7 @@ function StakeDialog({
     let cancelled = false;
     (async () => {
       try {
+        const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
         const wallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
         const evm = wallets.find(
           (w) => w.chainId === "Ethereum" || w.assetType === "ETH" || /eth/i.test(w.chainId || "")
@@ -608,6 +608,7 @@ function StakeDialog({
 
     setStep("running");
     try {
+      const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
       const wallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
       const evm = wallets.find(
         (w) => w.chainId === "Ethereum" || w.assetType === "ETH" || /eth/i.test(w.chainId || "")
@@ -847,6 +848,7 @@ export default function Stake() {
     let cancelled = false;
     (async () => {
       try {
+        const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
         const wallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
         const evm = wallets.find(
           (w) => w.chainId === "Ethereum" || w.assetType === "ETH" || /eth/i.test(w.chainId || "")

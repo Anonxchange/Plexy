@@ -31,7 +31,6 @@ import { SiApple, SiVisa, SiMastercard, SiPaypal, SiGooglepay, SiApplepay, SiAme
 import { useToast } from "@/hooks/use-toast";
 import { useCdpOnramp } from "@/hooks/use-cdp-onramp";
 import { useCdpOfframp } from "@/hooks/use-cdp-offramp";
-import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { safeExternalRedirect, COINBASE_PAY_ORIGINS } from "@/lib/sanitize";
 
 const QUICK_AMOUNTS = ["100", "250", "500", "1000"];
@@ -440,6 +439,7 @@ const BuyCryptoPage = () => {
       return;
     }
     try {
+      const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
       const wallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
       const sel = wallets.find((w) => {
         const s = crypto.toUpperCase(), ws = (w.chainId || "").toUpperCase(), wt = (w.walletType || "").toUpperCase();
