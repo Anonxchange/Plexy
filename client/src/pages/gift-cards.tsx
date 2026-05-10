@@ -15,11 +15,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { currencies } from "@/lib/currencies";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { cn } from "@/lib/utils";
-import { lazy, Suspense, useState, useEffect, ComponentType } from "react";
+import { useState } from "react";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
-import { createClient } from "@/lib/supabase";
 import { sanitizeImageUrl } from "@/lib/sanitize";
 
 interface GiftCardProps {
@@ -34,12 +33,14 @@ function GiftCardComponent({ card, setLocation, index }: GiftCardProps) {
     <div
       className="bg-card rounded-2xl overflow-hidden shadow-card border border-border hover:shadow-card-hover transition-all duration-300 cursor-pointer group animate-slide-up flex flex-col h-full"
       onClick={() => setLocation(`/gift-cards/${card.id}`)}
-      style={{ animationDelay: `${0.2 + index * 0.05}s` }}
+      style={{ animationDelay: `${index * 0.03}s` }}
     >
-      <div className={`h-40 bg-gradient-to-br ${card.gradient} relative overflow-hidden flex-shrink-0`}>
+      <div className={`h-28 sm:h-40 bg-gradient-to-br ${card.gradient} relative overflow-hidden flex-shrink-0`}>
         <img
           src={card.image}
           alt={card.name}
+          loading="lazy"
+          decoding="async"
           className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-500"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
@@ -66,15 +67,11 @@ function GiftCardComponent({ card, setLocation, index }: GiftCardProps) {
   );
 }
 
-// Lazy load the component to trigger skeleton loading
-const LazyGiftCard = lazy(() => Promise.resolve({
-  default: GiftCardComponent as ComponentType<GiftCardProps>
-}));
 
 function GiftCardSkeleton() {
   return (
     <div className="bg-card rounded-2xl overflow-hidden shadow-card border border-border">
-      <Skeleton className="h-40 w-full" />
+      <Skeleton className="h-28 sm:h-40 w-full" />
       <div className="p-4">
         <div className="flex items-start justify-between mb-2">
           <Skeleton className="h-6 w-32" />
@@ -550,16 +547,14 @@ export function GiftCards() {
 
           <div>
             <h2 className="text-lg font-semibold text-foreground mb-4">{selectedSidebarCategory}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-8">
+            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 pb-8">
               {isLoading ? (
                 [...Array(9)].map((_, i) => (
                   <GiftCardSkeleton key={i} />
                 ))
               ) : (
                 giftCards && giftCards.length > 0 ? giftCards.map((card, index) => (
-                  <Suspense key={card.id} fallback={<GiftCardSkeleton />}>
-                    <LazyGiftCard card={card} setLocation={setLocation} index={index} />
-                  </Suspense>
+                  <GiftCardComponent key={card.id} card={card} setLocation={setLocation} index={index} />
                 )) : (
                   <div className="text-center py-8 w-full col-span-full">
                     <p className="text-muted-foreground">No gift cards available yet</p>
