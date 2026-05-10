@@ -189,7 +189,10 @@ export async function signEVMTransaction(
   const encoded = RLP.encode(tx);
   const hash = keccak_256(encoded);
 
-  const signature = await secp.sign(hash, privKey, { recovered: true });
+  // der: false → compact 64-byte output (32 r + 32 s). Without this, v1.7.x
+  // returns DER-encoded bytes (~71 bytes) and sig.slice(0,32) extracts the
+  // DER header instead of r, producing an invalid transaction signature.
+  const signature = await secp.sign(hash, privKey, { recovered: true, der: false });
   const [sig, recovery] = (signature as any);
   const v = BigInt(config.chainId * 2 + 35 + recovery);
   const r = BigInt("0x" + bytesToHex(sig.slice(0, 32)));
@@ -268,7 +271,8 @@ export async function signEVMContractCall(
     const encoded = RLP.encode(tx);
     const hash = keccak_256(encoded);
 
-    const signature = await secp.sign(hash, privKey, { recovered: true });
+    // der: false → compact 64-byte output. Same fix as signEVMTransaction above.
+    const signature = await secp.sign(hash, privKey, { recovered: true, der: false });
     const [sig, recovery] = (signature as any);
     const v = BigInt(config.chainId * 2 + 35 + recovery);
     const r = BigInt("0x" + bytesToHex(sig.slice(0, 32)));
