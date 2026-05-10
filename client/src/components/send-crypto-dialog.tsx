@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertCircle, Loader2, CheckCircle2, X, Copy, ShieldCheck, ShieldAlert, ShieldQuestion } from "lucide-react";
-import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { signBitcoinTransaction } from "@/lib/bitcoinSigner";
 import { signEVMTransaction } from "@/lib/evmSigner";
 import { signSolanaTransaction } from "@/lib/solanaSigner";
@@ -233,6 +232,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
     if (!user) return;
     const cryptoAmountNum = amountInputMode === "crypto" ? parseFloat(amount) : parseFloat(cryptoAmount);
     const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
+    const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
     const userWallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
     const symbolMap: Record<string, string> = {
       'BTC': 'Bitcoin (SegWit)', 'ETH': 'Ethereum', 'SOL': 'Solana',
@@ -293,6 +293,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
     setLoading(true);
     try {
       const passwordToUse = getSessionPassword() || userPassword;
+      const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
       const userWallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
       const symbolMap: Record<string, string> = {
         'BTC': 'Bitcoin (SegWit)', 'ETH': 'Ethereum', 'SOL': 'Solana',

@@ -19,7 +19,6 @@ import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { QRCodeCanvas } from "qrcode.react";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
-import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 
 interface ReceiveCryptoDialogProps {
   open: boolean;
@@ -96,6 +95,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
     const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
     
     const fetchAddress = async () => {
+      const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
       const userWallets = await (nonCustodialWalletManager as any).getWalletsFromStorage(user.id);
       
       // Look for a wallet matching the specific symbol or base symbol
