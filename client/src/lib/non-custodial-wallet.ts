@@ -344,7 +344,7 @@ class NonCustodialWalletManager {
         encryptedPrivateKey: parseVaultField(w.encrypted_private_key),
         encryptedMnemonic: parseVaultField(w.encrypted_mnemonic),
         isActive: w.is_active === 'true',
-        isBacked_up: w.is_backed_up === 'true',
+        isBackedUp: w.is_backed_up === 'true',
         createdAt: w.created_at,
         assetType: w.asset_type,
         baseChainWalletId: w.base_chain_wallet_id,
