@@ -569,6 +569,8 @@ export function Shop() {
           setSelectedCategory(cat);
           setExpandedCategories(new Set());
         }}
+        products={currentListings}
+        onViewProduct={handleViewDetails}
       />
     </div>
   );
