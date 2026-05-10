@@ -464,75 +464,123 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkWalletOnAuth = useCallback(async (userId: string, force: boolean = false) => {
     if (!userId) return;
-    
+
     if (!force && checkedUsersRef.current.has(userId)) {
       return;
     }
-    
+
+    // Guard: don't attempt any Supabase calls when the project credentials
+    // are not configured (dev environment without .env) or the client failed
+    // to initialise. Without this the client silently returns null for every
+    // query and we'd land on "CREATE REQUIRED" every time.
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+    if (!supabaseUrl) {
+      devLog.warn("Wallet check skipped — VITE_SUPABASE_URL not configured");
+      return;
+    }
+
     try {
       const supabase = await getSupabase();
       checkedUsersRef.current.add(userId);
-      
+
       // DECISION FLOW:
       // 1. Fetch authoritative encrypted blobs from Supabase (source of truth).
       //    Cache them in IndexedDB for offline fallback. Never store decrypted keys.
       // 2. If wallet is already unlocked in memory -> Wallet Ready
       // 3. If encrypted blobs exist (Supabase or IDB cache) -> Password Required
       // 4. If wallet address exists in profile but no blob -> Import Required
-      // 5. No address at all -> Create Required
+      // 5. No address at all AND Supabase confirmed it -> Create Required
+      //
+      // Critical: only open the dialog when we have a CONFIRMED server response.
+      // If Supabase is unreachable (bad network, cold start, missing creds) we
+      // must stay silent — showing "create wallet" over real funds would be
+      // catastrophic. We track `supabaseReachable` for exactly this gate.
 
       // 1. Always sync encrypted blobs from Supabase first.
-      //    This ensures we never rely solely on potentially stale IDB data.
       let wallets: any[] = [];
+      let supabaseReachable = false;
       try {
         const { nonCustodialWalletManager } = await import("./non-custodial-wallet");
         const supabaseWallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
+        supabaseReachable = true; // request completed without throwing
         if (supabaseWallets && supabaseWallets.length > 0) {
           wallets = supabaseWallets;
         }
       } catch {
         devLog.error("Supabase wallet sync failed, falling back to IDB cache");
+        // supabaseReachable stays false — network was unavailable
         const { nonCustodialWalletManager } = await import("./non-custodial-wallet");
         wallets = await nonCustodialWalletManager.getWalletsFromStorage(userId);
       }
 
       // 2. If wallet is already unlocked in memory -> Wallet Ready
-      // Use ref to avoid stale closure (useCallback has [] deps)
       if (wallets.length > 0 && isWalletUnlockedRef.current) {
         setWalletImportState({ required: false, expectedAddress: null });
         return;
       }
 
-      // 3. Encrypted blobs exist -> password required to use them
+      // 3. Encrypted blobs exist -> password required to use them, no dialog
       if (wallets.length > 0) {
         setWalletImportState({ required: false, expectedAddress: null });
         return;
       }
 
-      // 4. Check Wallet Address (Ownership check)
-      const { data: profile } = await supabase
+      // No local/Supabase blobs. Before opening any dialog we MUST confirm
+      // the server state. If Supabase was unreachable in step 1, retry once
+      // with a lightweight ping before giving up.
+      if (!supabaseReachable) {
+        try {
+          const { error: pingError } = await supabase
+            .from('user_profiles')
+            .select('id')
+            .eq('id', userId)
+            .maybeSingle();
+          if (!pingError) {
+            supabaseReachable = true;
+          }
+        } catch {
+          // Still unreachable — stay silent
+        }
+      }
+
+      // If we still can't reach Supabase, refuse to open the dialog.
+      // The wallet page has its own retry loop that handles this case.
+      if (!supabaseReachable) {
+        devLog.warn("Wallet check aborted — Supabase unreachable, will retry on wallet page");
+        checkedUsersRef.current.delete(userId); // allow retry next navigation
+        return;
+      }
+
+      // 4. Check Wallet Address (Ownership check) — use the confirmed client
+      const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .select('wallet_address')
         .eq('id', userId)
         .maybeSingle();
-        
-      // Use profile data only — avoids stale `user` closure from useCallback([])
+
+      // A non-null error here means the query failed (RLS, network blip, etc.).
+      // Treat it the same as "unreachable" — do not open the dialog.
+      if (profileError) {
+        devLog.warn("Wallet check aborted — profile fetch error:", profileError.message);
+        checkedUsersRef.current.delete(userId);
+        return;
+      }
+
       const walletAddress = profile?.wallet_address;
 
       if (walletAddress) {
-        // IMPORT REQUIRED: User owns a wallet (address exists) but we have no encrypted blob.
-        // This is a security gap or device loss scenario.
-        setWalletImportState({ 
-          required: true, 
-          expectedAddress: walletAddress 
+        // IMPORT REQUIRED: address on server but no local blob (device loss / new device)
+        setWalletImportState({
+          required: true,
+          expectedAddress: walletAddress,
         });
         return;
       }
 
-      // 5. CREATE REQUIRED: No trace of a wallet anywhere
-      setWalletImportState({ 
-        required: true, 
-        expectedAddress: null 
+      // 5. CREATE REQUIRED: Supabase confirmed no wallet exists anywhere
+      setWalletImportState({
+        required: true,
+        expectedAddress: null,
       });
 
     } catch {
@@ -685,7 +733,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (event === 'SIGNED_IN') {
             // Stamp activity at login so the 30-min inactivity clock starts now
             touchLastActivity(currentSession.user.id, true);
-            // Defer async work to avoid blocking the callback
+            // Defer async work to avoid blocking the callback.
+            // The 1500ms delay gives Supabase time to stabilise its connection
+            // after sign-in so the wallet check doesn't run against a
+            // not-yet-ready client and falsely trigger the setup dialog.
             setTimeout(async () => {
               if (aborted) return;
               const userId = currentSession.user.id;
@@ -695,7 +746,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               // Fire login notification if the user has it enabled
               const ip = await getClientIP().catch(() => '');
               sendLoginNotificationIfEnabled(userId, deviceInfo, ip);
-            }, 0);
+            }, 1500);
           }
         }
 
