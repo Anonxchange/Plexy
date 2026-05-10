@@ -173,7 +173,11 @@ export function Shop() {
             const parts: string[] = [...(cat.ancestors || []).map((a: any) => a.name), cat.name];
             return parts.filter(Boolean).join(CAT_SEPARATOR);
           };
-          const taxonomyCategory: string = buildTaxonomyPath(p.category);
+          // p.category is the Shopify taxonomy object (ancestors + name); it is only
+          // present if the Edge Function's GraphQL query requests it AND the store has
+          // taxonomy categories set. Fall back to the flat productType string so the
+          // sidebar always has categories even when taxonomy data is absent.
+          const taxonomyCategory: string = buildTaxonomyPath(p.category) || (p.productType ?? "");
           return {
             id: p.id,
             handle: p.handle,
