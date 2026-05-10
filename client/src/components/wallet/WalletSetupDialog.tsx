@@ -8,7 +8,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { deriveVaultKey } from "@/lib/webCrypto";
 import { createClient } from "@/lib/supabase";
 import { ShieldCheck, Lock, AlertTriangle, CheckCircle2, Loader2, X, RefreshCw } from "lucide-react";
@@ -58,6 +57,7 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expec
       
       if (isImporting) {
         // Recovery flow: Attempt to load from Supabase and verify with password
+        const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
         const wallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
         const ethWallet = wallets.find(w => w.chainId === "ethereum");
         

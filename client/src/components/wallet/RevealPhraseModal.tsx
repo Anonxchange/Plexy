@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { AlertTriangle, Copy, Check, Eye, EyeOff, Loader2, ShieldOff, Lock } from "lucide-react";
 // SVG is imported as a static asset URL and rendered via <img>.
 // Browsers fully sandbox SVGs loaded this way — no scripts or event
@@ -130,6 +129,7 @@ function useRevealState(onOpenChange: (v: boolean) => void) {
     }
     setIsLoading(true);
     try {
+      const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
       const wallets = await nonCustodialWalletManager.getNonCustodialWallets(userId);
       if (wallets.length === 0) throw new Error("No non-custodial wallet found.");
       const phrase = await nonCustodialWalletManager.getWalletMnemonic(wallets[0].id, password, userId);
