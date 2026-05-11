@@ -1,7 +1,10 @@
 import {
   useMarketDetail, useOrderbook, usePriceHistory,
   useOpenOrders, usePlaceOrder, useCancelOrder,
+  usePolymarketWalletInfo, usePolymarketApprove, usePolymarketRevoke,
 } from "@/hooks/use-polymarket";
+import type { PolymarketWalletInfo } from "@/lib/polymarket-clob";
+import { useAuth } from "@/lib/auth-context";
 import { PolymarketImage } from "@/components/polymarket-image";
 import { useRoute, useLocation } from "wouter";
 import { Input } from "@/components/ui/input";
@@ -11,9 +14,10 @@ import {
   ChevronLeft, Share2, Bookmark, TrendingUp, TrendingDown,
   Clock, BarChart2, Droplets, Info, X, Loader2, AlertCircle,
   CheckCircle2, Wallet, ChevronDown, ChevronUp, Users,
+  Eye, EyeOff, ExternalLink,
 } from "lucide-react";
 import { format } from "date-fns";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
@@ -128,7 +132,12 @@ function TradePanel({
             <span className="text-xs font-medium">Balance</span>
           </div>
           {balanceData
-            ? <span className="text-sm font-bold tabular-nums">${availableUsdc.toFixed(2)} USDC</span>
+            ? (
+              <div className="text-right">
+                <span className="text-sm font-bold tabular-nums">${availableUsdc.toFixed(2)} USDC</span>
+                <p className="text-[10px] text-muted-foreground">approved for trading</p>
+              </div>
+            )
             : <span className="text-xs text-muted-foreground italic">Not connected</span>}
         </div>
 
@@ -303,6 +312,220 @@ function TradePanel({
   );
 }
 
+/* ───────────────────────────── Wallet Panel */
+interface WalletPanelProps {
+  address: string | null;
+  walletInfo: PolymarketWalletInfo | undefined;
+  walletInfoLoading: boolean;
+}
+
+function WalletPanel({ address, walletInfo, walletInfoLoading }: WalletPanelProps) {
+  const { user } = useAuth();
+  const [mode,      setMode]      = useState<"none" | "deposit" | "withdraw">("none");
+  const [amount,    setAmount]    = useState("");
+  const [password,  setPassword]  = useState("");
+  const [showPwd,   setShowPwd]   = useState(false);
+  const [txResult,  setTxResult]  = useState<{ txHash: string; explorerUrl: string } | null>(null);
+
+  const approveM = usePolymarketApprove();
+  const revokeM  = usePolymarketRevoke();
+  const busy = approveM.isPending || revokeM.isPending;
+
+  async function handleSubmit() {
+    if (!user)     { toast.error("Sign in first"); return; }
+    if (!password) { toast.error("Enter your wallet password"); return; }
+    if (mode === "deposit" && (!amount || parseFloat(amount) <= 0)) {
+      toast.error("Enter an amount to approve"); return;
+    }
+    try {
+      const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
+      const wallets = await nonCustodialWalletManager.getWalletsFromStorage(user.id);
+      const evmWallet = wallets.find(w =>
+        ["ethereum", "eth", "bsc", "bnb", "arb", "arbitrum"].some(k =>
+          w.chainId.toLowerCase().includes(k)
+        ) && w.address.startsWith("0x")
+      );
+      if (!evmWallet) { toast.error("No EVM wallet found"); return; }
+      const mnemonic = await nonCustodialWalletManager.getWalletMnemonic(evmWallet.id, password, user.id);
+      if (!mnemonic) { toast.error("Incorrect password"); return; }
+
+      let result: { txHash: string; explorerUrl: string };
+      if (mode === "deposit") {
+        result = await approveM.mutateAsync({ mnemonic, amount });
+        toast.success(`Approved $${amount} USDC.e for trading on Polygon`);
+      } else {
+        result = await revokeM.mutateAsync({ mnemonic });
+        toast.success("Trading approval revoked — USDC.e stays in your wallet");
+      }
+      setTxResult(result);
+      setPassword("");
+      setAmount("");
+    } catch (err: any) {
+      toast.error(err?.message || "Transaction failed");
+    }
+  }
+
+  function resetForm() {
+    setMode("none");
+    setAmount("");
+    setPassword("");
+    setTxResult(null);
+  }
+
+  return (
+    <div className="bg-background border border-border rounded-2xl overflow-hidden">
+      {/* Header */}
+      <div className="px-4 py-3.5 border-b border-border flex items-center gap-2">
+        <Wallet className="w-4 h-4 text-muted-foreground" />
+        <span className="text-sm font-semibold">Polygon Wallet</span>
+        {address && (
+          <span className="ml-auto font-mono text-[10px] text-muted-foreground">
+            {address.slice(0, 6)}…{address.slice(-4)}
+          </span>
+        )}
+      </div>
+
+      {!address ? (
+        <div className="px-4 py-4">
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Sign in and create an EVM wallet to see your Polygon balance and deposit USDC.e for trading.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Balances */}
+          <div className="px-4 py-4 space-y-2">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-muted-foreground text-xs">USDC.e on Polygon</span>
+              <span className="font-bold tabular-nums">
+                {walletInfoLoading ? "…" : `$${walletInfo?.usdcBalance ?? "0.00"}`}
+              </span>
+            </div>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-muted-foreground text-xs">Approved for trading</span>
+              <span className={cn(
+                "font-bold tabular-nums",
+                parseFloat(walletInfo?.approvedAmount ?? "0") > 0
+                  ? "text-emerald-600 dark:text-emerald-400"
+                  : "text-muted-foreground",
+              )}>
+                {walletInfoLoading ? "…" : `$${walletInfo?.approvedAmount ?? "0.00"}`}
+              </span>
+            </div>
+          </div>
+
+          {/* Actions */}
+          {mode === "none" && !txResult && (
+            <div className="px-4 pb-4 grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setMode("deposit")}
+                className="h-9 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold transition-all"
+              >
+                + Deposit
+              </button>
+              <button
+                onClick={() => setMode("withdraw")}
+                disabled={parseFloat(walletInfo?.approvedAmount ?? "0") <= 0}
+                className="h-9 rounded-xl bg-muted hover:bg-muted/80 border border-border text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                − Withdraw
+              </button>
+            </div>
+          )}
+
+          {/* Deposit / Withdraw form */}
+          {mode !== "none" && !txResult && (
+            <div className="px-4 pb-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  {mode === "deposit" ? "Approve USDC.e for trading" : "Revoke trading approval"}
+                </span>
+                <button onClick={resetForm} className="text-muted-foreground hover:text-foreground p-0.5">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {mode === "deposit" && (
+                <div className="space-y-1.5">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm select-none">$</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder="0.00"
+                      value={amount}
+                      onChange={e => setAmount(e.target.value)}
+                      className="pl-7 h-10 text-sm"
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    Wallet: ${walletInfo?.usdcBalance ?? "0.00"} USDC.e on Polygon
+                  </p>
+                </div>
+              )}
+
+              {mode === "withdraw" && (
+                <p className="text-xs text-muted-foreground bg-muted/50 rounded-xl px-3 py-2.5 leading-relaxed">
+                  Sets your Polymarket approval to zero. Your USDC.e stays in your Polygon wallet — no funds leave.
+                </p>
+              )}
+
+              <div className="relative">
+                <Input
+                  type={showPwd ? "text" : "password"}
+                  placeholder="Wallet password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="pr-10 h-10 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
+              <button
+                onClick={handleSubmit}
+                disabled={busy || !password || (mode === "deposit" && (!amount || parseFloat(amount) <= 0))}
+                className="w-full h-10 rounded-xl bg-primary text-primary-foreground text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
+              >
+                {busy
+                  ? <><Loader2 className="w-4 h-4 animate-spin" />Processing…</>
+                  : mode === "deposit" ? "Approve & Deposit" : "Revoke Approval"}
+              </button>
+            </div>
+          )}
+
+          {/* Tx success */}
+          {txResult && (
+            <div className="px-4 pb-4 space-y-2.5">
+              <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3">
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                Transaction submitted successfully
+              </div>
+              <a
+                href={txResult.explorerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+              >
+                <ExternalLink className="w-3 h-3" />
+                View on PolygonScan
+              </a>
+              <button onClick={resetForm} className="text-xs text-muted-foreground hover:text-foreground">
+                ← Back
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 /* ───────────────────────────── main page */
 export default function PredictionDetailPage() {
   const [, params]      = useRoute("/prediction/:id");
@@ -311,12 +534,37 @@ export default function PredictionDetailPage() {
   const { data: market, isLoading: marketLoading, error: marketError } =
     useMarketDetail(params?.id);
 
+  const { user } = useAuth();
+  const [userEvmAddress,     setUserEvmAddress]     = useState<string | null>(null);
+
   const [chartInterval,      setChartInterval]      = useState<Interval>("1D");
   const [tradeTab,           setTradeTab]           = useState<"buy" | "sell">("buy");
   const [rulesTab,           setRulesTab]           = useState<"rules" | "context">("rules");
   const [amount,             setAmount]             = useState("");
   const [orderBookOpen,      setOrderBookOpen]      = useState(true);
   const [mobileSheetOpen,    setMobileSheetOpen]    = useState(false);
+
+  useEffect(() => {
+    if (!user) { setUserEvmAddress(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
+        const wallets = await nonCustodialWalletManager.getWalletsFromStorage(user.id);
+        const evm = wallets.find(w =>
+          ["ethereum", "eth", "bsc", "bnb", "arb", "arbitrum"].some(k =>
+            w.chainId.toLowerCase().includes(k)
+          ) && w.address.startsWith("0x")
+        );
+        if (!cancelled) setUserEvmAddress(evm?.address ?? null);
+      } catch {
+        if (!cancelled) setUserEvmAddress(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
+
+  const { data: walletInfo, isLoading: walletInfoLoading } = usePolymarketWalletInfo(userEvmAddress);
 
   /* ── Outcomes ── */
   const outcomes = useMemo(() => {
@@ -353,7 +601,7 @@ export default function PredictionDetailPage() {
   const { data: historyData, isLoading: histLoading} = usePriceHistory(selectedOutcome?.tokenId, chartInterval);
   const yesOutcome                                   = outcomes.find(o => o.name.toLowerCase() === "yes");
   const { data: dailyHistory }                       = usePriceHistory(yesOutcome?.tokenId ?? selectedOutcome?.tokenId, "1D");
-  const balanceData                                  = undefined;
+  const balanceData: PolymarketWalletInfo | undefined = walletInfo;
   const { data: openOrders }                         = useOpenOrders();
   const placeOrder  = usePlaceOrder();
   const cancelOrder = useCancelOrder();
@@ -371,7 +619,7 @@ export default function PredictionDetailPage() {
 
   const availableUsdc = useMemo(() => {
     if (!balanceData) return 0;
-    return parseFloat(balanceData.balance ?? balanceData.allowance ?? "0");
+    return parseFloat(balanceData.approvedAmount ?? "0");
   }, [balanceData]);
 
   const chartPoints: { t: number; v: number }[] = useMemo(() => {
@@ -401,7 +649,7 @@ export default function PredictionDetailPage() {
       size:    amountNum,
       side:    tradeTab === "buy" ? "BUY" : "SELL",
       type:    "MARKET",
-      funderAddress: balanceData?.address ?? "",
+      funderAddress: userEvmAddress ?? "",
     }, {
       onSuccess: (data: any) => {
         if (data?.errorMsg) { toast.error(`Order failed: ${data.errorMsg}`); }
@@ -466,6 +714,13 @@ export default function PredictionDetailPage() {
               <X className="w-4 h-4" />
             </button>
             <TradePanel {...tradePanelProps} />
+            <div className="px-4 pb-6">
+              <WalletPanel
+                address={userEvmAddress}
+                walletInfo={walletInfo}
+                walletInfoLoading={walletInfoLoading}
+              />
+            </div>
           </div>
         </div>
       )}
@@ -958,10 +1213,15 @@ export default function PredictionDetailPage() {
           </div>
 
           {/* ════════════ RIGHT COLUMN — desktop trade panel ════════════ */}
-          <div className="hidden lg:block lg:sticky lg:top-20">
+          <div className="hidden lg:block lg:sticky lg:top-20 space-y-4">
             <div className="bg-background border border-border rounded-2xl overflow-hidden shadow-sm">
               <TradePanel {...tradePanelProps} />
             </div>
+            <WalletPanel
+              address={userEvmAddress}
+              walletInfo={walletInfo}
+              walletInfoLoading={walletInfoLoading}
+            />
           </div>
 
         </div>
