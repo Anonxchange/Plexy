@@ -277,6 +277,9 @@ export function useWalletBalances() {
       // Fetch live balances from the chain (non-custodial, no server balance store).
       const freshPromise = getUserWallets(userId, cached)
         .then((fresh) => {
+          // Push fresh data into both the React Query cache and sessionStorage
+          // so the UI updates even when we returned early with cached data.
+          queryClient.setQueryData([...queryKey], fresh);
           writeSessionSnapshot(userId, fresh);
           return fresh;
         })
@@ -285,8 +288,9 @@ export function useWalletBalances() {
           return cached ?? [];
         });
 
-      // If we already have something cached, return it immediately and let
-      // the chain refresh update the cache in the background.
+      // If we already have something cached, return it immediately so the UI
+      // paints instantly. The freshPromise above will push the live result
+      // into the cache once the chain responds.
       if (cached) return cached;
       return await freshPromise;
     },
