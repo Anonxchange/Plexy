@@ -498,7 +498,7 @@ function deriveEvmAddress(privateKey: Uint8Array): string {
 
 // Generate a fresh Ethereum keypair to use as the AsterDEX V3 signer wallet.
 export function asterGenerateSignerWallet(): { address: string; privateKey: string } {
-  const privKey = secp.randomPrivateKey();
+  const privKey = secp.utils.randomSecretKey();
   const address = deriveEvmAddress(privKey);
   const privateKey = '0x' + Array.from(privKey).map(b => b.toString(16).padStart(2, '0')).join('');
   return { address, privateKey };
