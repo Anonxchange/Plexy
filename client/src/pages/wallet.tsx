@@ -33,6 +33,8 @@ export default function WalletPage() {
   // "import / sync" mode instead of "create new" mode. Prevents the dangerous
   // race condition of creating a duplicate wallet over an existing one.
   const [importExpectedAddress, setImportExpectedAddress] = useState<string | null>(null);
+  // Must be declared here (before any early return) to satisfy Rules of Hooks.
+  const [selectedAsset, setSelectedAsset] = useState<string | undefined>();
 
   // showSkeleton is true while loading (includes live balance fetch) or fetching without existing data.
   // Only show skeleton on error when there's no cached data to fall back to.
@@ -154,8 +156,6 @@ export default function WalletPage() {
     name: asset.name,
     icon: asset.symbol
   }));
-
-  const [selectedAsset, setSelectedAsset] = useState<string | undefined>();
 
   const handleSend = (symbol?: string) => {
     setSelectedAsset(symbol);
