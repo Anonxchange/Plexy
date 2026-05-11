@@ -22,15 +22,7 @@ export interface WalletTransaction {
   id: string;
   user_id: string;
   wallet_id: string;
-  type:
-    | 'deposit'
-    | 'withdrawal'
-    | 'swap'
-    | 'p2p_buy'
-    | 'p2p_sell'
-    | 'escrow_lock'
-    | 'escrow_release'
-    | 'fee';
+  type: 'deposit' | 'withdrawal' | 'swap';
   crypto_symbol: string;
   amount: number;
   fee: number;
@@ -46,26 +38,10 @@ export interface WalletTransaction {
 }
 
 /* =========================================
-   CACHE MODEL
-   Layered, server-first:
-
-   1. Server snapshot (Supabase `wallets` table,
-      RLS-scoped to auth.uid). Primary cache –
-      shared across devices, instant render on
-      every login. Storing the last on-chain
-      reading server-side does not make the
-      product custodial: the user still owns the
-      keys, the server only echoes a value the
-      chain already publishes.
-   2. sessionStorage fallback – used when the
-      server snapshot can't be read (offline,
-      RLS hiccup) so the tab still renders
-      immediately on a reload.
-   3. In-memory React Query cache for intra-page
-      transitions.
-
-   On every successful chain refresh we update
-   both layers.
+   SESSION STORAGE CACHE
+   Client-side only — never touches a server.
+   Gives instant render on tab reload while the
+   chain fetch is in flight.
 ========================================= */
 
 const CACHE_KEY_PREFIX = 'pexly_wallet_balances_v3';
@@ -97,47 +73,6 @@ function writeSessionSnapshot(userId: string, wallets: Wallet[]): void {
 }
 
 /* =========================================
-   SERVER SNAPSHOT (primary cache)
-========================================= */
-
-async function readServerSnapshot(userId: string): Promise<Wallet[] | null> {
-  const client = await getSupabase();
-  const { data, error } = await client
-    .from('wallets')
-    .select('id, user_id, crypto_symbol, balance, locked_balance, deposit_address, created_at, updated_at')
-    .eq('user_id', userId);
-  if (error || !data) return null;
-  return data.map((row: any) => ({
-    id: row.id,
-    user_id: row.user_id,
-    crypto_symbol: row.crypto_symbol,
-    balance: Number(row.balance) || 0,
-    locked_balance: Number(row.locked_balance) || 0,
-    deposit_address: row.deposit_address,
-    chain_id: '',
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-  }));
-}
-
-async function writeServerSnapshot(userId: string, wallets: Wallet[]): Promise<void> {
-  if (!wallets.length) return;
-  const rows = wallets.map((w) => ({
-    user_id: userId,
-    crypto_symbol: w.crypto_symbol,
-    balance: w.balance,
-    locked_balance: w.locked_balance,
-    deposit_address: w.deposit_address,
-    updated_at: new Date().toISOString(),
-  }));
-  const client = await getSupabase();
-  const { error } = await client
-    .from('wallets')
-    .upsert(rows as any, { onConflict: 'user_id,crypto_symbol' });
-  if (error) console.warn('[wallet-balances] server snapshot upsert failed:', error.message);
-}
-
-/* =========================================
    CHAIN RESOLVER
    Maps DB chain_id values to edge function chain keys
 ========================================= */
@@ -145,7 +80,6 @@ async function writeServerSnapshot(userId: string, wallets: Wallet[]): Promise<v
 function resolveChain(chainId: string): { chain: string; isToken: boolean; tokenSymbol?: string } {
   const id = chainId.toLowerCase();
 
-  // Token-specific wallets (USDT-Ethereum, USDC-Tron, etc.)
   if (id.startsWith('usdt-') || id.startsWith('usdc-')) {
     const rest = id.replace(/^usdt-|^usdc-/, '');
     const tokenSymbol = id.startsWith('usdt-') ? 'USDT' : 'USDC';
@@ -167,16 +101,16 @@ function resolveChain(chainId: string): { chain: string; isToken: boolean; token
 }
 
 /* =========================================
-   GET USER WALLETS (live on-chain fetch)
-   user_wallets is read for *addresses only* – it
-   stores wallet metadata (address, chain), never
-   balances. Balances always come from the chain.
+   GET USER WALLETS (non-custodial, chain-first)
+
+   Reads wallet *addresses* from user_wallets
+   (metadata only — never balances). Fetches live
+   balances directly from each chain via the
+   monitor-deposits edge function.
 
    Resilience: if a chain RPC call fails, the
-   previous known balance for that wallet is
-   retained instead of dropping it from the list,
-   so the UI never collapses to zero on a flaky
-   network call.
+   previous known balance is kept so the UI never
+   collapses to zero on a flaky network call.
 ========================================= */
 
 export async function getUserWallets(
@@ -185,7 +119,6 @@ export async function getUserWallets(
 ): Promise<Wallet[]> {
   const client = await getSupabase();
 
-  // 1. Get all active wallet addresses from DB (metadata only).
   const { data: dbWallets, error: dbError } = await client
     .from('user_wallets')
     .select('id, address, chain_id, is_active')
@@ -205,7 +138,6 @@ export async function getUserWallets(
     prevBySymbol.set(w.crypto_symbol, w);
   });
 
-  // 2. Deduplicate: group by (address + resolved chain)
   const seen = new Map<string, { address: string; chain: string; walletIds: string[]; chainIds: string[] }>();
   const tokenWallets: { id: string; chainId: string; address: string; tokenSymbol: string; resolvedChain: string }[] = [];
 
@@ -228,8 +160,6 @@ export async function getUserWallets(
     }
   }
 
-  // 3. Fetch balances from chain (via the monitor-deposits proxy) for each
-  //    unique chain+address.
   const wallets: Wallet[] = [];
   const now = new Date().toISOString();
 
@@ -251,15 +181,11 @@ export async function getUserWallets(
       fetchFailed = true;
     }
 
-    // Native balance wallet — even on failure, keep the previous balance so
-    // the UI does not flicker to zero.
     if (entry.walletIds.length > 0) {
       const id = entry.walletIds[0];
       const prev = prevById.get(id) ?? prevBySymbol.get(data?.native?.symbol ?? '');
       const nativeSymbol = data?.native?.symbol ?? prev?.crypto_symbol ?? entry.chain;
-      const nativeBalance = fetchFailed
-        ? prev?.balance ?? 0
-        : parseFloat(data.native.balance) || 0;
+      const nativeBalance = fetchFailed ? prev?.balance ?? 0 : parseFloat(data.native.balance) || 0;
 
       wallets.push({
         id,
@@ -274,18 +200,16 @@ export async function getUserWallets(
       });
     }
 
-    // Token wallets riding on this address+chain.
     const tokens: any[] = data?.tokens ?? [];
     for (const tw of tokenWallets) {
       if (tw.address !== entry.address || tw.resolvedChain !== entry.chain) continue;
       const prev = prevById.get(tw.id) ?? prevBySymbol.get(tw.tokenSymbol);
       const match = tokens.find((t: any) => t.symbol === tw.tokenSymbol);
-
       const tokenBalance = fetchFailed
         ? prev?.balance ?? 0
         : match
           ? parseFloat(match.balance) || 0
-          : prev?.balance ?? 0; // token absent from response → treat as unchanged
+          : prev?.balance ?? 0;
 
       wallets.push({
         id: tw.id,
@@ -308,19 +232,16 @@ export async function getUserWallets(
 /* =========================================
    REACT QUERY HOOK
 
-   Strategy (non-custodial, blockchain-primary):
-   1. On mount, hydrate from the user-scoped
-      localStorage snapshot for an instant render.
-      No server-side balance store is read or
-      written.
-   2. Fire an on-chain refresh in the background.
-      When it returns, write the result back to
-      localStorage so the next reload is instant.
-   3. Poll every 60 s; preserve-on-error keeps
-      the last good per-wallet balance if a chain
-      RPC hiccups – the total never collapses.
-   4. localStorage is wiped by the existing logout
-      flow, so balances never leak across sessions.
+   Chain-first, fully non-custodial:
+   1. Hydrate instantly from sessionStorage so
+      the UI paints on reload with no flicker.
+   2. Fetch live balances from the chain in the
+      background and write the result back to
+      sessionStorage for the next reload.
+   3. Poll every 90 s as a safety net; window
+      focus and reconnect trigger a refetch too.
+   4. sessionStorage is wiped at logout so
+      balances never leak across sessions.
 ========================================= */
 
 export function useWalletBalances() {
@@ -328,140 +249,49 @@ export function useWalletBalances() {
   const queryClient = useQueryClient();
   const userId = user?.id;
 
-  // Real-time push: subscribe to changes on this user's `wallets` rows.
-  // The moment the server snapshot is updated (e.g. by the deposit-monitor
-  // backend after a confirmation), patch the cache live and trigger an
-  // immediate chain re-read so the UI doesn't have to wait for the next
-  // 60 s poll.
-  //
-  // Uses getSupabase() (async) instead of the synchronous proxy so this
-  // effect never throws if the client hasn't resolved yet (race condition
-  // on fast auth state restore from localStorage).
+  // Keep the in-memory query key in sync with the cache key used below
+  // so any invalidation from elsewhere correctly targets the right entry.
+  const queryKey = ['wallet-balances', userId ?? 'anon'] as const;
+
+  // Invalidate on window focus / reconnect is handled by React Query options
+  // below — no manual useEffect needed for that.
   useEffect(() => {
     if (!userId) return;
-
-    const queryKey = ['wallet-balances', userId] as const;
-    let cancelled = false;
-    let channelRef: ReturnType<Awaited<ReturnType<typeof getSupabase>>['channel']> | null = null;
-
-    getSupabase()
-      .then((client) => {
-        if (cancelled) return;
-
-        channelRef = client
-          .channel(`wallets:${userId}`)
-          .on(
-            'postgres_changes' as any,
-            {
-              event: '*',
-              schema: 'public',
-              table: 'wallets',
-              filter: `user_id=eq.${userId}`,
-            },
-            (payload: any) => {
-              const row = payload.new ?? payload.old;
-              if (!row) return;
-
-              // Patch the in-memory cache for the affected symbol.
-              queryClient.setQueryData<Wallet[]>([...queryKey], (current) => {
-                if (!current) return current;
-                const next = current.map((w) =>
-                  w.crypto_symbol === row.crypto_symbol
-                    ? {
-                        ...w,
-                        balance: Number(row.balance) || 0,
-                        locked_balance: Number(row.locked_balance) || 0,
-                        deposit_address: row.deposit_address ?? w.deposit_address,
-                        updated_at: row.updated_at ?? new Date().toISOString(),
-                      }
-                    : w,
-                );
-                writeSessionSnapshot(userId, next);
-                return next;
-              });
-
-              // Also re-read from chain to make sure the live value matches the
-              // server hint we just received.
-              void queryClient.invalidateQueries({ queryKey: [...queryKey] });
-            },
-          )
-          .subscribe();
-      })
-      .catch(() => {
-        // Supabase not available (e.g. credentials not configured in dev).
-        // Silently skip realtime subscription — polling will still work once
-        // credentials are present.
-      });
-
-    return () => {
-      cancelled = true;
-      if (channelRef) {
-        getSupabase()
-          .then((client) => client.removeChannel(channelRef!))
-          .catch(() => {});
-      }
-    };
-  }, [userId, queryClient]);
+    // Nothing to set up; cleanup clears the session cache on unmount
+    // only if the user has logged out (handled by the logout flow).
+  }, [userId]);
 
   return useQuery<Wallet[]>({
-    // Scope cache to the current user so a logout/login swap can never
-    // serve another account's result.
-    queryKey: ['wallet-balances', userId ?? 'anon'],
+    queryKey,
     enabled: !!userId,
-    // Hydrate immediately from the session-storage echo for this user so
-    // a tab reload paints something before the server round-trip resolves.
-    // The server snapshot below replaces this within milliseconds.
+    // Hydrate immediately from the client-side session cache so the
+    // first render shows real numbers without waiting for the chain.
     initialData: () => (userId ? readSessionSnapshot(userId) ?? undefined : undefined),
     initialDataUpdatedAt: 0,
     queryFn: async () => {
       if (!userId) return [];
 
-      const queryKey = ['wallet-balances', userId] as const;
       const inMem = queryClient.getQueryData<Wallet[]>([...queryKey]);
+      const cached = inMem ?? readSessionSnapshot(userId) ?? undefined;
 
-      // 1. Try the server snapshot first – this is the fast path that makes
-      //    a fresh login paint real numbers in one round-trip instead of
-      //    waiting for the chain.
-      const serverSnapshot = await readServerSnapshot(userId).catch(() => null);
-      const baseline =
-        (serverSnapshot && serverSnapshot.length ? serverSnapshot : null) ??
-        inMem ??
-        readSessionSnapshot(userId) ??
-        null;
-
-      // 2. Kick off the chain refresh in the background. It writes through
-      //    to both cache layers and updates the in-memory query cache when
-      //    it completes, so the UI upgrades from snapshot → live without
-      //    blocking the first paint.
-      const refreshPromise = getUserWallets(userId, baseline ?? undefined)
+      // Fetch live balances from the chain (non-custodial, no server balance store).
+      const freshPromise = getUserWallets(userId, cached)
         .then((fresh) => {
-          queryClient.setQueryData([...queryKey], fresh);
-          void writeServerSnapshot(userId, fresh);
           writeSessionSnapshot(userId, fresh);
           return fresh;
         })
         .catch((err) => {
-          console.warn('[wallet-balances] background chain refresh failed:', err);
-          return baseline ?? [];
+          console.warn('[wallet-balances] chain refresh failed:', err);
+          return cached ?? [];
         });
 
-      // 3. If we have a baseline (server snapshot or any cache), return it
-      //    NOW so the UI paints instantly. Otherwise wait for the chain –
-      //    this only happens on a brand-new account with no cached data
-      //    anywhere.
-      if (baseline) {
-        if (serverSnapshot) writeSessionSnapshot(userId, serverSnapshot);
-        return baseline;
-      }
-      return await refreshPromise;
+      // If we already have something cached, return it immediately and let
+      // the chain refresh update the cache in the background.
+      if (cached) return cached;
+      return await freshPromise;
     },
-    // Keep showing the previous balances while a refetch is in flight –
-    // never show an undefined / empty state mid-cycle.
     placeholderData: keepPreviousData,
     staleTime: 30_000,
-    // Realtime push handles instant updates. The poll is a safety net for
-    // missed events – 90 s is the sweet spot: rare enough to avoid RPC
-    // burn, frequent enough to self-heal within ~1 block on every chain.
     refetchInterval: 90_000,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
@@ -471,24 +301,12 @@ export function useWalletBalances() {
 }
 
 /* =========================================
-   OTHER HELPERS
+   HELPERS
 ========================================= */
 
 export async function getWalletBalance(userId: string, cryptoSymbol: string): Promise<Wallet | null> {
   const wallets = await getUserWallets(userId);
   return wallets.find((w) => w.crypto_symbol === cryptoSymbol) || null;
-}
-
-export async function getWalletTransactions(userId: string, limit: number = 50): Promise<WalletTransaction[]> {
-  const client = await getSupabase();
-  const { data, error } = await client
-    .from('wallet_transactions' as any)
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(limit);
-  if (error) throw new Error(error.message);
-  return (data as unknown as WalletTransaction[]) ?? [];
 }
 
 export async function getDepositAddress(userId: string, cryptoSymbol: string): Promise<string> {
