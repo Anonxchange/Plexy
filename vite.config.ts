@@ -51,6 +51,12 @@ export default defineConfig({
       "@": path.resolve(__dirname, "client", "src"),
       "@shared": path.resolve(__dirname, "shared"),
       "@assets": path.resolve(__dirname, "attached_assets"),
+      "@noble/hashes/sha256":    path.resolve(__dirname, "node_modules/@noble/hashes/sha2.js"),
+      "@noble/hashes/sha512":    path.resolve(__dirname, "node_modules/@noble/hashes/sha2.js"),
+      "@noble/hashes/sha3":      path.resolve(__dirname, "node_modules/@noble/hashes/sha3.js"),
+      "@noble/hashes/ripemd160": path.resolve(__dirname, "node_modules/@noble/hashes/legacy.js"),
+      "@noble/hashes/hmac":      path.resolve(__dirname, "node_modules/@noble/hashes/hmac.js"),
+      "@noble/hashes/utils":     path.resolve(__dirname, "node_modules/@noble/hashes/utils.js"),
     },
   },
 
@@ -88,9 +94,6 @@ export default defineConfig({
         manualChunks: {
           "vendor-react": ["react", "react-dom"],
 
-          // Only components needed for initial paint of every page (nav dropdowns,
-          // tooltip provider, button slot). Avatar is now in vendor-ui-x because
-          // it is only imported by the lazy AppHeaderUserSection component.
           "vendor-ui": [
             "@radix-ui/react-dialog",
             "@radix-ui/react-dropdown-menu",
@@ -98,8 +101,6 @@ export default defineConfig({
             "@radix-ui/react-tooltip",
           ],
 
-          // Extended UI – only used inside lazy-loaded pages/dialogs/components.
-          // This chunk is never preloaded on the home page.
           "vendor-ui-x": [
             "@radix-ui/react-avatar",
             "@radix-ui/react-accordion",
@@ -127,11 +128,6 @@ export default defineConfig({
 
           "vendor-icons": ["lucide-react"],
 
-          // vendor-charts, vendor-canvas, vendor-crypto intentionally removed
-          // from manualChunks. Recharts, html2canvas, and the crypto libs are
-          // only imported by lazy-loaded pages so Rollup will co-locate them in
-          // those lazy chunks – they are never fetched on the initial page load.
-
           "vendor-db": ["@supabase/supabase-js"],
 
           "vendor-utils": [
@@ -150,7 +146,6 @@ export default defineConfig({
     allowedHosts: true,
     hmr: {
       clientPort: 443,
-
     },
   },
 
