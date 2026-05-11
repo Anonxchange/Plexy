@@ -2,8 +2,9 @@ import {
   useMarketDetail, useOrderbook, usePriceHistory,
   useOpenOrders, usePlaceOrder, useCancelOrder,
   usePolymarketWalletInfo, usePolymarketApprove, usePolymarketRevoke,
+  usePolymarketTradeHistory,
 } from "@/hooks/use-polymarket";
-import type { PolymarketWalletInfo } from "@/lib/polymarket-clob";
+import type { PolymarketWalletInfo, PolymarketTrade } from "@/lib/polymarket-clob";
 import { useAuth } from "@/lib/auth-context";
 import { PolymarketImage } from "@/components/polymarket-image";
 import { useRoute, useLocation } from "wouter";
@@ -14,10 +15,11 @@ import {
   ChevronLeft, Share2, Bookmark, TrendingUp, TrendingDown,
   Clock, BarChart2, Droplets, Info, X, Loader2, AlertCircle,
   CheckCircle2, Wallet, ChevronDown, ChevronUp, Users,
-  Eye, EyeOff, ExternalLink,
+  Eye, EyeOff, ExternalLink, History, ArrowDownToLine,
+  ArrowUpFromLine, RefreshCw,
 } from "lucide-react";
 import { format } from "date-fns";
-import { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
@@ -349,7 +351,69 @@ function TradePanel({
   );
 }
 
+/* ───────────────────────────── Trade History Row */
+function TradeHistoryRow({ trade }: { trade: PolymarketTrade }) {
+  const isBuy  = trade.side === "BUY";
+  const isRedeem = trade.type === "REDEEM";
+  const date   = new Date(trade.timestamp * 1000);
+  const usdAmt = (trade.usdcSize ?? 0).toFixed(2);
+  const price  = (trade.price * 100).toFixed(0);
+
+  return (
+    <div className="flex items-start gap-3 py-3 border-b border-border/50 last:border-none">
+      <div className={cn(
+        "mt-0.5 w-7 h-7 rounded-full flex items-center justify-center shrink-0",
+        isRedeem
+          ? "bg-amber-500/15 text-amber-500"
+          : isBuy
+            ? "bg-emerald-500/15 text-emerald-500"
+            : "bg-red-500/15 text-red-500",
+      )}>
+        {isRedeem
+          ? <CheckCircle2 className="w-3.5 h-3.5" />
+          : isBuy
+            ? <ArrowDownToLine className="w-3.5 h-3.5" />
+            : <ArrowUpFromLine className="w-3.5 h-3.5" />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between gap-2">
+          <span className={cn(
+            "text-[11px] font-bold uppercase tracking-wide",
+            isRedeem ? "text-amber-500" : isBuy ? "text-emerald-600 dark:text-emerald-400" : "text-red-500",
+          )}>
+            {isRedeem ? "Redeemed" : isBuy ? "Bought" : "Sold"}
+            {trade.outcome ? ` · ${trade.outcome}` : ""}
+          </span>
+          <span className="text-xs font-bold tabular-nums shrink-0">${usdAmt}</span>
+        </div>
+        <p className="text-[11px] text-muted-foreground truncate mt-0.5">{trade.title || trade.conditionId?.slice(0, 12) + "…"}</p>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-[10px] text-muted-foreground tabular-nums">{price}¢ avg</span>
+          <span className="text-[10px] text-muted-foreground/50">·</span>
+          <span className="text-[10px] text-muted-foreground">{format(date, "MMM d, HH:mm")}</span>
+          {trade.transactionHash && (
+            <>
+              <span className="text-[10px] text-muted-foreground/50">·</span>
+              <a
+                href={`https://polygonscan.com/tx/${trade.transactionHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[10px] text-primary hover:underline flex items-center gap-0.5"
+              >
+                <ExternalLink className="w-2.5 h-2.5" />
+                Tx
+              </a>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ───────────────────────────── Polymarket Fund Modal */
+type FundTab = "deposit" | "withdraw" | "history";
+
 interface PolymarketFundModalProps {
   open: boolean;
   mode: "deposit" | "withdraw";
@@ -360,6 +424,7 @@ interface PolymarketFundModalProps {
 
 function PolymarketFundModal({ open, mode, onOpenChange, walletInfo, userEvmAddress }: PolymarketFundModalProps) {
   const { user } = useAuth();
+  const [tab,      setTab]      = useState<FundTab>(mode);
   const [amount,   setAmount]   = useState("");
   const [password, setPassword] = useState("");
   const [showPwd,  setShowPwd]  = useState(false);
@@ -367,7 +432,11 @@ function PolymarketFundModal({ open, mode, onOpenChange, walletInfo, userEvmAddr
 
   const approveM = usePolymarketApprove();
   const revokeM  = usePolymarketRevoke();
+  const { data: tradeHistory, isLoading: historyLoading, refetch: refetchHistory } =
+    usePolymarketTradeHistory(tab === "history" ? userEvmAddress : null);
   const busy = approveM.isPending || revokeM.isPending;
+
+  useEffect(() => { if (open) { setTab(mode); setTxResult(null); } }, [open, mode]);
 
   function handleClose() {
     if (busy) return;
@@ -378,7 +447,7 @@ function PolymarketFundModal({ open, mode, onOpenChange, walletInfo, userEvmAddr
   async function handleSubmit() {
     if (!user)     { toast.error("Sign in first"); return; }
     if (!password) { toast.error("Enter your wallet password"); return; }
-    if (mode === "deposit" && (!amount || parseFloat(amount) <= 0)) {
+    if (tab === "deposit" && (!amount || parseFloat(amount) <= 0)) {
       toast.error("Enter an amount to approve"); return;
     }
     try {
@@ -389,12 +458,12 @@ function PolymarketFundModal({ open, mode, onOpenChange, walletInfo, userEvmAddr
       const mnemonic = await nonCustodialWalletManager.getWalletMnemonic(evmWallet.id, password, user.id);
       if (!mnemonic) { toast.error("Incorrect password"); return; }
       let result: { txHash: string; explorerUrl: string };
-      if (mode === "deposit") {
+      if (tab === "deposit") {
         result = await approveM.mutateAsync({ mnemonic, amount });
         toast.success(`Approved $${amount} USDC.e for Polymarket trading`);
       } else {
         result = await revokeM.mutateAsync({ mnemonic });
-        toast.success("Trading approval revoked — your USDC.e stays in your wallet");
+        toast.success("Approval revoked — your USDC.e stays in your wallet");
       }
       setTxResult(result);
       setPassword(""); setAmount("");
@@ -403,8 +472,11 @@ function PolymarketFundModal({ open, mode, onOpenChange, walletInfo, userEvmAddr
     }
   }
 
-  const isDeposit = mode === "deposit";
-  const title     = isDeposit ? "Deposit USDC.e" : "Withdraw from Polymarket";
+  const TABS: { id: FundTab; label: string; icon: React.ReactNode }[] = [
+    { id: "deposit",  label: "Deposit",  icon: <ArrowDownToLine  className="w-3.5 h-3.5" /> },
+    { id: "withdraw", label: "Withdraw", icon: <ArrowUpFromLine  className="w-3.5 h-3.5" /> },
+    { id: "history",  label: "History",  icon: <History          className="w-3.5 h-3.5" /> },
+  ];
 
   return (
     <div
@@ -428,7 +500,7 @@ function PolymarketFundModal({ open, mode, onOpenChange, walletInfo, userEvmAddr
         {/* header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-1">
           <div>
-            <h3 className="text-base font-bold">{title}</h3>
+            <h3 className="text-base font-bold">Polymarket Wallet</h3>
             {userEvmAddress && (
               <p className="text-[11px] text-muted-foreground font-mono mt-0.5">
                 {userEvmAddress.slice(0, 6)}…{userEvmAddress.slice(-4)} · Polygon
@@ -440,111 +512,191 @@ function PolymarketFundModal({ open, mode, onOpenChange, walletInfo, userEvmAddr
           </button>
         </div>
 
-        <div className="px-5 pb-6 pt-4 space-y-4">
-          {/* balances */}
-          <div className="rounded-xl bg-muted/50 border border-border divide-y divide-border overflow-hidden">
-            <div className="flex justify-between items-center px-4 py-2.5 text-sm">
-              <span className="text-muted-foreground text-xs">Wallet balance</span>
-              <span className="font-bold tabular-nums">${walletInfo?.usdcBalance ?? "—"} USDC.e</span>
-            </div>
-            <div className="flex justify-between items-center px-4 py-2.5 text-sm">
-              <span className="text-muted-foreground text-xs">Approved for trading</span>
-              <span className={cn(
-                "font-bold tabular-nums",
-                parseFloat(walletInfo?.approvedAmount ?? "0") > 0
-                  ? "text-emerald-600 dark:text-emerald-400"
-                  : "text-muted-foreground",
-              )}>
-                ${walletInfo?.approvedAmount ?? "—"} USDC.e
-              </span>
-            </div>
+        {/* balances row */}
+        <div className="mx-5 mt-3 rounded-xl bg-muted/50 border border-border divide-y divide-border overflow-hidden">
+          <div className="flex justify-between items-center px-4 py-2 text-xs">
+            <span className="text-muted-foreground">Polygon wallet (USDC.e)</span>
+            <span className="font-bold tabular-nums">${walletInfo?.usdcBalance ?? "—"}</span>
           </div>
-
-          {txResult ? (
-            /* success state */
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3">
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
-                Transaction submitted
-              </div>
-              <a
-                href={txResult.explorerUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-sm text-primary hover:underline"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                View on PolygonScan
-              </a>
-              <button
-                onClick={handleClose}
-                className="w-full h-11 rounded-xl bg-muted hover:bg-muted/80 text-sm font-bold transition-all"
-              >
-                Done
-              </button>
+          <div className="flex justify-between items-center px-4 py-2 text-xs">
+            <span className="text-muted-foreground">Approved for trading</span>
+            <span className={cn(
+              "font-bold tabular-nums",
+              parseFloat(walletInfo?.approvedAmount ?? "0") > 0
+                ? "text-emerald-600 dark:text-emerald-400"
+                : "text-muted-foreground",
+            )}>
+              ${walletInfo?.approvedAmount ?? "—"}
+            </span>
+          </div>
+          {parseFloat(walletInfo?.pusdBalance ?? "0") > 0 && (
+            <div className="flex justify-between items-center px-4 py-2 text-xs">
+              <span className="text-muted-foreground">pUSD balance</span>
+              <span className="font-bold tabular-nums text-blue-500">${walletInfo?.pusdBalance}</span>
             </div>
-          ) : (
-            /* form */
-            <div className="space-y-3">
-              {isDeposit ? (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Amount to approve (USDC.e)</label>
-                  <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm select-none">$</span>
-                    <Input
-                      type="number"
-                      min={0}
-                      placeholder="0.00"
-                      value={amount}
-                      onChange={e => setAmount(e.target.value)}
-                      className="pl-8 h-11 text-sm"
-                    />
-                  </div>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    This approves USDC.e from your Polygon wallet to the Polymarket exchange contract. Funds only leave your wallet when you place a trade.
-                  </p>
-                </div>
-              ) : (
-                <div className="rounded-xl bg-muted/50 px-4 py-3 text-xs text-muted-foreground leading-relaxed">
-                  Sets your Polymarket approval to zero. Your USDC.e stays safely in your Polygon wallet — no funds are transferred.
-                </div>
+          )}
+        </div>
+
+        {/* tabs */}
+        <div className="flex mx-5 mt-4 rounded-xl bg-muted/50 border border-border p-1 gap-1">
+          {TABS.map(t => (
+            <button
+              key={t.id}
+              onClick={() => { setTxResult(null); setTab(t.id); }}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all",
+                tab === t.id
+                  ? "bg-background shadow-sm text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
               )}
+            >
+              {t.icon}{t.label}
+            </button>
+          ))}
+        </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Wallet password</label>
-                <div className="relative">
-                  <Input
-                    type={showPwd ? "text" : "password"}
-                    placeholder="Enter your wallet password"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    className="pr-11 h-11 text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPwd(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
+        <div className="px-5 pb-6 pt-4">
+
+          {/* ── History tab ── */}
+          {tab === "history" && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Trade Activity</span>
+                <button
+                  onClick={() => refetchHistory()}
+                  className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-colors"
+                  title="Refresh"
+                >
+                  <RefreshCw className={cn("w-3.5 h-3.5", historyLoading && "animate-spin")} />
+                </button>
               </div>
-
-              <button
-                onClick={handleSubmit}
-                disabled={busy || !password || (isDeposit && (!amount || parseFloat(amount) <= 0))}
-                className={cn(
-                  "w-full h-11 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50",
-                  isDeposit
-                    ? "bg-emerald-500 hover:bg-emerald-600 text-white"
-                    : "bg-foreground text-background hover:opacity-90",
+              <div className="max-h-[340px] overflow-y-auto pr-0.5">
+                {historyLoading ? (
+                  <div className="flex flex-col gap-3 py-4">
+                    {[1,2,3].map(i => (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className="w-7 h-7 rounded-full bg-muted animate-pulse shrink-0" />
+                        <div className="flex-1 space-y-1.5">
+                          <div className="h-3 bg-muted rounded animate-pulse w-3/4" />
+                          <div className="h-2.5 bg-muted rounded animate-pulse w-full" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : !tradeHistory || tradeHistory.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 gap-3">
+                    <div className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center">
+                      <History className="w-5 h-5 text-muted-foreground/40" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-semibold text-muted-foreground">No trade history yet</p>
+                      <p className="text-[11px] text-muted-foreground/60 mt-1 max-w-[220px] mx-auto leading-relaxed">
+                        Your Polymarket trades will appear here once you start trading.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    {tradeHistory.map((trade, i) => (
+                      <TradeHistoryRow key={trade.transactionHash ?? `${trade.conditionId}-${trade.timestamp}-${i}`} trade={trade} />
+                    ))}
+                  </div>
                 )}
-              >
-                {busy
-                  ? <><Loader2 className="w-4 h-4 animate-spin" />Processing…</>
-                  : isDeposit ? `Approve $${amount || "0"} USDC.e` : "Revoke Approval"}
-              </button>
+              </div>
             </div>
+          )}
+
+          {/* ── Deposit / Withdraw tabs ── */}
+          {(tab === "deposit" || tab === "withdraw") && (
+            txResult ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  Transaction submitted
+                </div>
+                <a
+                  href={txResult.explorerUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-sm text-primary hover:underline"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  View on PolygonScan
+                </a>
+                <button
+                  onClick={() => { setTxResult(null); setTab("history"); }}
+                  className="w-full h-11 rounded-xl bg-muted hover:bg-muted/80 text-sm font-bold transition-all"
+                >
+                  View History
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {tab === "deposit" ? (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">Amount to approve (USDC.e)</label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm select-none">$</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        placeholder="0.00"
+                        value={amount}
+                        onChange={e => setAmount(e.target.value)}
+                        className="pl-8 h-11 text-sm"
+                      />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      Approves USDC.e from your Polygon wallet to the Polymarket CTF Exchange. Funds only move when you place a trade — your balance stays in your wallet until then.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="rounded-xl bg-amber-500/8 border border-amber-500/20 px-4 py-3 text-xs text-amber-600 dark:text-amber-400 leading-relaxed">
+                      This sets your Polymarket trading allowance to zero. Your USDC.e stays in your Polygon wallet — no funds are transferred out.
+                    </div>
+                    <div className="rounded-xl bg-muted/50 border border-border px-4 py-3 text-xs text-muted-foreground leading-relaxed">
+                      Current allowance: <span className="font-bold text-foreground">${walletInfo?.approvedAmount ?? "0"} USDC.e</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Wallet password</label>
+                  <div className="relative">
+                    <Input
+                      type={showPwd ? "text" : "password"}
+                      placeholder="Enter your wallet password"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      className="pr-11 h-11 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPwd(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleSubmit}
+                  disabled={busy || !password || (tab === "deposit" && (!amount || parseFloat(amount) <= 0))}
+                  className={cn(
+                    "w-full h-11 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50",
+                    tab === "deposit"
+                      ? "bg-emerald-500 hover:bg-emerald-600 text-white"
+                      : "bg-foreground text-background hover:opacity-90",
+                  )}
+                >
+                  {busy
+                    ? <><Loader2 className="w-4 h-4 animate-spin" />Processing…</>
+                    : tab === "deposit" ? `Approve $${amount || "0"} USDC.e` : "Revoke Approval"}
+                </button>
+              </div>
+            )
           )}
         </div>
       </div>
