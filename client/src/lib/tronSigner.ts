@@ -97,13 +97,13 @@ export async function signTronTransaction(
   // Serialize transaction as JSON string
   const txBytes = new TextEncoder().encode(JSON.stringify(tx));
 
-  // Sign with secp256k1
+  // Sign with secp256k1 — signAsync returns compact Uint8Array in v3.x
   const hash = sha256(txBytes);
-  const signature = await secp256k1.sign(hash, privKey, { recovered: false });
+  const sigBytes = await secp256k1.signAsync(hash, privKey, { prehash: false } as any);
 
   const signedTx = {
     ...tx,
-    signature: base58.encode(signature)
+    signature: base58.encode(sigBytes)
   };
 
   // Transaction ID = SHA256 of serialized signed transaction
