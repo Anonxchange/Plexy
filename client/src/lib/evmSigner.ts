@@ -6,7 +6,9 @@ import { keccak_256 } from "@noble/hashes/sha3";
 import { bytesToHex } from "@noble/hashes/utils";
 import { wipeBytes, wipeHDKey } from "./secureMemory";
 
-// @noble/secp256k1 v3.x: sign() is always async — no hmacSha256Sync setup needed.
+// @noble/secp256k1 v3.x: use signAsync() which uses WebCrypto internally —
+// no secp.hashes setup required. Always pass { prehash: false } because our
+// callers supply already-keccak256-hashed data.
 
 /* -------------------------------------------------------------------------- */
 /*                                   CONFIG                                   */
@@ -181,8 +183,7 @@ export async function signEVMTransaction(
   const encoded = RLP.encode(tx);
   const hash = keccak_256(encoded);
 
-  // @noble/secp256k1 v3: sign() returns a Signature object with toCompactRawBytes() + recovery
-  const signature = await secp.sign(hash, privKey);
+  const signature = await secp.signAsync(hash, privKey, { prehash: false });
   const compact = signature.toCompactRawBytes();
   const recovery = signature.recovery ?? 0;
   const v = BigInt(config.chainId * 2 + 35 + recovery);
@@ -262,8 +263,7 @@ export async function signEVMContractCall(
     const encoded = RLP.encode(tx);
     const hash = keccak_256(encoded);
 
-    // @noble/secp256k1 v3: sign() returns Signature with toCompactRawBytes() + recovery
-    const signature = await secp.sign(hash, privKey);
+    const signature = await secp.signAsync(hash, privKey, { prehash: false });
     const compact = signature.toCompactRawBytes();
     const recovery = signature.recovery ?? 0;
     const v = BigInt(config.chainId * 2 + 35 + recovery);
@@ -303,8 +303,7 @@ export async function signEVMMessage(
   try {
     const prefix = `\x19Ethereum Signed Message:\n${message.length}`;
     const msgHash = keccak_256(new TextEncoder().encode(prefix + message));
-    // @noble/secp256k1 v3: sign() is async, returns Signature with toCompactRawBytes() + recovery
-    const signature = await secp.sign(msgHash, priv);
+    const signature = await secp.signAsync(msgHash, priv, { prehash: false });
     const compact = signature.toCompactRawBytes();
     const recovery = signature.recovery ?? 0;
     const v = (27 + recovery).toString(16).padStart(2, "0");
