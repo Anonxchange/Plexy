@@ -87,6 +87,7 @@ interface TradePanelProps {
   isYesSelected: boolean;
   availableUsdc: number;
   balanceData: any;
+  walletStatus: "no-user" | "no-wallet" | "loading" | "connected";
   estimatedShares: number;
   potentialProfit: string;
   amountNum: number;
@@ -102,7 +103,7 @@ function TradePanel({
   tradeTab, setTradeTab,
   amount, setAmount,
   yesCents, noCents, selectedCents,
-  isYesSelected, availableUsdc, balanceData,
+  isYesSelected, availableUsdc, balanceData, walletStatus,
   estimatedShares, potentialProfit, amountNum,
   placeOrder, handlePlaceOrder,
   onDeposit, onWithdraw,
@@ -129,7 +130,7 @@ function TradePanel({
 
       <div className="p-4 space-y-4">
         {/* Balance + wallet actions */}
-        {balanceData ? (
+        {walletStatus === "connected" ? (
           <div className="rounded-xl bg-muted/50 border border-border px-3 py-2.5 space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-muted-foreground">
@@ -163,7 +164,17 @@ function TradePanel({
               <Wallet className="w-3.5 h-3.5" />
               <span className="text-xs font-medium">Balance</span>
             </div>
-            <span className="text-xs text-muted-foreground italic">Not connected</span>
+            {walletStatus === "loading" && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Loader2 className="w-3 h-3 animate-spin" /> Loading wallet…
+              </span>
+            )}
+            {walletStatus === "no-user" && (
+              <span className="text-xs text-muted-foreground italic">Sign in to trade</span>
+            )}
+            {walletStatus === "no-wallet" && (
+              <span className="text-xs text-muted-foreground italic">No EVM wallet found</span>
+            )}
           </div>
         )}
 
@@ -551,6 +562,7 @@ export default function PredictionDetailPage() {
 
   const { user } = useAuth();
   const [userEvmAddress,     setUserEvmAddress]     = useState<string | null>(null);
+  const [walletLookupDone,   setWalletLookupDone]   = useState(false);
 
   const [chartInterval,      setChartInterval]      = useState<Interval>("1D");
   const [tradeTab,           setTradeTab]           = useState<"buy" | "sell">("buy");
@@ -562,16 +574,17 @@ export default function PredictionDetailPage() {
   const [fundModalMode,      setFundModalMode]      = useState<"deposit" | "withdraw">("deposit");
 
   useEffect(() => {
-    if (!user) { setUserEvmAddress(null); return; }
+    if (!user) { setUserEvmAddress(null); setWalletLookupDone(true); return; }
+    setWalletLookupDone(false);
     let cancelled = false;
     (async () => {
       try {
         const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
         const wallets = await nonCustodialWalletManager.getWalletsFromStorage(user.id);
         const evm = wallets.find(w => w.address.startsWith("0x"));
-        if (!cancelled) setUserEvmAddress(evm?.address ?? null);
+        if (!cancelled) { setUserEvmAddress(evm?.address ?? null); setWalletLookupDone(true); }
       } catch {
-        if (!cancelled) setUserEvmAddress(null);
+        if (!cancelled) { setUserEvmAddress(null); setWalletLookupDone(true); }
       }
     })();
     return () => { cancelled = true; };
@@ -700,6 +713,12 @@ export default function PredictionDetailPage() {
     amount, setAmount,
     yesCents, noCents, selectedCents,
     isYesSelected, availableUsdc, balanceData,
+    walletStatus: (
+      !user                                             ? "no-user"  :
+      !walletLookupDone || walletInfoLoading            ? "loading"  :
+      !userEvmAddress                                   ? "no-wallet":
+                                                          "connected"
+    ) as "no-user" | "no-wallet" | "loading" | "connected",
     estimatedShares, potentialProfit, amountNum,
     placeOrder, handlePlaceOrder,
     onDeposit:  () => { setFundModalMode("deposit");  setFundModalOpen(true); },
