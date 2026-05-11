@@ -1,5 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import {
+  getPolymarketWalletInfo,
+  approveUsdcToPolymarket,
+  revokeUsdcFromPolymarket,
+} from '@/lib/polymarket-clob';
 
 async function polymarketRequest(action: string, params: Record<string, unknown> = {}) {
   const { data, error } = await supabase.functions.invoke('polymarket', {
@@ -65,18 +70,6 @@ export function useMarketDetail(marketId: string | undefined) {
   });
 }
 
-/**
- * Price history via the edge function.
- * The edge function uses: GET /prices-history?market={tokenId}&interval={iv}&fidelity={f}
- * So we pass tokenId (not conditionId) and the interval as-is.
- *
- * Interval fidelity map:
- *   1H → interval=max, fidelity=1
- *   6H → interval=max, fidelity=5
- *   1D → interval=1d,  fidelity=60
- *   1W → interval=1w,  fidelity=60
- *   1M → interval=1m,  fidelity=1440
- */
 const INTERVAL_API: Record<string, string> = {
   '1H': 'max', '6H': 'max', '1D': '1d', '1W': '1w', '1M': '1m',
 };
@@ -123,7 +116,7 @@ export function usePlaceOrder() {
       polymarketRequest('postOrder', { order }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['polymarket', 'openOrders'] });
-      queryClient.invalidateQueries({ queryKey: ['polymarket', 'balance'] });
+      queryClient.invalidateQueries({ queryKey: ['polymarket', 'walletInfo'] });
     },
   });
 }
@@ -135,6 +128,38 @@ export function useCancelOrder() {
       polymarketRequest('cancelOrder', { orderId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['polymarket', 'openOrders'] });
+    },
+  });
+}
+
+export function usePolymarketWalletInfo(address: string | null | undefined) {
+  return useQuery({
+    queryKey: ['polymarket', 'walletInfo', address],
+    queryFn: () => getPolymarketWalletInfo(address!),
+    enabled: !!address,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+}
+
+export function usePolymarketApprove() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ mnemonic, amount }: { mnemonic: string; amount: string }) =>
+      approveUsdcToPolymarket(mnemonic, amount),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['polymarket', 'walletInfo'] });
+    },
+  });
+}
+
+export function usePolymarketRevoke() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ mnemonic }: { mnemonic: string }) =>
+      revokeUsdcFromPolymarket(mnemonic),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['polymarket', 'walletInfo'] });
     },
   });
 }
