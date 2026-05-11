@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import {
   getPolymarketWalletInfo,
+  getPolymarketTradeHistory,
   approveUsdcToPolymarket,
   revokeUsdcFromPolymarket,
 } from '@/lib/polymarket-clob';
@@ -139,6 +140,16 @@ export function usePolymarketWalletInfo(address: string | null | undefined) {
     enabled: !!address,
     staleTime: 30_000,
     refetchInterval: 60_000,
+  });
+}
+
+export function usePolymarketTradeHistory(address: string | null | undefined) {
+  return useQuery({
+    queryKey: ['polymarket', 'tradeHistory', address],
+    queryFn: () => getPolymarketTradeHistory(address!, 50),
+    enabled: !!address,
+    staleTime: 60_000,
+    retry: 1,
   });
 }
 
