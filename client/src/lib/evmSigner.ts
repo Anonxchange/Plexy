@@ -4,17 +4,9 @@ import { HDKey } from "@scure/bip32";
 import * as secp from "@noble/secp256k1";
 import { keccak_256 } from "@noble/hashes/sha3";
 import { bytesToHex } from "@noble/hashes/utils";
-import { hmac } from "@noble/hashes/hmac";
-import { sha256 } from "@noble/hashes/sha256";
 import { wipeBytes, wipeHDKey } from "./secureMemory";
 
-// @noble/secp256k1 v1.7.x requires hmacSha256Sync to be configured before
-// signSync can be used. Configure it once at module level.
-secp.utils.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]) => {
-  const h = hmac.create(sha256, key);
-  for (const msg of msgs) h.update(msg);
-  return h.digest();
-};
+// @noble/secp256k1 v3.x: sign() is always async — no hmacSha256Sync setup needed.
 
 /* -------------------------------------------------------------------------- */
 /*                                   CONFIG                                   */
@@ -189,14 +181,13 @@ export async function signEVMTransaction(
   const encoded = RLP.encode(tx);
   const hash = keccak_256(encoded);
 
-  // der: false → compact 64-byte output (32 r + 32 s). Without this, v1.7.x
-  // returns DER-encoded bytes (~71 bytes) and sig.slice(0,32) extracts the
-  // DER header instead of r, producing an invalid transaction signature.
-  const signature = await secp.sign(hash, privKey, { recovered: true, der: false });
-  const [sig, recovery] = (signature as any);
+  // @noble/secp256k1 v3: sign() returns a Signature object with toCompactRawBytes() + recovery
+  const signature = await secp.sign(hash, privKey);
+  const compact = signature.toCompactRawBytes();
+  const recovery = signature.recovery ?? 0;
   const v = BigInt(config.chainId * 2 + 35 + recovery);
-  const r = BigInt("0x" + bytesToHex(sig.slice(0, 32)));
-  const s = BigInt("0x" + bytesToHex(sig.slice(32, 64)));
+  const r = BigInt("0x" + bytesToHex(compact.slice(0, 32)));
+  const s = BigInt("0x" + bytesToHex(compact.slice(32, 64)));
 
   const signedTx = RLP.encode([nonce, gasPrice, gasLimit, to, value, data, v, r, s]);
   const txHash = "0x" + bytesToHex(keccak_256(signedTx));
@@ -271,12 +262,13 @@ export async function signEVMContractCall(
     const encoded = RLP.encode(tx);
     const hash = keccak_256(encoded);
 
-    // der: false → compact 64-byte output. Same fix as signEVMTransaction above.
-    const signature = await secp.sign(hash, privKey, { recovered: true, der: false });
-    const [sig, recovery] = (signature as any);
+    // @noble/secp256k1 v3: sign() returns Signature with toCompactRawBytes() + recovery
+    const signature = await secp.sign(hash, privKey);
+    const compact = signature.toCompactRawBytes();
+    const recovery = signature.recovery ?? 0;
     const v = BigInt(config.chainId * 2 + 35 + recovery);
-    const r = BigInt("0x" + bytesToHex(sig.slice(0, 32)));
-    const s = BigInt("0x" + bytesToHex(sig.slice(32, 64)));
+    const r = BigInt("0x" + bytesToHex(compact.slice(0, 32)));
+    const s = BigInt("0x" + bytesToHex(compact.slice(32, 64)));
 
     const signedTx = RLP.encode([nonce, gasPrice, gasLimit, request.to, valueWei, request.data, v, r, s]);
     const txHash = "0x" + bytesToHex(keccak_256(signedTx));
@@ -311,11 +303,10 @@ export async function signEVMMessage(
   try {
     const prefix = `\x19Ethereum Signed Message:\n${message.length}`;
     const msgHash = keccak_256(new TextEncoder().encode(prefix + message));
-    // signSync is safe because hmacSha256Sync is configured at module init above.
-    // der: false → compact 64-byte (r+s) output instead of DER encoding.
-    // recovered: true → returns [Uint8Array, recoveryBit] for the 65-byte
-    // Ethereum personal_sign format (r + s + v where v = 27 + recovery).
-    const [compact, recovery] = secp.signSync(msgHash, priv, { recovered: true, der: false });
+    // @noble/secp256k1 v3: sign() is async, returns Signature with toCompactRawBytes() + recovery
+    const signature = await secp.sign(msgHash, priv);
+    const compact = signature.toCompactRawBytes();
+    const recovery = signature.recovery ?? 0;
     const v = (27 + recovery).toString(16).padStart(2, "0");
     return "0x" + bytesToHex(compact) + v;
   } finally {
