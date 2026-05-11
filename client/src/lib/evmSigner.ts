@@ -183,9 +183,9 @@ export async function signEVMTransaction(
   const encoded = RLP.encode(tx);
   const hash = keccak_256(encoded);
 
-  const signature = await secp.signAsync(hash, privKey, { prehash: false });
-  const compact = signature.toCompactRawBytes();
-  const recovery = signature.recovery ?? 0;
+  const sigBytes = await secp.signAsync(hash, privKey, { prehash: false, format: 'recovered' } as any);
+  const recovery = sigBytes[0];
+  const compact = sigBytes.slice(1);
   const v = BigInt(config.chainId * 2 + 35 + recovery);
   const r = BigInt("0x" + bytesToHex(compact.slice(0, 32)));
   const s = BigInt("0x" + bytesToHex(compact.slice(32, 64)));
@@ -263,9 +263,9 @@ export async function signEVMContractCall(
     const encoded = RLP.encode(tx);
     const hash = keccak_256(encoded);
 
-    const signature = await secp.signAsync(hash, privKey, { prehash: false });
-    const compact = signature.toCompactRawBytes();
-    const recovery = signature.recovery ?? 0;
+    const sigBytes = await secp.signAsync(hash, privKey, { prehash: false, format: 'recovered' } as any);
+    const recovery = sigBytes[0];
+    const compact = sigBytes.slice(1);
     const v = BigInt(config.chainId * 2 + 35 + recovery);
     const r = BigInt("0x" + bytesToHex(compact.slice(0, 32)));
     const s = BigInt("0x" + bytesToHex(compact.slice(32, 64)));
@@ -303,9 +303,9 @@ export async function signEVMMessage(
   try {
     const prefix = `\x19Ethereum Signed Message:\n${message.length}`;
     const msgHash = keccak_256(new TextEncoder().encode(prefix + message));
-    const signature = await secp.signAsync(msgHash, priv, { prehash: false });
-    const compact = signature.toCompactRawBytes();
-    const recovery = signature.recovery ?? 0;
+    const sigBytes = await secp.signAsync(msgHash, priv, { prehash: false, format: 'recovered' } as any);
+    const recovery = sigBytes[0];
+    const compact = sigBytes.slice(1);
     const v = (27 + recovery).toString(16).padStart(2, "0");
     return "0x" + bytesToHex(compact) + v;
   } finally {
