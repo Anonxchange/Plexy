@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { getSupabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
 
 /* =========================================
@@ -101,7 +101,8 @@ function writeSessionSnapshot(userId: string, wallets: Wallet[]): void {
 ========================================= */
 
 async function readServerSnapshot(userId: string): Promise<Wallet[] | null> {
-  const { data, error } = await supabase
+  const client = await getSupabase();
+  const { data, error } = await client
     .from('wallets')
     .select('id, user_id, crypto_symbol, balance, locked_balance, deposit_address, created_at, updated_at')
     .eq('user_id', userId);
@@ -129,7 +130,8 @@ async function writeServerSnapshot(userId: string, wallets: Wallet[]): Promise<v
     deposit_address: w.deposit_address,
     updated_at: new Date().toISOString(),
   }));
-  const { error } = await supabase
+  const client = await getSupabase();
+  const { error } = await client
     .from('wallets')
     .upsert(rows as any, { onConflict: 'user_id,crypto_symbol' });
   if (error) console.warn('[wallet-balances] server snapshot upsert failed:', error.message);
@@ -181,8 +183,10 @@ export async function getUserWallets(
   userId: string,
   previous?: Wallet[],
 ): Promise<Wallet[]> {
+  const client = await getSupabase();
+
   // 1. Get all active wallet addresses from DB (metadata only).
-  const { data: dbWallets, error: dbError } = await supabase
+  const { data: dbWallets, error: dbError } = await client
     .from('user_wallets')
     .select('id, address, chain_id, is_active')
     .eq('user_id', userId)
@@ -234,7 +238,7 @@ export async function getUserWallets(
     let fetchFailed = false;
 
     try {
-      const res = await supabase.functions.invoke('monitor-deposits', {
+      const res = await client.functions.invoke('monitor-deposits', {
         body: { address: entry.address, chain: entry.chain },
       });
       if (res.error || !res.data?.success || !res.data?.native) {
@@ -329,51 +333,73 @@ export function useWalletBalances() {
   // backend after a confirmation), patch the cache live and trigger an
   // immediate chain re-read so the UI doesn't have to wait for the next
   // 60 s poll.
+  //
+  // Uses getSupabase() (async) instead of the synchronous proxy so this
+  // effect never throws if the client hasn't resolved yet (race condition
+  // on fast auth state restore from localStorage).
   useEffect(() => {
     if (!userId) return;
+
     const queryKey = ['wallet-balances', userId] as const;
+    let cancelled = false;
+    let channelRef: ReturnType<Awaited<ReturnType<typeof getSupabase>>['channel']> | null = null;
 
-    const channel = supabase
-      .channel(`wallets:${userId}`)
-      .on(
-        'postgres_changes' as any,
-        {
-          event: '*',
-          schema: 'public',
-          table: 'wallets',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload: any) => {
-          const row = payload.new ?? payload.old;
-          if (!row) return;
+    getSupabase()
+      .then((client) => {
+        if (cancelled) return;
 
-          // Patch the in-memory cache for the affected symbol.
-          queryClient.setQueryData<Wallet[]>([...queryKey], (current) => {
-            if (!current) return current;
-            const next = current.map((w) =>
-              w.crypto_symbol === row.crypto_symbol
-                ? {
-                    ...w,
-                    balance: Number(row.balance) || 0,
-                    locked_balance: Number(row.locked_balance) || 0,
-                    deposit_address: row.deposit_address ?? w.deposit_address,
-                    updated_at: row.updated_at ?? new Date().toISOString(),
-                  }
-                : w,
-            );
-            writeSessionSnapshot(userId, next);
-            return next;
-          });
+        channelRef = client
+          .channel(`wallets:${userId}`)
+          .on(
+            'postgres_changes' as any,
+            {
+              event: '*',
+              schema: 'public',
+              table: 'wallets',
+              filter: `user_id=eq.${userId}`,
+            },
+            (payload: any) => {
+              const row = payload.new ?? payload.old;
+              if (!row) return;
 
-          // Also re-read from chain to make sure the live value matches the
-          // server hint we just received.
-          void queryClient.invalidateQueries({ queryKey: [...queryKey] });
-        },
-      )
-      .subscribe();
+              // Patch the in-memory cache for the affected symbol.
+              queryClient.setQueryData<Wallet[]>([...queryKey], (current) => {
+                if (!current) return current;
+                const next = current.map((w) =>
+                  w.crypto_symbol === row.crypto_symbol
+                    ? {
+                        ...w,
+                        balance: Number(row.balance) || 0,
+                        locked_balance: Number(row.locked_balance) || 0,
+                        deposit_address: row.deposit_address ?? w.deposit_address,
+                        updated_at: row.updated_at ?? new Date().toISOString(),
+                      }
+                    : w,
+                );
+                writeSessionSnapshot(userId, next);
+                return next;
+              });
+
+              // Also re-read from chain to make sure the live value matches the
+              // server hint we just received.
+              void queryClient.invalidateQueries({ queryKey: [...queryKey] });
+            },
+          )
+          .subscribe();
+      })
+      .catch(() => {
+        // Supabase not available (e.g. credentials not configured in dev).
+        // Silently skip realtime subscription — polling will still work once
+        // credentials are present.
+      });
 
     return () => {
-      void supabase.removeChannel(channel);
+      cancelled = true;
+      if (channelRef) {
+        getSupabase()
+          .then((client) => client.removeChannel(channelRef!))
+          .catch(() => {});
+      }
     };
   }, [userId, queryClient]);
 
@@ -454,7 +480,8 @@ export async function getWalletBalance(userId: string, cryptoSymbol: string): Pr
 }
 
 export async function getWalletTransactions(userId: string, limit: number = 50): Promise<WalletTransaction[]> {
-  const { data, error } = await supabase
+  const client = await getSupabase();
+  const { data, error } = await client
     .from('wallet_transactions' as any)
     .select('*')
     .eq('user_id', userId)
