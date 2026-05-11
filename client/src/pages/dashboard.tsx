@@ -5,12 +5,10 @@ import { Eye, EyeOff, ChevronDown, TrendingDown, TrendingUp, MoreHorizontal, Arr
 import { PexlyFooter } from "@/components/pexly-footer";
 import { DashboardMoreModal } from "@/components/dashboard-more-modal";
 import { useAuth } from "@/lib/auth-context";
-import { getUserWallets, type Wallet } from "@/lib/wallet-api";
 import { useCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { Button } from "@/components/ui/button";
-import { useWalletBalances } from "@/hooks/use-wallet-balances";
 import { PageSkeleton } from "@/components/page-skeleton";
 import { AssetCardSkeleton } from "@/components/dashboard/AssetCard";
 import { MarketsSectionSkeleton } from "@/components/dashboard/MarketsSection";
@@ -157,40 +155,6 @@ const QuickActionIcon = ({ type, color }: { type: string; color: string }) => {
   return icons[type] || null;
 };
 
-const actions = [
-  { 
-    type: "p2p", 
-    label: "Buy Crypto", 
-    color: "#4FACFE",
-    onClick: () => navigate("/wallet/buy-crypto")
-  },
-  { 
-    type: "quick_trade", 
-    label: "Swap", 
-    color: "#7C3AED",
-    onClick: () => navigate("/swap")
-  },
-  { 
-    type: "rewards", 
-    label: "Rewards", 
-    color: "#F59E0B",
-    onClick: () => navigate("/rewards")
-  },
-  { 
-    type: "more", 
-    label: "More", 
-    color: "#6B7280",
-    onClick: () => setIsMoreModalOpen(true)
-  },
-];
-
-const rewards = [
-  { chances: 1, type: "Lucky Draw", onClick: () => navigate("/rewards") },
-  { chances: 2, type: "Lucky Draw", onClick: () => navigate("/rewards") },
-  { chances: 2, type: "Lucky Draw", onClick: () => navigate("/rewards") },
-  { chances: 1, type: "Lucky Draw", onClick: () => navigate("/rewards") },
-];
-
 export const Dashboard = () => {
   useHead({ title: "Dashboard | Pexly", meta: [{ name: "description", content: "An overview of your portfolio value, activity history, staking rewards, and account stats." }] });
   const { user, isLoading: authLoading } = useAuth();
@@ -198,7 +162,22 @@ export const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("Hot");
   const [isMoreModalOpen, setIsMoreModalOpen] = useState(false);
   const [walletBackupProcessed, setWalletBackupProcessed] = useState(false);
-  
+  const [, setLocation] = useLocation();
+
+  const actions = [
+    { type: "p2p",         label: "Buy Crypto", color: "#4FACFE", onClick: () => setLocation("/wallet/buy-crypto") },
+    { type: "quick_trade", label: "Swap",        color: "#7C3AED", onClick: () => setLocation("/swap") },
+    { type: "rewards",     label: "Rewards",     color: "#F59E0B", onClick: () => setLocation("/rewards") },
+    { type: "more",        label: "More",        color: "#6B7280", onClick: () => setIsMoreModalOpen(true) },
+  ];
+
+  const rewards = [
+    { chances: 1, type: "Lucky Draw", onClick: () => setLocation("/rewards") },
+    { chances: 2, type: "Lucky Draw", onClick: () => setLocation("/rewards") },
+    { chances: 2, type: "Lucky Draw", onClick: () => setLocation("/rewards") },
+    { chances: 1, type: "Lucky Draw", onClick: () => setLocation("/rewards") },
+  ];
+
   const { data: walletData, isLoading: walletLoading, error: walletError } = useWalletData();
   
   const symbols = useMemo(() => ["BTC", "ETH", "SOL", "BNB", "USDC", "USDT"], []);
