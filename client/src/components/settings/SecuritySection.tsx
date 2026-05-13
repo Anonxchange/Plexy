@@ -184,6 +184,7 @@ export function SecuritySection() {
       setShowSMS2FADialog(false);
       setSmsVerificationCode("");
       setSmsSent(false);
+      window.dispatchEvent(new Event('pexly:mfa-changed'));
 
       if (user?.id) {
         await createAccountChangeNotification(user.id, "2fa_enabled", { method: "SMS", timestamp: new Date().toISOString() });
@@ -198,6 +199,7 @@ export function SecuritySection() {
     try {
       await supabase.from("user_profiles").update({ sms_two_factor_enabled: false }).eq("id", user?.id);
       setSmsAuth(false);
+      window.dispatchEvent(new Event('pexly:mfa-changed'));
       if (user?.id) {
         await createAccountChangeNotification(user.id, "2fa_disabled", { method: "SMS", timestamp: new Date().toISOString() });
       }
@@ -274,6 +276,7 @@ export function SecuritySection() {
       setShowEmail2FADialog(false);
       setEmailVerificationCode("");
       setEmailCodeSent(false);
+      window.dispatchEvent(new Event('pexly:mfa-changed'));
       toast({ title: "Email 2FA Enabled", description: "Email two-factor authentication has been enabled" });
     } catch (error: any) {
       toast({ title: "Error", description: error.message || "Failed to enable Email 2FA", variant: "destructive" });
@@ -284,6 +287,7 @@ export function SecuritySection() {
     try {
       await supabase.from("user_profiles").update({ email_two_factor_enabled: false }).eq("id", user?.id);
       setEmailAuth(false);
+      window.dispatchEvent(new Event('pexly:mfa-changed'));
       toast({ title: "Email 2FA Disabled", description: "Email two-factor authentication has been disabled" });
     } catch {
       toast({ title: "Error", description: "Failed to disable Email 2FA", variant: "destructive" });
@@ -318,6 +322,7 @@ export function SecuritySection() {
       setAppAuth(false);
       setShowDisable2FADialog(false);
       setDisable2FACode("");
+      window.dispatchEvent(new Event('pexly:mfa-changed'));
 
       if (user?.id) {
         await createAccountChangeNotification(user.id, "2fa_disabled", { method: "App", timestamp: new Date().toISOString() });
