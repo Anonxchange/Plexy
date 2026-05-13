@@ -433,8 +433,8 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
                     <div className="flex flex-col gap-[3px]">
                       {[
                         { label: t("security.email_verified"), ok: !!user.email_confirmed_at },
-                        { label: t("security.phone_linked"),   ok: !!user.phone },
-                        { label: t("security.two_fa_enabled"), ok: !!user.user_metadata?.two_factor_enabled },
+                        { label: t("security.phone_linked"),   ok: !!(profilePhone || user.phone) },
+                        { label: t("security.two_fa_enabled"), ok: hasMfa },
                       ].map(({ label, ok }) => (
                         <div key={label} className="flex items-center justify-between">
                           <span className="text-[10px] text-foreground/65 leading-none">{label}</span>
