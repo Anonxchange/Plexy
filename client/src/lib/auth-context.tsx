@@ -37,6 +37,16 @@ export interface AuthContextType {
   signOut: () => Promise<void>;
   completeOTPVerification: () => Promise<void>;
   cancelOTPVerification: () => Promise<void>;
+  /**
+   * Call after a successful mfa.verify() to lift the TOTP-pending gate and
+   * commit the AAL2 session as the active user in auth context.
+   */
+  completeTOTPSignIn: () => Promise<void>;
+  /**
+   * Call when the user cancels the TOTP form ("Back to Login").
+   * Lifts the gate and signs the AAL1 session out so no partial session lingers.
+   */
+  cancelTOTPSignIn: () => Promise<void>;
   loading: boolean;
   isLoading: boolean;
   pendingOTPVerification: PendingAuth | null;
@@ -454,13 +464,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isWalletUnlockedRef = useRef(false);
 
   // ── TOTP-safe sign-in ───────────────────────────────────────────────────
-  // While signInInProgressRef is true the onAuthStateChange SIGNED_IN handler
-  // must NOT immediately call setUser/setSession — doing so would let the
-  // signin page's useEffect redirect to dashboard before we can confirm
-  // whether a TOTP challenge is required.  The handler instead parks the
-  // payload here; signIn() applies it after the check resolves.
+  // signInInProgressRef: true while signIn() is running its TOTP check.
+  //   The onAuthStateChange SIGNED_IN handler defers its payload here.
+  // totpPendingRef: true from when requiresTOTP is returned until the user
+  //   either successfully verifies (completeTOTPSignIn) or cancels
+  //   (cancelTOTPSignIn).  Gates TOKEN_REFRESHED, health-check, and
+  //   initial-session so no path can call setUser while a TOTP challenge
+  //   is active — including the AuthRoute redirect in App.tsx.
   const signInInProgressRef = useRef(false);
   const deferredSignedInRef = useRef<{ user: User; session: Session } | null>(null);
+  const totpPendingRef = useRef(false);
 
   // Keep refs in sync with state so callbacks always see current values
   useEffect(() => {
@@ -719,6 +732,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             supabase.auth.signOut().finally(() => { isSigningOutRef.current = false; });
             return;
           }
+          // Don't surface the AAL1 session while a TOTP challenge is active.
+          // completeTOTPSignIn() will explicitly commit the AAL2 session once
+          // mfa.verify() succeeds.
+          if (totpPendingRef.current) return;
           setSession(currentSession);
           setUser(currentSession?.user ?? null);
           return;
@@ -772,6 +789,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Add periodic session health check
       healthCheckInterval = setInterval(async () => {
         if (aborted) return;
+        // Skip entirely while a TOTP challenge is active — the health check
+        // would surface the AAL1 session and trigger the AuthRoute redirect.
+        if (totpPendingRef.current) return;
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         if (currentSession && sessionTokenRef.current !== currentSession.access_token && !isOTPBlockingUser(currentSession.user.id)) {
           setSession(currentSession);
@@ -788,7 +808,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const blocked = initialSession?.user
           ? isOTPBlockingUser(initialSession.user.id)
           : hasPendingOTP();
-        if (!blocked) {
+        // Also skip while a TOTP challenge is active — the initial-session
+        // path would surface the AAL1 session the same way the health check
+        // would.
+        if (!blocked && !totpPendingRef.current) {
           setSession(initialSession);
           setUser(initialSession?.user ?? null);
         }
@@ -847,10 +870,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = useCallback(async (email: string, password: string, captchaToken?: string) => {
     const supabase = await getSupabase();
 
-    // Block the onAuthStateChange SIGNED_IN handler from setting user/session
-    // state until we know whether a TOTP challenge is required.  The handler
-    // will park its payload in deferredSignedInRef; we apply it here once the
-    // TOTP check resolves.
+    // ── TOTP interception ───────────────────────────────────────────────
+    // Keep the flag TRUE for the entire duration of the sign-in + TOTP
+    // check.  The onAuthStateChange SIGNED_IN handler will park any
+    // incoming event in deferredSignedInRef and return immediately.
+    // signIn() explicitly releases the flag at every exit path *after*
+    // the TOTP decision is final, then manually applies or discards the
+    // deferred payload as appropriate.
     signInInProgressRef.current = true;
     deferredSignedInRef.current = null;
 
@@ -860,63 +886,94 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       options: { captchaToken },
     });
 
-    // SIGNED_IN fired (synchronously or as a microtask) inside signInWithPassword.
-    // Allow the handler to process future auth events normally from here on.
-    signInInProgressRef.current = false;
-
-    if (error) return { error, data };
+    if (error) {
+      // Auth failed — release interception and discard any deferred payload.
+      signInInProgressRef.current = false;
+      deferredSignedInRef.current = null;
+      return { error, data };
+    }
 
     if (data.user && data.session) {
       await trackDevice(data.user.id);
 
-      // ── Supabase native MFA (TOTP authenticator app) ──────────────────
+      // ── Fail-closed TOTP check ─────────────────────────────────────────
       // Use listFactors() directly — the same approach the profile dropdown
       // uses — because getAuthenticatorAssuranceLevel() can silently skip
       // the 2FA prompt when a cached AAL2 session is present in storage.
       // listFactors() is authoritative: if the user has a verified TOTP
       // factor we always challenge, regardless of the current session level.
+      //
+      // SECURITY: any error from listFactors() or challenge() is treated as
+      // a hard failure (fail closed).  We sign the user out so no
+      // unauthenticated session state leaks to the rest of the app.
+      let mfaErr: Error | null = null;
+      let totpFactorId: string | null = null;
+      let totpChallengeId: string | null = null;
+
       try {
-        const { data: factorsData } = await supabase.auth.mfa.listFactors();
+        const { data: factorsData, error: listErr } = await supabase.auth.mfa.listFactors();
+        if (listErr) throw listErr;
+
         const verifiedTotp = factorsData?.totp?.find((f: any) => f.status === 'verified');
         if (verifiedTotp) {
-          const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
+          const { data: challengeData, error: challengeErr } = await supabase.auth.mfa.challenge({
             factorId: verifiedTotp.id,
           });
-          if (challengeError || !challengeData) {
-            // Challenge failed — apply the deferred session so the user has a
-            // valid context, then surface the error.
-            if (deferredSignedInRef.current) {
-              const { user: dUser, session: dSession } = deferredSignedInRef.current;
-              touchLastActivity(dUser.id, true);
-              setSession(dSession);
-              setUser(dUser);
-              deferredSignedInRef.current = null;
-            }
-            return { error: challengeError ?? new Error('Failed to start MFA challenge'), data };
+          if (challengeErr || !challengeData) {
+            throw challengeErr ?? new Error('Failed to start MFA challenge');
           }
-          // TOTP required — discard the deferred AAL1 payload.
-          // After mfa.verify() succeeds Supabase fires TOKEN_REFRESHED which
-          // sets user/session with the upgraded AAL2 session.
-          deferredSignedInRef.current = null;
-          return {
-            error: null,
-            data,
-            requiresTOTP: true,
-            totpFactorId: verifiedTotp.id,
-            totpChallengeId: challengeData.id,
-          };
+          totpFactorId = verifiedTotp.id;
+          totpChallengeId = challengeData.id;
         }
-      } catch (e) {
-        console.error('[MFA] TOTP check threw:', e);
+      } catch (e: any) {
+        mfaErr = e instanceof Error ? e : new Error(String(e));
+        console.error('[MFA] TOTP check failed (fail-closed):', e);
       }
 
-      // No TOTP required (or check threw) — apply the deferred SIGNED_IN now.
-      if (deferredSignedInRef.current) {
-        const { user: dUser, session: dSession } = deferredSignedInRef.current;
+      // ── Exit: MFA check errored — sign out and return error ────────────
+      if (mfaErr) {
+        signInInProgressRef.current = false;
+        deferredSignedInRef.current = null;
+        // Fire-and-forget — SIGNED_OUT handler will clear user/session state
+        supabase.auth.signOut().catch(() => {});
+        return { error: mfaErr, data };
+      }
+
+      // ── Exit: TOTP required ─────────────────────────────────────────────
+      // Set totpPendingRef BEFORE clearing signInInProgressRef to ensure
+      // there is zero window where neither guard is active.  This ref stays
+      // true until completeTOTPSignIn() or cancelTOTPSignIn() is called —
+      // it gates TOKEN_REFRESHED, the health-check, and the initial-session
+      // path so nothing can call setUser while the challenge is live.
+      if (totpFactorId && totpChallengeId) {
+        totpPendingRef.current = true;
+        signInInProgressRef.current = false;
+        deferredSignedInRef.current = null;
+        return {
+          error: null,
+          data,
+          requiresTOTP: true,
+          totpFactorId,
+          totpChallengeId,
+        };
+      }
+
+      // ── Exit: No TOTP — apply the deferred SIGNED_IN ───────────────────
+      // Snapshot into a local const BEFORE clearing the ref so TypeScript
+      // can narrow on an immutable binding rather than a mutable ref property.
+      signInInProgressRef.current = false;
+      const deferred: { user: User; session: Session } | null = deferredSignedInRef.current;
+      deferredSignedInRef.current = null;
+      if (deferred) {
+        // TypeScript's control-flow analysis exhausts inside this large callback
+        // and collapses the destructured types to `never`.  Reading via explicit
+        // casts through `unknown` is the standard workaround — we own the ref
+        // type so the assertion is safe.
+        const dUser = deferred.user as unknown as User;
+        const dSession = deferred.session as unknown as Session;
         touchLastActivity(dUser.id, true);
         setSession(dSession);
         setUser(dUser);
-        deferredSignedInRef.current = null;
         // Replicate the async post-login tasks normally run in the SIGNED_IN handler
         setTimeout(async () => {
           const deviceInfo = getDeviceInfo();
@@ -925,6 +982,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           sendLoginNotificationIfEnabled(dUser.id, deviceInfo, ip);
         }, 1500);
       }
+    } else {
+      signInInProgressRef.current = false;
+      deferredSignedInRef.current = null;
     }
 
     return { error, data };
@@ -973,6 +1033,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch { /* silent */ }
   }, [setPendingOTPWithTimestamp]);
 
+  // ── TOTP completion / cancellation ─────────────────────────────────────
+  // completeTOTPSignIn: called by signin.tsx after mfa.verify() succeeds.
+  //   Clears totpPendingRef and commits the now-AAL2 session to auth state.
+  const completeTOTPSignIn = useCallback(async () => {
+    totpPendingRef.current = false;
+    const supabase = await getSupabase();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      touchLastActivity(session.user.id, true);
+      setSession(session);
+      setUser(session.user);
+      setTimeout(async () => {
+        const deviceInfo = getDeviceInfo();
+        checkWalletOnAuthRef.current(session.user.id);
+        const ip = await getClientIP().catch(() => '');
+        sendLoginNotificationIfEnabled(session.user.id, deviceInfo, ip);
+      }, 1500);
+    }
+  }, []);
+
+  // cancelTOTPSignIn: called when the user clicks "Back to Login".
+  //   Clears the gate and signs out the partial AAL1 session so nothing lingers.
+  const cancelTOTPSignIn = useCallback(async () => {
+    totpPendingRef.current = false;
+    const supabase = await getSupabase();
+    await supabase.auth.signOut().catch(() => {});
+  }, []);
+
   const signOut = useCallback(async () => {
     // Clear sensitive in-memory state immediately
     setSessionPassword(null);
@@ -999,6 +1087,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     completeOTPVerification,
     cancelOTPVerification,
+    completeTOTPSignIn,
+    cancelTOTPSignIn,
     loading,
     isLoading: loading,
     pendingOTPVerification,
