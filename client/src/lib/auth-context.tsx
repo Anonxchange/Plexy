@@ -453,6 +453,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Ref mirrors for values used inside long-lived callbacks to avoid stale closures
   const isWalletUnlockedRef = useRef(false);
 
+  // ── TOTP-safe sign-in ───────────────────────────────────────────────────
+  // While signInInProgressRef is true the onAuthStateChange SIGNED_IN handler
+  // must NOT immediately call setUser/setSession — doing so would let the
+  // signin page's useEffect redirect to dashboard before we can confirm
+  // whether a TOTP challenge is required.  The handler instead parks the
+  // payload here; signIn() applies it after the check resolves.
+  const signInInProgressRef = useRef(false);
+  const deferredSignedInRef = useRef<{ user: User; session: Session } | null>(null);
+
   // Keep refs in sync with state so callbacks always see current values
   useEffect(() => {
     activeUserIdRef.current = user?.id ?? null;
@@ -724,6 +733,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
+        // If signIn() is mid-flight, defer this SIGNED_IN event.
+        // signIn() will apply user/session state itself after the TOTP check.
+        if (event === 'SIGNED_IN' && signInInProgressRef.current) {
+          deferredSignedInRef.current = { user: currentSession.user, session: currentSession };
+          return;
+        }
+
         // Use user-aware OTP check: stale OTP for a different user is cleared
         // automatically inside isOTPBlockingUser so the real session gets through.
         if (!isOTPBlockingUser(currentSession.user.id)) {
@@ -830,11 +846,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback(async (email: string, password: string, captchaToken?: string) => {
     const supabase = await getSupabase();
+
+    // Block the onAuthStateChange SIGNED_IN handler from setting user/session
+    // state until we know whether a TOTP challenge is required.  The handler
+    // will park its payload in deferredSignedInRef; we apply it here once the
+    // TOTP check resolves.
+    signInInProgressRef.current = true;
+    deferredSignedInRef.current = null;
+
     const { error, data } = await supabase.auth.signInWithPassword({ 
       email, 
       password,
       options: { captchaToken },
     });
+
+    // SIGNED_IN fired (synchronously or as a microtask) inside signInWithPassword.
+    // Allow the handler to process future auth events normally from here on.
+    signInInProgressRef.current = false;
 
     if (error) return { error, data };
 
@@ -855,8 +883,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             factorId: verifiedTotp.id,
           });
           if (challengeError || !challengeData) {
+            // Challenge failed — apply the deferred session so the user has a
+            // valid context, then surface the error.
+            if (deferredSignedInRef.current) {
+              const { user: dUser, session: dSession } = deferredSignedInRef.current;
+              touchLastActivity(dUser.id, true);
+              setSession(dSession);
+              setUser(dUser);
+              deferredSignedInRef.current = null;
+            }
             return { error: challengeError ?? new Error('Failed to start MFA challenge'), data };
           }
+          // TOTP required — discard the deferred AAL1 payload.
+          // After mfa.verify() succeeds Supabase fires TOKEN_REFRESHED which
+          // sets user/session with the upgraded AAL2 session.
+          deferredSignedInRef.current = null;
           return {
             error: null,
             data,
@@ -867,6 +908,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (e) {
         console.error('[MFA] TOTP check threw:', e);
+      }
+
+      // No TOTP required (or check threw) — apply the deferred SIGNED_IN now.
+      if (deferredSignedInRef.current) {
+        const { user: dUser, session: dSession } = deferredSignedInRef.current;
+        touchLastActivity(dUser.id, true);
+        setSession(dSession);
+        setUser(dUser);
+        deferredSignedInRef.current = null;
+        // Replicate the async post-login tasks normally run in the SIGNED_IN handler
+        setTimeout(async () => {
+          const deviceInfo = getDeviceInfo();
+          checkWalletOnAuthRef.current(dUser.id);
+          const ip = await getClientIP().catch(() => '');
+          sendLoginNotificationIfEnabled(dUser.id, deviceInfo, ip);
+        }, 1500);
       }
     }
 
