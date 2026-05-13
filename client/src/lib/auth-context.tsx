@@ -962,15 +962,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Snapshot into a local const BEFORE clearing the ref so TypeScript
       // can narrow on an immutable binding rather than a mutable ref property.
       signInInProgressRef.current = false;
-      const deferred: { user: User; session: Session } | null = deferredSignedInRef.current;
+      // TypeScript's control-flow analysis collapses User/Session to `never`
+      // inside this large callback, making any annotation that references those
+      // types produce an all-`never` object that TypeScript treats as impossible.
+      // Asserting through `{ user: any; session: any }` breaks the inference
+      // chain; downstream calls (setUser, setSession) still receive the correct
+      // runtime values — the ref type guarantees that.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const deferred = deferredSignedInRef.current as { user: any; session: any } | null;
       deferredSignedInRef.current = null;
       if (deferred) {
-        // TypeScript's control-flow analysis exhausts inside this large callback
-        // and collapses the destructured types to `never`.  Reading via explicit
-        // casts through `unknown` is the standard workaround — we own the ref
-        // type so the assertion is safe.
-        const dUser = deferred.user as unknown as User;
-        const dSession = deferred.session as unknown as Session;
+        const dUser = deferred.user;
+        const dSession = deferred.session;
         touchLastActivity(dUser.id, true);
         setSession(dSession);
         setUser(dUser);
