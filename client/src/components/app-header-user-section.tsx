@@ -83,6 +83,8 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
   // The Avatar component's built-in <AvatarFallback> handles the brief image
   // download flash by showing the user's initials.
   const [isAvatarFetching, setIsAvatarFetching] = useState(true);
+  const [hasMfa, setHasMfa] = useState(false);
+  const [profilePhone, setProfilePhone] = useState<string | null>(null);
 
   const { data: walletData, isLoading: walletsLoading } = useWalletData();
   const balance = walletData?.totalBalance || 0;
@@ -125,24 +127,43 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
     return () => unsubscribe?.();
   }, [user, toast]);
 
+  const fetchMfaStatus = async () => {
+    try {
+      const supabase = await getSupabase();
+      const { data } = await supabase.auth.mfa.listFactors();
+      const verified = (data?.totp?.filter((f: any) => f.status === 'verified').length ?? 0) > 0;
+      setHasMfa(verified);
+    } catch {
+      // non-critical — keep current value
+    }
+  };
+
   useEffect(() => {
     if (!user) return;
     // Reset avatar state for this user session so we always show skeleton first
     setIsAvatarFetching(true);
     setProfileAvatar(null);
     fetchProfileAvatar();
+    fetchMfaStatus();
     (async () => {
       const supabase = await getSupabase();
       const { data: profile } = await supabase
         .from("user_profiles")
-        .select("username, preferred_currency")
+        .select("username, preferred_currency, phone_number")
         .eq("id", user.id)
         .single();
       if (profile?.username) setUserName(profile.username);
       if (profile?.preferred_currency)
         setPreferredCurrency(profile.preferred_currency.toUpperCase());
+      setProfilePhone(profile?.phone_number || null);
     })();
   }, [user?.id]);
+
+  useEffect(() => {
+    const handler = () => fetchMfaStatus();
+    window.addEventListener('pexly:mfa-changed', handler);
+    return () => window.removeEventListener('pexly:mfa-changed', handler);
+  }, []);
 
   const fetchProfileAvatar = async () => {
     // Hard cap of 5 s so the skeleton never gets permanently stuck if the
@@ -179,8 +200,8 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
 
   const securityInfo = useMemo(() => {
     if (!user) return { level: "low" as const, score: 0, label: "At Risk", color: "red" };
-    const has2FA = !!user.user_metadata?.two_factor_enabled;
-    const hasPhone = !!user.phone;
+    const has2FA = hasMfa;
+    const hasPhone = !!(profilePhone || user.phone);
     const hasEmailVerified = !!user.email_confirmed_at;
     const score = [has2FA, hasPhone, hasEmailVerified].filter(Boolean).length;
     if (score === 3)
@@ -188,7 +209,7 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
     if (score === 2)
       return { level: "medium" as const, score, label: "Fair", color: "yellow", checks: { has2FA, hasPhone, hasEmailVerified } };
     return { level: "low" as const, score, label: "At Risk", color: "red", checks: { has2FA, hasPhone, hasEmailVerified } };
-  }, [user]);
+  }, [user, hasMfa, profilePhone]);
 
   if (user) {
     return (
