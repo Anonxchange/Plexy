@@ -842,29 +842,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await trackDevice(data.user.id);
 
       // ── Supabase native MFA (TOTP authenticator app) ──────────────────
-      // getAuthenticatorAssuranceLevel() is the correct API: it tells us whether
-      // the current session needs to be stepped up to AAL2 (i.e. user has an
-      // enrolled and verified TOTP factor that hasn't been verified this session).
+      // Use listFactors() directly — the same approach the profile dropdown
+      // uses — because getAuthenticatorAssuranceLevel() can silently skip
+      // the 2FA prompt when a cached AAL2 session is present in storage.
+      // listFactors() is authoritative: if the user has a verified TOTP
+      // factor we always challenge, regardless of the current session level.
       try {
-        const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-        if (aalData?.nextLevel === 'aal2' && aalData.nextLevel !== aalData.currentLevel) {
-          const { data: factorsData } = await supabase.auth.mfa.listFactors();
-          const verifiedTotp = factorsData?.totp?.find((f: any) => f.status === 'verified');
-          if (verifiedTotp) {
-            const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
-              factorId: verifiedTotp.id,
-            });
-            if (challengeError || !challengeData) {
-              return { error: challengeError ?? new Error('Failed to start MFA challenge'), data };
-            }
-            return {
-              error: null,
-              data,
-              requiresTOTP: true,
-              totpFactorId: verifiedTotp.id,
-              totpChallengeId: challengeData.id,
-            };
+        const { data: factorsData } = await supabase.auth.mfa.listFactors();
+        const verifiedTotp = factorsData?.totp?.find((f: any) => f.status === 'verified');
+        if (verifiedTotp) {
+          const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
+            factorId: verifiedTotp.id,
+          });
+          if (challengeError || !challengeData) {
+            return { error: challengeError ?? new Error('Failed to start MFA challenge'), data };
           }
+          return {
+            error: null,
+            data,
+            requiresTOTP: true,
+            totpFactorId: verifiedTotp.id,
+            totpChallengeId: challengeData.id,
+          };
         }
       } catch (e) {
         console.error('[MFA] TOTP check threw:', e);
