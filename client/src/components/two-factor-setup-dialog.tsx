@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { RefreshCw, Shield } from "lucide-react";
-import { createClient } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 
 const FRIENDLY_NAME = "Pexly Authenticator";
 
@@ -72,9 +72,6 @@ export function TwoFactorSetupDialog({
   const [enrolling, setEnrolling] = useState(false);
   const { toast } = useToast();
 
-  // Stable Supabase client — never recreated across renders
-  const supabase = useRef(createClient()).current;
-
   // Monotonic counter: newer calls supersede older in-flight ones
   const enrollmentId = useRef(0);
 
@@ -100,13 +97,14 @@ export function TwoFactorSetupDialog({
    * Waits `delayMs` after unenrolling to let Supabase propagate the change.
    */
   const purgeUnverified = useCallback(async (id: number, delayMs = 0) => {
-    const { data, error } = await supabase.auth.mfa.listFactors();
+    const sb = await getSupabase();
+    const { data, error } = await sb.auth.mfa.listFactors();
     if (id !== enrollmentId.current) return;
     if (error) throw error;
 
     const unverified = data?.totp?.filter((f) => f.status === "unverified") ?? [];
     for (const factor of unverified) {
-      const { error: ue } = await supabase.auth.mfa.unenroll({ factorId: factor.id });
+      const { error: ue } = await sb.auth.mfa.unenroll({ factorId: factor.id });
       if (id !== enrollmentId.current) return;
       // Swallow "not found" — a concurrent call already removed it. Re-throw anything else.
       if (ue && !ue.message?.toLowerCase().includes("not found")) throw ue;
@@ -116,13 +114,15 @@ export function TwoFactorSetupDialog({
       await sleep(delayMs);
       if (id !== enrollmentId.current) return;
     }
-  }, [supabase]);
+  }, []);
 
   const runEnroll = useCallback(async (id: number) => {
     setEnrolling(true);
     try {
+      const sb = await getSupabase();
+
       // 1. List existing factors
-      const { data: existingFactors, error: listError } = await supabase.auth.mfa.listFactors();
+      const { data: existingFactors, error: listError } = await sb.auth.mfa.listFactors();
       if (id !== enrollmentId.current) return;
       if (listError) throw listError;
 
@@ -148,7 +148,7 @@ export function TwoFactorSetupDialog({
       if (id !== enrollmentId.current) return;
 
       // 4. Enroll a fresh TOTP factor
-      let { data, error } = await supabase.auth.mfa.enroll({
+      let { data, error } = await sb.auth.mfa.enroll({
         factorType: "totp",
         friendlyName: FRIENDLY_NAME,
       });
@@ -161,7 +161,7 @@ export function TwoFactorSetupDialog({
         await purgeUnverified(id, 1000);
         if (id !== enrollmentId.current) return;
 
-        const retry = await supabase.auth.mfa.enroll({
+        const retry = await sb.auth.mfa.enroll({
           factorType: "totp",
           friendlyName: FRIENDLY_NAME,
         });
@@ -183,7 +183,7 @@ export function TwoFactorSetupDialog({
     } finally {
       if (id === enrollmentId.current) setEnrolling(false);
     }
-  }, [userId, applyEnrollment, purgeUnverified, supabase, toast]);
+  }, [userId, applyEnrollment, purgeUnverified, toast]);
 
   const triggerEnroll = useCallback(() => {
     const id = ++enrollmentId.current;
@@ -205,7 +205,7 @@ export function TwoFactorSetupDialog({
       if (document.visibilityState !== "visible") return;
 
       // Always refresh the session — the token may have gone stale
-      await supabase.auth.refreshSession().catch(() => {});
+      await getSupabase().then(sb => sb.auth.refreshSession()).catch(() => {});
 
       // Re-trigger if on step 1 and the enrollment state was lost
       if (stepRef.current === 1 && !enrollingRef.current && !factorIdRef.current) {
@@ -215,13 +215,14 @@ export function TwoFactorSetupDialog({
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [open, triggerEnroll, supabase]);
+  }, [open, triggerEnroll]);
 
   const handleVerify = async () => {
     if (!factorId) return;
     setLoading(true);
     try {
-      const { error } = await supabase.auth.mfa.challengeAndVerify({
+      const sb = await getSupabase();
+      const { error } = await sb.auth.mfa.challengeAndVerify({
         factorId,
         code: verificationCode,
       });
