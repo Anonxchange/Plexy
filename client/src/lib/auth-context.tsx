@@ -757,6 +757,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
+        // If the user left the tab and came back while a TOTP challenge is
+        // active, Supabase re-emits SIGNED_IN for the existing AAL1 session.
+        // Block it here — completeTOTPSignIn() is the only path allowed to
+        // commit a user while totpPendingRef is true.
+        if (totpPendingRef.current) return;
+
         // Use user-aware OTP check: stale OTP for a different user is cleared
         // automatically inside isOTPBlockingUser so the real session gets through.
         if (!isOTPBlockingUser(currentSession.user.id)) {
