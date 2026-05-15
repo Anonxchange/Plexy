@@ -182,6 +182,8 @@ export const Dashboard = () => {
   const cryptoPrices = cryptoPricesMap || {};
 
   const totalBalance = walletData?.totalBalance || 0;
+  const pnlUSD     = walletData?.pnlUSD     ?? 0;
+  const pnlPercent = walletData?.pnlPercent ?? 0;
 
 
   useEffect(() => {
@@ -200,12 +202,14 @@ export const Dashboard = () => {
         <div className="lg:grid lg:grid-cols-12 lg:gap-8 lg:p-6">
           <div className="lg:col-span-7 xl:col-span-8">
             <Suspense fallback={<AssetCardSkeleton />}>
-              <AssetCard 
+              <AssetCard
                 showBalance={showBalance}
                 setShowBalance={setShowBalance}
                 totalBalance={totalBalance}
                 isLoading={isLoading}
                 cryptoPrices={cryptoPrices}
+                pnlUSD={pnlUSD}
+                pnlPercent={pnlPercent}
               />
             </Suspense>
 
