@@ -6,6 +6,8 @@ import { useState, useEffect, useMemo } from "react";
 
 export interface WalletData {
   totalBalance: number;
+  pnlUSD: number;
+  pnlPercent: number;
   userId?: string;
   preferredCurrency: string;
   isConverting: boolean;
@@ -181,6 +183,9 @@ export function useWalletData() {
 
       const assets = Array.from(assetMap.values());
       let totalBalanceUSD = assets.reduce((sum, asset) => sum + asset.value, 0);
+      // 24-hour P&L: approximate USD change per asset = value * change24h / 100
+      const pnlUSD = assets.reduce((sum, a) => sum + a.value * (a.change24h / 100), 0);
+      const pnlPercent = totalBalanceUSD > 0 ? (pnlUSD / totalBalanceUSD) * 100 : 0;
       let finalTotalBalance = totalBalanceUSD;
 
       if (preferredCurrency !== "USD") {
@@ -201,7 +206,7 @@ export function useWalletData() {
         return orderA - orderB || a.symbol.localeCompare(b.symbol);
       });
 
-      return { totalBalance: finalTotalBalance, userId: user.id, preferredCurrency, isConverting, assets };
+      return { totalBalance: finalTotalBalance, pnlUSD, pnlPercent, userId: user.id, preferredCurrency, isConverting, assets };
     },
   });
 
