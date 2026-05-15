@@ -45,7 +45,7 @@ async function callRocketX(action: string, params: Record<string, any> = {}) {
       throw new Error('RocketX service is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
     }
 
-    console.log('Invoking RocketX Edge Function:', { action, params });
+    if (import.meta.env.DEV) console.log('Invoking RocketX Edge Function:', { action, params });
 
     const client = await getSupabase();
     const { data, error } = await client.functions.invoke('rocketx-swap', {
@@ -213,13 +213,10 @@ export async function getRocketxRate(
     );
     const formattedAmount = formatAmountForRocketX(amount || 0, from || "", fromNetwork || "", fromDecimals);
 
-    if (!params.toAddress) {
-      console.warn('No toAddress provided, suppressing quote request');
-      return null;
-    }
-
     if (import.meta.env.DEV) console.log(`RocketX Quote Request: ${from}/${fromNetwork} -> ${to ?? 'walletless'}/${toNetwork}`);
 
+    // Addresses are optional for quotes — only required at swap execution time.
+    // Always build the quotation params; attach addresses when available for more accurate gas estimates.
     const quotationParams: any = {
       fromToken: fromAddr,
       fromNetwork: fromNetId,
@@ -233,10 +230,10 @@ export async function getRocketxRate(
     if (params.toAddress) quotationParams.toAddress = params.toAddress;
     if (params.excludedExchanges) quotationParams.excludedExchanges = params.excludedExchanges;
 
-    console.log('RocketX getQuotation Params:', JSON.stringify(quotationParams, null, 2));
+    if (import.meta.env.DEV) console.log('RocketX getQuotation Params:', JSON.stringify(quotationParams, null, 2));
 
     const data = await rocketXApi.getQuotation(quotationParams);
-    console.log('RocketX Quotation Raw Response:', data);
+    if (import.meta.env.DEV) console.log('RocketX Quotation Raw Response:', data);
 
     const actualData = data?.data?.data || data?.data || data;
     const quotes = actualData?.quotes;
