@@ -130,6 +130,21 @@ const ServiceIcon = ({ icon, color }: { icon: string; color: string }) => {
         <circle cx="38" cy="38" r="3" fill="white" opacity="0.9" />
       </svg>
     ),
+    stake: (
+      <svg viewBox="0 0 64 64" className="w-full h-full">
+        <polygon points="32,10 52,22 52,42 32,54 12,42 12,22" fill={color} opacity="0.25" />
+        <polygon points="32,18 44,25 44,39 32,46 20,39 20,25" fill={color} opacity="0.6" />
+        <polygon points="32,26 38,30 38,36 32,40 26,36 26,30" fill={color} />
+        <circle cx="32" cy="33" r="3" fill="white" opacity="0.9" />
+      </svg>
+    ),
+    explorer: (
+      <svg viewBox="0 0 64 64" className="w-full h-full">
+        <circle cx="28" cy="28" r="14" fill="none" stroke={color} strokeWidth="3" />
+        <path d="M38 38l12 12" stroke={color} strokeWidth="3.5" strokeLinecap="round" />
+        <path d="M22 28h12M28 22v12" stroke="white" strokeWidth="2.5" strokeLinecap="round" opacity="0.8" />
+      </svg>
+    ),
     settings: (
       <svg viewBox="0 0 64 64" className="w-full h-full">
         <circle cx="32" cy="32" r="8" fill={color} />
@@ -265,14 +280,14 @@ export const DashboardMoreModal = ({ isOpen, onClose }: MoreModalProps) => {
     { icon: "swap",       label: "Swap",              color: "#4FACFE",  href: "/swap" },
     { icon: "card",       label: "Visa Card",   badge: "NEW", color: "#3B82F6", href: "/visa-card" },
     { icon: "mobile",     label: "Mobile Top-up",     color: "#10B981",  href: "/utility-bills" },
-    { icon: "otc",        label: "OTC Desk",           color: "#EC4899",  href: "/p2p" },
     { icon: "shop",       label: "Shop",              color: "#FF6B6B",  href: "/shop" },
     { icon: "giftcard",   label: "Gift Cards",        color: "#FFA500",  href: "/gift-cards" },
     { icon: "perpetual",  label: "Perpetual Trade",   color: "#6366F1",  href: "/trade" },
     { icon: "spot",       label: "Spot Trade",        color: "#0EA5E9",  href: "/trade" },
     { icon: "utility",    label: "Utility",           color: "#14B8A6",  href: "/utility-bills" },
     { icon: "prediction", label: "Prediction",        color: "#8B5CF6",  href: "/prediction" },
-    { icon: "fees",       label: "Fees",              color: "#F97316",  href: "/fees" },
+    { icon: "stake",      label: "Stake",             color: "#10B981",  href: "/staking" },
+    { icon: "explorer",   label: "Explorer",          color: "#3B82F6",  href: "/explorer" },
   ];
 
   const accountSettings: ServiceItem[] = [
