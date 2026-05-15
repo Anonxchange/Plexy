@@ -106,85 +106,53 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
           return;
         }
 
-        // Try to fetch real wallet addresses for quotation if user is logged in
+        // Resolve wallet addresses if logged in — passed to RocketX for more accurate
+        // gas estimates, but quotes work without them (addresses only required at execution).
         let fromAddress: string | undefined = undefined;
         let toAddress: string | undefined = undefined;
 
         if (user?.id) {
-          const wallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
-          
-        const findWallet = (network: string, symbol: string) => {
-          const targetNet = network.toLowerCase();
-          const targetSym = symbol.toLowerCase();
-          
-          return wallets.find(w => {
-            const wChainId = (w.chainId || "").toLowerCase();
-            const wWalletType = (w.walletType || "").toLowerCase();
-            
-            // Direct matches
-            if (wChainId === targetNet || wWalletType === targetNet) return true;
-            
-            // Network specific aliases
-            if (targetNet === 'btc' || targetNet === 'bitcoin') {
-              return wWalletType === 'bitcoin' || wChainId.includes('bitcoin');
-            }
-            if (targetNet === 'eth' || targetNet === 'ethereum') {
-              return wWalletType === 'ethereum' || wChainId.includes('ethereum');
-            }
-            if (targetNet === 'bsc' || targetNet === 'binance') {
-              return wWalletType === 'binance' || wChainId.includes('binance') || wChainId === 'bsc';
-            }
-            if (targetNet === 'trx' || targetNet === 'tron') {
-              return wWalletType === 'tron' || wChainId.includes('tron');
-            }
-            if (targetNet === 'sol' || targetNet === 'solana') {
-              return wWalletType === 'solana' || wChainId.includes('solana');
-            }
-            if (targetNet === 'polygon' || targetNet === 'matic') {
-              return wWalletType === 'polygon' || wChainId.includes('polygon');
-            }
-            if (targetNet === 'arbitrum') {
-              return wWalletType === 'arbitrum' || wChainId.includes('arbitrum');
-            }
-            if (targetNet === 'optimism') {
-              return wWalletType === 'optimism' || wChainId.includes('optimism');
-            }
-            if (targetNet === 'base') {
-              return wWalletType === 'base' || wChainId.includes('base');
-            }
-            
-            return false;
-          });
-        };
+          try {
+            const wallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
 
-          const fWallet = findWallet(fromNetwork, fromCrypto);
-          if (fWallet) fromAddress = fWallet.address;
+            const findWallet = (network: string) => {
+              const net = network.toLowerCase();
+              return wallets.find(w => {
+                const wChain = (w.chainId || "").toLowerCase();
+                const wType  = (w.walletType || "").toLowerCase();
+                if (wChain === net || wType === net) return true;
+                if (net === 'btc'      || net === 'bitcoin')   return wType === 'bitcoin'  || wChain.includes('bitcoin');
+                if (net === 'eth'      || net === 'ethereum')  return wType === 'ethereum' || wChain.includes('ethereum');
+                if (net === 'bsc'      || net === 'binance')   return wType === 'binance'  || wChain.includes('binance') || wChain === 'bsc';
+                if (net === 'trx'      || net === 'tron')      return wType === 'tron'     || wChain.includes('tron');
+                if (net === 'sol'      || net === 'solana')    return wType === 'solana'   || wChain.includes('solana');
+                if (net === 'polygon'  || net === 'matic')     return wType === 'polygon'  || wChain.includes('polygon');
+                if (net === 'arbitrum')                        return wType === 'arbitrum' || wChain.includes('arbitrum');
+                if (net === 'optimism')                        return wType === 'optimism' || wChain.includes('optimism');
+                if (net === 'base')                            return wType === 'base'     || wChain.includes('base');
+                return false;
+              });
+            };
 
-          const tWallet = findWallet(toNetwork, toCrypto);
-          if (tWallet) toAddress = tWallet.address;
-        }
+            const fWallet = findWallet(fromNetwork);
+            if (fWallet) fromAddress = fWallet.address;
 
-        console.log('useSwapPrice addresses:', { fromCrypto, fromNetwork, fromAddress, toCrypto, toNetwork, toAddress });
-
-        // RocketX requires real addresses for quotations. 
-        // If the user isn't logged in or hasn't generated wallets, 
-        // we use a generic address for quotation purposes only if needed,
-        // but it's better to prompt the user.
-        if (!fromAddress || !toAddress) {
-          if (isMounted) {
-            setPriceData(prev => ({ 
-              ...prev, 
-              isLoading: false, 
-              error: `Please ensure you have both ${fromNetwork} and ${toNetwork} wallets created to get live swap rates` 
-            }));
+            const tWallet = findWallet(toNetwork);
+            if (tWallet) toAddress = tWallet.address;
+          } catch {
+            // Non-fatal — proceed with walletless quote
           }
-          return;
         }
 
-        console.log('useSwapPrice fetching quote for:', { fromCrypto, fromNetwork, toCrypto, toNetwork, amount: debouncedAmount });
+        if (import.meta.env.DEV) {
+          console.log('useSwapPrice fetching quote:', { fromCrypto, fromNetwork, fromAddress, toCrypto, toNetwork, toAddress, amount: debouncedAmount });
+        }
 
-        // Try to fetch from Rocketx first for real exchange rates
-        const rocketxQuote = await getRocketxRate(fromCrypto, fromNetwork, toCrypto, toNetwork, debouncedAmount, { fromAddress, toAddress });
+        // Fetch quote — addresses are optional, included when available for accuracy
+        const rocketxQuote = await getRocketxRate(
+          fromCrypto, fromNetwork, toCrypto, toNetwork, debouncedAmount,
+          { ...(fromAddress ? { fromAddress } : {}), ...(toAddress ? { toAddress } : {}) }
+        );
         
         // Ensure we prioritize RocketX quote. If it's missing, we wait or show error instead of jumping to market rate
         if (!rocketxQuote) {
