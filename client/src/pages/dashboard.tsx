@@ -11,7 +11,7 @@ import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/page-skeleton";
 import { AssetCardSkeleton } from "@/components/dashboard/AssetCard";
-import { MarketsSectionSkeleton } from "@/components/dashboard/MarketsSection";
+import { MarketsSectionSkeleton } from "@/components/dashboard/MarketsSectionSkeleton";
 import { useWalletData } from "@/hooks/use-wallet-data";
 import { useMarkets, PolymarketMarket } from "@/hooks/use-polymarket";
 import { useLocation } from "wouter";
