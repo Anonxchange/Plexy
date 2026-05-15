@@ -426,58 +426,79 @@ export function Swap() {
         throw new Error(`Please generate a ${missing} wallet first. Go to the Assets page to create it.`);
       }
 
-      // STEP 2: Create swap
-      const swapResponse = await rocketXApi.executeSwap({
-        userId: user!.id,
-        fromToken: activeQuoteToUse?.fromToken,
-        fromNetwork,
-        fromAmount: activeQuoteToUse?.fromAmount || fromAmountNum,
-        fromAddress: fromWallet.address,
-        toToken: activeQuoteToUse?.toToken,
-        toNetwork,
-        toAmount: activeQuoteToUse?.toAmount || toAmountNum,
-        toAddress: toWallet.address,
-        slippage: 1,
-        quoteId: activeQuoteToUse?.id,
-      });
-
-      if (!swapResponse?.id) {
-        throw new Error("Swap creation failed");
+      // Validate we have the token IDs from the quote (required by RocketX /v1/swap)
+      if (!activeQuoteToUse?.fromTokenId || !activeQuoteToUse?.toTokenId) {
+        throw new Error("Quote data is incomplete — please wait for a fresh quote and try again.");
       }
 
-      const swapId = swapResponse.id;
+      // STEP 2: Build swap payload per RocketX docs
+      // - fromTokenId / toTokenId come from the quotation response (not token addresses)
+      // - userAddress = sender, destinationAddress = recipient
+      // - For walletless exchanges only destinationAddress is strictly required,
+      //   but we always send userAddress for record-keeping
+      // - referrerAddress earns us 70% of the partner fee on DEX routes
+      const swapResponse = await rocketXApi.executeSwap({
+        fromTokenId: activeQuoteToUse.fromTokenId,
+        toTokenId: activeQuoteToUse.toTokenId,
+        userAddress: fromWallet.address,
+        destinationAddress: toWallet.address,
+        amount: activeQuoteToUse.fromAmount || fromAmountNum,
+        fee: 0.6,                    // partner fee % (0–3%)
+        slippage: 1,
+        ...(activeQuoteToUse.rateId ? { rateId: activeQuoteToUse.rateId } : {}),
+      });
+
+      if (!swapResponse?.requestId) {
+        throw new Error("Swap creation failed — no requestId returned.");
+      }
+
+      const requestId: string = swapResponse.requestId;
+      // txId is the on-chain tx hash (for DEX/non-walletless routes the swap response may include it)
+      let onChainTxId: string | undefined = swapResponse.txId || undefined;
 
       if (isMountedRef.current) {
         toast({
           title: "Swap Initiated",
-          description: "Waiting for blockchain confirmation...",
+          description: activeQuoteToUse.walletless
+            ? `Send ${activeQuoteToUse.fromAmount} ${fromCurrency} to the deposit address to complete the swap.`
+            : "Waiting for blockchain confirmation...",
         });
       }
 
-      // STEP 3: Poll status
+      // STEP 3: Poll status using requestId (and txId when available)
+      // subState lifecycle: transaction_pending → pending → approved → executed → withdrawal → withdraw_success
+      // Completion: status === "success" OR subState === "withdraw_success"
+      // Failure:    status === "failed"  OR subState === "invalid"
       let attempts = 0;
       let completed = false;
 
-      while (attempts < 30 && isMountedRef.current) {
-        await new Promise(r => setTimeout(r, 3000));
+      while (attempts < 40 && isMountedRef.current) {
+        await new Promise(r => setTimeout(r, 5000));
 
-        const statusRes = await rocketXApi.getStatus(swapId);
-        const status = statusRes?.status;
+        const statusRes = await rocketXApi.getStatus(requestId, onChainTxId);
+        const status   = statusRes?.status;
+        const subState = statusRes?.subState;
 
-        if (status === "completed") {
+        // Capture tx hash if returned in a later poll (DEX routes)
+        if (statusRes?.originTransactionHash && !onChainTxId) {
+          onChainTxId = statusRes.originTransactionHash;
+        }
+
+        if (status === "success" || subState === "withdraw_success") {
           completed = true;
           break;
         }
 
-        if (status === "failed") {
-          throw new Error("Swap failed (insufficient balance or rejected)");
+        if (status === "failed" || subState === "invalid") {
+          const reason = statusRes?.remarks || "Swap failed or timed out on the exchange.";
+          throw new Error(reason);
         }
 
         attempts++;
       }
 
       if (!completed && isMountedRef.current) {
-        throw new Error("Swap timeout: The transaction is taking longer than expected. Please check your wallet history.");
+        throw new Error("Swap is taking longer than expected. Check your wallet history — funds may still arrive.");
       }
 
       if (isMountedRef.current) {
