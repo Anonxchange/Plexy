@@ -1,4 +1,4 @@
-import { Eye, EyeOff, ChevronDown, TrendingDown } from "lucide-react";
+import { Eye, EyeOff, ChevronDown, TrendingDown, TrendingUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface AssetCardProps {
@@ -7,15 +7,21 @@ interface AssetCardProps {
   totalBalance: number;
   isLoading: boolean;
   cryptoPrices: any;
+  pnlUSD?: number;
+  pnlPercent?: number;
 }
 
-export const AssetCard = ({ showBalance, setShowBalance, totalBalance, isLoading, cryptoPrices }: AssetCardProps) => {
+export const AssetCard = ({ showBalance, setShowBalance, totalBalance, isLoading, cryptoPrices, pnlUSD = 0, pnlPercent = 0 }: AssetCardProps) => {
+  const pnlPositive = pnlUSD >= 0;
+  const pnlUSDStr = `${pnlPositive ? "+" : ""}${pnlUSD.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`;
+  const pnlPctStr = `(${pnlPositive ? "+" : ""}${pnlPercent.toFixed(2)}%)`;
+
   return (
     <div className="bg-card rounded-2xl p-5 mx-4 mt-4 lg:mx-0 lg:mt-0 shadow-sm border border-border animate-fade-in">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground text-sm font-medium">Total Assets</span>
-          <button 
+          <button
             onClick={() => setShowBalance(!showBalance)}
             className="p-1 hover:bg-muted rounded transition-colors"
           >
@@ -52,10 +58,20 @@ export const AssetCard = ({ showBalance, setShowBalance, totalBalance, isLoading
           )}
           <div className="flex items-center gap-2 mt-3">
             <span className="text-sm text-muted-foreground">Today's P&L</span>
-            <div className="flex items-center gap-1 text-destructive">
-              <TrendingDown className="h-3 w-3" />
-              <span className="text-sm font-medium">-12.87 USD (-0.33%)</span>
-            </div>
+            {isLoading ? (
+              <Skeleton className="h-4 w-32" />
+            ) : (
+              <div className={`flex items-center gap-1 ${pnlPositive ? "text-green-500" : "text-destructive"}`}>
+                {pnlPositive ? (
+                  <TrendingUp className="h-3 w-3" />
+                ) : (
+                  <TrendingDown className="h-3 w-3" />
+                )}
+                <span className="text-sm font-medium">
+                  {showBalance ? `${pnlUSDStr} ${pnlPctStr}` : "••••••"}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
