@@ -112,19 +112,9 @@ const PredictionEventSlider = ({ markets }: { markets: PolymarketMarket[] }) => 
   );
 };
 
-const tabs = ["Hot", "New", "Gainers", "Losers", "Turnover"];
-
-const defaultMarkets = [
-  { symbol: "BTC", name: "Bitcoin", pair: "USDT", price: "85,451.2", change: -0.79 },
-  { symbol: "ETH", name: "Ethereum", pair: "USDT", price: "2,826.06", change: -0.13 },
-  { symbol: "SOL", name: "Solana", pair: "USDT", price: "119.38", change: -3.11 },
-  { symbol: "BNB", name: "Binance Coin", pair: "USDT", price: "600", change: -2.0 },
-  { symbol: "USDC", name: "USD Coin", pair: "USDT", price: "1.0004", change: 0.02 },
-  { symbol: "USDT", name: "Tether", pair: "USDT", price: "1.0000", change: 0.0 },
-];
 
 const QuickActionIcon = ({ type, color }: { type: string; color: string }) => {
-  const icons: Record<string, JSX.Element> = {
+  const icons: Record<string, React.ReactElement> = {
     p2p: (
       <svg viewBox="0 0 64 64" className="w-full h-full">
         <circle cx="22" cy="32" r="12" fill={color} />
@@ -159,7 +149,6 @@ export const Dashboard = () => {
   useHead({ title: "Dashboard | Pexly", meta: [{ name: "description", content: "An overview of your portfolio value, activity history, staking rewards, and account stats." }] });
   const { user, isLoading: authLoading } = useAuth();
   const [showBalance, setShowBalance] = useState(true);
-  const [activeTab, setActiveTab] = useState("Hot");
   const [isMoreModalOpen, setIsMoreModalOpen] = useState(false);
   const [walletBackupProcessed, setWalletBackupProcessed] = useState(false);
   const [, setLocation] = useLocation();
@@ -194,16 +183,6 @@ export const Dashboard = () => {
 
   const totalBalance = walletData?.totalBalance || 0;
 
-  const markets = useMemo(() => {
-    return defaultMarkets.map(market => {
-      const priceData = cryptoPrices[market.symbol];
-      return {
-        ...market,
-        price: priceData ? priceData.current_price.toFixed(market.symbol === "USDT" || market.symbol === "USDC" ? 4 : 2) : market.price,
-        change: priceData?.price_change_percentage_24h || 0
-      };
-    });
-  }, [cryptoPrices]);
 
   useEffect(() => {
     if (user) {
@@ -274,13 +253,7 @@ export const Dashboard = () => {
 
             <div className="mt-6 animate-fade-in lg:hidden" style={{ animationDelay: "0.2s" }}>
               <Suspense fallback={<MarketsSectionSkeleton />}>
-                <MarketsSection 
-                  markets={markets}
-                  tabs={tabs}
-                  activeTab={activeTab}
-                  setActiveTab={setActiveTab}
-                  className="px-4"
-                />
+                <MarketsSection className="px-4" />
               </Suspense>
             </div>
 
@@ -323,12 +296,7 @@ export const Dashboard = () => {
           <div className="hidden lg:block lg:col-span-5 xl:col-span-4">
             <div className="bg-card rounded-2xl border border-border p-5 sticky top-6 animate-fade-in" style={{ animationDelay: "0.2s" }}>
               <Suspense fallback={<MarketsSectionSkeleton />}>
-                <MarketsSection 
-                  markets={markets}
-                  tabs={tabs}
-                  activeTab={activeTab}
-                  setActiveTab={setActiveTab}
-                />
+                <MarketsSection />
               </Suspense>
             </div>
           </div>
