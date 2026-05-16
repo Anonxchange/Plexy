@@ -46,7 +46,7 @@ const PredictionEventSlider = ({ markets }: { markets: PolymarketMarket[] }) => 
   const price = prices[0] ? Math.round(parseFloat(prices[0]) * 100) : 0;
   const imageSrc = currentMarket.image ? DOMPurify.sanitize(currentMarket.image) : null;
 
-  const marketId = currentMarket.conditionId || currentMarket.id;
+  const marketId = currentMarket.conditionId;
 
   return (
     <div
