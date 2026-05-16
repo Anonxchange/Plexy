@@ -46,8 +46,13 @@ const PredictionEventSlider = ({ markets }: { markets: PolymarketMarket[] }) => 
   const price = prices[0] ? Math.round(parseFloat(prices[0]) * 100) : 0;
   const imageSrc = currentMarket.image ? DOMPurify.sanitize(currentMarket.image) : null;
 
+  const marketId = currentMarket.conditionId || currentMarket.id;
+
   return (
-    <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-secondary rounded-2xl p-4 border border-primary/20 relative overflow-hidden h-[140px] flex flex-col justify-between transition-all duration-500">
+    <div
+      className="bg-gradient-to-r from-primary/10 via-primary/5 to-secondary rounded-2xl p-4 border border-primary/20 relative overflow-hidden h-[140px] flex flex-col justify-between transition-all duration-500 cursor-pointer"
+      onClick={() => marketId && setLocation(`/prediction/${marketId}`)}
+    >
       <div className="absolute right-0 top-0 w-24 h-24 bg-primary/10 rounded-full blur-2xl"></div>
       
       <div className="relative flex items-center gap-4">
@@ -63,7 +68,6 @@ const PredictionEventSlider = ({ markets }: { markets: PolymarketMarket[] }) => 
                 const parent = target.parentElement;
                 if (parent) {
                   parent.classList.add('flex', 'items-center', 'justify-center');
-                  // Only add icon if not already present
                   if (!parent.querySelector('.fallback-icon')) {
                     const iconContainer = document.createElement('div');
                     iconContainer.className = 'fallback-icon';
@@ -86,13 +90,10 @@ const PredictionEventSlider = ({ markets }: { markets: PolymarketMarket[] }) => 
           <h3 className="text-foreground font-semibold mt-1 line-clamp-2 text-sm sm:text-base leading-tight">
             {currentMarket.question}
           </h3>
-          <button 
-            onClick={() => setLocation(`/prediction/${currentMarket.conditionId}`)}
-            className="flex items-center gap-1 text-primary font-medium text-sm mt-2 hover:gap-2 transition-all"
-          >
+          <div className="flex items-center gap-1 text-primary font-medium text-sm mt-2">
             Predict Now
             <ArrowRight className="h-4 w-4" />
-          </button>
+          </div>
         </div>
       </div>
 
