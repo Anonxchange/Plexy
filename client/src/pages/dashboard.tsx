@@ -101,7 +101,7 @@ const PredictionEventSlider = ({ markets }: { markets: PolymarketMarket[] }) => 
         {activeMarkets.map((_, i) => (
           <button
             key={i}
-            onClick={() => setCurrentIndex(i)}
+            onClick={e => { e.stopPropagation(); setCurrentIndex(i); }}
             className={cn(
               "h-1.5 rounded-full transition-all duration-300",
               currentIndex === i ? "w-6 bg-primary" : "w-1.5 bg-muted-foreground/30"
