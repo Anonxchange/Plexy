@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { BlockchainCanvas } from "@/components/blockchain-canvas";
 import { uploadToR2 } from "@/lib/r2-storage";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 import medalTheOg from "@assets/generated_images/IMG_1432.png";
 import medalInitiate from "@assets/generated_images/IMG_1430.png";
 import medalTop1 from "@assets/generated_images/IMG_1425.png";
@@ -419,7 +420,88 @@ export function Profile() {
   };
 
   // ── Guards ──
-  if (loading || loadingProfile) return <div className="min-h-screen flex items-center justify-center"><LoadingSpinner size="lg" /></div>;
+  if (loading || loadingProfile) return (
+    <div className="min-h-screen bg-slate-50 dark:bg-background">
+      {/* Canvas header */}
+      <div className="relative h-56 bg-gradient-to-br from-[#e8f5d0] via-[#f0fce8] to-[#dff0f8] dark:from-[#1a2410] dark:via-[#111a0d] dark:to-[#0d1a1f]" />
+      <div className="max-w-5xl mx-auto px-4 lg:px-6 pb-6">
+        {/* Profile card */}
+        <div className="relative -mt-14 mb-6">
+          <div className="bg-white dark:bg-card border border-slate-100 dark:border-border rounded-2xl p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row gap-5 items-start">
+              <Skeleton className="w-24 h-24 rounded-2xl flex-shrink-0" />
+              <div className="flex-1 space-y-2.5 pt-1">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-3.5 w-28" />
+                <Skeleton className="h-3 w-52" />
+                <div className="flex gap-2 pt-1">
+                  <Skeleton className="h-3.5 w-24" />
+                  <Skeleton className="h-3.5 w-20" />
+                </div>
+              </div>
+              <Skeleton className="h-9 w-28 rounded-xl self-start sm:self-auto" />
+            </div>
+          </div>
+        </div>
+
+        {/* Stats grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white dark:bg-card border border-slate-100 dark:border-border rounded-2xl p-4 flex items-center gap-3 shadow-sm">
+              <Skeleton className="w-11 h-11 rounded-xl flex-shrink-0" />
+              <div className="space-y-1.5 flex-1">
+                <Skeleton className="h-2.5 w-12" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-2.5 w-16" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Gift card marquee */}
+        <div className="bg-white dark:bg-card border border-slate-100 dark:border-border rounded-2xl p-4 mb-4 shadow-sm">
+          <div className="flex gap-3 overflow-hidden">
+            {[...Array(6)].map((_, i) => (
+              <Skeleton key={i} className="w-28 h-20 rounded-xl flex-shrink-0" />
+            ))}
+          </div>
+        </div>
+
+        {/* XP bar */}
+        <div className="bg-white dark:bg-card border border-slate-100 dark:border-border rounded-2xl p-4 mb-5 shadow-sm">
+          <div className="flex justify-between mb-2">
+            <Skeleton className="h-3.5 w-16" />
+            <Skeleton className="h-3.5 w-24" />
+          </div>
+          <Skeleton className="h-2 w-full rounded-full" />
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 p-1 bg-white dark:bg-card border border-slate-100 dark:border-border rounded-xl mb-5 shadow-sm">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="flex-1 h-9 rounded-lg" />
+          ))}
+        </div>
+
+        {/* Tab content cards */}
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="bg-white dark:bg-card border border-slate-100 dark:border-border rounded-2xl p-4 shadow-sm">
+              <div className="flex items-center gap-3 mb-3">
+                <Skeleton className="w-10 h-10 rounded-xl" />
+                <div className="space-y-1.5 flex-1">
+                  <Skeleton className="h-3.5 w-32" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+                <Skeleton className="h-7 w-16 rounded-lg" />
+              </div>
+              <Skeleton className="h-2 w-full rounded-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
   if (!user && isOwnProfile) return null;
 
   // ── Derived values ──
