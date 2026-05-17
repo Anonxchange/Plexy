@@ -80,7 +80,84 @@ export default defineConfig({
     target: "es2020",
     chunkSizeWarningLimit: 1000,
     reportCompressedSize: false,
+       rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // ── React core ─────────────────────────────────────────────────
+          if (
+            id.includes("/node_modules/react/") ||
+            id.includes("/node_modules/react-dom/") ||
+            id.includes("/node_modules/scheduler/")
+          ) {
+            return "vendor-react";
+          }
 
+          // ── Routing ────────────────────────────────────────────────────
+          if (id.includes("/node_modules/wouter/")) {
+            return "vendor-react";
+          }
+
+          // ── Supabase (auth — always needed but heavy) ──────────────────
+          if (id.includes("@supabase/")) {
+            return "vendor-supabase";
+          }
+
+          // ── Crypto / wallet libs (only loaded on wallet pages) ─────────
+          if (
+            id.includes("@scure/") ||
+            id.includes("@noble/") ||
+            id.includes("@ethereumjs/") ||
+            id.includes("/scrypt-js/") ||
+            id.includes("/idb/")
+          ) {
+            return "vendor-crypto";
+          }
+
+          // ── Charts (recharts + d3 deps — only chart pages) ────────────
+          if (
+            id.includes("/recharts/") ||
+            id.includes("/d3-") ||
+            id.includes("/d3/") ||
+            id.includes("/victory-")
+          ) {
+            return "vendor-charts";
+          }
+
+          // ── Framer Motion (animation — only animated pages) ───────────
+          if (id.includes("/framer-motion/")) {
+            return "vendor-motion";
+          }
+
+          // ── Radix UI (UI primitives — shared across all pages) ────────
+          if (id.includes("@radix-ui/")) {
+            return "vendor-radix";
+          }
+
+          // ── TanStack (query client) ────────────────────────────────────
+          if (id.includes("@tanstack/")) {
+            return "vendor-tanstack";
+          }
+
+          // ── i18n ───────────────────────────────────────────────────────
+          if (
+            id.includes("/i18next/") ||
+            id.includes("/react-i18next/")
+          ) {
+            return "vendor-i18n";
+          }
+
+          // ── Icons ──────────────────────────────────────────────────────
+          if (id.includes("/lucide-react/")) {
+            return "vendor-icons";
+          }
+
+          // ── Everything else from node_modules ─────────────────────────
+          if (id.includes("/node_modules/")) {
+            return "vendor-misc";
+          }
+        },
+      },
+    },
     modulePreload: {
       resolveDependencies: (filename, deps) => {
         const lazyPrefixes = ["vendor-ui-x", "vendor-charts", "vendor-canvas", "vendor-crypto"];
