@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useRoute, Link } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { useRewardsProfile } from "@/hooks/use-rewards";
@@ -6,13 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { getCountryFlag } from "@/lib/localization";
-import { useMarkets, type PolymarketMarket } from "@/hooks/use-polymarket";
-import { shopifyService } from "@/lib/shopify-service";
-import { ProfileOverviewCards } from "@/components/profile-overview-cards";
+import { ProfileOverviewCards, ProfilePredictionsTab, ProfileShopTab, ProfileActivityTab } from "@/components/profile-overview-cards";
 import { GiftCardMarquee } from "@/components/gift-card-marquee";
 import { cn } from "@/lib/utils";
-import DOMPurify from "dompurify";
-import { Upload, User, TrendingUp, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Upload, User } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -23,7 +20,6 @@ import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { BlockchainCanvas } from "@/components/blockchain-canvas";
 import { uploadToR2 } from "@/lib/r2-storage";
-import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import medalTheOg from "@assets/generated_images/IMG_1432.png";
 import medalInitiate from "@assets/generated_images/IMG_1430.png";
@@ -238,78 +234,10 @@ function IconStar({ size = 11, filled = false }: { size?: number; filled?: boole
   );
 }
 
-function IconChevronRight({ size = 12, className }: { size?: number; className?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
-      <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function IconExternalLink({ size = 12 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <polyline points="15,3 21,3 21,9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <line x1="10" y1="14" x2="21" y2="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function IconShoppingBag({ size = 14, gradient = false }: { size?: number; gradient?: boolean }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <defs>
-        <linearGradient id="sbg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#a5b4fc" /><stop offset="100%" stopColor="#6366f1" />
-        </linearGradient>
-      </defs>
-      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" fill={gradient ? "url(#sbg)" : "none"} stroke={gradient ? "none" : "#6366f1"} strokeWidth="2" strokeLinejoin="round" />
-      <path d="M3 6h18" stroke={gradient ? "#c7d2fe" : "#6366f1"} strokeWidth="1.5" />
-      <path d="M16 10a4 4 0 01-8 0" stroke={gradient ? "#e0e7ff" : "#6366f1"} strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function IconTrending({ size = 16, up = true }: { size?: number; up?: boolean }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <defs>
-        <linearGradient id="tg" x1="0" y1="1" x2="1" y2="0">
-          <stop offset="0%" stopColor={up ? "#34d399" : "#f87171"} /><stop offset="100%" stopColor={up ? "#10b981" : "#ef4444"} />
-        </linearGradient>
-      </defs>
-      {up
-        ? <><polyline points="3,17 8,11 13,14 21,5" stroke="url(#tg)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" /><polyline points="16,5 21,5 21,10" stroke="url(#tg)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" /></>
-        : <><polyline points="3,7 8,13 13,10 21,19" stroke="url(#tg)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" /><polyline points="16,19 21,19 21,14" stroke="url(#tg)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" /></>
-      }
-    </svg>
-  );
-}
-
-function IconPrediction({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <defs>
-        <linearGradient id="preg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#818cf8" /><stop offset="100%" stopColor="#6366f1" />
-        </linearGradient>
-      </defs>
-      <circle cx="12" cy="12" r="9" fill="url(#preg)" opacity=".15" stroke="url(#preg)" strokeWidth="1.5" />
-      <path d="M8 12h8M12 8v8" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" opacity=".4" />
-      <circle cx="12" cy="12" r="3" fill="#6366f1" />
-    </svg>
-  );
-}
-
 // ─── Shared UI ─────────────────────────────────────────────────────────────────
 
 function Card({ children, className }: { children: React.ReactNode; className?: string }) {
   return <div className={cn("bg-white dark:bg-card rounded-2xl border border-slate-200 dark:border-border shadow-sm", className)}>{children}</div>;
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <p className="text-[11px] font-semibold text-slate-400 dark:text-muted-foreground uppercase tracking-widest mb-3">{children}</p>;
 }
 
 const TABS = ["Overview", "Predictions", "Shop", "Activity"] as const;
@@ -336,10 +264,6 @@ interface UserProfile {
   pexly_pay_id: string | null;
   last_seen: string | null;
 }
-
-interface ShopProduct { id: string; title: string; images: string[]; price: number; currency: string; productType: string; inStock: boolean; }
-interface SpotTrade { id: string; symbol: string; side: string; price: string; qty: string; status: string; time: number; }
-interface PerpTrade { id: string; symbol: string; side: string; positionAmt: string; entryPrice: string; unrealizedProfit: string; leverage?: string; }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -381,15 +305,10 @@ export function Profile() {
   // ── Tab / UI state ──
   const [tab, setTab] = useState<Tab>("Overview");
   const [copied, setCopied] = useState(false);
-  const [tradeTypeFilter, setTradeTypeFilter] = useState<"spot" | "perp">("spot");
 
   // ── Data state ──
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
-  const [spotTrades, setSpotTrades] = useState<SpotTrade[]>([]);
-  const [perpTrades, setPerpTrades] = useState<PerpTrade[]>([]);
-  const [shopProducts, setShopProducts] = useState<ShopProduct[]>([]);
   const [loadingProfile, setLoadingProfile] = useState(true);
-  const [loadingTrades, setLoadingTrades] = useState(false);
 
   // ── Edit profile state ──
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -398,14 +317,6 @@ export function Profile() {
 
   // ── Rewards ──
   const { data: rewardsProfile } = useRewardsProfile();
-
-  // ── Live data ──
-  const { data: predictionMarkets } = useMarkets({ limit: 10 });
-
-  const activeMarkets = useMemo(() => {
-    if (!predictionMarkets) return [];
-    return [...predictionMarkets].sort((a, b) => (b.volumeNum || 0) - (a.volumeNum || 0));
-  }, [predictionMarkets]);
 
   const avatarTypes = [
     { id: "default", label: "Default", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=default" },
@@ -418,24 +329,6 @@ export function Profile() {
     { id: "artist", label: "Artist", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=artist" },
   ];
 
-  // ── Fetch Shopify products ──
-  useEffect(() => {
-    shopifyService.getProducts(4).then(result => {
-      setShopProducts(result.products.map((edge: any) => {
-        const p = edge.node;
-        const firstVariant = p.variants?.edges?.[0]?.node;
-        return {
-          id: p.id, title: p.title,
-          images: p.images.edges.map((e: any) => e.node.url),
-          price: parseFloat(p.priceRange.minVariantPrice.amount),
-          currency: p.priceRange.minVariantPrice.currencyCode,
-          productType: p.productType || "Product",
-          inStock: firstVariant?.availableForSale !== false,
-        };
-      }));
-    }).catch(() => {});
-  }, []);
-
   // ── Auth redirect ──
   useEffect(() => {
     if (!loading && !user && isOwnProfile) { setLocation("/signin"); return; }
@@ -443,8 +336,6 @@ export function Profile() {
       fetchProfileData();
     }
   }, [user, loading, viewingUserId]);
-
-  useEffect(() => { if (tab === "Activity" && user?.id) fetchSpotAndPerpTrades(); }, [tab, user?.id]);
 
   // ── Data fetchers ──
   const fetchProfileData = async () => {
@@ -468,20 +359,6 @@ export function Profile() {
       const country = user?.user_metadata?.country || user?.user_metadata?.Country || "";
       setProfileData({ id: user?.id || "", username: `user_${user?.id?.substring(0, 8)}`, country, bio: null, languages: ["English"], positive_feedback: 0, negative_feedback: 0, total_trades: 0, trade_partners: 0, is_verified: false, phone_verified: false, email_verified: false, last_seen: new Date().toISOString(), created_at: new Date().toISOString(), avatar_type: "default", avatar_url: null, pexly_pay_id: null });
     } finally { setLoadingProfile(false); }
-  };
-
-  const fetchSpotAndPerpTrades = async () => {
-    if (!user?.id) return;
-    setLoadingTrades(true);
-    try {
-      const { data: spot } = await supabase.from("spot_orders").select("*").eq("user_id", user.id).order("time", { ascending: false }).limit(20);
-      setSpotTrades(spot || []);
-    } catch { setSpotTrades([]); }
-    try {
-      const { data: perp } = await supabase.from("perp_positions").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20);
-      setPerpTrades(perp || []);
-    } catch { setPerpTrades([]); }
-    setLoadingTrades(false);
   };
 
   // ── Handlers ──
@@ -571,7 +448,6 @@ export function Profile() {
   const badges: string[] = [];
   if ((profileData?.total_trades || 0) >= 1) badges.push("Early Adopter");
   if ((profileData?.total_trades || 0) >= 50) badges.push("Trade Pro");
-  if (shopProducts.length > 0) badges.push("Shop Pioneer");
 
   const avatarSrc = profileData?.avatar_url || avatarTypes.find(a => a.id === profileData?.avatar_type)?.image || avatarTypes[0].image;
 
@@ -593,7 +469,7 @@ export function Profile() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 lg:px-6 pb-24">
+      <div className="max-w-5xl mx-auto px-4 lg:px-6 pb-6">
 
         {/* ── Profile Card ── */}
         <div className="relative -mt-14 mb-6">
@@ -755,260 +631,9 @@ export function Profile() {
           </div>
         )}
 
-        {/* ── PREDICTIONS TAB ── */}
-        {tab === "Predictions" && (
-          <div className="space-y-3 animate-in fade-in-0 duration-200">
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-4 rounded-full bg-gradient-to-b from-lime-400 to-emerald-500 inline-block" />
-                <h2 className="text-sm font-bold text-slate-900 dark:text-foreground">Prediction Markets</h2>
-              </div>
-              <Link href="/prediction" className="text-[11px] font-semibold text-primary flex items-center gap-1 bg-primary/8 px-2.5 py-1 rounded-full hover:opacity-70 transition-opacity">
-                Browse all <IconExternalLink size={10} />
-              </Link>
-            </div>
-            {activeMarkets.length === 0 ? (
-              <div className="rounded-2xl border border-slate-100 dark:border-border bg-white dark:bg-card p-10 text-center">
-                <p className="text-sm text-slate-400">No prediction markets available</p>
-              </div>
-            ) : (
-              activeMarkets.map(m => {
-                const prices = (() => { try { return JSON.parse(m.outcomePrices || "[]"); } catch { return []; } })();
-                const yesOdds = prices[0] ? Math.round(parseFloat(prices[0]) * 100) : 0;
-                const noOdds = 100 - yesOdds;
-                const isHigh = yesOdds >= 50;
-                const imgSrc = m.image || m.icon || null;
-                const isTrending = (m.volumeNum || 0) > 500000;
-                return (
-                  <div key={m.id} className="rounded-2xl border border-slate-100 dark:border-border bg-white dark:bg-card overflow-hidden shadow-sm hover:shadow-md hover:border-slate-200 dark:hover:border-border/80 transition-all duration-200 group">
-                    {/* Image banner */}
-                    <div className="relative h-28 bg-slate-100 dark:bg-muted overflow-hidden cursor-pointer" onClick={() => setLocation(`/prediction/${m.id}`)}>
-                      {imgSrc ? (
-                        <img src={DOMPurify.sanitize(imgSrc)} alt={m.question} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-muted dark:to-muted/50 flex items-center justify-center">
-                          <span className="text-4xl opacity-20 select-none">{m.question.charAt(0)}</span>
-                        </div>
-                      )}
-                      {/* Gradient overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                      {/* Odds badge */}
-                      <div className="absolute bottom-2 left-3 flex items-center gap-1.5">
-                        <span className={cn("text-xs font-bold px-2 py-0.5 rounded-lg shadow",
-                          isHigh ? "bg-emerald-500 text-white" : "bg-red-500 text-white")}>
-                          {yesOdds}% YES
-                        </span>
-                        {isTrending && (
-                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-lime-400 text-lime-900 flex items-center gap-1">
-                            <IconTrending size={9} up /> Hot
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Body */}
-                    <div className="p-4">
-                      <h3 className="text-sm font-semibold text-slate-800 dark:text-foreground leading-snug mb-3 cursor-pointer hover:text-primary transition-colors line-clamp-2"
-                        onClick={() => setLocation(`/prediction/${m.id}`)}>
-                        {m.question}
-                      </h3>
-
-                      {/* Progress bar */}
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold w-8 shrink-0">YES {yesOdds}%</span>
-                        <div className="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-muted overflow-hidden">
-                          <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-700" style={{ width: `${yesOdds}%` }} />
-                        </div>
-                        <span className="text-[10px] text-red-500 font-semibold w-8 shrink-0 text-right">NO {noOdds}%</span>
-                      </div>
-
-                      <p className="text-[10px] text-slate-400 dark:text-muted-foreground mb-3">Vol: {m.volume || "—"}</p>
-
-                      {/* Action buttons */}
-                      <div className="flex gap-2">
-                        <button className="flex-1 h-8 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white transition-colors"
-                          onClick={() => setLocation(`/prediction/${m.id}`)}>
-                          Buy YES
-                        </button>
-                        <button className="flex-1 h-8 rounded-xl text-xs font-bold bg-red-500 hover:bg-red-600 text-white transition-colors"
-                          onClick={() => setLocation(`/prediction/${m.id}`)}>
-                          Buy NO
-                        </button>
-                        <button className="h-8 w-8 rounded-xl border border-slate-200 dark:border-border flex items-center justify-center text-slate-400 hover:text-primary hover:border-primary/50 transition-colors"
-                          onClick={() => setLocation(`/prediction/${m.id}`)}>
-                          <IconChevronRight size={13} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        )}
-
-        {/* ── SHOP TAB ── */}
-        {tab === "Shop" && (
-          <div className="animate-in fade-in-0 duration-200 space-y-3">
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-4 rounded-full bg-gradient-to-b from-violet-400 to-indigo-500 inline-block" />
-                <h2 className="text-sm font-bold text-slate-900 dark:text-foreground">Pexly Store</h2>
-              </div>
-              <Link href="/shop" className="text-[11px] font-semibold text-primary flex items-center gap-1 bg-primary/8 px-2.5 py-1 rounded-full hover:opacity-70 transition-opacity">
-                Full store <IconExternalLink size={10} />
-              </Link>
-            </div>
-
-            {shopProducts.length === 0 ? (
-              <div className="rounded-2xl border border-slate-100 dark:border-border bg-white dark:bg-card p-10 text-center">
-                <p className="text-sm text-slate-400">Loading products…</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-3">
-                {shopProducts.map(p => (
-                  <div key={p.id}
-                    className={cn("rounded-2xl border border-slate-100 dark:border-border bg-white dark:bg-card overflow-hidden shadow-sm group transition-all duration-200",
-                      p.inStock ? "cursor-pointer hover:shadow-md hover:border-slate-200 dark:hover:border-border/80" : "opacity-70")}
-                    onClick={() => p.inStock && setLocation(`/shop/product/${encodeURIComponent(p.id)}`)}>
-                    {/* Square image */}
-                    <div className="relative aspect-square bg-slate-100 dark:bg-muted overflow-hidden">
-                      {p.images[0]
-                        ? <img src={p.images[0]} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                        : <div className="w-full h-full flex items-center justify-center"><IconShoppingBag size={36} gradient /></div>}
-                      {/* In stock badge */}
-                      {!p.inStock && (
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                          <span className="text-[10px] font-bold text-white bg-black/60 px-2 py-1 rounded-lg">Sold Out</span>
-                        </div>
-                      )}
-                      {p.inStock && (
-                        <span className="absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500 text-white shadow">In Stock</span>
-                      )}
-                    </div>
-                    {/* Info */}
-                    <div className="p-3">
-                      {p.productType && (
-                        <p className="text-[9px] text-slate-400 dark:text-muted-foreground uppercase tracking-widest font-semibold mb-0.5">{p.productType}</p>
-                      )}
-                      <h3 className="text-xs font-semibold text-slate-800 dark:text-foreground leading-snug line-clamp-2 mb-2 group-hover:text-primary transition-colors">{p.title}</h3>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-bold text-slate-900 dark:text-foreground">${p.price.toFixed(2)}</span>
-                        <span className="text-[9px] text-slate-400 dark:text-muted-foreground font-medium">{p.currency}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── ACTIVITY TAB ── */}
-        {tab === "Activity" && (
-          <div className="animate-in fade-in-0 duration-200 space-y-3">
-
-            {/* Header + filter */}
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-4 rounded-full bg-gradient-to-b from-orange-400 to-rose-500 inline-block" />
-                <h2 className="text-sm font-bold text-slate-900 dark:text-foreground">Trade History</h2>
-              </div>
-              <div className="flex gap-0.5 p-0.5 bg-slate-100 dark:bg-muted rounded-xl">
-                {(["spot", "perp"] as const).map(t => (
-                  <button key={t} onClick={() => setTradeTypeFilter(t)}
-                    className={cn("px-3 py-1.5 text-[11px] font-semibold rounded-lg transition-all",
-                      tradeTypeFilter === t
-                        ? "bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm"
-                        : "text-slate-400 dark:text-muted-foreground hover:text-slate-600 dark:hover:text-foreground")}>
-                    {t === "spot" ? "Spot" : "Perp"}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-slate-100 dark:border-border bg-white dark:bg-card overflow-hidden shadow-sm">
-              {loadingTrades ? (
-                <div className="px-5 py-8 flex items-center gap-3 text-slate-400 dark:text-muted-foreground">
-                  <LoadingSpinner size="sm" />
-                  <span className="text-sm">Loading trades…</span>
-                </div>
-              ) : tradeTypeFilter === "spot" ? (
-                spotTrades.length === 0 ? (
-                  <div className="px-5 py-10 text-center">
-                    <p className="text-sm text-slate-400">No spot trade history yet</p>
-                    <p className="text-[11px] text-slate-300 dark:text-muted-foreground/60 mt-1">Trades will appear here once you start trading</p>
-                  </div>
-                ) : (
-                  spotTrades.map((trade, i) => (
-                    <div key={trade.id || i} className={cn("flex items-center gap-3 px-4 py-3.5 hover:bg-slate-50 dark:hover:bg-muted/40 transition-colors", i > 0 && "border-t border-slate-100 dark:border-border")}>
-                      {/* Side badge */}
-                      <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center text-[9px] font-extrabold flex-shrink-0 tracking-wide",
-                        trade.side === "BUY"
-                          ? "bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400"
-                          : "bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-500 dark:text-red-400")}>
-                        {trade.side}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-800 dark:text-foreground">{trade.symbol}</p>
-                        <p className="text-[10px] text-slate-400 dark:text-muted-foreground mt-0.5 flex items-center gap-1">
-                          <IconClock size={9} />
-                          {trade.time ? new Date(trade.time).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
-                        </p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-sm font-bold text-slate-800 dark:text-foreground tabular-nums">{parseFloat(trade.qty || "0").toFixed(4)}</p>
-                        <span className={cn("inline-block text-[9px] font-bold px-2 py-0.5 rounded-full mt-0.5",
-                          trade.status === "FILLED"
-                            ? "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400"
-                            : "bg-slate-100 dark:bg-muted text-slate-500 dark:text-muted-foreground")}>
-                          {trade.status || "—"}
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                )
-              ) : (
-                perpTrades.length === 0 ? (
-                  <div className="px-5 py-10 text-center">
-                    <p className="text-sm text-slate-400">No perpetual positions yet</p>
-                    <p className="text-[11px] text-slate-300 dark:text-muted-foreground/60 mt-1">Open a position to see it here</p>
-                  </div>
-                ) : (
-                  perpTrades.map((pos, i) => {
-                    const pnl = parseFloat(pos.unrealizedProfit || "0");
-                    const isProfit = pnl >= 0;
-                    return (
-                      <div key={pos.id || i} className={cn("flex items-center gap-3 px-4 py-3.5 hover:bg-slate-50 dark:hover:bg-muted/40 transition-colors", i > 0 && "border-t border-slate-100 dark:border-border")}>
-                        {/* Direction badge */}
-                        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center text-[9px] font-extrabold flex-shrink-0 tracking-wide",
-                          pos.side === "LONG"
-                            ? "bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400"
-                            : "bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-500 dark:text-red-400")}>
-                          {pos.side === "LONG" ? "LONG" : "SHORT"}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-slate-800 dark:text-foreground">
-                            {pos.symbol}
-                            {pos.leverage && <span className="ml-1.5 text-[10px] font-bold text-slate-400 dark:text-muted-foreground bg-slate-100 dark:bg-muted px-1.5 py-0.5 rounded-md">{pos.leverage}×</span>}
-                          </p>
-                          <p className="text-[10px] text-slate-400 dark:text-muted-foreground mt-0.5">Entry {parseFloat(pos.entryPrice || "0").toFixed(2)}</p>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <p className="text-sm font-bold text-slate-800 dark:text-foreground tabular-nums">{parseFloat(pos.positionAmt || "0").toFixed(4)}</p>
-                          <span className={cn("text-[11px] font-bold tabular-nums", isProfit ? "text-emerald-500" : "text-red-500")}>
-                            {isProfit ? "+" : ""}{pnl.toFixed(2)} USD
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })
-                )
-              )}
-            </div>
-
-          </div>
-        )}
+        {tab === "Predictions" && <ProfilePredictionsTab />}
+        {tab === "Shop" && <ProfileShopTab />}
+        {tab === "Activity" && <ProfileActivityTab userId={user?.id} />}
 
       </div>
 
