@@ -38,19 +38,21 @@ function GiftCard({ card, onClick }: { card: CardItem; onClick: () => void }) {
       className="rounded-2xl overflow-hidden border border-border hover:scale-[1.04] active:scale-95 transition-transform focus:outline-none"
       style={{ flex: "1 1 0", minWidth: "72px", scrollSnapAlign: "start", background: card.bg ?? "hsl(var(--muted))" }}
     >
-      <div className="h-[72px] w-full flex items-center justify-center p-2">
+      <div className="h-[72px] w-full relative overflow-hidden">
         {imgFailed ? (
-          <span
-            className="text-3xl font-black select-none"
-            style={{ color: "rgba(255,255,255,0.9)", textShadow: "0 1px 4px rgba(0,0,0,0.4)" }}
-          >
-            {initial}
-          </span>
+          <div className="w-full h-full flex items-center justify-center">
+            <span
+              className="text-3xl font-black select-none"
+              style={{ color: "rgba(255,255,255,0.9)", textShadow: "0 1px 4px rgba(0,0,0,0.4)" }}
+            >
+              {initial}
+            </span>
+          </div>
         ) : (
           <img
             src={card.logo}
             alt={card.name}
-            className="w-full h-full object-contain drop-shadow-sm"
+            className="absolute inset-0 w-full h-full object-cover"
             loading="lazy"
             onError={() => setImgFailed(true)}
           />
