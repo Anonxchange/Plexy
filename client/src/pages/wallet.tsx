@@ -205,6 +205,8 @@ export default function WalletPage() {
     return null;
   }
 
+  if (loading || showSkeleton) return <WalletPageSkeleton />;
+
   const walletsForDialog = (wallet?.assets || []).map(asset => ({
     symbol: asset.symbol,
     balance: asset.balance,
