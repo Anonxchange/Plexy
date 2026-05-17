@@ -9,6 +9,7 @@ import { getCountryFlag } from "@/lib/localization";
 import { useMarkets, type PolymarketMarket } from "@/hooks/use-polymarket";
 import { shopifyService } from "@/lib/shopify-service";
 import { ProfileOverviewCards } from "@/components/profile-overview-cards";
+import { GiftCardMarquee } from "@/components/gift-card-marquee";
 import { cn } from "@/lib/utils";
 import DOMPurify from "dompurify";
 import { Upload, User, TrendingUp, ArrowRight, CheckCircle2 } from "lucide-react";
@@ -704,43 +705,28 @@ export function Profile() {
           ))}
         </div>
 
-        {/* ── Wallet + XP ── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-          <Card className="p-4 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-muted flex items-center justify-center flex-shrink-0">
-              <IconWallet size={18} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-[11px] text-slate-400 dark:text-muted-foreground">Pexly ID</div>
-              <div className="text-sm font-mono font-semibold text-slate-800 dark:text-foreground truncate">{pexlyId}</div>
-            </div>
-            <div className="flex items-center gap-1.5">
-              {["BTC", "ETH", "SOL"].map(t => (
-                <span key={t} className="flex items-center gap-1 text-[10px] px-2 py-0.5 bg-slate-100 dark:bg-muted rounded-full border border-slate-200 dark:border-border text-slate-500 dark:text-muted-foreground font-medium">
-                  <img src={cryptoIconUrls[t]} alt={t} className="w-3 h-3 rounded-full object-cover" />
-                  {t}
-                </span>
-              ))}
-            </div>
-          </Card>
-
-          <Card className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-semibold text-slate-800 dark:text-foreground flex items-center gap-1.5">
-                <IconAward size={16} accent /> {prevTier.label}
-              </span>
-              <span className="text-xs text-slate-400 dark:text-muted-foreground tabular-nums">
-                {pts.toLocaleString()} / {nextTier.threshold.toLocaleString()} pts
-              </span>
-            </div>
-            <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-muted overflow-hidden">
-              <div className="h-full rounded-full bg-gradient-to-r from-primary to-lime-400" style={{ width: `${ptsProgress}%` }} />
-            </div>
-            <div className="flex justify-between text-[10px] text-slate-400 dark:text-muted-foreground mt-1.5">
-              <span>Newcomer</span><span>Diamond</span>
-            </div>
-          </Card>
+        {/* ── Gift Card Marquee ── */}
+        <div className="mb-4">
+          <GiftCardMarquee />
         </div>
+
+        {/* ── XP Progress ── */}
+        <Card className="p-4 mb-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-semibold text-slate-800 dark:text-foreground flex items-center gap-1.5">
+              <IconAward size={16} accent /> {prevTier.label}
+            </span>
+            <span className="text-xs text-slate-400 dark:text-muted-foreground tabular-nums">
+              {pts.toLocaleString()} / {nextTier.threshold.toLocaleString()} pts
+            </span>
+          </div>
+          <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-muted overflow-hidden">
+            <div className="h-full rounded-full bg-gradient-to-r from-primary to-lime-400" style={{ width: `${ptsProgress}%` }} />
+          </div>
+          <div className="flex justify-between text-[10px] text-slate-400 dark:text-muted-foreground mt-1.5">
+            <span>Newcomer</span><span>Diamond</span>
+          </div>
+        </Card>
 
         {/* ── Tabs ── */}
         <div className="flex gap-0.5 p-1 bg-white dark:bg-card border border-slate-200 dark:border-border rounded-xl mb-5 overflow-x-auto scrollbar-hide shadow-sm">
@@ -771,71 +757,90 @@ export function Profile() {
 
         {/* ── PREDICTIONS TAB ── */}
         {tab === "Predictions" && (
-          <div className="space-y-4 animate-in fade-in-0 duration-200">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-slate-900 dark:text-foreground">Prediction Markets</h2>
-              <Link href="/prediction" className="text-xs text-primary font-medium hover:underline flex items-center gap-1">
-                Browse all <IconExternalLink size={12} />
+          <div className="space-y-3 animate-in fade-in-0 duration-200">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-4 rounded-full bg-gradient-to-b from-lime-400 to-emerald-500 inline-block" />
+                <h2 className="text-sm font-bold text-slate-900 dark:text-foreground">Prediction Markets</h2>
+              </div>
+              <Link href="/prediction" className="text-[11px] font-semibold text-primary flex items-center gap-1 bg-primary/8 px-2.5 py-1 rounded-full hover:opacity-70 transition-opacity">
+                Browse all <IconExternalLink size={10} />
               </Link>
             </div>
             {activeMarkets.length === 0 ? (
-              <Card className="p-8 text-center">
+              <div className="rounded-2xl border border-slate-100 dark:border-border bg-white dark:bg-card p-10 text-center">
                 <p className="text-sm text-slate-400">No prediction markets available</p>
-              </Card>
+              </div>
             ) : (
               activeMarkets.map(m => {
-                const prices = JSON.parse(m.outcomePrices || "[]");
+                const prices = (() => { try { return JSON.parse(m.outcomePrices || "[]"); } catch { return []; } })();
                 const yesOdds = prices[0] ? Math.round(parseFloat(prices[0]) * 100) : 0;
-                const imageSrc = m.image ? DOMPurify.sanitize(m.image) : null;
+                const noOdds = 100 - yesOdds;
+                const isHigh = yesOdds >= 50;
+                const imgSrc = m.image || m.icon || null;
+                const isTrending = (m.volumeNum || 0) > 500000;
                 return (
-                  <Card key={m.conditionId} className="p-5 hover:border-primary/50 hover:shadow-md transition-all duration-150 cursor-default">
-                    <div className="flex items-start gap-4">
-                      <div className={cn("w-13 h-12 rounded-xl flex flex-col items-center justify-center flex-shrink-0 border px-3",
-                        yesOdds >= 65 ? "bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400" : "bg-amber-50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400")}>
-                        <span className="text-sm font-bold tabular-nums leading-none">{yesOdds}%</span>
-                        <span className="text-[9px] uppercase tracking-wide opacity-60">YES</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start gap-3 mb-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-wrap gap-1.5 mb-1.5">
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-muted text-slate-500 dark:text-muted-foreground border border-slate-200 dark:border-border font-medium">Crypto</span>
-                              {(m.volumeNum || 0) > 500000 && (
-                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-lime-50 dark:bg-lime-950/50 text-lime-700 dark:text-lime-400 border border-lime-200 dark:border-lime-800 font-medium flex items-center gap-1">
-                                  <IconTrending size={10} /> Trending
-                                </span>
-                              )}
-                            </div>
-                            <h3 className="text-sm font-semibold text-slate-800 dark:text-foreground leading-snug">{m.question}</h3>
-                          </div>
+                  <div key={m.id} className="rounded-2xl border border-slate-100 dark:border-border bg-white dark:bg-card overflow-hidden shadow-sm hover:shadow-md hover:border-slate-200 dark:hover:border-border/80 transition-all duration-200 group">
+                    {/* Image banner */}
+                    <div className="relative h-28 bg-slate-100 dark:bg-muted overflow-hidden cursor-pointer" onClick={() => setLocation(`/prediction/${m.id}`)}>
+                      {imgSrc ? (
+                        <img src={DOMPurify.sanitize(imgSrc)} alt={m.question} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-muted dark:to-muted/50 flex items-center justify-center">
+                          <span className="text-4xl opacity-20 select-none">{m.question.charAt(0)}</span>
                         </div>
-                        <div className="flex items-center gap-2 mb-2.5">
-                          <span className="text-[10px] text-emerald-600 font-medium w-7">YES</span>
-                          <div className="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-muted overflow-hidden">
-                            <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400" style={{ width: `${yesOdds}%` }} />
-                          </div>
-                          <span className="text-[10px] text-red-500 font-medium w-7 text-right">NO</span>
-                        </div>
-                        <div className="flex gap-4 text-[11px] text-slate-400 dark:text-muted-foreground">
-                          <span>Vol {m.volume || "—"}</span>
-                        </div>
+                      )}
+                      {/* Gradient overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      {/* Odds badge */}
+                      <div className="absolute bottom-2 left-3 flex items-center gap-1.5">
+                        <span className={cn("text-xs font-bold px-2 py-0.5 rounded-lg shadow",
+                          isHigh ? "bg-emerald-500 text-white" : "bg-red-500 text-white")}>
+                          {yesOdds}% YES
+                        </span>
+                        {isTrending && (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-lime-400 text-lime-900 flex items-center gap-1">
+                            <IconTrending size={9} up /> Hot
+                          </span>
+                        )}
                       </div>
                     </div>
-                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-border flex gap-2">
-                      <Button size="sm" className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium border-0"
+
+                    {/* Body */}
+                    <div className="p-4">
+                      <h3 className="text-sm font-semibold text-slate-800 dark:text-foreground leading-snug mb-3 cursor-pointer hover:text-primary transition-colors line-clamp-2"
                         onClick={() => setLocation(`/prediction/${m.id}`)}>
-                        Buy YES
-                      </Button>
-                      <Button size="sm" className="h-7 text-xs bg-red-500 hover:bg-red-600 text-white font-medium border-0"
-                        onClick={() => setLocation(`/prediction/${m.id}`)}>
-                        Buy NO
-                      </Button>
-                      <Button size="sm" variant="ghost" className="h-7 text-xs text-slate-400 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground ml-auto"
-                        onClick={() => setLocation(`/prediction/${m.id}`)}>
-                        Details <IconChevronRight size={11} className="ml-0.5 inline" />
-                      </Button>
+                        {m.question}
+                      </h3>
+
+                      {/* Progress bar */}
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold w-8 shrink-0">YES {yesOdds}%</span>
+                        <div className="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-muted overflow-hidden">
+                          <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-700" style={{ width: `${yesOdds}%` }} />
+                        </div>
+                        <span className="text-[10px] text-red-500 font-semibold w-8 shrink-0 text-right">NO {noOdds}%</span>
+                      </div>
+
+                      <p className="text-[10px] text-slate-400 dark:text-muted-foreground mb-3">Vol: {m.volume || "—"}</p>
+
+                      {/* Action buttons */}
+                      <div className="flex gap-2">
+                        <button className="flex-1 h-8 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white transition-colors"
+                          onClick={() => setLocation(`/prediction/${m.id}`)}>
+                          Buy YES
+                        </button>
+                        <button className="flex-1 h-8 rounded-xl text-xs font-bold bg-red-500 hover:bg-red-600 text-white transition-colors"
+                          onClick={() => setLocation(`/prediction/${m.id}`)}>
+                          Buy NO
+                        </button>
+                        <button className="h-8 w-8 rounded-xl border border-slate-200 dark:border-border flex items-center justify-center text-slate-400 hover:text-primary hover:border-primary/50 transition-colors"
+                          onClick={() => setLocation(`/prediction/${m.id}`)}>
+                          <IconChevronRight size={13} />
+                        </button>
+                      </div>
                     </div>
-                  </Card>
+                  </div>
                 );
               })
             )}
@@ -844,46 +849,55 @@ export function Profile() {
 
         {/* ── SHOP TAB ── */}
         {tab === "Shop" && (
-          <div className="animate-in fade-in-0 duration-200">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-bold text-slate-900 dark:text-foreground">Pexly Store</h2>
-              <Link href="/shop" className="text-xs text-primary font-medium hover:underline flex items-center gap-1">
-                Full store <IconExternalLink size={12} />
+          <div className="animate-in fade-in-0 duration-200 space-y-3">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-4 rounded-full bg-gradient-to-b from-violet-400 to-indigo-500 inline-block" />
+                <h2 className="text-sm font-bold text-slate-900 dark:text-foreground">Pexly Store</h2>
+              </div>
+              <Link href="/shop" className="text-[11px] font-semibold text-primary flex items-center gap-1 bg-primary/8 px-2.5 py-1 rounded-full hover:opacity-70 transition-opacity">
+                Full store <IconExternalLink size={10} />
               </Link>
             </div>
+
             {shopProducts.length === 0 ? (
-              <Card className="p-8 text-center"><p className="text-sm text-slate-400">Loading products…</p></Card>
+              <div className="rounded-2xl border border-slate-100 dark:border-border bg-white dark:bg-card p-10 text-center">
+                <p className="text-sm text-slate-400">Loading products…</p>
+              </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 {shopProducts.map(p => (
-                  <Card key={p.id} className="overflow-hidden hover:shadow-md hover:border-slate-300 dark:hover:border-border transition-all duration-150 group cursor-pointer"
+                  <div key={p.id}
+                    className={cn("rounded-2xl border border-slate-100 dark:border-border bg-white dark:bg-card overflow-hidden shadow-sm group transition-all duration-200",
+                      p.inStock ? "cursor-pointer hover:shadow-md hover:border-slate-200 dark:hover:border-border/80" : "opacity-70")}
                     onClick={() => p.inStock && setLocation(`/shop/product/${encodeURIComponent(p.id)}`)}>
-                    <div className="h-40 flex items-center justify-center relative bg-slate-100 dark:bg-muted overflow-hidden">
+                    {/* Square image */}
+                    <div className="relative aspect-square bg-slate-100 dark:bg-muted overflow-hidden">
                       {p.images[0]
-                        ? <img src={p.images[0]} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                        : <IconShoppingBag size={42} gradient />}
+                        ? <img src={p.images[0]} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        : <div className="w-full h-full flex items-center justify-center"><IconShoppingBag size={36} gradient /></div>}
+                      {/* In stock badge */}
                       {!p.inStock && (
-                        <div className="absolute inset-0 bg-white/70 dark:bg-card/70 flex items-center justify-center">
-                          <span className="text-xs font-semibold text-slate-500 dark:text-muted-foreground bg-white dark:bg-card border border-slate-200 dark:border-border px-3 py-1 rounded-full shadow-sm">Out of Stock</span>
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                          <span className="text-[10px] font-bold text-white bg-black/60 px-2 py-1 rounded-lg">Sold Out</span>
                         </div>
                       )}
+                      {p.inStock && (
+                        <span className="absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500 text-white shadow">In Stock</span>
+                      )}
                     </div>
-                    <div className="p-4">
-                      {p.productType && <div className="text-[10px] text-slate-400 dark:text-muted-foreground uppercase tracking-widest font-medium mb-1">{p.productType}</div>}
-                      <h3 className="text-sm font-semibold text-slate-900 dark:text-foreground mb-2 leading-snug group-hover:text-primary transition-colors">{p.title}</h3>
-                      <div className="flex items-center gap-0.5 mb-3">
-                        {Array.from({ length: 5 }).map((_, i) => <IconStar key={i} size={12} filled={i < 4} />)}
-                        <span className="text-[11px] text-slate-400 dark:text-muted-foreground ml-1">{p.currency}</span>
-                      </div>
+                    {/* Info */}
+                    <div className="p-3">
+                      {p.productType && (
+                        <p className="text-[9px] text-slate-400 dark:text-muted-foreground uppercase tracking-widest font-semibold mb-0.5">{p.productType}</p>
+                      )}
+                      <h3 className="text-xs font-semibold text-slate-800 dark:text-foreground leading-snug line-clamp-2 mb-2 group-hover:text-primary transition-colors">{p.title}</h3>
                       <div className="flex items-center justify-between">
-                        <div className="text-base font-bold text-slate-900 dark:text-foreground">${p.price.toFixed(2)}</div>
-                        <Button size="sm" disabled={!p.inStock}
-                          className={cn("h-8 text-xs font-semibold", p.inStock ? "bg-primary text-black hover:bg-primary/90" : "opacity-40 bg-slate-100 dark:bg-muted text-slate-400 dark:text-muted-foreground border border-slate-200 dark:border-border cursor-not-allowed")}>
-                          {p.inStock ? "Add to Cart" : "Sold Out"}
-                        </Button>
+                        <span className="text-sm font-bold text-slate-900 dark:text-foreground">${p.price.toFixed(2)}</span>
+                        <span className="text-[9px] text-slate-400 dark:text-muted-foreground font-medium">{p.currency}</span>
                       </div>
                     </div>
-                  </Card>
+                  </div>
                 ))}
               </div>
             )}
@@ -892,42 +906,62 @@ export function Profile() {
 
         {/* ── ACTIVITY TAB ── */}
         {tab === "Activity" && (
-          <div className="animate-in fade-in-0 duration-200 space-y-4">
+          <div className="animate-in fade-in-0 duration-200 space-y-3">
 
-            {/* Spot / Perp Trade History */}
-            <div className="flex items-center justify-between mt-2">
-              <h2 className="text-base font-bold text-slate-900 dark:text-foreground">Trade History</h2>
-              <div className="flex gap-1 p-0.5 bg-slate-100 dark:bg-muted rounded-lg">
+            {/* Header + filter */}
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-4 rounded-full bg-gradient-to-b from-orange-400 to-rose-500 inline-block" />
+                <h2 className="text-sm font-bold text-slate-900 dark:text-foreground">Trade History</h2>
+              </div>
+              <div className="flex gap-0.5 p-0.5 bg-slate-100 dark:bg-muted rounded-xl">
                 {(["spot", "perp"] as const).map(t => (
                   <button key={t} onClick={() => setTradeTypeFilter(t)}
-                    className={cn("px-3 py-1 text-xs font-medium rounded-md transition-all",
-                      tradeTypeFilter === t ? "bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm" : "text-slate-400 dark:text-muted-foreground hover:text-slate-600 dark:hover:text-foreground")}>
-                    {t === "spot" ? "Spot" : "Perpetual"}
+                    className={cn("px-3 py-1.5 text-[11px] font-semibold rounded-lg transition-all",
+                      tradeTypeFilter === t
+                        ? "bg-white dark:bg-card text-slate-800 dark:text-foreground shadow-sm"
+                        : "text-slate-400 dark:text-muted-foreground hover:text-slate-600 dark:hover:text-foreground")}>
+                    {t === "spot" ? "Spot" : "Perp"}
                   </button>
                 ))}
               </div>
             </div>
 
-            <Card className="divide-y divide-slate-100 dark:divide-border">
+            <div className="rounded-2xl border border-slate-100 dark:border-border bg-white dark:bg-card overflow-hidden shadow-sm">
               {loadingTrades ? (
-                <div className="px-5 py-6 text-sm text-slate-400 dark:text-muted-foreground flex items-center gap-2"><LoadingSpinner size="sm" /> Loading trades…</div>
+                <div className="px-5 py-8 flex items-center gap-3 text-slate-400 dark:text-muted-foreground">
+                  <LoadingSpinner size="sm" />
+                  <span className="text-sm">Loading trades…</span>
+                </div>
               ) : tradeTypeFilter === "spot" ? (
                 spotTrades.length === 0 ? (
-                  <div className="px-5 py-6 text-sm text-slate-400 dark:text-muted-foreground">No spot trade history</div>
+                  <div className="px-5 py-10 text-center">
+                    <p className="text-sm text-slate-400">No spot trade history yet</p>
+                    <p className="text-[11px] text-slate-300 dark:text-muted-foreground/60 mt-1">Trades will appear here once you start trading</p>
+                  </div>
                 ) : (
                   spotTrades.map((trade, i) => (
-                    <div key={trade.id || i} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-muted/50 transition-colors">
-                      <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center text-[10px] font-bold flex-shrink-0",
-                        trade.side === "BUY" ? "bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400" : "bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400")}>
-                        {trade.side === "BUY" ? "BUY" : "SELL"}
+                    <div key={trade.id || i} className={cn("flex items-center gap-3 px-4 py-3.5 hover:bg-slate-50 dark:hover:bg-muted/40 transition-colors", i > 0 && "border-t border-slate-100 dark:border-border")}>
+                      {/* Side badge */}
+                      <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center text-[9px] font-extrabold flex-shrink-0 tracking-wide",
+                        trade.side === "BUY"
+                          ? "bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400"
+                          : "bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-500 dark:text-red-400")}>
+                        {trade.side}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-slate-700 dark:text-foreground font-medium">{trade.symbol}</p>
-                        <p className="text-[11px] text-slate-400 dark:text-muted-foreground flex items-center gap-1 mt-0.5"><IconClock size={10} />{trade.time ? new Date(trade.time).toLocaleDateString() : "—"}</p>
+                        <p className="text-sm font-semibold text-slate-800 dark:text-foreground">{trade.symbol}</p>
+                        <p className="text-[10px] text-slate-400 dark:text-muted-foreground mt-0.5 flex items-center gap-1">
+                          <IconClock size={9} />
+                          {trade.time ? new Date(trade.time).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                        </p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold text-slate-800 dark:text-foreground">{parseFloat(trade.qty || "0").toFixed(6)}</p>
-                        <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium", trade.status === "FILLED" ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400" : "bg-slate-100 dark:bg-muted text-slate-500 dark:text-muted-foreground")}>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-bold text-slate-800 dark:text-foreground tabular-nums">{parseFloat(trade.qty || "0").toFixed(4)}</p>
+                        <span className={cn("inline-block text-[9px] font-bold px-2 py-0.5 rounded-full mt-0.5",
+                          trade.status === "FILLED"
+                            ? "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400"
+                            : "bg-slate-100 dark:bg-muted text-slate-500 dark:text-muted-foreground")}>
                           {trade.status || "—"}
                         </span>
                       </div>
@@ -936,24 +970,34 @@ export function Profile() {
                 )
               ) : (
                 perpTrades.length === 0 ? (
-                  <div className="px-5 py-6 text-sm text-slate-400 dark:text-muted-foreground">No perpetual positions</div>
+                  <div className="px-5 py-10 text-center">
+                    <p className="text-sm text-slate-400">No perpetual positions yet</p>
+                    <p className="text-[11px] text-slate-300 dark:text-muted-foreground/60 mt-1">Open a position to see it here</p>
+                  </div>
                 ) : (
                   perpTrades.map((pos, i) => {
                     const pnl = parseFloat(pos.unrealizedProfit || "0");
+                    const isProfit = pnl >= 0;
                     return (
-                      <div key={pos.id || i} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-muted/50 transition-colors">
-                        <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center text-[10px] font-bold flex-shrink-0",
-                          pos.side === "LONG" ? "bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400" : "bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400")}>
+                      <div key={pos.id || i} className={cn("flex items-center gap-3 px-4 py-3.5 hover:bg-slate-50 dark:hover:bg-muted/40 transition-colors", i > 0 && "border-t border-slate-100 dark:border-border")}>
+                        {/* Direction badge */}
+                        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center text-[9px] font-extrabold flex-shrink-0 tracking-wide",
+                          pos.side === "LONG"
+                            ? "bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400"
+                            : "bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-500 dark:text-red-400")}>
                           {pos.side === "LONG" ? "LONG" : "SHORT"}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-slate-700 dark:text-foreground font-medium">{pos.symbol}{pos.leverage ? ` ${pos.leverage}×` : ""}</p>
-                          <p className="text-[11px] text-slate-400 dark:text-muted-foreground mt-0.5">Entry: {parseFloat(pos.entryPrice || "0").toFixed(2)}</p>
+                          <p className="text-sm font-semibold text-slate-800 dark:text-foreground">
+                            {pos.symbol}
+                            {pos.leverage && <span className="ml-1.5 text-[10px] font-bold text-slate-400 dark:text-muted-foreground bg-slate-100 dark:bg-muted px-1.5 py-0.5 rounded-md">{pos.leverage}×</span>}
+                          </p>
+                          <p className="text-[10px] text-slate-400 dark:text-muted-foreground mt-0.5">Entry {parseFloat(pos.entryPrice || "0").toFixed(2)}</p>
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold text-slate-800 dark:text-foreground">{parseFloat(pos.positionAmt || "0").toFixed(4)}</p>
-                          <span className={cn("text-[10px] font-semibold", pnl >= 0 ? "text-emerald-600" : "text-red-500")}>
-                            {pnl >= 0 ? "+" : ""}{pnl.toFixed(2)} USD
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-bold text-slate-800 dark:text-foreground tabular-nums">{parseFloat(pos.positionAmt || "0").toFixed(4)}</p>
+                          <span className={cn("text-[11px] font-bold tabular-nums", isProfit ? "text-emerald-500" : "text-red-500")}>
+                            {isProfit ? "+" : ""}{pnl.toFixed(2)} USD
                           </span>
                         </div>
                       </div>
@@ -961,7 +1005,7 @@ export function Profile() {
                   })
                 )
               )}
-            </Card>
+            </div>
 
           </div>
         )}
