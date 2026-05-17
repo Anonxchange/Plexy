@@ -23,10 +23,7 @@ interface CardItem { name: string; logo: string; bg?: string }
 function CardSkeleton() {
   return (
     <div className="rounded-2xl overflow-hidden border border-border bg-muted animate-pulse" style={{ flex: "1 1 0", minWidth: "72px" }}>
-      <div className="h-[68px] w-full bg-muted-foreground/10" />
-      <div className="px-2 py-2">
-        <div className="h-2 w-3/4 rounded-full bg-muted-foreground/15 mx-auto" />
-      </div>
+      <div className="h-[72px] w-full bg-muted-foreground/10" />
     </div>
   );
 }
@@ -38,17 +35,14 @@ function GiftCard({ card, onClick }: { card: CardItem; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="rounded-2xl overflow-hidden border border-border bg-card hover:scale-[1.04] active:scale-95 transition-transform focus:outline-none group"
-      style={{ flex: "1 1 0", minWidth: "72px", scrollSnapAlign: "start" }}
+      className="rounded-2xl overflow-hidden border border-border hover:scale-[1.04] active:scale-95 transition-transform focus:outline-none"
+      style={{ flex: "1 1 0", minWidth: "72px", scrollSnapAlign: "start", background: card.bg ?? "hsl(var(--muted))" }}
     >
-      <div
-        className="h-[68px] w-full flex items-center justify-center"
-        style={{ background: card.bg ?? "hsl(var(--muted))" }}
-      >
+      <div className="h-[72px] w-full flex items-center justify-center p-2">
         {imgFailed ? (
           <span
-            className="text-2xl font-black select-none"
-            style={{ color: "rgba(255,255,255,0.9)", textShadow: "0 1px 4px rgba(0,0,0,0.3)" }}
+            className="text-3xl font-black select-none"
+            style={{ color: "rgba(255,255,255,0.9)", textShadow: "0 1px 4px rgba(0,0,0,0.4)" }}
           >
             {initial}
           </span>
@@ -56,16 +50,11 @@ function GiftCard({ card, onClick }: { card: CardItem; onClick: () => void }) {
           <img
             src={card.logo}
             alt={card.name}
-            className="w-10 h-10 object-contain drop-shadow"
+            className="w-full h-full object-contain drop-shadow-sm"
             loading="lazy"
             onError={() => setImgFailed(true)}
           />
         )}
-      </div>
-      <div className="px-1.5 py-1.5 text-center">
-        <span className="text-[10px] font-semibold text-foreground/75 leading-tight line-clamp-1 block">
-          {card.name}
-        </span>
       </div>
     </button>
   );
