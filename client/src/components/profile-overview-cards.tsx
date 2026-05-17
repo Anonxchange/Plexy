@@ -155,7 +155,7 @@ interface OverviewProps {
 export function ProfileOverviewCards({ onViewPredictions, onViewShop }: OverviewProps) {
   const [, setLocation] = useLocation();
   const { data: predictionMarkets } = useMarkets({ limit: 50 });
-  const shopProducts = useShopProducts(6);
+  const shopProducts = useShopProducts(4);
 
   const displayedMarkets = useMemo(() => {
     if (!predictionMarkets || predictionMarkets.length === 0) return [];
