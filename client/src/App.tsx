@@ -21,7 +21,7 @@ import { PageNavigation } from "@/components/page-navigation";
 const CookieConsent = lazy(() => import("@/components/cookie-consent").then(m => ({ default: m.CookieConsent })));
 const WalletSetupDialog = lazy(() => import("@/components/wallet/WalletSetupDialog").then(m => ({ default: m.WalletSetupDialog })));
 import { PageSkeleton, ChartPageSkeleton } from "@/components/page-skeleton";
-
+import { ProfilePageSkeleton } from "@/pages/profile";
 // Core pages - loaded eagerly (only what's needed for first-visit home page)
 import Home from "@/pages/home";
 import NotFound from "@/pages/not-found";
@@ -234,7 +234,7 @@ function AppRoutes() {
       <Route path="/restricted-countries">{() => <LazyRoute component={RestrictedCountries} />}</Route>
       <Route path="/rewards-program">{() => <LazyRoute component={RewardsProgram} />}</Route>
       <Route path="/risk-disclosure">{() => <LazyRoute component={RiskDisclosure} />}</Route>
-      <Route path="/profile/:userId?">{() => <LazyRoute component={Profile} />}</Route>
+      <Route path="/profile/:userId?">{() => <LazyRoute component={Profile} skeleton={<ProfilePageSkeleton />} />}</Route>
       <Route path="/verify-email">{() => <LazyRoute component={VerifyEmail} />}</Route>
 
       {/* ── Auth pages (redirect away if already signed in) ── */}
