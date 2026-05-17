@@ -22,6 +22,8 @@ const CookieConsent = lazy(() => import("@/components/cookie-consent").then(m =>
 const WalletSetupDialog = lazy(() => import("@/components/wallet/WalletSetupDialog").then(m => ({ default: m.WalletSetupDialog })));
 import { PageSkeleton, ChartPageSkeleton } from "@/components/page-skeleton";
 import { ProfilePageSkeleton } from "@/pages/profile";
+import { ShopPageSkeleton } from "@/pages/shop";
+import { WalletPageSkeleton } from "@/pages/wallet";
 // Core pages - loaded eagerly (only what's needed for first-visit home page)
 import Home from "@/pages/home";
 import NotFound from "@/pages/not-found";
@@ -163,7 +165,7 @@ function ProtectedRoute({
  * - Unauthenticated → renders the auth page.
  */
 function AuthRoute({
-  component: Component,
+  component: LazyComponent,
   skeleton = <PageSkeleton />,
 }: {
   component: LazyComponent;
@@ -215,7 +217,7 @@ function AppRoutes() {
       <Route path="/buy-crypto">{() => <LazyRoute component={BuyCrypto} />}</Route>
       <Route path="/gift-cards">{() => <LazyRoute component={GiftCards} />}</Route>
       <Route path="/gift-cards/:id">{() => <LazyRoute component={GiftCardDetail} />}</Route>
-      <Route path="/shop">{() => <LazyRoute component={Shop} />}</Route>
+      <Route path="/shop">{() => <LazyRoute component={Shop} skeleton={<ShopPageSkeleton />} />}</Route>
       <Route path="/shop/product/:id">{() => <LazyRoute component={ProductDetail} />}</Route>
       <Route path="/shop/post">{() => <LazyRoute component={ShopPost} />}</Route>
       <Route path="/bitcoin-calculator">{() => <LazyRoute component={BitcoinCalculator} skeleton={<ChartPageSkeleton />} />}</Route>
@@ -243,7 +245,7 @@ function AppRoutes() {
 
       {/* ── Protected pages (require a valid session) ── */}
       <Route path="/dashboard">{() => <ProtectedRoute component={Dashboard} />}</Route>
-      <Route path="/wallet">{() => <ProtectedRoute component={Wallet} />}</Route>
+      <Route path="/wallet">{() => <ProtectedRoute component={Wallet} skeleton={<WalletPageSkeleton />} />}</Route>
       <Route path="/wallet/visa-card">{() => <LazyRoute component={VisaCard} />}</Route>
       <Route path="/wallet/visa-card/details">{() => <LazyRoute component={VisaCardDetails} />}</Route>
       <Route path="/wallet/mobile-topup">{() => <ProtectedRoute component={MobileTopup} />}</Route>
