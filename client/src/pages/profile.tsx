@@ -342,8 +342,12 @@ export function Profile() {
   const fetchProfileData = async () => {
     try {
       setLoadingProfile(true);
+      const minDelay = new Promise(res => setTimeout(res, 600));
       const timeout = new Promise((_, r) => setTimeout(() => r(new Error("timeout")), 5000));
-      const { data, error } = await Promise.race([supabase.from("user_profiles").select("*").eq("id", viewingUserId).single(), timeout]) as any;
+      const [{ data, error }] = await Promise.all([
+        Promise.race([supabase.from("user_profiles").select("*").eq("id", viewingUserId).single(), timeout]) as any,
+        minDelay,
+      ]);
       if (error && error.code !== "PGRST116") throw error;
       if (data) {
         const emailVerified = isOwnProfile ? !!user?.email_confirmed_at : (data.email_verified || false);
