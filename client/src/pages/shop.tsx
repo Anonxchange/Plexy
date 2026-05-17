@@ -131,14 +131,11 @@ export function ShopPageSkeleton() {
         {/* Product grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="rounded-xl border border-border/40 overflow-hidden">
-              <Skeleton className="aspect-[4/3] w-full" />
-              <div className="p-3 space-y-2">
+            <div key={i} className="flex flex-col">
+              <Skeleton className="aspect-square w-full rounded-xl mb-3" />
+              <div className="space-y-1.5">
                 <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-3 w-full" />
-                <Skeleton className="h-3 w-4/5" />
-                <Skeleton className="h-7 w-24 rounded-md" />
-                <Skeleton className="h-9 w-full rounded-xl" />
+                <Skeleton className="h-4 w-1/2" />
               </div>
             </div>
           ))}
@@ -382,6 +379,8 @@ export function Shop() {
 
   const isLoading = activeTab === "shopify" ? isShopifyLoading : isMarketplaceLoading;
   const categories = activeTab === "shopify" ? shopifyCategories : marketplaceCategories;
+
+  if (isLoading) return <ShopPageSkeleton />;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
