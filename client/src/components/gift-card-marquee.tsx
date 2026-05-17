@@ -1,102 +1,130 @@
 import { useGiftCardProducts } from "@/hooks/use-reloadly";
 import { useLocation } from "wouter";
+import { useRef, useState } from "react";
+import { ChevronRight } from "lucide-react";
 
-/** Known popular gift card brand logos — shown while real data loads / as fallback */
-const SEED_LOGOS = [
-  { name: "Amazon",      logo: "https://logo.clearbit.com/amazon.com" },
-  { name: "Netflix",     logo: "https://logo.clearbit.com/netflix.com" },
-  { name: "Spotify",     logo: "https://logo.clearbit.com/spotify.com" },
-  { name: "Apple",       logo: "https://logo.clearbit.com/apple.com" },
-  { name: "Google Play", logo: "https://logo.clearbit.com/google.com" },
-  { name: "Steam",       logo: "https://logo.clearbit.com/steampowered.com" },
-  { name: "PlayStation", logo: "https://logo.clearbit.com/playstation.com" },
-  { name: "Xbox",        logo: "https://logo.clearbit.com/xbox.com" },
-  { name: "Uber",        logo: "https://logo.clearbit.com/uber.com" },
-  { name: "Airbnb",      logo: "https://logo.clearbit.com/airbnb.com" },
-  { name: "Visa",        logo: "https://logo.clearbit.com/visa.com" },
-  { name: "Nike",        logo: "https://logo.clearbit.com/nike.com" },
-  { name: "Adidas",      logo: "https://logo.clearbit.com/adidas.com" },
-  { name: "DoorDash",    logo: "https://logo.clearbit.com/doordash.com" },
-  { name: "eBay",        logo: "https://logo.clearbit.com/ebay.com" },
-  { name: "Walmart",     logo: "https://logo.clearbit.com/walmart.com" },
+const SEED_CARDS = [
+  { name: "Netflix",     logo: "https://logo.clearbit.com/netflix.com",      bg: "#E50914" },
+  { name: "Spotify",     logo: "https://logo.clearbit.com/spotify.com",      bg: "#1DB954" },
+  { name: "Apple",       logo: "https://logo.clearbit.com/apple.com",        bg: "#1c1c1e" },
+  { name: "Google Play", logo: "https://logo.clearbit.com/play.google.com",  bg: "#4285F4" },
+  { name: "Amazon",      logo: "https://logo.clearbit.com/amazon.com",       bg: "#FF9900" },
+  { name: "Steam",       logo: "https://logo.clearbit.com/steampowered.com", bg: "#1B2838" },
+  { name: "PlayStation", logo: "https://logo.clearbit.com/playstation.com",  bg: "#003087" },
+  { name: "Xbox",        logo: "https://logo.clearbit.com/xbox.com",         bg: "#107C10" },
+  { name: "Nike",        logo: "https://logo.clearbit.com/nike.com",         bg: "#111111" },
+  { name: "Airbnb",      logo: "https://logo.clearbit.com/airbnb.com",       bg: "#FF5A5F" },
+  { name: "Uber",        logo: "https://logo.clearbit.com/uber.com",         bg: "#000000" },
+  { name: "DoorDash",    logo: "https://logo.clearbit.com/doordash.com",     bg: "#FF3008" },
 ];
 
-interface LogoItem { name: string; logo: string }
+interface CardItem { name: string; logo: string; bg?: string }
+
+function CardSkeleton() {
+  return (
+    <div className="rounded-2xl overflow-hidden border border-border bg-muted animate-pulse" style={{ flex: "1 1 0", minWidth: "72px" }}>
+      <div className="h-[68px] w-full bg-muted-foreground/10" />
+      <div className="px-2 py-2">
+        <div className="h-2 w-3/4 rounded-full bg-muted-foreground/15 mx-auto" />
+      </div>
+    </div>
+  );
+}
+
+function GiftCard({ card, onClick }: { card: CardItem; onClick: () => void }) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const initial = card.name.charAt(0).toUpperCase();
+
+  return (
+    <button
+      onClick={onClick}
+      className="rounded-2xl overflow-hidden border border-border bg-card hover:scale-[1.04] active:scale-95 transition-transform focus:outline-none group"
+      style={{ flex: "1 1 0", minWidth: "72px", scrollSnapAlign: "start" }}
+    >
+      <div
+        className="h-[68px] w-full flex items-center justify-center"
+        style={{ background: card.bg ?? "hsl(var(--muted))" }}
+      >
+        {imgFailed ? (
+          <span
+            className="text-2xl font-black select-none"
+            style={{ color: "rgba(255,255,255,0.9)", textShadow: "0 1px 4px rgba(0,0,0,0.3)" }}
+          >
+            {initial}
+          </span>
+        ) : (
+          <img
+            src={card.logo}
+            alt={card.name}
+            className="w-10 h-10 object-contain drop-shadow"
+            loading="lazy"
+            onError={() => setImgFailed(true)}
+          />
+        )}
+      </div>
+      <div className="px-1.5 py-1.5 text-center">
+        <span className="text-[10px] font-semibold text-foreground/75 leading-tight line-clamp-1 block">
+          {card.name}
+        </span>
+      </div>
+    </button>
+  );
+}
 
 export function GiftCardMarquee() {
   const [, setLocation] = useLocation();
-  const { data } = useGiftCardProducts({ size: 40 });
+  const { data, isLoading } = useGiftCardProducts({ size: 40 });
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const logos: LogoItem[] = (() => {
+  const cards: CardItem[] = (() => {
     if (data?.content && data.content.length > 0) {
-      const fromApi = data.content
-        .filter(p => p.logoUrls?.[0])
-        .map(p => ({ name: p.brand?.brandName || p.productName, logo: p.logoUrls[0] }));
-      return fromApi.length >= 6 ? fromApi : SEED_LOGOS;
+      const seen = new Set<string>();
+      const unique: CardItem[] = [];
+      for (const p of data.content) {
+        if (!p.logoUrls?.[0]) continue;
+        const key = (p.brand?.brandName || p.productName || "").toLowerCase().trim();
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        unique.push({ name: p.brand?.brandName || p.productName, logo: p.logoUrls[0] });
+      }
+      return unique.length >= 4 ? unique : SEED_CARDS;
     }
-    return SEED_LOGOS;
+    return SEED_CARDS;
   })();
 
-  // Duplicate for seamless infinite loop
-  const track = [...logos, ...logos];
-
-  const speed = `${Math.max(20, logos.length * 1.8)}s`;
-
   return (
-    <div
-      className="rounded-2xl border border-slate-100 dark:border-border bg-white dark:bg-card overflow-hidden shadow-sm cursor-pointer"
-      onClick={() => setLocation("/gift-cards")}
-    >
-      {/* Header label */}
-      <div className="flex items-center justify-between px-4 pt-3 pb-2">
+    <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+      {/* Header */}
+      <div
+        className="flex items-center justify-between px-4 pt-3 pb-2 cursor-pointer"
+        onClick={() => setLocation("/gift-cards")}
+      >
         <div className="flex items-center gap-2">
           <span className="w-1.5 h-3.5 rounded-full bg-gradient-to-b from-amber-400 to-orange-500 inline-block" />
-          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-muted-foreground">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             Gift Cards
           </span>
         </div>
-        <span className="text-[11px] font-semibold text-primary bg-primary/8 px-2.5 py-0.5 rounded-full">
-          Shop Now →
+        <span className="flex items-center gap-0.5 text-[11px] font-semibold text-primary">
+          Shop Now <ChevronRight className="w-3 h-3" />
         </span>
       </div>
 
-      {/* Marquee track */}
-      <div className="relative overflow-hidden pb-3 px-0">
-        {/* Fade edges */}
-        <div className="absolute left-0 top-0 bottom-0 w-8 z-10 bg-gradient-to-r from-white dark:from-card to-transparent pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-8 z-10 bg-gradient-to-l from-white dark:from-card to-transparent pointer-events-none" />
-
-        <style>{`
-          @keyframes gift-marquee {
-            0%   { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-          }
-          .gift-marquee-track {
-            display: flex;
-            width: max-content;
-            animation: gift-marquee ${speed} linear infinite;
-          }
-          .gift-marquee-track:hover {
-            animation-play-state: paused;
-          }
-        `}</style>
-
-        <div className="gift-marquee-track gap-3 px-4" style={{ gap: "12px", paddingLeft: "16px", paddingRight: "16px" }}>
-          {track.map((item, i) => (
-            <div
-              key={`${item.name}-${i}`}
-              className="w-11 h-11 rounded-xl bg-white dark:bg-muted border border-slate-100 dark:border-border flex-shrink-0 flex items-center justify-center overflow-hidden shadow-sm"
-            >
-              <img
-                src={item.logo}
-                alt={item.name}
-                className="w-8 h-8 object-contain"
-                loading="lazy"
-                onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = "0"; }}
+      {/* Horizontal scroll row */}
+      <div
+        ref={scrollRef}
+        className="flex gap-2.5 overflow-x-auto px-4 pb-3 scrollbar-hide"
+        style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch" as any }}
+      >
+        {isLoading
+          ? Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)
+          : cards.map(card => (
+              <GiftCard
+                key={card.name}
+                card={card}
+                onClick={() => setLocation("/gift-cards")}
               />
-            </div>
-          ))}
-        </div>
+            ))}
       </div>
     </div>
   );
