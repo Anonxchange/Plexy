@@ -8,6 +8,7 @@ import { PexlyFooter } from "@/components/pexly-footer";
 import { getCountryFlag } from "@/lib/localization";
 import { useMarkets, type PolymarketMarket } from "@/hooks/use-polymarket";
 import { shopifyService } from "@/lib/shopify-service";
+import { ProfileOverviewCards } from "@/components/profile-overview-cards";
 import { cn } from "@/lib/utils";
 import DOMPurify from "dompurify";
 import { Upload, User, TrendingUp, ArrowRight, CheckCircle2 } from "lucide-react";
@@ -760,64 +761,10 @@ export function Profile() {
         {/* ── OVERVIEW TAB ── */}
         {tab === "Overview" && (
           <div className="space-y-4 animate-in fade-in-0 duration-200">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-              {/* Active Predictions */}
-              <Card className="p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <SectionLabel>Active Predictions</SectionLabel>
-                  <button onClick={() => setTab("Predictions")} className="text-xs text-primary font-medium hover:underline flex items-center gap-0.5">
-                    View all <IconChevronRight size={12} />
-                  </button>
-                </div>
-                {activeMarkets.slice(0, 3).length === 0 ? (
-                  <p className="text-sm text-slate-400 text-center py-4">No markets available</p>
-                ) : (
-                  activeMarkets.slice(0, 3).map((m, i, arr) => {
-                    const prices = JSON.parse(m.outcomePrices || "[]");
-                    const yesOdds = prices[0] ? Math.round(parseFloat(prices[0]) * 100) : 0;
-                    return (
-                      <div key={m.conditionId} className={cn("flex items-center gap-3 py-3", i < arr.length - 1 ? "border-b border-slate-100 dark:border-border" : "")}>
-                        <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center text-[10px] font-bold flex-shrink-0",
-                          yesOdds >= 50 ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800" : "bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800")}>
-                          {yesOdds}%
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-slate-700 dark:text-foreground truncate">{m.question}</p>
-                          <p className="text-[10px] text-slate-400 dark:text-muted-foreground mt-0.5">Vol: {m.volume || "—"}</p>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </Card>
-
-              {/* Trending Products */}
-              <Card className="p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <SectionLabel>Trending Products</SectionLabel>
-                  <button onClick={() => setTab("Shop")} className="text-xs text-primary font-medium hover:underline flex items-center gap-0.5">
-                    Shop <IconChevronRight size={12} />
-                  </button>
-                </div>
-                {shopProducts.slice(0, 3).length === 0 ? (
-                  <p className="text-sm text-slate-400 text-center py-4">Loading products…</p>
-                ) : (
-                  shopProducts.slice(0, 3).map((p, i) => (
-                    <div key={p.id} className={cn("flex items-center gap-3 py-3", i < 2 ? "border-b border-slate-100 dark:border-border" : "")}>
-                      <div className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-100 dark:border-indigo-800 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                        {p.images[0] ? <img src={p.images[0]} alt={p.title} className="w-full h-full object-cover rounded-lg" /> : <IconShoppingBag size={15} />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-slate-700 dark:text-foreground truncate">{p.title}</p>
-                        <p className="text-[10px] text-slate-400 dark:text-muted-foreground mt-0.5">{p.currency}</p>
-                      </div>
-                      <span className="text-xs font-semibold text-slate-700 dark:text-foreground tabular-nums">${p.price.toFixed(2)}</span>
-                    </div>
-                  ))
-                )}
-              </Card>
-            </div>
+            <ProfileOverviewCards
+              onViewPredictions={() => setTab("Predictions")}
+              onViewShop={() => setTab("Shop")}
+            />
 
           </div>
         )}
@@ -876,15 +823,15 @@ export function Profile() {
                     </div>
                     <div className="mt-4 pt-3 border-t border-slate-100 dark:border-border flex gap-2">
                       <Button size="sm" className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium border-0"
-                        onClick={() => setLocation(`/prediction/${m.conditionId}`)}>
+                        onClick={() => setLocation(`/prediction/${m.id}`)}>
                         Buy YES
                       </Button>
                       <Button size="sm" className="h-7 text-xs bg-red-500 hover:bg-red-600 text-white font-medium border-0"
-                        onClick={() => setLocation(`/prediction/${m.conditionId}`)}>
+                        onClick={() => setLocation(`/prediction/${m.id}`)}>
                         Buy NO
                       </Button>
                       <Button size="sm" variant="ghost" className="h-7 text-xs text-slate-400 dark:text-muted-foreground hover:text-slate-700 dark:hover:text-foreground ml-auto"
-                        onClick={() => setLocation(`/prediction/${m.conditionId}`)}>
+                        onClick={() => setLocation(`/prediction/${m.id}`)}>
                         Details <IconChevronRight size={11} className="ml-0.5 inline" />
                       </Button>
                     </div>
