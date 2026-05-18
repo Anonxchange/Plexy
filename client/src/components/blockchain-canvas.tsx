@@ -13,15 +13,19 @@ export function BlockchainCanvas({ dark = false }: { dark?: boolean }) {
     type Node = { x: number; y: number; vx: number; vy: number; r: number; phase: number; lime: boolean; hex: boolean; };
     let nodes: Node[] = [];
 
+    // Cache dimensions — only updated on resize, never read inside draw()
+    let w = 0, h = 0;
+
     const resize = () => {
-      canvas.width = canvas.offsetWidth * window.devicePixelRatio;
-      canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+      w = canvas.offsetWidth;
+      h = canvas.offsetHeight;
+      canvas.width = w * window.devicePixelRatio;
+      canvas.height = h * window.devicePixelRatio;
       ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
       initNodes();
     };
 
     const initNodes = () => {
-      const w = canvas.offsetWidth, h = canvas.offsetHeight;
       const count = Math.max(Math.floor((w * h) / 10000), 35);
       nodes = Array.from({ length: count }, () => ({
         x: Math.random() * w, y: Math.random() * h,
@@ -44,7 +48,7 @@ export function BlockchainCanvas({ dark = false }: { dark?: boolean }) {
     };
 
     const draw = () => {
-      const w = canvas.offsetWidth, h = canvas.offsetHeight;
+      // Use cached w/h — no layout read happens here
       ctx.clearRect(0, 0, w, h);
       nodes.forEach(n => {
         n.x += n.vx; n.y += n.vy;
