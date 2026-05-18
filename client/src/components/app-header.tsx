@@ -16,15 +16,31 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth-context";
-import {
-  TradeMegaMenu,
-  WalletMegaMenu,
-  ShopMegaMenu,
-  EarnMegaMenu,
-  SupportMegaMenu,
-} from "@/components/nav-mega-dropdown";
 
-import { AppSidebar } from "./app-sidebar";
+// Mega menus — only rendered on hover/open, never on initial paint.
+// Lazy-loading moves the entire nav-mega-dropdown module (539 lines + SVGs)
+// out of the initial bundle; Vite deduplicates all five into a single chunk.
+const TradeMegaMenu = lazy(() =>
+  import("@/components/nav-mega-dropdown").then(m => ({ default: m.TradeMegaMenu }))
+);
+const WalletMegaMenu = lazy(() =>
+  import("@/components/nav-mega-dropdown").then(m => ({ default: m.WalletMegaMenu }))
+);
+const ShopMegaMenu = lazy(() =>
+  import("@/components/nav-mega-dropdown").then(m => ({ default: m.ShopMegaMenu }))
+);
+const EarnMegaMenu = lazy(() =>
+  import("@/components/nav-mega-dropdown").then(m => ({ default: m.EarnMegaMenu }))
+);
+const SupportMegaMenu = lazy(() =>
+  import("@/components/nav-mega-dropdown").then(m => ({ default: m.SupportMegaMenu }))
+);
+
+// Mobile sidebar — only mounted when the hamburger is tapped.
+const AppSidebar = lazy(() =>
+  import("./app-sidebar").then(m => ({ default: m.AppSidebar }))
+);
+
 const SymbolSelector = lazy(() => import("./trading/SymbolSelector"));
 const LazyUserSection = lazy(() =>
   import("./app-header-user-section").then(m => ({ default: m.AppHeaderUserSection }))
@@ -103,7 +119,9 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar }: { onOpenSid
                 onPointerEnter={() => setActiveDropdown("trade")}
               >
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground pb-3">Trade</p>
-                <TradeMegaMenu onNavigate={navigate} onClose={() => setActiveDropdown(null)} />
+                <Suspense fallback={null}>
+                  <TradeMegaMenu onNavigate={navigate} onClose={() => setActiveDropdown(null)} />
+                </Suspense>
               </DropdownMenuContent>
             </div>
           </DropdownMenu>
@@ -150,7 +168,9 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar }: { onOpenSid
                 onPointerEnter={() => setActiveDropdown("wallet")}
               >
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground pb-3">Wallet</p>
-                <WalletMegaMenu onNavigate={navigate} onClose={() => setActiveDropdown(null)} />
+                <Suspense fallback={null}>
+                  <WalletMegaMenu onNavigate={navigate} onClose={() => setActiveDropdown(null)} />
+                </Suspense>
               </DropdownMenuContent>
             </div>
           </DropdownMenu>
@@ -188,7 +208,9 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar }: { onOpenSid
                 onPointerEnter={() => setActiveDropdown("shop")}
               >
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground pb-3">Shop</p>
-                <ShopMegaMenu onNavigate={navigate} onClose={() => setActiveDropdown(null)} />
+                <Suspense fallback={null}>
+                  <ShopMegaMenu onNavigate={navigate} onClose={() => setActiveDropdown(null)} />
+                </Suspense>
               </DropdownMenuContent>
             </div>
           </DropdownMenu>
@@ -215,7 +237,9 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar }: { onOpenSid
                 onPointerEnter={() => setActiveDropdown("earn")}
               >
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground pb-3">Earn</p>
-                <EarnMegaMenu onNavigate={navigate} onClose={() => setActiveDropdown(null)} />
+                <Suspense fallback={null}>
+                  <EarnMegaMenu onNavigate={navigate} onClose={() => setActiveDropdown(null)} />
+                </Suspense>
               </DropdownMenuContent>
             </div>
           </DropdownMenu>
@@ -242,7 +266,9 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar }: { onOpenSid
                 onPointerEnter={() => setActiveDropdown("support")}
               >
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground pb-3">Support</p>
-                <SupportMegaMenu onNavigate={(href) => { if (href.startsWith('http')) window.open(href, '_blank'); else navigate(href); setActiveDropdown(null); }} onClose={() => setActiveDropdown(null)} />
+                <Suspense fallback={null}>
+                  <SupportMegaMenu onNavigate={(href) => { if (href.startsWith('http')) window.open(href, '_blank'); else navigate(href); setActiveDropdown(null); }} onClose={() => setActiveDropdown(null)} />
+                </Suspense>
               </DropdownMenuContent>
             </div>
           </DropdownMenu>
@@ -360,7 +386,9 @@ export function AppHeader() {
           <SheetHeader className="sr-only">
             <SheetTitle>Navigation Menu</SheetTitle>
           </SheetHeader>
-          <AppSidebar onNavigate={closeSidebar} />
+          <Suspense fallback={null}>
+            <AppSidebar onNavigate={closeSidebar} />
+          </Suspense>
         </SheetContent>
       </Sheet>
     </>
