@@ -13,67 +13,12 @@ import { useWalletData } from "@/hooks/use-wallet-data";
 import { WalletHeader } from "@/components/wallet/WalletHeader";
 import { AssetList } from "@/components/wallet/AssetList";
 import { WalletSetupDialog } from "@/components/wallet/WalletSetupDialog";
-import { Skeleton } from "@/components/ui/skeleton";
+import { WalletPageSkeleton } from "@/components/page-skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Wallet as WalletIcon, Landmark, ChevronRight, Gift } from "lucide-react";
-
-export function WalletPageSkeleton() {
-  return (
-    <div className="min-h-screen flex flex-col bg-[#F8F9FA] dark:bg-background">
-      <div className="flex-1 w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 max-w-7xl">
-        <Skeleton className="h-9 w-40 mb-6 sm:mb-8" />
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-8">
-          {/* Main */}
-          <div className="lg:col-span-8 space-y-4 sm:space-y-6">
-            {/* Tabs */}
-            <div className="flex gap-2">
-              <Skeleton className="h-10 w-28 rounded-lg" />
-              <Skeleton className="h-10 w-28 rounded-lg" />
-            </div>
-            {/* Wallet header card */}
-            <div className="rounded-2xl border border-border bg-white dark:bg-card overflow-hidden">
-              <div className="p-6 space-y-4 border-b border-border">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-10 w-48" />
-                <div className="flex gap-2 pt-1">
-                  <Skeleton className="h-10 w-24 rounded-xl" />
-                  <Skeleton className="h-10 w-24 rounded-xl" />
-                  <Skeleton className="h-10 w-24 rounded-xl" />
-                  <Skeleton className="h-10 w-24 rounded-xl" />
-                </div>
-              </div>
-              <div className="p-6 space-y-4">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="flex items-center justify-between py-3">
-                    <div className="flex items-center gap-4">
-                      <Skeleton className="h-10 w-10 rounded-full" />
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-24" />
-                        <Skeleton className="h-3 w-16" />
-                      </div>
-                    </div>
-                    <div className="space-y-2 text-right">
-                      <Skeleton className="h-4 w-20 ml-auto" />
-                      <Skeleton className="h-3 w-14 ml-auto" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          {/* Sidebar */}
-          <div className="lg:col-span-4 space-y-6">
-            <Skeleton className="h-12 w-full rounded-xl" />
-            <Skeleton className="aspect-[4/3] w-full rounded-2xl" />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function WalletPage() {
   useHead({ title: "My Wallet | Pexly", meta: [{ name: "description", content: "Send, receive, swap, stake, pay bills, and manage all your crypto assets in one place." }] });

@@ -22,6 +22,7 @@ import { getSupabase } from "@/lib/supabase";
 import { shopifyService } from "@/lib/shopify-service";
 import { ShopSkeleton } from "@/components/shop/ShopSkeleton";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ShopPageSkeleton } from "@/components/page-skeleton";
 import { CartSheet } from "@/components/shop/CartSheet";
 import { CategoryBrowserModal } from "@/components/shop/CategoryBrowserModal";
 import { toast } from "sonner";
@@ -102,47 +103,6 @@ function buildCategoryTree(categories: string[]): CategoryNode[] {
       fullPath: root,
       children: buildChildren(root, 1),
     }));
-}
-
-export function ShopPageSkeleton() {
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="space-y-1.5">
-            <Skeleton className="h-8 w-32" />
-            <Skeleton className="h-4 w-48" />
-          </div>
-          <Skeleton className="h-9 w-28 rounded-lg" />
-        </div>
-        {/* Search + sort + tabs */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
-          <Skeleton className="h-10 flex-1 rounded-lg" />
-          <Skeleton className="h-10 w-44 rounded-lg" />
-          <Skeleton className="h-10 w-36 rounded-lg" />
-        </div>
-        {/* Category pills */}
-        <div className="flex gap-2 mb-6 overflow-hidden">
-          {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-8 w-20 rounded-full flex-shrink-0" />
-          ))}
-        </div>
-        {/* Product grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="flex flex-col">
-              <Skeleton className="aspect-square w-full rounded-xl mb-3" />
-              <div className="space-y-1.5">
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export function Shop() {
