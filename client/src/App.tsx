@@ -20,10 +20,7 @@ import { AppFooter } from "@/components/app-footer";
 import { PageNavigation } from "@/components/page-navigation";
 const CookieConsent = lazy(() => import("@/components/cookie-consent").then(m => ({ default: m.CookieConsent })));
 const WalletSetupDialog = lazy(() => import("@/components/wallet/WalletSetupDialog").then(m => ({ default: m.WalletSetupDialog })));
-import { PageSkeleton, ChartPageSkeleton } from "@/components/page-skeleton";
-import { ProfilePageSkeleton } from "@/pages/profile";
-import { ShopPageSkeleton } from "@/pages/shop";
-import { WalletPageSkeleton } from "@/pages/wallet";
+import { PageSkeleton, ChartPageSkeleton, ProfilePageSkeleton, ShopPageSkeleton, WalletPageSkeleton } from "@/components/page-skeleton";
 // Core pages - loaded eagerly (only what's needed for first-visit home page)
 import Home from "@/pages/home";
 import NotFound from "@/pages/not-found";
