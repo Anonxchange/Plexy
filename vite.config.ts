@@ -85,7 +85,7 @@ export default defineConfig({
       resolveDependencies: (filename, deps) => {
         // Don't eagerly preload chunks only needed on demand
         const lazyPrefixes = [
-          // "vendor-db", ← removed: Supabase is needed on every page for session checks
+          // "vendor-db" removed — @supabase/ssr is needed on every page for session checks
           "vendor-ui-x",
           "vendor-charts",
           "vendor-canvas",
