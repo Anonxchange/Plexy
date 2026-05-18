@@ -182,7 +182,7 @@ function AuthRoute({
 
   return (
     <Suspense fallback={skeleton}>
-      <Component />
+      <LazyComponent />
     </Suspense>
   );
 }
