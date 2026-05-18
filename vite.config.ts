@@ -137,7 +137,7 @@ export default defineConfig({
 
           "vendor-icons": ["lucide-react"],
 
-          "vendor-db": ["@supabase/supabase-js"],
+          "vendor-db": ["@supabase/ssr"],
 
           "vendor-utils": [
             "@tanstack/react-query",
