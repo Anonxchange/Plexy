@@ -316,10 +316,10 @@ function getInitialLangBase(): string | null {
 }
 
 function App() {
-  const [langBase, setLangBase] = useState<string>(() => getInitialLangBase() ?? "/en");
+  const [langBase, setLangBase] = useState<string | null>(getInitialLangBase);
 
   useEffect(() => {
-    if (getInitialLangBase()) {
+    if (langBase) {
       i18n.changeLanguage(langBase.slice(1));
     } else {
       detectLanguageFromIP().then((lang) => {
@@ -330,6 +330,8 @@ function App() {
       });
     }
   }, []);
+
+  if (!langBase) return null;
 
   const isHelp = window.location.hostname === "help.pexly.app";
 
