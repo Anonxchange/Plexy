@@ -85,7 +85,7 @@ export default defineConfig({
       resolveDependencies: (filename, deps) => {
         // Don't eagerly preload chunks only needed on demand
         const lazyPrefixes = [
-          "vendor-db",
+          // "vendor-db", ← removed: Supabase is needed on every page for session checks
           "vendor-ui-x",
           "vendor-charts",
           "vendor-canvas",
@@ -110,6 +110,7 @@ export default defineConfig({
           ],
 
           "vendor-ui-x": [
+            "@radix-ui/react-toast",
             "@radix-ui/react-avatar",
             "@radix-ui/react-accordion",
             "@radix-ui/react-alert-dialog",
