@@ -83,20 +83,14 @@ export default defineConfig({
 
     modulePreload: {
       resolveDependencies: (filename, deps) => {
-        // Don't eagerly preload chunks only needed on demand:
-        // - vendor-supabase  → auth code not needed until user interacts
-        // - vendor-motion    → animations only on specific pages
-        // - vendor-charts    → chart pages only
-        // - vendor-crypto    → wallet/signing pages only
-        // - vendor-canvas    → canvas pages only
-        // - vendor-ui-x      → extended Radix primitives, not on every page
+        // Don't eagerly preload chunks only needed on demand
         const lazyPrefixes = [
-          "vendor-supabase",
-          "vendor-motion",
-          "vendor-charts",
-          "vendor-crypto",
-          "vendor-canvas",
+          "vendor-db",
           "vendor-ui-x",
+          "vendor-charts",
+          "vendor-canvas",
+          "vendor-crypto",
+          "vendor-motion",
         ];
         if (lazyPrefixes.some((p) => filename.includes(p))) return [];
         return deps;
@@ -105,85 +99,50 @@ export default defineConfig({
 
     rollupOptions: {
       output: {
-        manualChunks(id) {
-          // ── React core + router ────────────────────────────────────────
-          if (
-            id.includes("/node_modules/react/") ||
-            id.includes("/node_modules/react-dom/") ||
-            id.includes("/node_modules/scheduler/") ||
-            id.includes("/node_modules/wouter/")
-          ) {
-            return "vendor-react";
-          }
+        manualChunks: {
+          "vendor-react": ["react", "react-dom"],
 
-          // ── Supabase (auth — heavy, deferred until needed) ─────────────
-          if (id.includes("@supabase/")) {
-            return "vendor-supabase";
-          }
+          "vendor-ui": [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-slot",
+            "@radix-ui/react-tooltip",
+          ],
 
-          // ── Crypto / wallet (only loaded on wallet/signing pages) ───────
-          if (
-            id.includes("@scure/") ||
-            id.includes("@noble/") ||
-            id.includes("@ethereumjs/") ||
-            id.includes("/scrypt-js/") ||
-            id.includes("/idb/")
-          ) {
-            return "vendor-crypto";
-          }
+          "vendor-ui-x": [
+            "@radix-ui/react-avatar",
+            "@radix-ui/react-accordion",
+            "@radix-ui/react-alert-dialog",
+            "@radix-ui/react-aspect-ratio",
+            "@radix-ui/react-checkbox",
+            "@radix-ui/react-collapsible",
+            "@radix-ui/react-context-menu",
+            "@radix-ui/react-hover-card",
+            "@radix-ui/react-label",
+            "@radix-ui/react-menubar",
+            "@radix-ui/react-navigation-menu",
+            "@radix-ui/react-popover",
+            "@radix-ui/react-progress",
+            "@radix-ui/react-radio-group",
+            "@radix-ui/react-scroll-area",
+            "@radix-ui/react-select",
+            "@radix-ui/react-separator",
+            "@radix-ui/react-slider",
+            "@radix-ui/react-switch",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-toggle",
+            "@radix-ui/react-toggle-group",
+          ],
 
-          // ── Charts (recharts + d3 — only on chart pages) ────────────────
-          if (
-            id.includes("/recharts/") ||
-            id.includes("/d3-") ||
-            id.includes("/d3/") ||
-            id.includes("/victory-")
-          ) {
-            return "vendor-charts";
-          }
+          "vendor-icons": ["lucide-react"],
 
-          // ── Framer Motion (only on animated pages) ──────────────────────
-          if (id.includes("/framer-motion/")) {
-            return "vendor-motion";
-          }
+          "vendor-db": ["@supabase/supabase-js"],
 
-          // ── Core Radix UI (used on every page — keep in eager bundle) ───
-          if (
-            id.includes("@radix-ui/react-dialog") ||
-            id.includes("@radix-ui/react-dropdown-menu") ||
-            id.includes("@radix-ui/react-slot") ||
-            id.includes("@radix-ui/react-tooltip")
-          ) {
-            return "vendor-ui";
-          }
-
-          // ── Extended Radix UI (less-critical primitives) ─────────────────
-          if (id.includes("@radix-ui/")) {
-            return "vendor-ui-x";
-          }
-
-          // ── TanStack Query ───────────────────────────────────────────────
-          if (id.includes("@tanstack/")) {
-            return "vendor-tanstack";
-          }
-
-          // ── i18n ─────────────────────────────────────────────────────────
-          if (
-            id.includes("/i18next/") ||
-            id.includes("/react-i18next/")
-          ) {
-            return "vendor-i18n";
-          }
-
-          // ── Icons ─────────────────────────────────────────────────────────
-          if (id.includes("/lucide-react/")) {
-            return "vendor-icons";
-          }
-
-          // ── Everything else from node_modules ─────────────────────────────
-          if (id.includes("/node_modules/")) {
-            return "vendor-misc";
-          }
+          "vendor-utils": [
+            "@tanstack/react-query",
+            "wouter",
+            "zod",
+          ],
         },
       },
     },
