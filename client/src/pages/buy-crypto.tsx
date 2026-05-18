@@ -294,6 +294,18 @@ function TrustBadges() {
 function HowItWorksCarousel({ cryptoName }: { cryptoName: string }) {
   const [activeIdx, setActiveIdx] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const containerWidthRef = useRef(0);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => {
+      containerWidthRef.current = entries[0].contentRect.width;
+    });
+    ro.observe(el);
+    containerWidthRef.current = el.offsetWidth;
+    return () => ro.disconnect();
+  }, []);
 
   const scrollTo = (idx: number) => {
     const el = scrollRef.current;
@@ -306,7 +318,8 @@ function HowItWorksCarousel({ cryptoName }: { cryptoName: string }) {
   const onScroll = () => {
     const el = scrollRef.current;
     if (!el) return;
-    const idx = Math.round(el.scrollLeft / el.offsetWidth);
+    const width = containerWidthRef.current || el.offsetWidth;
+    const idx = Math.round(el.scrollLeft / width);
     setActiveIdx(idx);
   };
 
