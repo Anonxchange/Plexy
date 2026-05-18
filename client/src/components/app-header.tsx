@@ -46,7 +46,7 @@ const LazyUserSection = lazy(() =>
   import("./app-header-user-section").then(m => ({ default: m.AppHeaderUserSection }))
 );
 
-const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar }: { onOpenSidebar: () => void }) {
+const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar, onPreloadSidebar }: { onOpenSidebar: () => void; onPreloadSidebar: () => void }) {
   const { user } = useAuth();
   const [location, navigate] = useLocation();
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -79,6 +79,7 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar }: { onOpenSid
               variant="outline"
               size="icon"
               onClick={onOpenSidebar}
+              onPointerEnter={onPreloadSidebar}
               data-testid="button-sidebar-toggle"
               aria-label="Open navigation menu"
               className="border-border lg:hidden"
@@ -368,6 +369,14 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar }: { onOpenSid
   );
 });
 
+// Fire-and-forget — triggers the dynamic import so the browser fetches and
+// caches the sidebar chunk before the user has finished tapping the button.
+// Called once via onPointerEnter; subsequent calls hit the module cache and
+// are instant. The returned Promise is intentionally ignored.
+function preloadSidebarChunk() {
+  void import("./app-sidebar");
+}
+
 export function AppHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [, startTransition] = useTransition();
@@ -380,7 +389,7 @@ export function AppHeader() {
 
   return (
     <>
-      <AppHeaderCore onOpenSidebar={openSidebar} />
+      <AppHeaderCore onOpenSidebar={openSidebar} onPreloadSidebar={preloadSidebarChunk} />
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <SheetContent side="left" className="p-0 w-[280px]">
           <SheetHeader className="sr-only">
