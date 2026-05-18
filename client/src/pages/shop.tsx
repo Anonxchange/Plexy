@@ -35,6 +35,25 @@ const SHOPIFY_FETCH_SIZE = 250;
 const SHOPIFY_DISPLAY_PAGE_SIZE = 60;
 const CAT_SEPARATOR = " > ";
 
+const SHOP_CACHE_KEY = "pexly_shop_cache";
+const SHOP_CACHE_TTL = 5 * 60 * 1000;
+
+function readShopCache(): { products: Listing[]; categories: string[] } | null {
+  try {
+    const raw = sessionStorage.getItem(SHOP_CACHE_KEY);
+    if (!raw) return null;
+    const { products, categories, ts } = JSON.parse(raw);
+    if (Date.now() - ts > SHOP_CACHE_TTL) return null;
+    return { products, categories };
+  } catch { return null; }
+}
+
+function writeShopCache(products: Listing[], categories: string[]) {
+  try {
+    sessionStorage.setItem(SHOP_CACHE_KEY, JSON.stringify({ products, categories, ts: Date.now() }));
+  } catch { /* silent */ }
+}
+
 function shuffleArray<T>(items: T[]): T[] {
   const shuffled = [...items];
   for (let i = shuffled.length - 1; i > 0; i -= 1) {
@@ -149,11 +168,21 @@ export function Shop() {
 
   const fetchShopifyProducts = async (isBackground = false) => {
     const fetchId = ++shopifyFetchIdRef.current;
+
     if (!isBackground) {
-      setIsShopifyLoading(true);
-      setShopifyProducts([]);
-      setShopifyCategories(["All"]);
+      const cached = readShopCache();
+      if (cached) {
+        setShopifyProducts(cached.products);
+        setShopifyCategories(cached.categories);
+        setIsShopifyLoading(false);
+      } else {
+        setIsShopifyLoading(true);
+        setShopifyProducts([]);
+        setShopifyCategories(["All"]);
+      }
     }
+
+    const allFetched: Listing[] = [];
     let firstPageDone = false;
     try {
       let after: string | undefined;
@@ -166,19 +195,11 @@ export function Shop() {
 
         const fetched: Listing[] = (result.products || []).map((edge: any) => {
           const p = edge.node;
-          // Build the full taxonomy path from ancestors + leaf name.
-          // Storefront API exposes category.ancestors (root→parent) and category.name (leaf).
-          // e.g. ancestors=["Vehicles & Parts","Vehicle Care"] + name="Car Wax"
-          //   → "Vehicles & Parts > Vehicle Care > Car Wax"
           const buildTaxonomyPath = (cat: any): string => {
             if (!cat) return "";
             const parts: string[] = [...(cat.ancestors || []).map((a: any) => a.name), cat.name];
             return parts.filter(Boolean).join(CAT_SEPARATOR);
           };
-          // p.category is the Shopify taxonomy object (ancestors + name); it is only
-          // present if the Edge Function's GraphQL query requests it AND the store has
-          // taxonomy categories set. Fall back to the flat productType string so the
-          // sidebar always has categories even when taxonomy data is absent.
           const taxonomyCategory: string = buildTaxonomyPath(p.category) || (p.productType ?? "");
           return {
             id: p.id,
@@ -198,7 +219,8 @@ export function Shop() {
           };
         });
 
-        // Collect all taxonomy category paths — buildCategoryTree splits on " > " automatically
+        allFetched.push(...fetched);
+
         const newCats = fetched.map(p => p.category).filter((c): c is string => c.trim().length > 0);
         if (newCats.length > 0) {
           setShopifyCategories(prev => {
@@ -224,6 +246,13 @@ export function Shop() {
         hasMore = result.pageInfo?.hasNextPage || false;
         after = result.pageInfo?.endCursor || undefined;
         page++;
+      }
+
+      if (fetchId === shopifyFetchIdRef.current && allFetched.length > 0) {
+        const allCats = ["All", ...Array.from(new Set(
+          allFetched.map(p => p.category).filter((c): c is string => c.trim().length > 0)
+        )).sort()];
+        writeShopCache(allFetched, allCats);
       }
     } catch (err) {
       if (fetchId === shopifyFetchIdRef.current) devLog.error("Error fetching Shopify products:", err);
