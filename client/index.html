@@ -19,9 +19,9 @@
     <title>Pexly - Non-Custodial Decentralized Crypto Software</title>
     <meta name="description" content="Pexly is your all-in-one decentralized market. Swap crypto, earn yield through staking, buy gift cards, top up mobile credit, pay utility bills, shop with crypto, and explore blockchain data — all without giving up custody of your assets." />
     
-    <!-- Preconnect hints for external APIs (improves LCP by establishing early connections) -->
-    <link rel="preconnect" href="%VITE_SUPABASE_URL%" crossorigin="anonymous">
-    <link rel="dns-prefetch" href="%VITE_SUPABASE_URL%">
+    <!-- Supabase preconnect hints are injected here at build time by vite.config.ts
+         when VITE_SUPABASE_URL is defined. No placeholder needed in source HTML. -->
+    <!--SUPABASE_PRECONNECT-->
     <!-- Preconnect for Google Fonts — both the CSS and the actual font file origin -->
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin="anonymous">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
@@ -46,6 +46,34 @@
     <meta name="twitter:image" content="https://www.pexly.app/hero-bg.webp" />
     <meta name="twitter:image:alt" content="Pexly - Non-Custodial Decentralized Crypto Software" />
     
+    <!--
+      LCP hero image preload — tells the browser to fetch the hero background
+      before React even starts, eliminating the JS-render delay from LCP.
+      Two hints mirror the two <picture> elements in hero-section.tsx:
+        • mobile  (max-width: 1023px) — image fills 100vw
+        • desktop (min-width: 1024px) — image fills ~50vw (right panel)
+      imagesrcset/imagesizes must match the <source> in hero-section.tsx exactly
+      so the browser picks the same variant for the preload as for the render.
+    -->
+    <link
+      rel="preload"
+      as="image"
+      href="/hero-bg-640.webp"
+      imagesrcset="/hero-bg-640.webp 640w, /hero-bg-1024.webp 1024w, /hero-bg.webp 1408w"
+      imagesizes="100vw"
+      media="(max-width: 1023px)"
+      fetchpriority="high"
+    />
+    <link
+      rel="preload"
+      as="image"
+      href="/hero-bg-1024.webp"
+      imagesrcset="/hero-bg-640.webp 640w, /hero-bg-1024.webp 1024w, /hero-bg.webp 1408w"
+      imagesizes="50vw"
+      media="(min-width: 1024px)"
+      fetchpriority="high"
+    />
+
     <!-- Non-blocking font load: preload downloads the CSS immediately but doesn't block rendering.
          defer-css.js promotes this to a full stylesheet after DOMContentLoaded. -->
     <link rel="preload" as="style" crossorigin="anonymous" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap">
