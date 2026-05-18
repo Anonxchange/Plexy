@@ -593,67 +593,120 @@ export default function NotificationsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-2xl">
-        {/* Sticky header */}
-        <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border">
-          {/* Top bar */}
-          <div className="flex items-center justify-between px-4 h-14">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate("/dashboard")}
-                className="h-9 w-9 -ml-1"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <h1 className="text-lg font-semibold">Notifications</h1>
-              {unreadAll > 0 && (
-                <Badge className="h-5 min-w-5 px-1.5 bg-primary text-primary-foreground text-[10px] rounded-full">
-                  {unreadAll > 99 ? "99+" : unreadAll}
-                </Badge>
-              )}
+      <div className="mx-auto max-w-2xl lg:max-w-6xl lg:px-8">
+
+        {/* ── Mobile layout (< lg) ── */}
+        <div className="lg:hidden">
+          {/* Mobile sticky header */}
+          <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border">
+            <div className="flex items-center justify-between px-4 h-14">
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} className="h-9 w-9 -ml-1">
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <h1 className="text-lg font-semibold">Notifications</h1>
+                {unreadAll > 0 && (
+                  <Badge className="h-5 min-w-5 px-1.5 bg-primary text-primary-foreground text-[10px] rounded-full">
+                    {unreadAll > 99 ? "99+" : unreadAll}
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" className="h-9 w-9" title="Mark all as read" onClick={handleMarkAllAsRead}>
+                  <CheckCheck className="h-4.5 w-4.5" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigate("/account-settings?section=notifications")}>
+                  <SettingsIcon className="h-4.5 w-4.5" />
+                </Button>
+              </div>
             </div>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9"
-                title="Mark all as read"
-                onClick={handleMarkAllAsRead}
+            <div className="flex items-center gap-3 px-4 pb-3">
+              <button
+                onClick={() => setUnreadOnly(!unreadOnly)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-colors",
+                  unreadOnly ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-muted"
+                )}
               >
-                <CheckCheck className="h-4.5 w-4.5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9"
-                onClick={() => navigate("/account-settings?section=notifications")}
-              >
-                <SettingsIcon className="h-4.5 w-4.5" />
-              </Button>
+                <span className={cn("h-1.5 w-1.5 rounded-full", unreadOnly ? "bg-primary-foreground" : "bg-muted-foreground")} />
+                Unread only
+              </button>
+            </div>
+            <div className="overflow-x-auto scrollbar-hide">
+              <div className="flex min-w-max border-b border-border">
+                {TABS.map((tab) => {
+                  const count = badgeCounts[tab.id];
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={cn(
+                        "relative flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap",
+                        isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {tab.label}
+                      {count > 0 && (
+                        <span className={cn(
+                          "inline-flex items-center justify-center h-4.5 min-w-4.5 px-1 text-[10px] font-bold rounded-full",
+                          isActive ? "bg-foreground text-background" : "bg-muted text-muted-foreground"
+                        )}>
+                          {count > 99 ? "99+" : count}
+                        </span>
+                      )}
+                      {isActive && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground rounded-full" />}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
+          <div className="divide-y-0">{renderItems()}</div>
+        </div>
 
-          {/* Filter row */}
-          <div className="flex items-center gap-3 px-4 pb-3">
-            <button
-              onClick={() => setUnreadOnly(!unreadOnly)}
-              className={cn(
-                "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-colors",
-                unreadOnly
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "border-border text-muted-foreground hover:bg-muted"
-              )}
-            >
-              <span className={cn("h-1.5 w-1.5 rounded-full", unreadOnly ? "bg-primary-foreground" : "bg-muted-foreground")} />
-              Unread only
-            </button>
-          </div>
+        {/* ── Desktop layout (≥ lg) ── */}
+        <div className="hidden lg:flex gap-0 pt-6 pb-12 min-h-screen">
 
-          {/* Tabs */}
-          <div className="overflow-x-auto scrollbar-hide">
-            <div className="flex min-w-max border-b border-border">
+          {/* Left sidebar */}
+          <aside className="w-64 flex-shrink-0 sticky top-20 self-start">
+            {/* Title + actions */}
+            <div className="flex items-center justify-between mb-1 px-2">
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-semibold">Notifications</h1>
+                {unreadAll > 0 && (
+                  <Badge className="h-5 min-w-5 px-1.5 bg-primary text-primary-foreground text-[10px] rounded-full">
+                    {unreadAll > 99 ? "99+" : unreadAll}
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1 px-2 mb-4">
+              <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs text-muted-foreground" title="Mark all as read" onClick={handleMarkAllAsRead}>
+                <CheckCheck className="h-3.5 w-3.5" /> Mark all read
+              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => navigate("/account-settings?section=notifications")}>
+                <SettingsIcon className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+
+            {/* Unread filter */}
+            <div className="px-2 mb-4">
+              <button
+                onClick={() => setUnreadOnly(!unreadOnly)}
+                className={cn(
+                  "w-full inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-colors",
+                  unreadOnly ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-muted"
+                )}
+              >
+                <span className={cn("h-1.5 w-1.5 rounded-full", unreadOnly ? "bg-primary-foreground" : "bg-muted-foreground")} />
+                Unread only
+              </button>
+            </div>
+
+            {/* Vertical tab list */}
+            <nav className="flex flex-col gap-0.5">
               {TABS.map((tab) => {
                 const count = badgeCounts[tab.id];
                 const isActive = activeTab === tab.id;
@@ -662,37 +715,45 @@ export default function NotificationsPage() {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={cn(
-                      "relative flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap",
+                      "flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left",
                       isActive
-                        ? "text-foreground"
-                        : "text-muted-foreground hover:text-foreground"
+                        ? "bg-muted text-foreground"
+                        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                     )}
                   >
                     {tab.label}
                     {count > 0 && (
                       <span className={cn(
-                        "inline-flex items-center justify-center h-4.5 min-w-4.5 px-1 text-[10px] font-bold rounded-full",
-                        isActive
-                          ? "bg-foreground text-background"
-                          : "bg-muted text-muted-foreground"
+                        "inline-flex items-center justify-center h-5 min-w-5 px-1.5 text-[10px] font-bold rounded-full",
+                        isActive ? "bg-foreground text-background" : "bg-muted text-muted-foreground"
                       )}>
                         {count > 99 ? "99+" : count}
                       </span>
                     )}
-                    {isActive && (
-                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground rounded-full" />
-                    )}
                   </button>
                 );
               })}
+            </nav>
+          </aside>
+
+          {/* Divider */}
+          <div className="w-px bg-border mx-6 self-stretch" />
+
+          {/* Main content panel */}
+          <main className="flex-1 min-w-0">
+            {/* Panel header */}
+            <div className="flex items-center justify-between mb-4 px-1">
+              <h2 className="text-base font-semibold text-foreground capitalize">
+                {TABS.find((t) => t.id === activeTab)?.label}
+              </h2>
             </div>
-          </div>
+
+            <div className="rounded-xl border border-border overflow-hidden bg-card divide-y divide-border">
+              {renderItems()}
+            </div>
+          </main>
         </div>
 
-        {/* Content */}
-        <div className="divide-y-0">
-          {renderItems()}
-        </div>
       </div>
     </div>
   );
