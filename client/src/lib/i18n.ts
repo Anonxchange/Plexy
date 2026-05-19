@@ -38,10 +38,14 @@ function setByPath(tree: Tree, path: string, value: string) {
   let cur: Tree = tree;
   for (let i = 0; i < parts.length - 1; i++) {
     const p = parts[i];
-    if (!cur[p] || typeof cur[p] !== "object") cur[p] = {};
+    if (p === "__proto__" || p === "constructor" || p === "prototype") return;
+    if (!Object.prototype.hasOwnProperty.call(cur, p) || typeof cur[p] !== "object") cur[p] = {};
     cur = cur[p] as Tree;
   }
-  cur[parts[parts.length - 1]] = value;
+  const last = parts[parts.length - 1];
+  if (last !== "__proto__" && last !== "constructor" && last !== "prototype") {
+    cur[last] = value;
+  }
 }
 
 function buildTreeFromMap(
