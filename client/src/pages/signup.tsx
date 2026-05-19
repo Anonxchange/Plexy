@@ -29,7 +29,21 @@ interface PasswordRequirement {
   met: boolean;
 }
 
-function validatePassword(password: string): { isValid: boolean; requirements: PasswordRequirement[] } {
+const COMMON_PASSWORDS = [
+  "password","password1","password123","12345678","123456789","1234567890",
+  "qwerty123","iloveyou","admin123","letmein","welcome1","monkey123",
+  "dragon123","master123","abc12345","passw0rd","p@ssword","p@ssw0rd",
+];
+
+function hasRepeatedChars(password: string): boolean {
+  return /(.)\1{2,}/.test(password);
+}
+
+function isCommonPassword(password: string): boolean {
+  return COMMON_PASSWORDS.includes(password.toLowerCase());
+}
+
+function validatePassword(password: string): { isValid: boolean; score: number; requirements: PasswordRequirement[] } {
   const requirements: PasswordRequirement[] = [
     { label: "At least 8 characters", regex: /.{8,}/, met: false },
     { label: "One uppercase letter (A-Z)", regex: /[A-Z]/, met: false },
@@ -42,8 +56,15 @@ function validatePassword(password: string): { isValid: boolean; requirements: P
     req.met = req.regex.test(password);
   });
 
-  const isValid = requirements.every((req) => req.met);
-  return { isValid, requirements };
+  const commonFail = isCommonPassword(password);
+  if (commonFail) {
+    requirements.forEach((req) => { req.met = false; });
+  }
+
+  const metCount = requirements.filter((r) => r.met).length;
+  const score = commonFail ? 0 : Math.round((metCount / requirements.length) * 100);
+  const isValid = !commonFail && requirements.every((req) => req.met);
+  return { isValid, score, requirements };
 }
 
 const countries = [
@@ -154,8 +175,6 @@ export function SignUp() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
-
-  const isDark = theme === "dark";
 
   const passwordValidation = useMemo(() => validatePassword(password), [password]);
 
@@ -454,7 +473,7 @@ export function SignUp() {
   };
 
   return (
-    <div className={`min-h-screen ${isDark ? 'bg-black' : 'bg-white'} transition-colors duration-300`}>
+    <div className="min-h-screen bg-background transition-colors duration-300">
       {/* Header */}
       <div className="p-6 flex justify-between items-center lg:absolute lg:top-0 lg:left-0 lg:right-0 lg:z-10">
         <a href="/" className="flex items-center gap-2 cursor-pointer">
@@ -463,19 +482,17 @@ export function SignUp() {
               <PexlyIcon className="h-5 w-5 text-primary-foreground" />
             </div>
           </div>
-          <span className={`text-2xl font-extrabold ${isDark ? 'text-white' : 'text-black'}`}>
+          <span className="text-2xl font-extrabold text-foreground">
             Pexly
           </span>
         </a>
 
         {/* Theme Toggle */}
         <button
-          onClick={() => setTheme(isDark ? 'light' : 'dark')}
-          className={`p-2 rounded-full ${
-            isDark ? 'bg-gray-800 text-lime-400' : 'bg-gray-100 text-gray-700'
-          } transition-colors`}
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className="p-2 rounded-full bg-muted text-foreground transition-colors"
         >
-          {isDark ? <Moon size={20} /> : <Sun size={20} />}
+          {theme === 'dark' ? <Moon size={20} /> : <Sun size={20} />}
         </button>
       </div>
 
@@ -484,16 +501,16 @@ export function SignUp() {
         {/* Left Column: Form */}
         <div className="px-6 pt-8 lg:pt-20 max-w-md mx-auto pb-12 lg:flex lg:flex-col lg:justify-center w-full">
         {step === "email_verify" ? (
-          <div className={`rounded-2xl p-6 ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-gray-50 border border-gray-200'}`}>
-            <h2 className={`text-2xl mb-2 ${isDark ? 'text-white' : 'text-black'}`} style={{ fontWeight: 200 }}>
+          <div className="rounded-2xl p-6 bg-card border border-border">
+            <h2 className="text-2xl mb-2 text-foreground" style={{ fontWeight: 200 }}>
               Verify Your Email
             </h2>
-            <p className={`text-sm mb-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            <p className="text-sm mb-6 text-muted-foreground">
               We've sent a 6-digit code to {email}
             </p>
             
             <div className="mb-6">
-              <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <label className="block mb-2 text-sm text-muted-foreground">
                 Verification Code
               </label>
               <input
@@ -503,18 +520,14 @@ export function SignUp() {
                 maxLength={6}
                 value={emailOtp}
                 onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ""))}
-                className={`w-full px-4 py-4 rounded-xl text-center text-2xl tracking-widest font-mono ${
-                  isDark 
-                    ? 'bg-gray-900 text-white border border-gray-800 focus:border-lime-400' 
-                    : 'bg-gray-50 text-black border border-gray-200 focus:border-lime-500'
-                } focus:outline-none transition-colors`}
+                className="w-full px-4 py-4 rounded-xl text-center text-2xl tracking-widest font-mono bg-background text-foreground border border-input focus:border-primary focus:outline-none transition-colors"
                 autoFocus
               />
             </div>
 
             {/* Countdown Timer */}
             <div className="mb-4 text-center">
-              <p className={`text-sm ${otpCountdown > 30 ? (isDark ? 'text-gray-400' : 'text-gray-600') : 'text-red-500 font-medium'}`}>
+              <p className={`text-sm ${otpCountdown > 30 ? 'text-muted-foreground' : 'text-red-500 font-medium'}`}>
                 Code expires in: <span className="font-mono font-bold">{Math.floor(otpCountdown / 60)}:{(otpCountdown % 60).toString().padStart(2, '0')}</span>
               </p>
             </div>
@@ -533,12 +546,8 @@ export function SignUp() {
               disabled={resendCooldown > 0 || isResending}
               className={`w-full py-3 rounded-xl text-sm font-medium transition-colors mb-4 ${
                 resendCooldown > 0 || isResending
-                  ? isDark
-                    ? 'text-gray-600 bg-gray-800 cursor-not-allowed'
-                    : 'text-gray-400 bg-gray-100 cursor-not-allowed'
-                  : isDark
-                  ? 'text-lime-400 hover:text-lime-300 hover:bg-gray-800'
-                  : 'text-lime-600 hover:text-lime-700 hover:bg-gray-100'
+                  ? 'text-muted-foreground bg-muted cursor-not-allowed'
+                  : 'text-primary hover:text-primary/80 hover:bg-muted'
               }`}
             >
               {isResending ? "Sending..." : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend Code"}
@@ -550,18 +559,14 @@ export function SignUp() {
                 setEmailOtp("");
                 setOtpCountdown(60);
               }}
-              className={`w-full py-3 rounded-xl text-sm transition-colors ${
-                isDark 
-                  ? 'text-gray-400 hover:text-white hover:bg-gray-800' 
-                  : 'text-gray-600 hover:text-black hover:bg-gray-100'
-              }`}
+              className="w-full py-3 rounded-xl text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
             >
               Back
             </button>
           </div>
         ) : step === "details" ? (
           <>
-            <h1 className={`text-4xl mb-8 ${isDark ? 'text-white' : 'text-black'}`} style={{ fontWeight: 200, letterSpacing: '-0.01em' }}>
+            <h1 className="text-4xl mb-8 text-foreground" style={{ fontWeight: 200, letterSpacing: '-0.01em' }}>
               Create your account
             </h1>
 
@@ -570,42 +575,30 @@ export function SignUp() {
               <button 
                 type="button"
                 onClick={() => toast({ title: "Coming soon", description: "Google sign-in will be available soon" })}
-                className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-colors ${
-                  isDark 
-                    ? 'border-gray-800 hover:border-gray-700 text-gray-400 hover:text-white' 
-                    : 'border-gray-200 hover:border-gray-300 text-gray-600 hover:text-black'
-                }`}
+                className="w-12 h-12 rounded-full border-2 border-border hover:border-border/60 flex items-center justify-center transition-colors text-muted-foreground hover:text-foreground"
               >
                 <FcGoogle className="w-5 h-5" />
               </button>
               <button 
                 type="button"
                 onClick={() => toast({ title: "Coming soon", description: "Facebook sign-in will be available soon" })}
-                className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-colors ${
-                  isDark 
-                    ? 'border-gray-800 hover:border-gray-700 text-gray-400 hover:text-white' 
-                    : 'border-gray-200 hover:border-gray-300 text-gray-600 hover:text-black'
-                }`}
+                className="w-12 h-12 rounded-full border-2 border-border hover:border-border/60 flex items-center justify-center transition-colors text-muted-foreground hover:text-foreground"
               >
                 <FaFacebook className="w-5 h-5 text-[#1877F2]" />
               </button>
               <button 
                 type="button"
                 onClick={() => toast({ title: "Coming soon", description: "Apple sign-in will be available soon" })}
-                className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-colors ${
-                  isDark 
-                    ? 'border-gray-800 hover:border-gray-700 text-gray-400 hover:text-white' 
-                    : 'border-gray-200 hover:border-gray-300 text-gray-600 hover:text-black'
-                }`}
+                className="w-12 h-12 rounded-full border-2 border-border hover:border-border/60 flex items-center justify-center transition-colors text-muted-foreground hover:text-foreground"
               >
-                <FaApple className={`w-5 h-5 ${isDark ? 'text-white' : 'text-black'}`} />
+                <FaApple className="w-5 h-5 text-foreground" />
               </button>
             </div>
 
-            <div className={`flex items-center gap-4 mb-6`}>
-              <div className={`flex-1 h-px ${isDark ? 'bg-gray-800' : 'bg-gray-200'}`}></div>
-              <span className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>or</span>
-              <div className={`flex-1 h-px ${isDark ? 'bg-gray-800' : 'bg-gray-200'}`}></div>
+            <div className="flex items-center gap-4 mb-6">
+              <div className="flex-1 h-px bg-border"></div>
+              <span className="text-sm text-muted-foreground">or</span>
+              <div className="flex-1 h-px bg-border"></div>
             </div>
 
             <form onSubmit={handleSubmit}>
@@ -614,11 +607,7 @@ export function SignUp() {
                 <button
                   type="button"
                   onClick={() => setSignupMethod(signupMethod === "email" ? "phone" : "email")}
-                  className={`w-full py-3 px-4 rounded-xl text-sm ${
-                    isDark 
-                      ? 'bg-gray-900 text-gray-300 border border-gray-800 hover:border-gray-700' 
-                      : 'bg-gray-50 text-gray-700 border border-gray-200 hover:border-gray-300'
-                  } transition-colors`}
+                  className="w-full py-3 px-4 rounded-xl text-sm bg-card text-muted-foreground border border-border hover:border-border/60 transition-colors"
                 >
                   Sign up using {signupMethod === "email" ? "Phone Number" : "Email"}
                 </button>
@@ -626,7 +615,7 @@ export function SignUp() {
 
               {/* Full Name */}
               <div className="mb-6">
-                <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <label className="block mb-2 text-sm text-muted-foreground">
                   Full Name<span className="text-red-500">*</span>
                 </label>
                 <input
@@ -635,28 +624,20 @@ export function SignUp() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required
-                  className={`w-full px-4 py-4 rounded-xl text-base ${
-                    isDark 
-                      ? 'bg-gray-900 text-white border border-gray-800 focus:border-lime-400' 
-                      : 'bg-gray-50 text-black border border-gray-200 focus:border-lime-500'
-                  } focus:outline-none transition-colors`}
+                  className="w-full px-4 py-4 rounded-xl text-base bg-background text-foreground border border-input focus:border-primary focus:outline-none transition-colors"
                 />
               </div>
 
               {/* Country Selection */}
               <div className="mb-6">
-                <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <label className="block mb-2 text-sm text-muted-foreground">
                   Country<span className="text-red-500">*</span>
                   {detectingCountry && (
                     <span className="ml-2 text-xs text-lime-400">Detecting...</span>
                   )}
                 </label>
                 <Select value={country} onValueChange={setCountry}>
-                  <SelectTrigger className={`w-full h-12 ${
-                    isDark 
-                      ? 'bg-gray-900 text-white border border-gray-800' 
-                      : 'bg-gray-50 text-black border border-gray-200'
-                  }`}>
+                  <SelectTrigger className="w-full h-12 bg-background text-foreground border border-input">
                     <div className="flex items-center gap-3">
                       <MapPin className="h-4 w-4 text-muted-foreground" />
                       <SelectValue />
@@ -678,7 +659,7 @@ export function SignUp() {
               {/* Email or Phone */}
               {signupMethod === "email" ? (
                 <div className="mb-6">
-                  <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <label className="block mb-2 text-sm text-muted-foreground">
                     Email Address<span className="text-red-500">*</span>
                   </label>
                   <input
@@ -687,17 +668,13 @@ export function SignUp() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className={`w-full px-4 py-4 rounded-xl text-base ${
-                      isDark 
-                        ? 'bg-gray-900 text-white border border-gray-800 focus:border-lime-400' 
-                        : 'bg-gray-50 text-black border border-gray-200 focus:border-lime-500'
-                    } focus:outline-none transition-colors`}
+                    className="w-full px-4 py-4 rounded-xl text-base bg-background text-foreground border border-input focus:border-primary focus:outline-none transition-colors"
                   />
                 </div>
               ) : (
                 <>
                   <div className="mb-6">
-                    <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    <label className="block mb-2 text-sm text-muted-foreground">
                       Phone Number<span className="text-red-500">*</span>
                     </label>
                     <div className="flex gap-2">
@@ -708,11 +685,7 @@ export function SignUp() {
                         value={phoneNumber}
                         onChange={(e) => setPhoneNumber(e.target.value)}
                         required
-                        className={`flex-1 px-4 py-4 rounded-xl text-base ${
-                          isDark 
-                            ? 'bg-gray-900 text-white border border-gray-800 focus:border-lime-400' 
-                            : 'bg-gray-50 text-black border border-gray-200 focus:border-lime-500'
-                        } focus:outline-none transition-colors`}
+                        className="flex-1 px-4 py-4 rounded-xl text-base bg-background text-foreground border border-input focus:border-primary focus:outline-none transition-colors"
                       />
                     </div>
                   </div>
@@ -723,7 +696,7 @@ export function SignUp() {
               {signupMethod === "email" && (
                 <>
                   <div className="mb-6">
-                    <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    <label className="block mb-2 text-sm text-muted-foreground">
                       Password<span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
@@ -733,28 +706,44 @@ export function SignUp() {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
-                        className={`w-full px-4 py-4 rounded-xl text-base pr-12 ${
-                          isDark 
-                            ? 'bg-gray-900 text-white border border-gray-800 focus:border-lime-400' 
-                            : 'bg-gray-50 text-black border border-gray-200 focus:border-lime-500'
-                        } focus:outline-none transition-colors`}
+                        className="w-full px-4 py-4 rounded-xl text-base pr-12 bg-background text-foreground border border-input focus:border-primary focus:outline-none transition-colors"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className={`absolute right-4 top-1/2 -translate-y-1/2 ${
-                          isDark ? 'text-gray-500' : 'text-gray-400'
-                        }`}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground"
                       >
                         {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                       </button>
                     </div>
 
-                    {/* Password Requirements */}
+                    {/* Password Strength + Requirements */}
                     {password.length > 0 && (
-                      <div className={`mt-3 p-3 rounded-lg ${isDark ? 'bg-gray-800/50' : 'bg-gray-100'}`}>
-                        <p className={`text-xs font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                          Password must contain:
+                      <div className="mt-3 p-3 rounded-lg bg-muted">
+                        {/* Strength bar */}
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="text-muted-foreground">Strength</span>
+                          <span className={
+                            passwordValidation.score >= 100 ? 'text-green-500 font-semibold' :
+                            passwordValidation.score >= 60  ? 'text-yellow-500 font-semibold' :
+                            'text-red-500 font-semibold'
+                          }>
+                            {passwordValidation.score >= 100 ? 'Strong' :
+                             passwordValidation.score >= 60  ? 'Fair' : 'Weak'}
+                          </span>
+                        </div>
+                        <div className="w-full h-1.5 rounded-full mb-3 overflow-hidden bg-muted-foreground/20">
+                          <div
+                            className={`h-full rounded-full transition-all duration-300 ${
+                              passwordValidation.score >= 100 ? 'bg-green-500' :
+                              passwordValidation.score >= 60  ? 'bg-yellow-400' :
+                              'bg-red-400'
+                            }`}
+                            style={{ width: `${passwordValidation.score}%` }}
+                          />
+                        </div>
+                        <p className="text-xs font-medium mb-2 text-foreground">
+                          Requirements:
                         </p>
                         <ul className="space-y-1">
                           {passwordValidation.requirements.map((req, index) => (
@@ -764,10 +753,7 @@ export function SignUp() {
                               ) : (
                                 <X className="w-3 h-3 text-red-400" />
                               )}
-                              <span className={req.met 
-                                ? (isDark ? 'text-green-400' : 'text-green-600') 
-                                : (isDark ? 'text-gray-400' : 'text-gray-500')
-                              }>
+                              <span className={req.met ? 'text-green-500' : 'text-muted-foreground'}>
                                 {req.label}
                               </span>
                             </li>
@@ -779,7 +765,7 @@ export function SignUp() {
 
                   {/* Confirm Password */}
                   <div className="mb-6">
-                    <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    <label className="block mb-2 text-sm text-muted-foreground">
                       Confirm Password<span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
@@ -789,18 +775,12 @@ export function SignUp() {
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         required
-                        className={`w-full px-4 py-4 rounded-xl text-base pr-12 ${
-                          isDark 
-                            ? 'bg-gray-900 text-white border border-gray-800 focus:border-lime-400' 
-                            : 'bg-gray-50 text-black border border-gray-200 focus:border-lime-500'
-                        } focus:outline-none transition-colors`}
+                        className="w-full px-4 py-4 rounded-xl text-base pr-12 bg-background text-foreground border border-input focus:border-primary focus:outline-none transition-colors"
                       />
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className={`absolute right-4 top-1/2 -translate-y-1/2 ${
-                          isDark ? 'text-gray-500' : 'text-gray-400'
-                        }`}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground"
                       >
                         {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                       </button>
@@ -810,13 +790,13 @@ export function SignUp() {
               )}
 
               {/* Terms and Conditions */}
-              <div className={`text-xs mb-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <div className="text-xs mb-6 text-muted-foreground">
                 By continuing, you acknowledge that you have read and agree to Pexly's{" "}
-                <a href="#" className={`${isDark ? 'text-lime-400' : 'text-lime-600'} hover:underline`}>
+                <a href="#" className="text-primary hover:underline">
                   Terms and conditions
                 </a>{" "}
                 and{" "}
-                <a href="#" className={`${isDark ? 'text-lime-400' : 'text-lime-600'} hover:underline`}>
+                <a href="#" className="text-primary hover:underline">
                   Privacy policy
                 </a>
               </div>
@@ -826,7 +806,7 @@ export function SignUp() {
                 <div className="mb-6 flex flex-col items-center gap-2">
                   {captchaError ? (
                     <div className="flex flex-col items-center gap-2">
-                      <p className={`text-sm ${isDark ? 'text-red-400' : 'text-red-500'}`}>
+                      <p className="text-sm text-destructive">
                         Captcha failed to load.
                       </p>
                       <button
@@ -836,7 +816,7 @@ export function SignUp() {
                           setCaptchaToken(null);
                           setCaptchaKey(k => k + 1);
                         }}
-                        className={`text-sm underline ${isDark ? 'text-lime-400' : 'text-lime-600'}`}
+                        className="text-sm underline text-primary"
                       >
                         Retry
                       </button>
@@ -849,7 +829,7 @@ export function SignUp() {
                       onError={() => { setCaptchaToken(null); setCaptchaError(true); }}
                       onExpire={() => { setCaptchaToken(null); setCaptchaError(false); }}
                       options={{
-                        theme: isDark ? 'dark' : 'light',
+                        theme: theme === 'dark' ? 'dark' : 'light',
                       }}
                     />
                   )}
@@ -867,20 +847,20 @@ export function SignUp() {
               </button>
 
               {/* Sign In Link */}
-              <div className={`text-center mt-8 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <div className="text-center mt-8 text-sm text-muted-foreground">
                 Have an account?{' '}
-                <a href="/signin" className={`${isDark ? 'text-lime-400' : 'text-lime-600'} hover:underline font-medium`}>
+                <a href="/signin" className="text-primary hover:underline font-medium">
                   Log in
                 </a>
               </div>
             </form>
           </>
         ) : (
-          <div className={`rounded-2xl p-6 ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-gray-50 border border-gray-200'}`}>
-            <h2 className={`text-2xl mb-2 ${isDark ? 'text-white' : 'text-black'}`} style={{ fontWeight: 200 }}>
+          <div className="rounded-2xl p-6 bg-card border border-border">
+            <h2 className="text-2xl mb-2 text-foreground" style={{ fontWeight: 200 }}>
               Phone Verification
             </h2>
-            <p className={`text-sm mb-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            <p className="text-sm mb-6 text-muted-foreground">
               {signupMethod === "phone" 
                 ? "Verify your phone number to complete signup"
                 : "Verify your phone number to unlock Level 1 trading (Optional)"}
