@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,26 @@ import { useToast } from "@/hooks/use-toast";
 import { deriveVaultKey } from "@/lib/webCrypto";
 import { createClient } from "@/lib/supabase";
 import { ShieldCheck, Lock, AlertTriangle, CheckCircle2, Loader2, X, RefreshCw } from "lucide-react";
+
+const COMMON_PASSWORDS = [
+  "password","password1","password123","12345678","123456789","1234567890",
+  "qwerty123","iloveyou","admin123","letmein","welcome1","monkey123",
+  "dragon123","master123","abc12345","passw0rd","p@ssword","p@ssw0rd",
+];
+
+function validateWalletPassword(password: string): { isValid: boolean; score: number; errors: string[] } {
+  const checks = [
+    { test: /.{8,}/.test(password),               msg: "At least 8 characters" },
+    { test: /[A-Z]/.test(password),               msg: "One uppercase letter" },
+    { test: /[a-z]/.test(password),               msg: "One lowercase letter" },
+    { test: /[0-9]/.test(password),               msg: "One number" },
+    { test: /[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\\/`~;']/.test(password), msg: "One special character" },
+    { test: !COMMON_PASSWORDS.includes(password.toLowerCase()), msg: "Must not be a common password" },
+  ];
+  const errors = checks.filter((c) => !c.test).map((c) => c.msg);
+  const score = Math.round((checks.filter((c) => c.test).length / checks.length) * 100);
+  return { isValid: errors.length === 0, score, errors };
+}
 import securityIllustration from "@/assets/svg-image-1 20.svg";
 
 interface WalletSetupDialogProps {
@@ -30,19 +50,21 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expec
 
   const isImporting = !!expectedAddress;
 
+  const passwordValidation = useMemo(() => validateWalletPassword(password), [password]);
+
   const handleCreatePassword = async () => {
-    if (password.length < 8) {
+    if (!isImporting && !passwordValidation.isValid) {
       toast({
-        title: "Weak password",
-        description: "Password must be at least 8 characters long.",
+        title: "Password too weak",
+        description: passwordValidation.errors[0] ?? "Please meet all password requirements.",
         variant: "destructive",
       });
       return;
     }
-    
+
     if (!isImporting && password !== confirmPassword) {
       toast({
-        title: "Passwords mismatch",
+        title: "Passwords don't match",
         description: "Please make sure both passwords match.",
         variant: "destructive",
       });
@@ -210,6 +232,41 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expec
                       onChange={(e) => setPassword(e.target.value)}
                     />
                   </div>
+
+                  {!isImporting && password.length > 0 && (
+                    <div className="text-left px-2 space-y-2">
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="text-gray-500">Strength</span>
+                        <span className={
+                          passwordValidation.score >= 100 ? "text-green-600 font-semibold" :
+                          passwordValidation.score >= 60  ? "text-yellow-600 font-semibold" :
+                          "text-red-500 font-semibold"
+                        }>
+                          {passwordValidation.score >= 100 ? "Strong" :
+                           passwordValidation.score >= 60  ? "Fair" : "Weak"}
+                        </span>
+                      </div>
+                      <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            passwordValidation.score >= 100 ? "bg-green-500" :
+                            passwordValidation.score >= 60  ? "bg-yellow-400" :
+                            "bg-red-400"
+                          }`}
+                          style={{ width: `${passwordValidation.score}%` }}
+                        />
+                      </div>
+                      <ul className="space-y-1 pt-1">
+                        {passwordValidation.errors.map((err, i) => (
+                          <li key={i} className="flex items-center gap-2 text-xs text-red-500">
+                            <X className="w-3 h-3 shrink-0" />
+                            {err}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   {!isImporting && (
                     <div className="relative group">
                       <Input
