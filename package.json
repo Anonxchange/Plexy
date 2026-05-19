@@ -77,6 +77,10 @@
     "wouter": "^3.3.5",
     "zod": "^3.25.76"
   },
+  "overrides": {
+    "lodash": ">=4.18.0",
+    "ws": ">=8.20.1"
+  },
   "dependencies": {
     "@ethereumjs/rlp": "^10.1.1",
     "@marsidev/react-turnstile": "^1.5.1",
