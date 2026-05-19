@@ -115,7 +115,7 @@ export function HeroSection() {
           <span className="text-[11px] font-medium text-foreground px-2.5">
             {t('hero.trust_badge')}
           </span>
-          <span className="rounded-full bg-foreground/[0.07] px-2.5 py-0.5 text-[11px] font-medium text-foreground/60 whitespace-nowrap">
+          <span className="rounded-full bg-foreground/[0.07] px-2.5 py-0.5 text-[11px] font-medium text-foreground/90 whitespace-nowrap">
             {t('hero.trust_since')}
           </span>
         </div>
