@@ -81,14 +81,16 @@ export function IPWhitelistDialog({
 
   const validateIP = (ip: string): boolean => {
     const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
-    const ipv6Regex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$/;
-    
+
     if (ipv4Regex.test(ip)) {
       const parts = ip.split('.').map(Number);
       return parts.every(part => part >= 0 && part <= 255);
     }
-    
-    return ipv6Regex.test(ip);
+
+    // Safe IPv6 validation without ReDoS-prone nested quantifiers
+    const segments = ip.split(':');
+    if (segments.length !== 8) return false;
+    return segments.every(seg => /^[0-9a-fA-F]{1,4}$/.test(seg));
   };
 
   const handleAddIP = async () => {
