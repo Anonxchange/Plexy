@@ -244,7 +244,24 @@ export function ShippingEstimator({
         toast.error("Could not create checkout. Please try again.");
         return;
       }
-      window.location.href = result.checkoutUrl;
+      // Validate URL is a safe https destination before redirecting
+      const allowedHosts = ["checkout.shopify.com", "shop.app"];
+      let parsedUrl: URL;
+      try {
+        parsedUrl = new URL(result.checkoutUrl);
+      } catch {
+        toast.error("Invalid checkout URL. Please try again.");
+        return;
+      }
+      const isAllowed =
+        parsedUrl.protocol === "https:" &&
+        (allowedHosts.some(h => parsedUrl.hostname === h || parsedUrl.hostname.endsWith(`.${h}`)) ||
+          parsedUrl.hostname.endsWith(".myshopify.com"));
+      if (!isAllowed) {
+        toast.error("Unexpected checkout destination. Please try again.");
+        return;
+      }
+      window.location.href = parsedUrl.href;
     } catch {
       toast.error("Checkout failed. Please try again.");
     } finally {
