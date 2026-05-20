@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useLocation } from "wouter";
+import { useHead } from "@unhead/react";
+import { useSchema, createProductSchema } from "@/hooks/use-schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -149,6 +151,30 @@ export function ProductDetail() {
   
   const { addToCart, isLoading: isAddingToCart } = useCart();
   const { user } = useAuth();
+
+  const productUrl = `https://www.pexly.app/shop/product/${id}`;
+  const productDescription = product?.description
+    ? product.description.replace(/<[^>]+>/g, '').trim().slice(0, 155)
+    : "View this product in the Pexly shop and complete your purchase using cryptocurrency.";
+
+  useHead({
+    title: product ? `${product.title} | Pexly Shop` : "Product | Pexly Shop",
+    meta: [
+      { name: "description", content: productDescription },
+      { property: "og:type", content: "product" },
+      { property: "og:title", content: product ? `${product.title} | Pexly Shop` : "Product | Pexly Shop" },
+      { property: "og:description", content: productDescription },
+      { property: "og:image", content: product?.images?.[0] || "" },
+      { property: "og:url", content: productUrl },
+    ],
+    link: [{ rel: "canonical", href: productUrl }],
+  });
+
+  const productSchema = useMemo(
+    () => product ? createProductSchema(product, id || '') : {},
+    [product, id]
+  );
+  useSchema(productSchema, 'product-schema');
 
   useEffect(() => {
     if (id) {
