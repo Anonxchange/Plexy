@@ -328,50 +328,60 @@ export function SignUp() {
   const handleEmailOtpVerify = async () => {
     setLoading(true);
     
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify({
-        email,
-        otp: emailOtp,
-        password,
-        fullName,
-        country,
-      }),
-    });
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          email,
+          otp: emailOtp,
+          password,
+          fullName,
+          country,
+        }),
+      });
 
-    const data = await response.json();
-    setLoading(false);
+      const data = await response.json().catch(() => ({}));
 
-    if (!response.ok) {
+      if (!response.ok) {
+        toast({
+          title: "Verification Failed",
+          description: data.error || "Invalid verification code",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Sign in the user
+      await signIn(email, password);
+      
+      toast({
+        title: "Success!",
+        description: "Email verified! Account created successfully!",
+      });
+      
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData.user) {
+        try {
+          await deviceFingerprint.registerDeviceAsTrusted(userData.user.id);
+        } catch (error) {
+          console.error('Error auto-trusting device during signup:', error);
+        }
+        setUserId(userData.user.id);
+        setStep("phone");
+      }
+    } catch (error) {
+      console.error("Email OTP verify error:", error);
       toast({
         title: "Verification Failed",
-        description: data.error || "Invalid verification code",
+        description: "Something went wrong. Please check your connection and try again.",
         variant: "destructive",
       });
-      return;
-    }
-
-    // Sign in the user
-    await signIn(email, password);
-    
-    toast({
-      title: "Success!",
-      description: "Email verified! Account created successfully!",
-    });
-    
-    const { data: userData } = await supabase.auth.getUser();
-    if (userData.user) {
-      try {
-        await deviceFingerprint.registerDeviceAsTrusted(userData.user.id);
-      } catch (error) {
-        console.error('Error auto-trusting device during signup:', error);
-      }
-      setUserId(userData.user.id);
-      setStep("phone");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -442,34 +452,43 @@ export function SignUp() {
   const handleResendOtp = async () => {
     setIsResending(true);
     
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-verification-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify({ email }),
-    });
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-verification-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ email }),
+      });
 
-    setIsResending(false);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        toast({
+          title: "Error",
+          description: errorData.error || "Failed to resend verification code. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      setOtpCountdown(300);
+      setResendCooldown(60);
+      setEmailOtp("");
+      toast({
+        title: "Code resent!",
+        description: "We've sent a new 6-digit verification code to your email.",
+      });
+    } catch (error) {
+      console.error("Resend OTP error:", error);
       toast({
         title: "Error",
-        description: errorData.error || "Failed to resend verification code. Please try again.",
+        description: "Something went wrong. Please check your connection and try again.",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setIsResending(false);
     }
-
-    setOtpCountdown(300);
-    setResendCooldown(60);
-    setEmailOtp("");
-    toast({
-      title: "Code resent!",
-      description: "We've sent a new 6-digit verification code to your email.",
-    });
   };
 
   return (
