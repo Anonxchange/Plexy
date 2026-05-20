@@ -28,7 +28,7 @@ export async function deriveTronPrivateKey(mnemonic: string): Promise<Uint8Array
   const root = HDKey.fromMasterSeed(seed);
   const account = root.derive("m/44'/195'/0'/0/0");
 
-  if (!account.privateKey || !secp256k1.utils.isValidPrivateKey(account.privateKey)) {
+  if (!account.privateKey || !secp256k1.utils.isValidSecretKey(account.privateKey)) {
     wipeBytes(seed);
     wipeHDKey(root);
     wipeHDKey(account);
