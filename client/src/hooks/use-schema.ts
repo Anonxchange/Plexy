@@ -7,9 +7,9 @@ interface SchemaData {
 export function useSchema(schema: SchemaData, id: string) {
   useEffect(() => {
     const existingScript = document.getElementById(id);
-    if (existingScript) {
-      existingScript.remove();
-    }
+    if (existingScript) existingScript.remove();
+
+    if (!schema || Object.keys(schema).length === 0) return;
 
     const script = document.createElement('script');
     script.id = id;
@@ -19,9 +19,7 @@ export function useSchema(schema: SchemaData, id: string) {
 
     return () => {
       const scriptToRemove = document.getElementById(id);
-      if (scriptToRemove) {
-        scriptToRemove.remove();
-      }
+      if (scriptToRemove) scriptToRemove.remove();
     };
   }, [schema, id]);
 }
@@ -466,3 +464,74 @@ export const supportPageSchema = {
     }
   ]
 };
+
+export const shopPageSchema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://www.pexly.app/shop#webpage",
+      "url": "https://www.pexly.app/shop",
+      "name": "Crypto Shop — Buy Products with Cryptocurrency | Pexly",
+      "description": "Discover products and services from sellers worldwide. Pay directly with Bitcoin, Ethereum, USDT, and more cryptocurrencies on Pexly.",
+      "isPartOf": { "@id": "https://www.pexly.app/#website" },
+      "dateModified": "2025-01-01T00:00:00Z"
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.pexly.app/" },
+        { "@type": "ListItem", "position": 2, "name": "Shop", "item": "https://www.pexly.app/shop" }
+      ]
+    }
+  ]
+};
+
+export function createProductSchema(product: {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  currency: string;
+  images: string[];
+  availableForSale?: boolean;
+}, urlId: string) {
+  const productUrl = `https://www.pexly.app/shop/product/${encodeURIComponent(urlId)}`;
+  const cleanDescription = product.description
+    ? product.description.replace(/<[^>]+>/g, '').trim().slice(0, 5000)
+    : '';
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Product",
+        "name": product.title,
+        "description": cleanDescription,
+        "url": productUrl,
+        "image": product.images.slice(0, 5).filter(Boolean),
+        "offers": {
+          "@type": "Offer",
+          "price": product.price.toFixed(2),
+          "priceCurrency": product.currency,
+          "availability": product.availableForSale !== false
+            ? "https://schema.org/InStock"
+            : "https://schema.org/OutOfStock",
+          "url": productUrl,
+          "seller": {
+            "@type": "Organization",
+            "name": "Pexly",
+            "url": "https://www.pexly.app"
+          }
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.pexly.app/" },
+          { "@type": "ListItem", "position": 2, "name": "Shop", "item": "https://www.pexly.app/shop" },
+          { "@type": "ListItem", "position": 3, "name": product.title, "item": productUrl }
+        ]
+      }
+    ]
+  };
+}
