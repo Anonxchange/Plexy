@@ -76,10 +76,10 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expec
 
     try {
       const supabase = createClient();
+      const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
       
       if (isImporting) {
         // Recovery flow: Attempt to load from Supabase and verify with password
-        const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
         const wallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
         const ethWallet = wallets.find(w => w.chainId === "ethereum");
         
