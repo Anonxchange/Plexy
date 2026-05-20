@@ -1,4 +1,5 @@
 import { useHead } from "@unhead/react";
+import { useSchema, shopPageSchema } from "@/hooks/use-schema";
 import { useState, useEffect, useRef, lazy, Suspense, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -125,7 +126,18 @@ function buildCategoryTree(categories: string[]): CategoryNode[] {
 }
 
 export function Shop() {
-  useHead({ title: "Crypto Shop | Pexly", meta: [{ name: "description", content: "Discover products and services available for direct cryptocurrency purchase." }] });
+  useHead({
+    title: "Crypto Shop | Pexly",
+    meta: [
+      { name: "description", content: "Discover products and services from sellers worldwide. Pay directly with Bitcoin, Ethereum, USDT, and more cryptocurrencies." },
+      { property: "og:type", content: "website" },
+      { property: "og:title", content: "Crypto Shop | Pexly" },
+      { property: "og:description", content: "Discover products and services from sellers worldwide. Pay directly with Bitcoin, Ethereum, USDT, and more." },
+      { property: "og:url", content: "https://www.pexly.app/shop" },
+    ],
+    link: [{ rel: "canonical", href: "https://www.pexly.app/shop" }],
+  });
+  useSchema(shopPageSchema, 'shop-schema');
   const [, navigate] = useLocation();
   const { addToCart } = useCart();
   const [searchQuery, setSearchQuery] = useState("");
