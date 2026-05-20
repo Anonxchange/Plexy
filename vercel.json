@@ -21,14 +21,6 @@
       ]
     },
     {
-      "source": "/shop/product/:handle",
-      "destination": "https://hvpeycnedmzrjshmvgri.supabase.co/functions/v1/prerender?path=/shop/product/:handle"
-    },
-    {
-      "source": "/shop",
-      "destination": "https://hvpeycnedmzrjshmvgri.supabase.co/functions/v1/prerender?path=/shop"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
