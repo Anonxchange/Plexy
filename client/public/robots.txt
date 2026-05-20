@@ -96,3 +96,4 @@ User-agent: img2dataset
 Disallow: /
 
 Sitemap: https://www.pexly.app/sitemap.xml
+Sitemap: https://hvpeycnedmzrjshmvgri.supabase.co/functions/v1/sitemap-products
