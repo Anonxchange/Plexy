@@ -22,11 +22,11 @@
     },
     {
       "source": "/shop/product/:handle",
-      "destination": "https://YOUR_PROJECT_REF.supabase.co/functions/v1/prerender?path=/shop/product/:handle"
+      "destination": "https://hvpeycnedmzrjshmvgri.supabase.co/functions/v1/prerender?path=/shop/product/:handle"
     },
     {
       "source": "/shop",
-      "destination": "https://YOUR_PROJECT_REF.supabase.co/functions/v1/prerender?path=/shop"
+      "destination": "https://hvpeycnedmzrjshmvgri.supabase.co/functions/v1/prerender?path=/shop"
     },
     {
       "source": "/(.*)",
