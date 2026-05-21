@@ -620,7 +620,6 @@ export function ProductDetail() {
                     })}
                   </div>
                 )}
-              </div>
 
               {/* Description + store — desktop only, lives under images in col 1 */}
               <div className="hidden md:block space-y-4 pt-2">
@@ -647,6 +646,7 @@ export function ProductDetail() {
                   </div>
                 </div>
               </div>
+            </div>
             );
           })()}
 
