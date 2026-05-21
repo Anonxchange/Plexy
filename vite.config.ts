@@ -14,6 +14,16 @@ export default defineConfig({
       "@": path.resolve(__dirname, "client", "src"),
       "@shared": path.resolve(__dirname, "shared"),
       "@assets": path.resolve(__dirname, "attached_assets"),
+
+      // @noble/hashes ships subpath specifiers not listed in its exports map.
+      // Vite 7's strict resolver rejects them at build time without these.
+      // Each alias points directly to the real file on disk.
+      "@noble/hashes/sha256":    path.resolve(__dirname, "node_modules/@noble/hashes/sha2.js"),
+      "@noble/hashes/sha512":    path.resolve(__dirname, "node_modules/@noble/hashes/sha2.js"),
+      "@noble/hashes/sha3":      path.resolve(__dirname, "node_modules/@noble/hashes/sha3.js"),
+      "@noble/hashes/ripemd160": path.resolve(__dirname, "node_modules/@noble/hashes/legacy.js"),
+      "@noble/hashes/hmac":      path.resolve(__dirname, "node_modules/@noble/hashes/hmac.js"),
+      "@noble/hashes/utils":     path.resolve(__dirname, "node_modules/@noble/hashes/utils.js"),
     },
   },
 
@@ -95,13 +105,9 @@ export default defineConfig({
     },
   },
 
-  // ─── Dev server (local machine only) ─────────────────────────────────────
-  // No host override → Vite defaults to 127.0.0.1 (loopback).
-  // This means only processes on your machine can reach it — not your LAN,
-  // not the internet, and no amount of header spoofing changes that because
-  // the OS drops the packet before Vite ever sees it.
-  // allowedHosts is omitted — it only validates HTTP headers, not the
-  // network layer, so it adds nothing when you're already loopback-only.
+  // Dev server — loopback only (Vite default: 127.0.0.1).
+  // Only your machine can reach it. No header-based allowedHosts needed
+  // because the OS drops packets from any other source before Vite sees them.
   server: {
     port: 5000,
     hmr: true,
@@ -111,15 +117,13 @@ export default defineConfig({
     },
   },
 
-  // ─── Preview server (test your production build locally) ─────────────────
-  // Same rule: loopback only. Run `vite preview` before deploying to Vercel
-  // to catch build-time regressions without exposing anything publicly.
+  // Preview server — same loopback-only rule.
+  // Use `vite preview` locally before pushing to Vercel to catch build regressions.
   preview: {
     port: 4173,
   },
 
-  // ─── Production ───────────────────────────────────────────────────────────
-  // Neither server block above runs on Vercel. `vite build` emits static
-  // files to /dist. Vercel's CDN serves those files. Security headers
-  // (HSTS, X-Frame-Options, CSP) belong in vercel.json, not here.
+  // Production: `vite build` emits static files to /dist.
+  // Vercel's CDN serves them — no Vite server runs in production.
+  // Security headers (HSTS, CSP, X-Frame-Options) belong in vercel.json.
 });
