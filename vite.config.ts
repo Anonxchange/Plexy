@@ -5,6 +5,8 @@ import path from "path";
 export default defineConfig({
   root: "client",
   envDir: "../",
+  envPrefix: "VITE_",  // only VITE_* vars are ever baked into the bundle
+
   base: "/",
 
   plugins: [react()],
@@ -15,9 +17,9 @@ export default defineConfig({
       "@shared": path.resolve(__dirname, "shared"),
       "@assets": path.resolve(__dirname, "attached_assets"),
 
-      // @noble/hashes ships subpath specifiers not listed in its exports map.
-      // Vite 7's strict resolver rejects them at build time without these.
-      // Each alias points directly to the real file on disk.
+      // @noble/hashes exports map is broken — these aliases are required for
+      // Vite 7 to resolve subpath imports. Pin @noble/hashes in package.json
+      // and verify these filenames still exist after any version bump.
       "@noble/hashes/sha256":    path.resolve(__dirname, "node_modules/@noble/hashes/sha2.js"),
       "@noble/hashes/sha512":    path.resolve(__dirname, "node_modules/@noble/hashes/sha2.js"),
       "@noble/hashes/sha3":      path.resolve(__dirname, "node_modules/@noble/hashes/sha3.js"),
@@ -54,7 +56,8 @@ export default defineConfig({
           "vendor-ui-x",
           "vendor-charts",
           "vendor-canvas",
-          "vendor-crypto",
+          // vendor-crypto removed: crypto runs at auth/signing time, not on
+          // demand — stripping its preload causes race conditions on load
           "vendor-motion",
         ];
         if (lazyPrefixes.some((p) => filename.includes(p))) return [];
@@ -105,9 +108,6 @@ export default defineConfig({
     },
   },
 
-  // Dev server — loopback only (Vite default: 127.0.0.1).
-  // Only your machine can reach it. No header-based allowedHosts needed
-  // because the OS drops packets from any other source before Vite sees them.
   server: {
     port: 5000,
     hmr: true,
@@ -117,13 +117,7 @@ export default defineConfig({
     },
   },
 
-  // Preview server — same loopback-only rule.
-  // Use `vite preview` locally before pushing to Vercel to catch build regressions.
   preview: {
     port: 4173,
   },
-
-  // Production: `vite build` emits static files to /dist.
-  // Vercel's CDN serves them — no Vite server runs in production.
-  // Security headers (HSTS, CSP, X-Frame-Options) belong in vercel.json.
 });
