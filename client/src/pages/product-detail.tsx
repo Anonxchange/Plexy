@@ -764,7 +764,8 @@ export function ProductDetail() {
                 </div>
               )}
 
-              <div className="space-y-2">
+              {/* Description — mobile only (desktop version is below the grid) */}
+              <div className="space-y-2 md:hidden">
                 <p className="text-sm font-semibold">Description</p>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   {product.description || "No description provided for this item."}
@@ -790,6 +791,19 @@ export function ProductDetail() {
             </div>
           </div>
         </div>}
+
+        {/* Description — desktop only, aligned to right column */}
+        {!isLoading && product && (
+          <div className="hidden md:grid md:grid-cols-2 gap-8 lg:gap-12">
+            <div />
+            <div className="space-y-2 pt-2">
+              <p className="text-sm font-semibold">Description</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {product.description || "No description provided for this item."}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Related Products */}
         {relatedProducts.length > 0 && (
