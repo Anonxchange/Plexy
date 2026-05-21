@@ -621,6 +621,32 @@ export function ProductDetail() {
                   </div>
                 )}
               </div>
+
+              {/* Description + store — desktop only, lives under images in col 1 */}
+              <div className="hidden md:block space-y-4 pt-2">
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold">Description</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {product.description || "No description provided for this item."}
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Store className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">Store</p>
+                      <p className="text-muted-foreground">{product.user_id === 'shopify' ? 'Verified Store' : 'Marketplace'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">Shipping</p>
+                      <p className="text-muted-foreground">Fast Delivery</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             );
           })()}
 
@@ -764,7 +790,7 @@ export function ProductDetail() {
                 </div>
               )}
 
-              {/* Description — mobile only (desktop version is below the grid) */}
+              {/* Description + store — mobile only (desktop version is in col 1 under images) */}
               <div className="space-y-2 md:hidden">
                 <p className="text-sm font-semibold">Description</p>
                 <p className="text-sm text-muted-foreground leading-relaxed">
@@ -772,7 +798,7 @@ export function ProductDetail() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-2 gap-4 text-sm md:hidden">
                 <div className="flex items-center gap-2">
                   <Store className="h-4 w-4 text-muted-foreground" />
                   <div>
@@ -791,19 +817,6 @@ export function ProductDetail() {
             </div>
           </div>
         </div>}
-
-        {/* Description — desktop only, aligned to right column */}
-        {!isLoading && product && (
-          <div className="hidden md:grid md:grid-cols-2 gap-8 lg:gap-12">
-            <div />
-            <div className="space-y-2 pt-2">
-              <p className="text-sm font-semibold">Description</p>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {product.description || "No description provided for this item."}
-              </p>
-            </div>
-          </div>
-        )}
 
         {/* Related Products */}
         {relatedProducts.length > 0 && (
