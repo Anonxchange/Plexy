@@ -35,10 +35,10 @@
  *    setAttribute('style',…) calls. Per the CSP spec, el.style.x = '…' (DOM
  *    property access) is NOT covered by this directive and continues to work,
  *    so Framer Motion, Radix UI, and similar libraries are unaffected.
- *  - img-src uses *.amazonaws.com to cover S3 regional buckets
- *    (e.g. polymarket-static.s3.us-east-2.amazonaws.com). The pattern
- *    *.s3.amazonaws.com does NOT match regional buckets due to extra
- *    subdomain levels, which would silently break prediction market images.
+ *  - img-src uses two S3 patterns: *.s3.amazonaws.com (classic buckets) and
+ *    *.s3.*.amazonaws.com (regional buckets, e.g. bucket.s3.us-east-2.amazonaws.com).
+ *    The former broad *.amazonaws.com wildcard was replaced to block raw EC2
+ *    instances and Lambda URLs from being used to bypass the CSP.
  *  - CORS: the Access-Control-Allow-Origin header reflects the request's Origin
  *    only if it appears in the ALLOWED_ORIGINS env variable. No wildcard is used.
  */
@@ -49,126 +49,117 @@ function generateNonce() {
   return btoa(String.fromCharCode(...bytes));
 }
 
+// Pre-build the static CSP string once at module load time.
+// Only the nonce changes per-request — everything else is constant.
+// At request time we do a single replaceAll("__NONCE__", nonce) instead of
+// rebuilding the full ~1 KB string from an array on every HTML response.
+//
+// style-src / style-src-elem / style-src-attr notes:
+//   style-src          — CSP Level 2 fallback for iOS Safari < 15.4 / old Android
+//                        WebView. 'unsafe-inline' is inert when a nonce is present
+//                        in modern browsers; only activates on engines that ignore
+//                        the Level 3 sub-directives.
+//   style-src-elem     — governs <style> and <link rel="stylesheet">. HTMLRewriter
+//                        stamps the nonce; hashes cover JS-injected <style> tags.
+//   style-src-attr     — 'none' blocks inline style="" attributes. Does NOT affect
+//                        el.style.x = '…' (DOM property), so Framer Motion / Radix
+//                        are unaffected.
+//
+// img-src S3 patterns:
+//   *.s3.amazonaws.com          — classic buckets (my-bucket.s3.amazonaws.com)
+//   *.s3.us-east-2.amazonaws.com — regional buckets in us-east-2, e.g.
+//                                  polymarket-static.s3.us-east-2.amazonaws.com
+//   NOTE: CSP wildcards are only valid as the leftmost label — *.s3.*.amazonaws.com
+//   is not legal syntax and is silently ignored by browsers. Specific regional
+//   suffixes must be listed explicitly. Add more regions here if needed.
+//   The former *.amazonaws.com wildcard also matched EC2/Lambda — replaced.
+//
+// sha256 hashes (style-src-elem fallback for JS-injected <style> tags):
+//   sha256-47DE... — empty string (Vite CSS code-split placeholders)
+//   sha256-nzTg... — react-remove-scroll scroll-lock (v2.x)
+//   sha256-CIxD... — react-remove-scroll-bar (v2.3+)
+//   sha256-JyHF... — TradingView advanced chart inline style
+//   sha256-YIjA... — vaul drawer inline style
+const _N = "__NONCE__";
+const _CSP_TEMPLATE = [
+  "default-src 'none'",
+  `script-src 'self' 'nonce-${_N}' 'strict-dynamic' challenges.cloudflare.com s3.tradingview.com static.cloudflareinsights.com`,
+  `style-src 'self' 'nonce-${_N}' 'unsafe-inline' fonts.googleapis.com`,
+  `style-src-elem 'self' 'nonce-${_N}' 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' 'sha256-nzTgYzXYDNe6BAHiiI7NNlfK8n/auuOAhh2t92YvuXo=' 'sha256-CIxDM5jnsGiKqXs2v7NKCY5MzdR9gu6TtiMJrDw29AY=' 'sha256-JyHF32z4Ou/Ujas95CX3WgBqlTt7Dxzo/fQG5/5oBo8=' 'sha256-YIjArHm2rkb5J7hX9lUM1bnQ3Kp61MTfluMGkuyKwDw=' fonts.googleapis.com`,
+  "style-src-attr 'none'",
+  "font-src 'self' fonts.gstatic.com data:",
+  [
+    "img-src 'self' data: blob:",
+    "hvpeycnedmzrjshmvgri.supabase.co",
+    "pub-1d1c072ba4084950addc61f4dd8d95a3.r2.dev",
+    "assets.coingecko.com",
+    "api.coingecko.com",
+    "flagcdn.com",
+    "cdn.shopify.com",
+    "*.reloadly.com",
+    "*.s3.amazonaws.com",
+    "*.s3.us-east-2.amazonaws.com",
+    "cdn.rocketx.exchange",
+    "cdn.jsdelivr.net",
+    "images.unsplash.com",
+    "raw.githubusercontent.com",
+    "www.pexly.app",
+    "pexly.app",
+    "ui-avatars.com",
+    "api.dicebear.com",
+    "polymarket.com",
+    "*.polymarket.com",
+  ].join(" "),
+  [
+    "connect-src 'self'",
+    "hvpeycnedmzrjshmvgri.supabase.co",
+    "wss://hvpeycnedmzrjshmvgri.supabase.co",
+    "pub-1d1c072ba4084950addc61f4dd8d95a3.r2.dev",
+    "api.coingecko.com",
+    "assets.coingecko.com",
+    "api.binance.com",
+    "binance.llamarpc.com",
+    "eth.llamarpc.com",
+    "api.blockchain.info",
+    "blockchain.info",
+    "blockstream.info",
+    "mempool.space",
+    "developers.cjdropshipping.com",
+    "static.cloudflareinsights.com",
+    "api.etherscan.io",
+    "api.mainnet-beta.solana.com",
+    "www.asterdex.com",
+    "sapi.asterdex.com",
+    "fapi.asterdex.com",
+    "pay.coinbase.com",
+    "www.staderlabs.com",
+    "www.tradingview.com",
+    "cdn.jsdelivr.net",
+    "www.pexly.app",
+    "pexly.app",
+    "api.ipify.org",
+    "ipapi.co",
+    "api.exchangerate-api.com",
+  ].join(" "),
+  "frame-src 'self' s.tradingview.com www.tradingview-widget.com www.paypal.com pay.coinbase.com challenges.cloudflare.com",
+  "worker-src 'self' blob:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "upgrade-insecure-requests",
+  "block-all-mixed-content",
+].join("; ");
+
 function buildCsp(nonce) {
-  const directives = [
-    "default-src 'none'",
-
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' challenges.cloudflare.com s3.tradingview.com static.cloudflareinsights.com`,
-
-    // style-src is split into two sub-directives (CSP Level 3):
-    //
-    //   style-src-elem — governs <style> elements and <link rel="stylesheet">.
-    //                    Nonce is injected by HTMLRewriter onto both; no unsafe-inline needed.
-    //
-    //   style-src-attr — governs inline style="" HTML attributes and setAttribute('style',…).
-    //                    Set to 'none' to block all inline style attribute injection.
-    //                    Per MDN spec, this does NOT block el.style.color = 'red' (DOM property
-    //                    access) — only the HTML attribute/setAttribute path is blocked.
-    //                    Framer Motion, Radix UI and similar libraries use DOM property access
-    //                    (el.style.transform, el.style.opacity, etc.), so they are unaffected.
-    // style-src — CSP Level 2 fallback for browsers that do not support the
-    // Level 3 sub-directives style-src-elem / style-src-attr (iOS Safari < 15.4,
-    // older Android WebView). When those browsers see only the sub-directives they
-    // ignore them and fall back to style-src; without it they'd fall back all the
-    // way to default-src 'none', which blocks every stylesheet and breaks the UI.
-    //
-    // 'unsafe-inline' here is intentionally safe: browsers that understand nonces
-    // (all modern browsers) treat 'unsafe-inline' as completely inert when a nonce
-    // is also present — so it has zero effect on them. It only provides the escape
-    // hatch for the older engines that don't parse style-src-elem at all.
-    `style-src 'self' 'nonce-${nonce}' 'unsafe-inline' fonts.googleapis.com`,
-
-    // Hashes for <style> elements dynamically injected by JavaScript at runtime.
-    // HTMLRewriter can only nonce elements in the initial HTML; JS-created <style>
-    // tags must be covered by their content hash OR by a propagated nonce.
-    //
-    // Primary fix: the app reads the nonce from <meta property="csp-nonce"> at
-    // startup and calls setNonce() from get-nonce. react-style-singleton (used by
-    // react-remove-scroll, and therefore all Radix Dialog/Dropdown/Popover/Tooltip
-    // components) reads getNonce() and stamps the nonce onto every <style> it
-    // creates — so those elements are covered by the nonce, not by hashes.
-    //
-    // Hashes below are kept as a fallback for any edge cases:
-    // sha256-47DE... — SHA-256 of empty string. Vite CSS code-splitting injects
-    //                   empty <style> placeholders; no exploitable content.
-    // sha256-nzTg... — react-remove-scroll scroll-lock style (react-remove-scroll v2.x).
-    // sha256-CIxD... — react-remove-scroll scroll-lock style (react-remove-scroll-bar v2.3+).
-    // sha256-JyHF... — TradingView advanced chart widget inline style injection.
-    // sha256-YIjA... — vaul drawer component inline style injection.
-    `style-src-elem 'self' 'nonce-${nonce}' 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' 'sha256-nzTgYzXYDNe6BAHiiI7NNlfK8n/auuOAhh2t92YvuXo=' 'sha256-CIxDM5jnsGiKqXs2v7NKCY5MzdR9gu6TtiMJrDw29AY=' 'sha256-JyHF32z4Ou/Ujas95CX3WgBqlTt7Dxzo/fQG5/5oBo8=' 'sha256-YIjArHm2rkb5J7hX9lUM1bnQ3Kp61MTfluMGkuyKwDw=' fonts.googleapis.com`,
-    "style-src-attr 'none'",
-
-    "font-src 'self' fonts.gstatic.com data:",
-
-    [
-      "img-src 'self' data: blob:",
-      "hvpeycnedmzrjshmvgri.supabase.co",
-      "pub-1d1c072ba4084950addc61f4dd8d95a3.r2.dev",
-      "assets.coingecko.com",
-      "api.coingecko.com",
-      "flagcdn.com",
-      "cdn.shopify.com",
-      "*.reloadly.com",
-      // *.amazonaws.com covers all S3 regional buckets
-      // (e.g. polymarket-static.s3.us-east-2.amazonaws.com).
-      // The narrower *.s3.amazonaws.com does not match regional variants.
-      "*.amazonaws.com",
-      "cdn.rocketx.exchange",
-      "cdn.jsdelivr.net",
-      "images.unsplash.com",
-      "raw.githubusercontent.com",
-      "www.pexly.app",
-      "pexly.app",
-      "ui-avatars.com",
-      "api.dicebear.com",
-      "polymarket.com",
-      "*.polymarket.com",
-    ].join(" "),
-
-    [
-      "connect-src 'self'",
-      "hvpeycnedmzrjshmvgri.supabase.co",
-      "wss://hvpeycnedmzrjshmvgri.supabase.co",
-      "pub-1d1c072ba4084950addc61f4dd8d95a3.r2.dev",
-      "api.coingecko.com",
-      "assets.coingecko.com",
-      "api.binance.com",
-      "binance.llamarpc.com",
-      "eth.llamarpc.com",
-      "api.blockchain.info",
-      "blockchain.info",
-      "blockstream.info",
-      "mempool.space",
-      "developers.cjdropshipping.com",
-      "static.cloudflareinsights.com",
-      "api.etherscan.io",
-      "api.mainnet-beta.solana.com",
-      "www.asterdex.com",
-      "sapi.asterdex.com",
-      "fapi.asterdex.com",
-      "pay.coinbase.com",
-      "www.staderlabs.com",
-      "www.tradingview.com",
-      "cdn.jsdelivr.net",
-      "www.pexly.app",
-      "pexly.app",
-      "api.ipify.org",
-      "ipapi.co",
-      "api.exchangerate-api.com",
-    ].join(" "),
-
-    "frame-src 'self' s.tradingview.com www.tradingview-widget.com www.paypal.com pay.coinbase.com challenges.cloudflare.com",
-    "worker-src 'self' blob:",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    "frame-ancestors 'none'",
-    "upgrade-insecure-requests",
-    "block-all-mixed-content",
-  ];
-
-  return directives.join("; ");
+  return _CSP_TEMPLATE.replaceAll(_N, nonce);
 }
+
+// Memoized CORS allowlist — ALLOWED_ORIGINS is constant for a Worker's lifetime
+// so we parse the comma-separated env string once and cache the result.
+// Parsing on every HTML request creates 3 throwaway arrays per response.
+let _allowedOriginsCache = null;
+let _allowedOriginsRaw = undefined;
 
 /**
  * Returns the Access-Control-Allow-Origin value to use, or null if the
@@ -179,12 +170,15 @@ function getAllowedOrigin(request, env) {
   const requestOrigin = request.headers.get("Origin");
   if (!requestOrigin || !env.ALLOWED_ORIGINS) return null;
 
-  const allowed = env.ALLOWED_ORIGINS
-    .split(",")
-    .map((o) => o.trim())
-    .filter(Boolean);
+  if (_allowedOriginsRaw !== env.ALLOWED_ORIGINS) {
+    _allowedOriginsRaw = env.ALLOWED_ORIGINS;
+    _allowedOriginsCache = env.ALLOWED_ORIGINS
+      .split(",")
+      .map((o) => o.trim())
+      .filter(Boolean);
+  }
 
-  return allowed.includes(requestOrigin) ? requestOrigin : null;
+  return _allowedOriginsCache.includes(requestOrigin) ? requestOrigin : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -261,7 +255,8 @@ function esc(str) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function stripHtml(html) {
@@ -294,6 +289,9 @@ function buildProductSeoTags(product, handle) {
     "USD";
   const available = product.availableForSale !== false;
 
+  // Replace < with \u003c so a product title/description containing </script>
+  // can never break out of the JSON-LD script tag and inject arbitrary HTML.
+  // \u003c is valid JSON per spec and browsers parse it correctly as <.
   const schema = JSON.stringify({
     "@context": "https://schema.org",
     "@graph": [
@@ -325,6 +323,8 @@ function buildProductSeoTags(product, handle) {
     ],
   });
 
+  const safeSchema = schema.replace(/</g, "\\u003c");
+
   return `<title>${title} | Pexly Shop</title>
 <meta name="description" content="${description}">
 <link rel="canonical" href="${esc(url)}">
@@ -338,7 +338,7 @@ function buildProductSeoTags(product, handle) {
 <meta name="twitter:title" content="${title} | Pexly Shop">
 <meta name="twitter:description" content="${description}">
 <meta name="twitter:image" content="${esc(image)}">
-<script type="application/ld+json">${schema}</script>`;
+<script type="application/ld+json">${safeSchema}</script>`;
 }
 
 function buildShopSeoTags() {
@@ -377,7 +377,7 @@ function buildShopSeoTags() {
 <meta property="og:description" content="${esc(description)}">
 <meta property="og:url" content="${esc(url)}">
 <meta property="og:site_name" content="Pexly">
-<script type="application/ld+json">${schema}</script>`;
+<script type="application/ld+json">${schema.replace(/</g, "\\u003c")}</script>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -461,6 +461,10 @@ export default {
           `${env.SUPABASE_URL}/functions/v1/sitemap-products`,
           { headers: { Authorization: `Bearer ${env.SUPABASE_ANON_KEY}` } }
         );
+        // Guard against Supabase returning a 4xx/5xx error body — forwarding
+        // that as status 200 XML would cause Googlebot to parse garbage and
+        // potentially de-index the sitemap.
+        if (!sitemapRes.ok) throw new Error(`Supabase ${sitemapRes.status}`);
         const xml = await sitemapRes.text();
         return new Response(xml, {
           headers: {
@@ -481,19 +485,6 @@ export default {
     const isShopPage = path === "/shop" || path === "/shop/";
     const needsSeo = isProductPage || isShopPage;
 
-    // Fetch product data ahead of proxying (only for product pages)
-    let seoTags = "";
-    if (isProductPage) {
-      const handle = path
-        .replace("/shop/product/", "")
-        .replace(/\/$/, "")
-        .split("?")[0];
-      const product = await fetchProductByHandle(handle, env, ctx);
-      if (product) seoTags = buildProductSeoTags(product, handle);
-    } else if (isShopPage) {
-      seoTags = buildShopSeoTags();
-    }
-
     const originRequest = new Request(
       originUrl.replace(/\/$/, "") + url.pathname + url.search,
       {
@@ -504,12 +495,30 @@ export default {
       }
     );
 
-    // Fetch from upstream with graceful error handling.
-    // Network errors (origin down, DNS failure, timeout) throw — catch them
-    // and return a clean 502 so users see a meaningful error, not a crash page.
+    // Fetch from upstream (and product data when needed) with graceful error handling.
+    // For product pages: Promise.all fires both fetches simultaneously so Supabase
+    // and Vercel round-trips overlap — cuts uncached TTFB roughly in half.
+    // fetchProductByHandle handles its own errors internally and returns null on
+    // failure, so only an origin network error triggers the 502 fallback.
     let response;
+    let seoTags = "";
+
     try {
-      response = await fetch(originRequest);
+      if (isProductPage) {
+        const handle = path
+          .replace("/shop/product/", "")
+          .replace(/\/$/, "")
+          .split("?")[0];
+        const [originResponse, product] = await Promise.all([
+          fetch(originRequest),
+          fetchProductByHandle(handle, env, ctx),
+        ]);
+        response = originResponse;
+        if (product) seoTags = buildProductSeoTags(product, handle);
+      } else {
+        if (isShopPage) seoTags = buildShopSeoTags();
+        response = await fetch(originRequest);
+      }
     } catch {
       return new Response(
         "Service temporarily unavailable. Please try again later.",
