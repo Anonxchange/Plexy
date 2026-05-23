@@ -550,7 +550,7 @@ function EventCard({
   const isMulti = markets.length > 1;
   const isLive  = event.active && !event.closed;
   const volume  = formatVolume(event.volume ?? 0);
-  const navId   = markets[0]?.conditionId ?? event.id;
+  const navId   = String(markets[0]?.id ?? event.id);
 
   // ── Multi-market: sub-markets each with Yes/No binary outcomes ──────────────
   const rankedMarkets = useMemo(() => {
@@ -671,7 +671,7 @@ function EventCard({
               const shortName = extractShortName(m.question);
               const yesPct    = Math.round(yesPrice * 100);
               const noPct     = Math.round(noPrice  * 100);
-              const navMkt    = m.conditionId ?? m.id;
+              const navMkt    = String(m.id);
               return (
                 <div
                   key={m.id}
