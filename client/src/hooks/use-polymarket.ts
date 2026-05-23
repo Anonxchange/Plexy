@@ -220,21 +220,16 @@ export function useTags() {
 }
 
 // ─── Market detail ─────────────────────────────────────────────────────────────
-// Gamma API does NOT support /markets/:conditionId — it returns 422.
-// The correct endpoint is /markets?conditionIds=<id> which returns an array.
-export function useMarketDetail(conditionId: string | undefined) {
+// Gamma API supports /markets/:numericId directly.
+export function useMarketDetail(marketId: string | undefined) {
   return useQuery({
-    queryKey: ['polymarket', 'market', conditionId],
+    queryKey: ['polymarket', 'market', marketId],
     queryFn:  async () => {
-      const results = await gammaFetch<PolymarketMarket[]>('/markets', {
-        conditionIds: conditionId,
-        limit: 1,
-      });
-      const market = results?.[0];
+      const market = await gammaFetch<PolymarketMarket>(`/markets/${marketId}`);
       if (!market) throw new Error('Market not found');
       return market;
     },
-    enabled:  !!conditionId,
+    enabled:  !!marketId,
     staleTime: 30_000,
   });
 }
