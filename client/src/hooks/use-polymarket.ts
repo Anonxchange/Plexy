@@ -37,7 +37,13 @@ async function gammaFetch<T>(
       if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
     }
   }
-  const res = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
+  const res = await fetch(url.toString(), {
+    headers: {
+      'Accept':          'application/json',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Referer':         'https://polymarket.com/',
+    },
+  });
   if (!res.ok) throw new Error(`Polymarket API error ${res.status}: ${url.pathname}`);
   return res.json() as Promise<T>;
 }
@@ -158,10 +164,12 @@ const FIDELITY_API: Record<string, number> = {
 };
 
 export function useEvents(params?: {
-  limit?:    number;
-  offset?:   number;
-  tag_slug?: string;
-  closed?:   boolean;
+  limit?:     number;
+  offset?:    number;
+  tag_slug?:  string;
+  closed?:    boolean;
+  sort?:      string;
+  ascending?: boolean;
 }) {
   return useQuery({
     queryKey: ['polymarket', 'events', params],
@@ -170,8 +178,8 @@ export function useEvents(params?: {
       closed:    String(params?.closed ?? false),
       limit:     params?.limit  ?? 20,
       offset:    params?.offset ?? 0,
-      order:     'volume_24hr',
-      ascending: 'false',
+      order:     params?.sort ?? 'volume_24hr',
+      ascending: String(params?.ascending ?? false),
       ...(params?.tag_slug ? { tag_slug: params.tag_slug } : {}),
     }),
     staleTime: 30_000,
