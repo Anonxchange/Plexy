@@ -122,6 +122,7 @@ export interface PolymarketEvent {
   negRiskAugmented: boolean;
   endDate:          string;
   startDate:        string;
+  commentCount:     number;
 }
 
 export interface PricePoint {
@@ -216,6 +217,20 @@ export function useTags() {
     queryKey: ['polymarket', 'tags'],
     queryFn:  () => gammaFetch<PolymarketTag[]>('/tags', { limit: 100 }),
     staleTime: 5 * 60_000,
+  });
+}
+
+// ─── Event detail (fetches full event by numeric ID, includes all markets) ────
+export function useEventDetail(eventId: string | undefined) {
+  return useQuery({
+    queryKey: ['polymarket', 'event', eventId],
+    queryFn:  async () => {
+      const ev = await gammaFetch<PolymarketEvent>(`/events/${eventId}`);
+      if (!ev || !ev.markets) throw new Error('Event not found');
+      return ev;
+    },
+    enabled:  !!eventId,
+    staleTime: 30_000,
   });
 }
 
