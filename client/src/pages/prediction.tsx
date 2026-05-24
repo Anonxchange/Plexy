@@ -552,15 +552,17 @@ function EventCard({
   const volume  = formatVolume(event.volume ?? 0);
   const navId   = String(event.id);
 
-  // ── Multi-market: sub-markets each with Yes/No binary outcomes ──────────────
+  // ── Multi-market: sub-markets, supports binary and named outcomes ────────────
   const rankedMarkets = useMemo(() => {
     if (!isMulti) return [];
     return markets
+      .filter(m => !m.closed)
       .map(m => {
         const outs   = parseOutcomes(m);
-        const yesOut = outs.find(o => o.name.toLowerCase() === "yes");
-        const noOut  = outs.find(o => o.name.toLowerCase() === "no");
-        return { m, yesPrice: yesOut?.price ?? 0, noPrice: noOut?.price ?? 0, isBin: !!(yesOut && noOut) };
+        // Sort by price descending so the leading outcome is always first
+        const sorted = [...outs].sort((a, b) => b.price - a.price);
+        const topOut = sorted[0];
+        return { m, outs: sorted, yesPrice: topOut?.price ?? 0 };
       })
       .filter(({ yesPrice }) => yesPrice > 0)
       .sort((a, b) => b.yesPrice - a.yesPrice)
@@ -667,29 +669,34 @@ function EventCard({
         {isMulti ? (
           /* Multi sub-market rows: each sub-market is binary (label + % + Yes/No) */
           <div className="space-y-1.5">
-            {rankedMarkets.map(({ m, yesPrice, noPrice, isBin }) => {
-              const shortName = extractShortName(m.question);
-              const yesPct    = Math.round(yesPrice * 100);
-              const noPct     = Math.round(noPrice  * 100);
-              const navMkt    = String(event.id);
+            {rankedMarkets.map(({ m, outs, yesPrice }) => {
+              const shortName  = extractShortName(m.question);
+              const topPct     = Math.round(yesPrice * 100);
+              const navMkt     = String(event.id);
+              // Show at most the top 2 outcomes as action buttons
+              const btnOuts    = outs.slice(0, 2);
               return (
                 <div
                   key={m.id}
-                  className="flex items-center gap-2 rounded-lg hover:bg-muted/50 px-1 py-0.5 transition-colors"
+                  className="flex items-center gap-2 rounded-lg hover:bg-muted/50 px-1 py-0.5 transition-colors cursor-pointer"
                   onClick={e => { e.stopPropagation(); onNavigate(navMkt); }}
                 >
                   <span className="flex-1 text-xs font-medium text-foreground truncate">{shortName}</span>
-                  <span className="text-xs font-bold tabular-nums text-muted-foreground w-7 text-right shrink-0">{yesPct}%</span>
-                  {isBin && <>
+                  <span className="text-xs font-bold tabular-nums text-muted-foreground w-7 text-right shrink-0">{topPct}%</span>
+                  {btnOuts.map((o, i) => (
                     <button
-                      className="h-6 px-2.5 rounded-md text-[11px] font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-500 transition-colors shrink-0"
+                      key={i}
+                      className={cn(
+                        "h-6 px-2.5 rounded-md text-[11px] font-bold transition-colors shrink-0",
+                        i === 0
+                          ? "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-500"
+                          : "bg-red-500/15 hover:bg-red-500/25 text-red-500",
+                      )}
                       onClick={e => { e.stopPropagation(); onNavigate(navMkt); }}
-                    >Yes</button>
-                    <button
-                      className="h-6 px-2.5 rounded-md text-[11px] font-bold bg-red-500/15 hover:bg-red-500/25 text-red-500 transition-colors shrink-0"
-                      onClick={e => { e.stopPropagation(); onNavigate(navMkt); }}
-                    >No</button>
-                  </>}
+                    >
+                      {o.name}
+                    </button>
+                  ))}
                 </div>
               );
             })}
@@ -700,7 +707,7 @@ function EventCard({
             )}
           </div>
         ) : singleBinary ? (
-          /* Single binary market: progress bar + Yes/No buttons */
+          /* Single binary market: probability bar + outcome buttons using real names */
           <div className="space-y-2">
             <div className="relative h-1.5 rounded-full bg-muted overflow-hidden">
               <div className="absolute left-0 top-0 h-full bg-emerald-500 rounded-l-full transition-all duration-500"
@@ -709,14 +716,22 @@ function EventCard({
                 style={{ width: `${singleBinary.noPct}%` }} />
             </div>
             <div className="flex items-center gap-2">
-              <button
-                className="flex-1 h-9 rounded-xl text-sm font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-500 transition-colors"
-                onClick={e => { e.stopPropagation(); onNavigate(navId); }}
-              >Yes · {singleBinary.yesPct}¢</button>
-              <button
-                className="flex-1 h-9 rounded-xl text-sm font-bold bg-red-500/15 hover:bg-red-500/25 text-red-500 transition-colors"
-                onClick={e => { e.stopPropagation(); onNavigate(navId); }}
-              >No · {singleBinary.noPct}¢</button>
+              {singleOutcomes.map((o, i) => {
+                const pct = Math.round(o.price * 100);
+                const isYes = o.name.toLowerCase() === "yes" || i === 0;
+                return (
+                  <button
+                    key={i}
+                    className={cn(
+                      "flex-1 h-9 rounded-xl text-sm font-bold transition-colors",
+                      isYes
+                        ? "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-500"
+                        : "bg-red-500/15 hover:bg-red-500/25 text-red-500",
+                    )}
+                    onClick={e => { e.stopPropagation(); onNavigate(navId); }}
+                  >{o.name} · {pct}¢</button>
+                );
+              })}
             </div>
           </div>
         ) : singleOutcomes.filter(o => o.price > 0).length > 0 ? (
