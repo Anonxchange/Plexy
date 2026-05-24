@@ -75,12 +75,19 @@ const HIDDEN_SUB_TAGS = new Set([
 ]);
 
 // ─── Outcome parsing ──────────────────────────────────────────────────────────
-function parseOutcomes(market: PolymarketMarket): { name: string; price: number }[] {
+function parseOutcomes(market: PolymarketMarket): { name: string; shortName: string; price: number }[] {
   try {
-    const names  = JSON.parse(market.outcomes      || "[]") as string[];
-    const prices = JSON.parse(market.outcomePrices || "[]") as string[];
+    const names      = JSON.parse(market.outcomes      || "[]") as string[];
+    const prices     = JSON.parse(market.outcomePrices || "[]") as string[];
+    const shortNames = market.shortOutcomes
+      ? (JSON.parse(market.shortOutcomes) as string[])
+      : [];
     if (!names.length) return [];
-    return names.map((name, i) => ({ name, price: parseFloat(prices[i] ?? "0") || 0 }));
+    return names.map((name, i) => ({
+      name,
+      shortName: shortNames[i] || name,   // fall back to full name if no short version
+      price: parseFloat(prices[i] ?? "0") || 0,
+    }));
   } catch { return []; }
 }
 
@@ -276,8 +283,8 @@ export default function PredictionPage() {
     for (const ev of allEvents) {
       const seen = new Set<string>();
       for (const t of (ev.tags ?? [])) {
-        const slug  = typeof t === "string" ? t : t.slug;
-        const label = typeof t === "string" ? t : (t.label ?? t.slug);
+        const slug  = t.slug;
+        const label = t.label ?? t.slug;
         if (!slug || slug === mainCatSlug || HIDDEN_SUB_TAGS.has(slug) || seen.has(slug)) continue;
         seen.add(slug);
         const e = freq.get(slug);
@@ -311,22 +318,19 @@ export default function PredictionPage() {
     }
 
     if (hideSports) {
-      list = list.filter(ev => !(ev.tags ?? []).some((t: any) => {
-        const s = typeof t === "string" ? t : t.slug;
-        return s === "sports" || s === "sport";
-      }));
+      list = list.filter(ev => !(ev.tags ?? []).some(t =>
+        t.slug === "sports" || t.slug === "sport"
+      ));
     }
     if (hideCrypto) {
-      list = list.filter(ev => !(ev.tags ?? []).some((t: any) => {
-        const s = typeof t === "string" ? t : t.slug;
-        return s === "crypto" || s === "cryptocurrency";
-      }));
+      list = list.filter(ev => !(ev.tags ?? []).some(t =>
+        t.slug === "crypto" || t.slug === "cryptocurrency"
+      ));
     }
     if (hideEarnings) {
-      list = list.filter(ev => !(ev.tags ?? []).some((t: any) => {
-        const s = typeof t === "string" ? t : t.slug;
-        return s === "earnings" || s === "finance";
-      }));
+      list = list.filter(ev => !(ev.tags ?? []).some(t =>
+        t.slug === "earnings" || t.slug === "finance"
+      ));
     }
 
     return list;
@@ -700,7 +704,9 @@ function EventCard({
           /* Multi sub-market rows: each sub-market is binary (label + % + Yes/No) */
           <div className="space-y-1.5">
             {rankedMarkets.map(({ m, outs, yesPrice, isBinaryRow }) => {
-              const shortName  = extractShortName(m.question);
+              // groupItemTitle is the authoritative label (e.g. "Carolina Hurricanes",
+              // "Donald Trump"); fall back to question parsing only when absent
+              const shortName  = m.groupItemTitle || extractShortName(m.question);
               const topPct     = Math.round(yesPrice * 100);
               const navMkt     = String(event.id);
               // Show at most the top 2 outcomes as action buttons (Yes always before No)
