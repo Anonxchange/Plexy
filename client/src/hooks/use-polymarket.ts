@@ -220,6 +220,44 @@ export function useTags() {
   });
 }
 
+// ─── Comments (real Polymarket comments, entity type must be "Event") ─────────
+export interface PolymarketComment {
+  id:               string;
+  body:             string;
+  parentEntityType: string;
+  parentEntityID:   number;
+  parentCommentID?: string;
+  userAddress:      string;
+  createdAt:        string;
+  updatedAt:        string;
+  reactionCount:    number;
+  reportCount:      number;
+  profile?: {
+    name:                  string;
+    pseudonym:             string;
+    displayUsernamePublic: boolean;
+    bio?:                  string;
+    proxyWallet:           string;
+    baseAddress:           string;
+    profileImage?:         string;
+  };
+}
+
+export function useComments(eventId: string | undefined, offset = 0, limit = 30) {
+  return useQuery({
+    queryKey: ['polymarket', 'comments', eventId, offset, limit],
+    queryFn:  () => gammaFetch<PolymarketComment[]>('/comments', {
+      parent_entity_id:   eventId!,
+      parent_entity_type: 'Event',
+      limit:              String(limit),
+      offset:             String(offset),
+    }),
+    enabled:   !!eventId,
+    staleTime: 60_000,
+    placeholderData: (prev) => prev,
+  });
+}
+
 // ─── Event detail (fetches full event by numeric ID, includes all markets) ────
 export function useEventDetail(eventId: string | undefined) {
   return useQuery({
