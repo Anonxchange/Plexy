@@ -1,18 +1,20 @@
 import {
-  useMarketDetail, useOrderbook, usePriceHistory,
+  useEventDetail, useEvents, useOrderbook, usePriceHistory,
   useOpenOrders, usePlaceOrder, useCancelOrder,
   usePolymarketWalletInfo, usePolymarketApprove, usePolymarketRevoke,
   usePolymarketTradeHistory,
 } from "@/hooks/use-polymarket";
+import type { PolymarketMarket } from "@/hooks/use-polymarket";
 import type { PolymarketWalletInfo, PolymarketTrade } from "@/lib/polymarket-clob";
 import { useAuth } from "@/lib/auth-context";
 import { PolymarketImage } from "@/components/polymarket-image";
+import { CommentSection } from "@/components/comment-section";
 import { useRoute, useLocation } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
-  ChevronLeft, Share2, Bookmark, TrendingUp, TrendingDown,
+  ChevronLeft, ChevronRight, Share2, Bookmark, TrendingUp, TrendingDown,
   Clock, BarChart2, Droplets, Info, X, Loader2, AlertCircle,
   CheckCircle2, Wallet, ChevronDown, ChevronUp, Users,
   Eye, EyeOff, ExternalLink, History, ArrowDownToLine,
@@ -22,7 +24,7 @@ import { format } from "date-fns";
 import React, { useState, useMemo, useEffect } from "react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer,
+  Tooltip, ResponsiveContainer, ReferenceLine,
 } from "recharts";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -81,6 +83,10 @@ interface TradePanelProps {
   setSelectedOutcomeIdx: (i: number) => void;
   tradeTab: "buy" | "sell";
   setTradeTab: (t: "buy" | "sell") => void;
+  orderType: "market" | "limit";
+  setOrderType: (t: "market" | "limit") => void;
+  limitPrice: string;
+  setLimitPrice: (v: string) => void;
   amount: string;
   setAmount: (v: string) => void;
   yesCents: number;
@@ -103,6 +109,8 @@ function TradePanel({
   market, outcomes, isBinary,
   selectedOutcomeIdx, setSelectedOutcomeIdx,
   tradeTab, setTradeTab,
+  orderType, setOrderType,
+  limitPrice, setLimitPrice,
   amount, setAmount,
   yesCents, noCents, selectedCents,
   isYesSelected, availableUsdc, balanceData, walletStatus,
@@ -110,9 +118,13 @@ function TradePanel({
   placeOrder, handlePlaceOrder,
   onDeposit, onWithdraw,
 }: TradePanelProps) {
+  const limitPriceNum  = Number(limitPrice) || 0;
+  const limitShares    = orderType === "limit" && limitPriceNum > 0 ? amountNum / (limitPriceNum / 100) : estimatedShares;
+  const limitProfit    = limitShares > amountNum ? (limitShares - amountNum).toFixed(2) : "0.00";
+
   return (
     <div className="flex flex-col">
-      {/* Buy / Sell tabs */}
+      {/* ── Buy / Sell tabs ── */}
       <div className="flex border-b border-border">
         {(["buy", "sell"] as const).map(tab => (
           <button
@@ -131,7 +143,33 @@ function TradePanel({
       </div>
 
       <div className="p-4 space-y-4">
-        {/* Balance + wallet actions */}
+        {/* ── Market / Limit toggle ── */}
+        <div className="flex rounded-xl bg-muted/60 border border-border p-1 gap-1">
+          {(["market", "limit"] as const).map(type => (
+            <button
+              key={type}
+              onClick={() => setOrderType(type)}
+              className={cn(
+                "flex-1 py-2 rounded-lg text-xs font-bold capitalize transition-all",
+                orderType === type
+                  ? "bg-background text-foreground shadow-sm border border-border/60"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {type === "market" ? "Market" : "Limit"}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Limit info callout ── */}
+        {orderType === "limit" && (
+          <div className="flex items-start gap-2 text-[11px] text-muted-foreground bg-muted/50 rounded-xl px-3 py-2.5 border border-border">
+            <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+            <span>Limit orders sit in the order book until filled at your specified price or better.</span>
+          </div>
+        )}
+
+        {/* ── Balance + wallet actions ── */}
         {walletStatus === "connected" ? (
           <div className="rounded-xl bg-muted/50 border border-border px-3 py-2.5 space-y-2">
             <div className="flex items-center justify-between">
@@ -180,7 +218,7 @@ function TradePanel({
           </div>
         )}
 
-        {/* Binary Yes/No picker */}
+        {/* ── Binary Yes/No picker ── */}
         {isBinary && (
           <div className="grid grid-cols-2 gap-2">
             <button
@@ -208,7 +246,7 @@ function TradePanel({
           </div>
         )}
 
-        {/* Multi-outcome picker */}
+        {/* ── Multi-outcome picker ── */}
         {!isBinary && outcomes.length > 0 && (
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">Select outcome</label>
@@ -232,7 +270,40 @@ function TradePanel({
           </div>
         )}
 
-        {/* Amount input */}
+        {/* ── Limit price input (only for Limit orders) ── */}
+        {orderType === "limit" && (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-muted-foreground">Limit price</label>
+              <span className="text-[10px] text-muted-foreground">Market: {selectedCents}¢</span>
+            </div>
+            <div className="relative">
+              <Input
+                type="number"
+                min={1}
+                max={99}
+                step={1}
+                value={limitPrice}
+                onChange={e => setLimitPrice(e.target.value)}
+                placeholder={String(selectedCents)}
+                className="pr-8 h-11 text-sm font-semibold tabular-nums"
+              />
+              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-semibold select-none">¢</span>
+            </div>
+            {limitPriceNum > 0 && limitPriceNum !== selectedCents && (
+              <p className={cn(
+                "text-[10px] font-medium",
+                limitPriceNum < selectedCents ? "text-emerald-600 dark:text-emerald-400" : "text-amber-500",
+              )}>
+                {limitPriceNum < selectedCents
+                  ? `${selectedCents - limitPriceNum}¢ below market — order may fill quickly`
+                  : `${limitPriceNum - selectedCents}¢ above market — order queued in book`}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* ── Amount input ── */}
         <div className="space-y-2">
           <label className="text-xs font-medium text-muted-foreground">Amount (USDC)</label>
           <div className="relative">
@@ -267,40 +338,88 @@ function TradePanel({
           </div>
         </div>
 
-        {/* Order summary */}
+        {/* ── Order summary ── */}
         <div className="bg-muted/50 rounded-xl p-3.5 space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Avg price</span>
-            <span className="font-semibold tabular-nums">{selectedCents}¢</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Shares</span>
-            <span className="font-semibold tabular-nums">
-              {estimatedShares.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Potential profit</span>
-            <span className={cn(
-              "font-semibold tabular-nums",
-              Number(potentialProfit) > 0 ? "text-emerald-600 dark:text-emerald-400" : "",
-            )}>
-              +${potentialProfit}
-            </span>
-          </div>
-          <div className="border-t border-border pt-2 flex justify-between font-bold">
-            <span className="text-muted-foreground font-medium">Max return</span>
-            <span className="tabular-nums">
-              ${estimatedShares.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-            </span>
-          </div>
+          {orderType === "limit" ? (
+            <>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Order type</span>
+                <span className="font-semibold">Limit (GTC)</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Limit price</span>
+                <span className="font-semibold tabular-nums">
+                  {limitPriceNum > 0 ? `${limitPriceNum}¢` : `${selectedCents}¢ (market)`}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Est. shares</span>
+                <span className="font-semibold tabular-nums">
+                  {limitShares.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Potential profit</span>
+                <span className={cn(
+                  "font-semibold tabular-nums",
+                  Number(limitProfit) > 0 ? "text-emerald-600 dark:text-emerald-400" : "",
+                )}>
+                  +${limitProfit}
+                </span>
+              </div>
+              <div className="border-t border-border pt-2 flex justify-between font-bold">
+                <span className="text-muted-foreground font-medium">Max return</span>
+                <span className="tabular-nums">
+                  ${limitShares.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Order type</span>
+                <span className="font-semibold">Market (FOK)</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Avg price</span>
+                <span className="font-semibold tabular-nums">{selectedCents}¢</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Est. shares</span>
+                <span className="font-semibold tabular-nums">
+                  {estimatedShares.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Potential profit</span>
+                <span className={cn(
+                  "font-semibold tabular-nums",
+                  Number(potentialProfit) > 0 ? "text-emerald-600 dark:text-emerald-400" : "",
+                )}>
+                  +${potentialProfit}
+                </span>
+              </div>
+              <div className="border-t border-border pt-2 flex justify-between font-bold">
+                <span className="text-muted-foreground font-medium">Max return</span>
+                <span className="tabular-nums">
+                  ${estimatedShares.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </span>
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Warnings */}
+        {/* ── Warnings ── */}
         {balanceData && amountNum > availableUsdc && amountNum > 0 && (
           <div className="flex items-center gap-2 text-xs text-red-500 bg-red-500/8 border border-red-500/20 rounded-xl p-3">
             <AlertCircle className="w-3.5 h-3.5 shrink-0" />
             Insufficient balance. Available: ${availableUsdc.toFixed(2)}
+          </div>
+        )}
+        {orderType === "limit" && limitPriceNum <= 0 && amountNum > 0 && (
+          <div className="flex items-center gap-2 text-xs text-amber-500 bg-amber-500/8 border border-amber-500/20 rounded-xl p-3">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            Enter a limit price (1–99¢) to place this order.
           </div>
         )}
         {market.closed && (
@@ -310,11 +429,12 @@ function TradePanel({
           </div>
         )}
 
-        {/* CTA */}
+        {/* ── CTA ── */}
         <button
           onClick={handlePlaceOrder}
           disabled={
             placeOrder.isPending || market.closed || amountNum <= 0 ||
+            (orderType === "limit" && limitPriceNum <= 0) ||
             (balanceData != null && amountNum > availableUsdc)
           }
           className={cn(
@@ -327,7 +447,11 @@ function TradePanel({
         >
           {placeOrder.isPending
             ? <><Loader2 className="w-4 h-4 animate-spin" />Placing order…</>
-            : <>{tradeTab === "buy" ? "Buy" : "Sell"} {outcomes[selectedOutcomeIdx]?.name || "Yes"}{amountNum > 0 ? ` · $${amountNum}` : ""}</>}
+            : <>
+                {tradeTab === "buy" ? "Buy" : "Sell"} {outcomes[selectedOutcomeIdx]?.name || "Yes"}
+                {amountNum > 0 ? ` · $${amountNum}` : ""}
+                {orderType === "limit" && limitPriceNum > 0 ? ` @ ${limitPriceNum}¢` : ""}
+              </>}
         </button>
 
         {placeOrder.isSuccess && (
@@ -709,8 +833,8 @@ export default function PredictionDetailPage() {
   const [, params]      = useRoute("/prediction/:id");
   const [, setLocation] = useLocation();
 
-  const { data: market, isLoading: marketLoading, error: marketError } =
-    useMarketDetail(params?.id);
+  const { data: event, isLoading: eventLoading, error: eventError } =
+    useEventDetail(params?.id);
 
   const { user } = useAuth();
   const [userEvmAddress,     setUserEvmAddress]     = useState<string | null>(null);
@@ -718,6 +842,15 @@ export default function PredictionDetailPage() {
 
   const [chartInterval,      setChartInterval]      = useState<Interval>("1D");
   const [tradeTab,           setTradeTab]           = useState<"buy" | "sell">("buy");
+  const [orderType,          setOrderType]          = useState<"market" | "limit">("market");
+  const [selectedMarketIdx,  setSelectedMarketIdx]  = useState(0);
+  /* Auto-select first active (non-resolved) market when event loads */
+  useEffect(() => {
+    if (!event?.markets) return;
+    const firstActive = event.markets.findIndex(m => !m.closed);
+    if (firstActive !== -1) setSelectedMarketIdx(firstActive);
+  }, [event?.id]);
+  const [limitPrice,         setLimitPrice]         = useState("");
   const [rulesTab,           setRulesTab]           = useState<"rules" | "context">("rules");
   const [amount,             setAmount]             = useState("");
   const [orderBookOpen,      setOrderBookOpen]      = useState(true);
@@ -743,6 +876,14 @@ export default function PredictionDetailPage() {
   }, [user]);
 
   const { data: walletInfo, isLoading: walletInfoLoading } = usePolymarketWalletInfo(userEvmAddress);
+
+  /* ── Derived event → market ── */
+  const isMultiMarket = (event?.markets?.length ?? 0) > 1;
+  const market: PolymarketMarket | null = (event?.markets?.[
+    Math.min(selectedMarketIdx, Math.max(0, (event?.markets?.length ?? 1) - 1))
+  ]) ?? null;
+  const marketLoading = eventLoading;
+  const marketError   = eventError;
 
   /* ── Outcomes ── */
   const outcomes = useMemo(() => {
@@ -793,7 +934,7 @@ export default function PredictionDetailPage() {
   const amountNum       = Number(amount) || 0;
   const estimatedShares = selectedOutcome?.price > 0 ? amountNum / selectedOutcome.price : 0;
   const potentialProfit = estimatedShares > amountNum ? (estimatedShares - amountNum).toFixed(2) : "0.00";
-  const endDate         = market?.endDate ? format(new Date(market.endDate), "MMM d, yyyy") : null;
+  const endDate         = (event?.endDate || market?.endDate) ? format(new Date((event?.endDate || market?.endDate)!), "MMM d, yyyy") : null;
 
   const availableUsdc = useMemo(() => {
     if (!balanceData) return 0;
@@ -812,33 +953,56 @@ export default function PredictionDetailPage() {
     return { value: (last - first) * 100, pct: ((last - first) / (first || 1)) * 100 };
   }, [dailyHistory]);
 
+  /* ── Chart color — green when trending up, red when down ── */
+  const isChartUp   = !change24h || change24h.value >= 0;
+  const chartColor  = isChartUp ? "#22c55e" : "#ef4444";
+
   const marketOpenOrders = useMemo(() => {
     if (!Array.isArray(openOrders)) return [];
     return openOrders.filter((o: any) => outcomes.some(oc => oc.tokenId === o.asset_id));
   }, [openOrders, outcomes]);
 
+  /* ── Related events (same tag category) ── */
+  const firstTagSlug = event?.tags?.[0]?.slug as string | undefined;
+  const { data: relatedEventsRaw } = useEvents({ limit: 7, tag_slug: firstTagSlug });
+  const filteredRelated = useMemo(
+    () => (relatedEventsRaw ?? []).filter(ev => String(ev.id) !== String(event?.id)).slice(0, 5),
+    [relatedEventsRaw, event?.id],
+  );
+
   /* ── Place order ── */
   function handlePlaceOrder() {
-    if (amountNum <= 0)           { toast.error("Enter an amount to trade"); return; }
-    if (!selectedOutcome?.tokenId){ toast.error("No outcome selected"); return; }
+    if (amountNum <= 0)            { toast.error("Enter an amount to trade"); return; }
+    if (!selectedOutcome?.tokenId) { toast.error("No outcome selected"); return; }
+    const limitPriceNum = Number(limitPrice) || 0;
+    if (orderType === "limit" && limitPriceNum <= 0) { toast.error("Enter a limit price (1–99¢)"); return; }
+    const effectivePrice = orderType === "limit" ? limitPriceNum / 100 : selectedOutcome.price;
+    const sharesEstimate = effectivePrice > 0 ? amountNum / effectivePrice : estimatedShares;
     placeOrder.mutate({
-      tokenID: selectedOutcome.tokenId,
-      price:   selectedOutcome.price,
-      size:    amountNum,
-      side:    tradeTab === "buy" ? "BUY" : "SELL",
-      type:    "MARKET",
+      tokenID:       selectedOutcome.tokenId,
+      price:         effectivePrice,
+      size:          amountNum,
+      side:          tradeTab === "buy" ? "BUY" : "SELL",
+      type:          orderType === "limit" ? "GTC" : "FOK",
       funderAddress: userEvmAddress ?? "",
     }, {
       onSuccess: (data: any) => {
         if (data?.errorMsg) { toast.error(`Order failed: ${data.errorMsg}`); }
-        else { toast.success(`${tradeTab === "buy" ? "Bought" : "Sold"} ${estimatedShares.toFixed(2)} shares of ${selectedOutcome.name}`); setAmount(""); }
+        else {
+          const label = orderType === "limit"
+            ? `Limit order placed: ${sharesEstimate.toFixed(2)} shares of ${selectedOutcome.name} @ ${limitPriceNum}¢`
+            : `${tradeTab === "buy" ? "Bought" : "Sold"} ${sharesEstimate.toFixed(2)} shares of ${selectedOutcome.name}`;
+          toast.success(label);
+          setAmount("");
+          if (orderType === "limit") setLimitPrice("");
+        }
       },
       onError: (err: Error) => toast.error(err.message || "Failed to place order"),
     });
   }
 
   /* ── Open mobile sheet ── */
-  function openMobileBuy(idx: 0 | 1) {
+  function openMobileBuy(idx: number) {
     setSelectedOutcomeIdx(idx);
     setMobileSheetOpen(true);
   }
@@ -862,6 +1026,8 @@ export default function PredictionDetailPage() {
     market, outcomes, isBinary,
     selectedOutcomeIdx, setSelectedOutcomeIdx,
     tradeTab, setTradeTab,
+    orderType, setOrderType,
+    limitPrice, setLimitPrice,
     amount, setAmount,
     yesCents, noCents, selectedCents,
     isYesSelected, availableUsdc, balanceData,
@@ -923,10 +1089,10 @@ export default function PredictionDetailPage() {
             {/* ── Hero header ── */}
             <div className="relative rounded-2xl overflow-hidden">
               {/* Background image or gradient */}
-              {market.image ? (
+              {(event?.image || market?.image) ? (
                 <div className="absolute inset-0">
                   <PolymarketImage
-                    src={market.image}
+                    src={(event?.image || market?.image)!}
                     className="w-full h-full object-cover"
                     fallback={<div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5" />}
                   />
@@ -939,29 +1105,32 @@ export default function PredictionDetailPage() {
               {/* Content overlay */}
               <div className={cn(
                 "relative px-5 pt-5 pb-5 md:px-7 md:pt-7",
-                market.image ? "text-white" : "text-foreground",
+                (event?.image || market?.image) ? "text-white" : "text-foreground",
               )}>
                 {/* Top row: tags + actions */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex flex-wrap items-center gap-2">
-                    {market.tags?.[0] && tagLabel(market.tags[0]) && (
-                      <span className={cn(
-                        "text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full",
-                        market.image ? "bg-white/20 text-white" : "bg-muted text-muted-foreground",
-                      )}>
-                        {tagLabel(market.tags[0])}
-                      </span>
-                    )}
-                    {market.active && !market.closed && (
+                    {(() => {
+                      const t = event?.tags?.[0] || market?.tags?.[0];
+                      return t && tagLabel(t) ? (
+                        <span className={cn(
+                          "text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full",
+                          (event?.image || market?.image) ? "bg-white/20 text-white" : "bg-muted text-muted-foreground",
+                        )}>
+                          {tagLabel(t)}
+                        </span>
+                      ) : null;
+                    })()}
+                    {event?.active && !event?.closed && (
                       <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/20 px-2.5 py-1 rounded-full">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                         Live
                       </span>
                     )}
-                    {market.closed && (
+                    {event?.closed && (
                       <span className={cn(
                         "text-[10px] font-bold px-2.5 py-1 rounded-full",
-                        market.image ? "bg-white/20 text-white/70" : "bg-muted text-muted-foreground",
+                        (event?.image || market?.image) ? "bg-white/20 text-white/70" : "bg-muted text-muted-foreground",
                       )}>
                         Resolved
                       </span>
@@ -970,49 +1139,139 @@ export default function PredictionDetailPage() {
                   <div className="flex items-center gap-1.5 shrink-0 ml-2">
                     <button className={cn(
                       "p-2 rounded-xl transition-colors",
-                      market.image ? "bg-white/10 hover:bg-white/20 text-white" : "border border-border hover:bg-muted text-muted-foreground",
+                      (event?.image || market?.image) ? "bg-white/10 hover:bg-white/20 text-white" : "border border-border hover:bg-muted text-muted-foreground",
                     )}>
                       <Share2 className="w-4 h-4" />
                     </button>
                     <button className={cn(
                       "p-2 rounded-xl transition-colors",
-                      market.image ? "bg-white/10 hover:bg-white/20 text-white" : "border border-border hover:bg-muted text-muted-foreground",
+                      (event?.image || market?.image) ? "bg-white/10 hover:bg-white/20 text-white" : "border border-border hover:bg-muted text-muted-foreground",
                     )}>
                       <Bookmark className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
 
-                {/* Title */}
+                {/* Title — use event headline, fall back to single-market question */}
                 <h1 className={cn(
                   "text-xl md:text-2xl font-bold leading-snug tracking-tight mb-4",
-                  market.image ? "text-white drop-shadow" : "text-foreground",
+                  (event?.image || market?.image) ? "text-white drop-shadow" : "text-foreground",
                 )}>
-                  {market.question}
+                  {event?.title || market?.question}
                 </h1>
 
                 {/* Stats row */}
                 <div className={cn(
                   "flex items-center gap-4 flex-wrap text-xs font-medium",
-                  market.image ? "text-white/70" : "text-muted-foreground",
+                  (event?.image || market?.image) ? "text-white/70" : "text-muted-foreground",
                 )}>
                   <span className="flex items-center gap-1.5">
                     <BarChart2 className="w-3.5 h-3.5" />
-                    {fmtVol(market.volumeNum ?? 0)} vol.
+                    {fmtVol(event?.volume ?? market?.volumeNum ?? 0)} vol.
                   </span>
                   <span className="flex items-center gap-1.5">
                     <Droplets className="w-3.5 h-3.5" />
-                    {market.liquidityNum ? fmtVol(market.liquidityNum) : "—"} liq.
+                    {(event?.liquidity || market?.liquidityNum) ? fmtVol(event?.liquidity ?? market?.liquidityNum ?? 0) : "—"} liq.
                   </span>
                   {endDate && (
                     <span className="flex items-center gap-1.5">
                       <Clock className="w-3.5 h-3.5" />
-                      {market.closed ? "Ended" : "Ends"} {endDate}
+                      {market?.closed ? "Ended" : "Ends"} {endDate}
                     </span>
                   )}
                 </div>
               </div>
             </div>
+
+            {/* ── Multi-market stacked list (for events with > 1 market) ── */}
+            {isMultiMarket && (
+              <div className="bg-background border border-border rounded-2xl overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
+                  <span className="text-sm font-bold">{event!.markets.filter(m => !m.closed).length} Markets</span>
+                  {market && (
+                    <span className="text-xs text-muted-foreground">
+                      Viewing: {market.groupItemTitle || (market.endDate ? format(new Date(market.endDate), "MMM d") : `#${selectedMarketIdx + 1}`)}
+                    </span>
+                  )}
+                </div>
+                <div className="divide-y divide-border">
+                  {event!.markets.map((m, idx) => ({ m, idx })).filter(({ m }) => !m.closed).map(({ m, idx }) => {
+                    const mNames  = safeJsonParse<string[]>(m.outcomes, []);
+                    const mPrices = safeJsonParse<string[]>(m.outcomePrices, []);
+                    const mIds    = safeJsonParse<string[]>(m.clobTokenIds, []);
+                    let mOuts = mNames.map((n, i) => ({ name: n, price: parseFloat(mPrices[i] || "0.5"), tokenId: mIds[i] }));
+                    const mIsBin  = mOuts.length === 2 && mOuts.every(o => ["yes","no"].includes(o.name.toLowerCase()));
+                    if (mIsBin && mOuts[0]?.name.toLowerCase() === "no") mOuts = [mOuts[1], mOuts[0]];
+                    const yesO   = mIsBin ? mOuts[0] : mOuts.reduce((a, b) => a.price > b.price ? a : b, mOuts[0] ?? { name: "", price: 0.5, tokenId: "" });
+                    const noO    = mIsBin ? mOuts[1] : null;
+                    const yesPct = Math.round((yesO?.price ?? 0.5) * 100);
+                    const noPct  = noO ? Math.round(noO.price * 100) : 100 - yesPct;
+                    const isSelected = selectedMarketIdx === idx;
+                    const label  = m.groupItemTitle || (m.endDate ? format(new Date(m.endDate), "MMM d, yyyy") : `Market ${idx + 1}`);
+
+                    return (
+                      <div
+                        key={m.id}
+                        className={cn(
+                          "px-5 py-4 transition-colors cursor-pointer",
+                          isSelected ? "bg-primary/5 border-l-2 border-l-primary" : "hover:bg-muted/20 border-l-2 border-l-transparent",
+                        )}
+                        onClick={() => setSelectedMarketIdx(idx)}
+                      >
+                        {/* Market row header */}
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <div className="text-sm font-bold leading-tight">{label}</div>
+                            {(m as any).volumeNum != null && (
+                              <div className="text-xs text-muted-foreground mt-0.5">{fmtVol((m as any).volumeNum)} Vol.</div>
+                            )}
+                          </div>
+                          <div className="text-2xl font-black tabular-nums">{yesPct}%</div>
+                        </div>
+                        {/* Mini probability bar */}
+                        <div className="h-1.5 rounded-full overflow-hidden flex mb-3">
+                          <div className="bg-emerald-500 transition-all duration-300" style={{ width: `${yesPct}%` }} />
+                          <div className="flex-1 bg-red-400" />
+                        </div>
+                        {/* Buy buttons */}
+                        {!m.closed ? (
+                          mIsBin ? (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={e => { e.stopPropagation(); setSelectedMarketIdx(idx); setSelectedOutcomeIdx(0); setTradeTab("buy"); setMobileSheetOpen(true); }}
+                                className="flex-1 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-bold transition-all"
+                              >
+                                Buy Yes · {yesPct}¢
+                              </button>
+                              <button
+                                onClick={e => { e.stopPropagation(); setSelectedMarketIdx(idx); setSelectedOutcomeIdx(1); setTradeTab("buy"); setMobileSheetOpen(true); }}
+                                className="flex-1 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 text-xs font-bold transition-all"
+                              >
+                                Buy No · {noPct}¢
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex gap-2 flex-wrap">
+                              {mOuts.map((o, oi) => (
+                                <button
+                                  key={oi}
+                                  onClick={e => { e.stopPropagation(); setSelectedMarketIdx(idx); setSelectedOutcomeIdx(oi); setTradeTab("buy"); setMobileSheetOpen(true); }}
+                                  className="flex-1 min-w-[120px] py-2 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/30 text-xs font-bold transition-all"
+                                >
+                                  {o.name} · {Math.round(o.price * 100)}¢
+                                </button>
+                              ))}
+                            </div>
+                          )
+                        ) : (
+                          <span className="text-xs font-semibold text-muted-foreground">Resolved</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* ── Probability + Chart ── */}
             <div className="bg-background border border-border rounded-2xl overflow-hidden">
@@ -1133,44 +1392,61 @@ export default function PredictionDetailPage() {
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartPoints} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
+                    <AreaChart data={chartPoints} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
                       <defs>
-                        <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%"   stopColor="#B4F22E" stopOpacity={0.22} />
-                          <stop offset="100%" stopColor="#B4F22E" stopOpacity={0}    />
+                        <linearGradient id="chartGradUp" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%"   stopColor="#22c55e" stopOpacity={0.28} />
+                          <stop offset="55%"  stopColor="#22c55e" stopOpacity={0.06} />
+                          <stop offset="100%" stopColor="#22c55e" stopOpacity={0}    />
+                        </linearGradient>
+                        <linearGradient id="chartGradDown" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%"   stopColor="#ef4444" stopOpacity={0.28} />
+                          <stop offset="55%"  stopColor="#ef4444" stopOpacity={0.06} />
+                          <stop offset="100%" stopColor="#ef4444" stopOpacity={0}    />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" opacity={0.05} />
+                      <CartesianGrid strokeDasharray="2 6" vertical={false} stroke="currentColor" opacity={0.04} />
                       <XAxis dataKey="t" hide />
                       <YAxis
                         domain={[0, 100]}
                         orientation="right"
-                        tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                        tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))", fontWeight: 500 }}
                         axisLine={false}
                         tickLine={false}
                         tickFormatter={v => `${v}%`}
                         width={38}
+                        ticks={[0, 25, 50, 75, 100]}
+                      />
+                      <ReferenceLine
+                        y={selectedCents}
+                        stroke={chartColor}
+                        strokeDasharray="4 3"
+                        strokeWidth={1.5}
+                        strokeOpacity={0.45}
                       />
                       <Tooltip
+                        cursor={{ stroke: chartColor, strokeWidth: 1, strokeDasharray: "3 3", strokeOpacity: 0.6 }}
                         contentStyle={{
                           backgroundColor: "hsl(var(--background))",
-                          borderColor:     "hsl(var(--border))",
-                          borderRadius:    "12px",
-                          boxShadow:       "0 4px 24px rgba(0,0,0,0.12)",
+                          border:          `1.5px solid ${chartColor}`,
+                          borderRadius:    "10px",
+                          boxShadow:       "0 8px 24px rgba(0,0,0,0.14)",
                           fontSize: 13,
-                          fontWeight: 600,
+                          fontWeight: 700,
+                          padding: "7px 12px",
                         }}
                         formatter={(v: any) => [`${Math.round(v)}%`, "Probability"]}
                         labelStyle={{ display: "none" }}
+                        itemStyle={{ color: chartColor }}
                       />
                       <Area
                         type="monotone"
                         dataKey="v"
-                        stroke="#B4F22E"
+                        stroke={chartColor}
                         strokeWidth={2.5}
-                        fill="url(#chartGrad)"
+                        fill={`url(#${isChartUp ? "chartGradUp" : "chartGradDown"})`}
                         dot={false}
-                        activeDot={{ r: 4, fill: "#B4F22E", stroke: "white", strokeWidth: 2 }}
+                        activeDot={{ r: 5, fill: chartColor, stroke: "hsl(var(--background))", strokeWidth: 2.5 }}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -1326,12 +1602,14 @@ export default function PredictionDetailPage() {
                     </div>
                     <div className="flex items-start justify-between gap-4">
                       <span className="text-muted-foreground shrink-0">End date</span>
-                      <span className="font-medium">{endDate ?? "—"}</span>
+                      <span className="font-medium">
+                        {market.endDate ? format(new Date(market.endDate), "MMM d, yyyy") : endDate ?? "—"}
+                      </span>
                     </div>
                     <div className="flex items-start justify-between gap-4">
                       <span className="text-muted-foreground shrink-0">Status</span>
                       <span className={cn("font-semibold", market.active ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>
-                        {market.closed ? "Resolved" : market.active ? "Active" : "Inactive"}
+                        {market.active ? "Active" : "Inactive"}
                       </span>
                     </div>
                     {market.tags?.length > 0 && (
@@ -1389,6 +1667,56 @@ export default function PredictionDetailPage() {
                 </div>
               </div>
             )}
+
+            {/* ── Related Markets ── */}
+            {filteredRelated.length > 0 && (
+              <div className="bg-background border border-border rounded-2xl overflow-hidden">
+                <div className="px-5 py-4 border-b border-border">
+                  <h3 className="text-sm font-bold">Related Markets</h3>
+                </div>
+                <div className="divide-y divide-border">
+                  {filteredRelated.map(ev => {
+                    const topMarket  = ev.markets?.[0];
+                    const topPrices  = safeJsonParse<string[]>(topMarket?.outcomePrices, []);
+                    const yesPct     = topPrices.length > 0 ? Math.round(parseFloat(topPrices[0] || "0.5") * 100) : null;
+                    return (
+                      <button
+                        key={ev.id}
+                        onClick={() => setLocation(`/prediction/${ev.id}`)}
+                        className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-muted/40 transition-colors text-left"
+                      >
+                        {ev.image && (
+                          <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-muted">
+                            <PolymarketImage src={ev.image} className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold leading-snug line-clamp-2">{ev.title}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">{fmtVol(ev.volume ?? 0)} Vol.</div>
+                        </div>
+                        {yesPct !== null && (
+                          <div className="shrink-0 text-right ml-2">
+                            <div
+                              className={cn(
+                                "text-sm font-bold tabular-nums",
+                                yesPct >= 50 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500",
+                              )}
+                            >
+                              {yesPct}%
+                            </div>
+                            <div className="text-[10px] text-muted-foreground font-medium">Yes</div>
+                          </div>
+                        )}
+                        <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 ml-1" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ── Comments ── */}
+            <CommentSection marketId={market?.id ?? ""} isAuthenticated={!!walletInfo} commentCount={event?.commentCount} />
           </div>
 
           {/* ════════════ RIGHT COLUMN — desktop trade panel ════════════ */}
@@ -1402,23 +1730,38 @@ export default function PredictionDetailPage() {
       </div>
 
       {/* ── Mobile sticky bottom Buy bar ── */}
-      {!market.closed && (
+      {!market?.closed && !isMultiMarket && (
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-t border-border px-4 py-3 safe-area-pb">
           <div className="flex gap-2 max-w-lg mx-auto">
-            <button
-              onClick={() => openMobileBuy(0)}
-              className="flex-1 py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm transition-colors flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/25"
-            >
-              Buy Yes
-              <span className="opacity-80 font-medium">· {yesCents}¢</span>
-            </button>
-            <button
-              onClick={() => openMobileBuy(1)}
-              className="flex-1 py-3.5 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold text-sm transition-colors flex items-center justify-center gap-1.5 shadow-lg shadow-red-500/25"
-            >
-              Buy No
-              <span className="opacity-80 font-medium">· {noCents}¢</span>
-            </button>
+            {isBinary ? (
+              <>
+                <button
+                  onClick={() => openMobileBuy(0)}
+                  className="flex-1 py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm transition-colors flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/25"
+                >
+                  {outcomes[0]?.name ?? "Yes"}
+                  <span className="opacity-80 font-medium">· {yesCents}¢</span>
+                </button>
+                <button
+                  onClick={() => openMobileBuy(1)}
+                  className="flex-1 py-3.5 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold text-sm transition-colors flex items-center justify-center gap-1.5 shadow-lg shadow-red-500/25"
+                >
+                  {outcomes[1]?.name ?? "No"}
+                  <span className="opacity-80 font-medium">· {noCents}¢</span>
+                </button>
+              </>
+            ) : (
+              outcomes.map((o, i) => (
+                <button
+                  key={i}
+                  onClick={() => openMobileBuy(i)}
+                  className="flex-1 py-3.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-sm transition-colors flex items-center justify-center gap-1.5 shadow-lg"
+                >
+                  {o.name}
+                  <span className="opacity-80 font-medium">· {Math.round(o.price * 100)}¢</span>
+                </button>
+              ))
+            )}
           </div>
         </div>
       )}
