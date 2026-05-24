@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { mapPolymarketMarket } from '@/lib/mappers/polymarket';
 import {
   getPolymarketWalletInfo,
   getPolymarketTradeHistory,
@@ -67,10 +68,19 @@ async function clobFetch<T>(
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 export interface PolymarketTag {
-  id:    string;
-  label: string;
-  slug:  string;
-  forceShowOnHomepage?: boolean;
+  id:         string;
+  label:      string;
+  slug:       string;
+  forceShow?: boolean;      // pinned to the top of the tag list
+  forceHide?: boolean;      // suppressed from all UI surfaces
+  isCarousel?: boolean;     // shown in the carousel on the homepage
+}
+
+export interface PolymarketCategory {
+  id:              string;
+  label:           string;
+  slug:            string;
+  parentCategory?: string;  // slug of the parent category (e.g. "sports" → "politics")
 }
 
 export interface PolymarketMarket {
@@ -89,17 +99,56 @@ export interface PolymarketMarket {
   outcomes:       string;          // JSON-encoded string[]
   volume:         string;
   volumeNum:      number;
+  volume24hr:     number;          // 24-hour rolling volume
+  volume1wk:      number;
+  volume1mo:      number;
+  volume1yr:      number;
   liquidity:      string;
   liquidityNum:   number;
   endDate:        string;
   startDate:      string;
-  tags:           Array<string | PolymarketTag>;
+  tags:           PolymarketTag[];              // always objects per Gamma API schema
   bestBid:        number;
   bestAsk:        number;
   lastTradePrice: number;
   negRisk:        boolean;
+  negRiskOther:   boolean;         // this market is the "other" leg of a neg-risk group
   minimumTickSize?: string;
   enableOrderBook?: boolean;
+  acceptingOrders:  boolean;       // whether the order book is currently accepting orders
+  // price movement
+  oneDayPriceChange:   number;
+  oneHourPriceChange:  number;
+  oneWeekPriceChange:  number;
+  oneMonthPriceChange: number;
+  oneYearPriceChange:  number;
+  // market quality
+  spread:           number;        // current bid-ask spread
+  competitive:      number;        // competitiveness score (0-1)
+  curationOrder:    number;        // manual ordering hint
+  // display hints
+  wideFormat:       boolean;       // render in wide card layout
+  // range / scalar markets
+  lowerBound:       string;
+  upperBound:       string;
+  lowerBoundDate:   string;
+  upperBoundDate:   string;
+  // grouped / series markets
+  groupItemTitle:    string;       // team/candidate name for grouped markets
+  groupItemRange:    string;       // range label for grouped markets
+  shortOutcomes:     string;       // JSON-encoded abbreviated outcome names
+  // sports fields
+  teamAID:           string;       // team A identifier
+  teamBID:           string;       // team B identifier
+  marketType:        string;       // e.g. "binary", "categorical"
+  formatType:        string;       // display format hint
+  sportsMarketType:  string;       // "moneyline" | "spread" | "totals"
+  gameId:            string;       // game identifier
+  gameStartTime:     string;       // ISO datetime when the game starts
+  eventStartTime:    string;       // ISO datetime when the event starts
+  line:              number;       // spread / totals line value
+  seriesColor:       string;       // hex colour for team/series branding
+  chartColor:        string;       // hex colour for probability chart
 }
 
 // An Event groups one or more related markets under a shared headline.
@@ -111,18 +160,41 @@ export interface PolymarketEvent {
   slug:             string;
   image:            string;
   icon:             string;
+  featuredImage:    string;        // hero/banner image used on the event page
   active:           boolean;
   closed:           boolean;
   volume:           number;
   volume24hr:       number;
+  volume1wk:        number;
+  volume1mo:        number;
+  volume1yr:        number;
   liquidity:        number;
+  openInterest:     number;        // total open interest across all markets
   tags:             PolymarketTag[];
+  categories:       PolymarketCategory[];  // e.g. Politics, Sports, Crypto
   markets:          PolymarketMarket[];
+  // neg-risk
   enableNegRisk:    boolean;
   negRiskAugmented: boolean;
+  negRisk:          boolean;       // event-level neg-risk flag
+  negRiskMarketID:  string;        // ID of the companion neg-risk market
+  negRiskFeeBips:   number;        // fee charged for neg-risk resolution (basis points)
   endDate:          string;
   startDate:        string;
   commentCount:     number;
+  competitive:      number;        // competitiveness score (0-1)
+  // sports live-game fields
+  live:             boolean;       // game is currently in progress
+  ended:            boolean;       // game has finished
+  score:            string;        // live score string e.g. "3 - 1"
+  elapsed:          string;        // time elapsed in game e.g. "72'"
+  period:           string;        // current period / quarter / half
+  gameStatus:       string;        // full status string from data provider
+  eventDate:        string;        // date of the sporting event
+  startTime:        string;        // ISO kickoff / tip-off time
+  seriesSlug:       string;        // slug of the series this event belongs to
+  spreadsMainLine:  number;        // primary spread line for this event
+  totalsMainLine:   number;        // primary totals (over/under) line
 }
 
 export interface PricePoint {
@@ -164,6 +236,10 @@ const FIDELITY_API: Record<string, number> = {
   '1H': 1, '6H': 5, '1D': 60, '1W': 60, '1M': 1440,
 };
 
+function applyMarketMapper(ev: PolymarketEvent): PolymarketEvent {
+  return { ...ev, markets: (ev.markets ?? []).map(mapPolymarketMarket) };
+}
+
 export function useEvents(params?: {
   limit?:     number;
   offset?:    number;
@@ -174,15 +250,18 @@ export function useEvents(params?: {
 }) {
   return useQuery({
     queryKey: ['polymarket', 'events', params],
-    queryFn:  () => gammaFetch<PolymarketEvent[]>('/events', {
-      active:    'true',
-      closed:    String(params?.closed ?? false),
-      limit:     params?.limit  ?? 20,
-      offset:    params?.offset ?? 0,
-      order:     params?.sort ?? 'volume_24hr',
-      ascending: String(params?.ascending ?? false),
-      ...(params?.tag_slug ? { tag_slug: params.tag_slug } : {}),
-    }),
+    queryFn:  async () => {
+      const events = await gammaFetch<PolymarketEvent[]>('/events', {
+        active:    params?.closed ? 'false' : 'true',
+        closed:    String(params?.closed ?? false),
+        limit:     params?.limit  ?? 20,
+        offset:    params?.offset ?? 0,
+        order:     params?.sort ?? 'volume_24hr',
+        ascending: String(params?.ascending ?? false),
+        ...(params?.tag_slug ? { tag_slug: params.tag_slug } : {}),
+      });
+      return events.map(applyMarketMapper);
+    },
     staleTime: 30_000,
   });
 }
@@ -196,26 +275,33 @@ export function useMarkets(params?: {
 }) {
   return useQuery({
     queryKey: ['polymarket', 'markets', params],
-    queryFn:  () => gammaFetch<PolymarketMarket[]>('/markets', {
-      active:    'true',
-      closed:    String(params?.closed ?? false),
-      limit:     params?.limit  ?? 20,
-      offset:    params?.offset ?? 0,
-      order:     'volume_24hr',
-      ascending: 'false',
-      ...(params?.tag_slug ? { tag_slug: params.tag_slug } : {}),
-    }),
+    queryFn:  async () => {
+      const markets = await gammaFetch<PolymarketMarket[]>('/markets', {
+        active:    'true',
+        closed:    String(params?.closed ?? false),
+        limit:     params?.limit  ?? 20,
+        offset:    params?.offset ?? 0,
+        order:     'volume_24hr',
+        ascending: 'false',
+        ...(params?.tag_slug ? { tag_slug: params.tag_slug } : {}),
+      });
+      return markets.map(mapPolymarketMarket);
+    },
     staleTime: 30_000,
   });
 }
 
 // ─── Tags ─────────────────────────────────────────────────────────────────────
-// forceShowOnHomepage=true returns only the curated category-level tags
-// (Politics, Crypto, Sports…) and excludes event-specific tags.
+// forceShowOnHomepage=true (query param) filters to the curated category-level
+// tags (Politics, Crypto, Sports…) and excludes event-specific sub-tags.
+// The field on returned tag objects is "forceShow", not "forceShowOnHomepage".
 export function useTags() {
   return useQuery({
     queryKey: ['polymarket', 'tags'],
-    queryFn:  () => gammaFetch<PolymarketTag[]>('/tags', { limit: 100 }),
+    queryFn:  () => gammaFetch<PolymarketTag[]>('/tags', {
+      limit:                100,
+      forceShowOnHomepage:  true,
+    }),
     staleTime: 5 * 60_000,
   });
 }
@@ -265,7 +351,7 @@ export function useEventDetail(eventId: string | undefined) {
     queryFn:  async () => {
       const ev = await gammaFetch<PolymarketEvent>(`/events/${eventId}`);
       if (!ev || !ev.markets) throw new Error('Event not found');
-      return ev;
+      return applyMarketMapper(ev);
     },
     enabled:  !!eventId,
     staleTime: 30_000,
@@ -280,7 +366,7 @@ export function useMarketDetail(marketId: string | undefined) {
     queryFn:  async () => {
       const market = await gammaFetch<PolymarketMarket>(`/markets/${marketId}`);
       if (!market) throw new Error('Market not found');
-      return market;
+      return mapPolymarketMarket(market);
     },
     enabled:  !!marketId,
     staleTime: 30_000,
@@ -288,10 +374,22 @@ export function useMarketDetail(marketId: string | undefined) {
 }
 
 // ─── Orderbook (live, polled) ─────────────────────────────────────────────────
+export interface OrderbookLevel {
+  price: string;
+  size:  string;
+}
+export interface PolymarketOrderbook {
+  market:    string;
+  asset_id:  string;
+  bids:      OrderbookLevel[];
+  asks:      OrderbookLevel[];
+  timestamp: string;
+  hash:      string;
+}
 export function useOrderbook(tokenId: string | undefined) {
   return useQuery({
     queryKey: ['polymarket', 'orderbook', tokenId],
-    queryFn:  () => clobFetch<unknown>('/book', { token_id: tokenId }),
+    queryFn:  () => clobFetch<PolymarketOrderbook>('/book', { token_id: tokenId }),
     enabled:  !!tokenId,
     refetchInterval: 10_000,
   });
