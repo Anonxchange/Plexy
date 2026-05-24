@@ -1716,7 +1716,12 @@ export default function PredictionDetailPage() {
             )}
 
             {/* ── Comments ── */}
-            <CommentSection marketId={market?.id ?? ""} isAuthenticated={!!walletInfo} commentCount={event?.commentCount} />
+            <CommentSection
+              eventId={event?.id}
+              isAuthenticated={!!walletInfo}
+              commentCount={event?.commentCount}
+              onSignIn={() => setLocation("/signin")}
+            />
           </div>
 
           {/* ════════════ RIGHT COLUMN — desktop trade panel ════════════ */}
