@@ -24,8 +24,8 @@ interface CategoryDef {
 
 const CATEGORIES: CategoryDef[] = [
   { key: "trending",    label: "Trending",    icon: <TrendingUp className="w-3.5 h-3.5" />, sort: "volume_24hr",  ascending: false },
-  { key: "breaking",    label: "Breaking",    icon: <Zap        className="w-3.5 h-3.5" />, sort: "start_date",   ascending: false },
-  { key: "new",         label: "New",         icon: <Sparkles   className="w-3.5 h-3.5" />, sort: "start_date",   ascending: false },
+  { key: "breaking",    label: "Breaking",    icon: <Zap        className="w-3.5 h-3.5" />, sort: "featured",     ascending: false },
+  { key: "new",         label: "New",         icon: <Sparkles   className="w-3.5 h-3.5" />, sort: "new",          ascending: false },
   { key: "politics",    label: "Politics",    tag_slug: "politics",    sort: "volume_24hr", ascending: false },
   { key: "crypto",      label: "Crypto",      tag_slug: "crypto",      sort: "volume_24hr", ascending: false },
   { key: "sports",      label: "Sports",      tag_slug: "sports",      sort: "volume_24hr", ascending: false },
@@ -550,7 +550,7 @@ function EventCard({
   const isMulti = markets.length > 1;
   const isLive  = event.active && !event.closed;
   const volume  = formatVolume(event.volume ?? 0);
-  const navId   = String(markets[0]?.id ?? event.id);
+  const navId   = String(event.id);
 
   // ── Multi-market: sub-markets each with Yes/No binary outcomes ──────────────
   const rankedMarkets = useMemo(() => {
@@ -671,7 +671,7 @@ function EventCard({
               const shortName = extractShortName(m.question);
               const yesPct    = Math.round(yesPrice * 100);
               const noPct     = Math.round(noPrice  * 100);
-              const navMkt    = String(m.id);
+              const navMkt    = String(event.id);
               return (
                 <div
                   key={m.id}
