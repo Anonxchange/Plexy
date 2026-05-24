@@ -41,13 +41,9 @@ function safeJsonParse<T>(str: unknown, fallback: T): T {
   try { const r = JSON.parse(str); return Array.isArray(r) ? r as T : fallback; }
   catch { return fallback; }
 }
-function tagLabel(t: unknown): string {
-  if (typeof t === 'string') return t;
-  if (t && typeof t === 'object') {
-    const o = t as Record<string, unknown>;
-    return String(o.label ?? o.name ?? o.slug ?? '');
-  }
-  return '';
+function tagLabel(t: { label?: string; slug?: string } | undefined | null): string {
+  if (!t) return '';
+  return t.label ?? t.slug ?? '';
 }
 function fmtVol(n: number) {
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
@@ -1222,8 +1218,8 @@ export default function PredictionDetailPage() {
                         <div className="flex items-start justify-between mb-2">
                           <div>
                             <div className="text-sm font-bold leading-tight">{label}</div>
-                            {(m as any).volumeNum != null && (
-                              <div className="text-xs text-muted-foreground mt-0.5">{fmtVol((m as any).volumeNum)} Vol.</div>
+                            {m.volumeNum != null && (
+                              <div className="text-xs text-muted-foreground mt-0.5">{fmtVol(m.volumeNum)} Vol.</div>
                             )}
                           </div>
                           <div className="text-2xl font-black tabular-nums">{yesPct}%</div>
@@ -1616,7 +1612,7 @@ export default function PredictionDetailPage() {
                       <div className="flex items-start justify-between gap-4">
                         <span className="text-muted-foreground shrink-0">Tags</span>
                         <div className="flex flex-wrap justify-end gap-1">
-                          {market.tags.map((tag: unknown, i: number) => (
+                          {market.tags.map((tag, i) => (
                             <span key={i} className="px-2 py-0.5 rounded-full bg-muted text-xs font-medium">{tagLabel(tag)}</span>
                           ))}
                         </div>
