@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 
@@ -113,6 +114,8 @@ function formatVolume(v: number): string {
 }
 
 // ─── Simple dropdown component ────────────────────────────────────────────────
+// Uses a portal so the menu renders at document.body and escapes any
+// overflow-x-auto parent that would otherwise clip it.
 function FilterDropdown({
   label, value, options, onSelect, icon,
 }: {
@@ -122,24 +125,35 @@ function FilterDropdown({
   onSelect: (key: string) => void;
   icon?:    React.ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [open, setOpen]   = useState(false);
+  const [rect, setRect]   = useState<DOMRect | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+      if (
+        !btnRef.current?.contains(e.target as Node) &&
+        !menuRef.current?.contains(e.target as Node)
+      ) setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
+  const toggle = () => {
+    if (!open && btnRef.current) setRect(btnRef.current.getBoundingClientRect());
+    setOpen(v => !v);
+  };
+
   const selected = options.find(o => o.key === value);
 
   return (
-    <div ref={ref} className="relative">
+    <>
       <button
-        onClick={() => setOpen(!open)}
+        ref={btnRef}
+        onClick={toggle}
         className={cn(
           "flex items-center gap-1.5 h-8 px-3 rounded-full border text-xs font-semibold whitespace-nowrap transition-all",
           open
@@ -151,8 +165,17 @@ function FilterDropdown({
         {selected?.label ?? label}
         <ChevronDown className={cn("w-3 h-3 transition-transform", open && "rotate-180")} />
       </button>
-      {open && (
-        <div className="absolute bottom-full mb-1.5 left-0 z-50 min-w-[140px] rounded-xl border border-border bg-popover shadow-lg py-1 overflow-hidden">
+      {open && rect && createPortal(
+        <div
+          ref={menuRef}
+          style={{
+            position: "fixed",
+            top:  rect.bottom + 6,
+            left: rect.left,
+            zIndex: 9999,
+          }}
+          className="min-w-[140px] rounded-xl border border-border bg-popover shadow-lg py-1 overflow-hidden"
+        >
           {options.map(opt => (
             <button
               key={opt.key}
@@ -166,9 +189,10 @@ function FilterDropdown({
               {value === opt.key && <Check className="w-3 h-3" />}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
-    </div>
+    </>
   );
 }
 
@@ -559,12 +583,18 @@ function EventCard({
       .filter(m => !m.closed)
       .map(m => {
         const outs   = parseOutcomes(m);
-        // Sort by price descending so the leading outcome is always first
-        const sorted = [...outs].sort((a, b) => b.price - a.price);
-        const topOut = sorted[0];
-        return { m, outs: sorted, yesPrice: topOut?.price ?? 0 };
+        const yesOut = outs.find(o => o.name.toLowerCase() === "yes");
+        const noOut  = outs.find(o => o.name.toLowerCase() === "no");
+        const isBinaryRow = !!(yesOut && noOut);
+        // For binary rows always show Yes first; for others sort by price desc
+        const sorted = isBinaryRow
+          ? [yesOut!, noOut!, ...outs.filter(o => o !== yesOut && o !== noOut)]
+          : [...outs].sort((a, b) => b.price - a.price);
+        // yesPct = probability of "Yes" (what Polymarket shows); fallback to max
+        const yesPrice = yesOut ? yesOut.price : (sorted[0]?.price ?? 0);
+        return { m, outs: sorted, yesPrice, isBinaryRow };
       })
-      .filter(({ yesPrice }) => yesPrice > 0)
+      .filter(({ yesPrice }) => yesPrice > 0 || true) // keep all open rows
       .sort((a, b) => b.yesPrice - a.yesPrice)
       .slice(0, 5);
   }, [markets, isMulti]);
@@ -669,11 +699,11 @@ function EventCard({
         {isMulti ? (
           /* Multi sub-market rows: each sub-market is binary (label + % + Yes/No) */
           <div className="space-y-1.5">
-            {rankedMarkets.map(({ m, outs, yesPrice }) => {
+            {rankedMarkets.map(({ m, outs, yesPrice, isBinaryRow }) => {
               const shortName  = extractShortName(m.question);
               const topPct     = Math.round(yesPrice * 100);
               const navMkt     = String(event.id);
-              // Show at most the top 2 outcomes as action buttons
+              // Show at most the top 2 outcomes as action buttons (Yes always before No)
               const btnOuts    = outs.slice(0, 2);
               return (
                 <div
@@ -683,12 +713,16 @@ function EventCard({
                 >
                   <span className="flex-1 text-xs font-medium text-foreground truncate">{shortName}</span>
                   <span className="text-xs font-bold tabular-nums text-muted-foreground w-7 text-right shrink-0">{topPct}%</span>
-                  {btnOuts.map((o, i) => (
+                  {btnOuts.map((o) => {
+                    const isYesBtn = isBinaryRow
+                      ? o.name.toLowerCase() === "yes"
+                      : outs.indexOf(o) === 0;
+                    return (
                     <button
-                      key={i}
+                      key={o.name}
                       className={cn(
                         "h-6 px-2.5 rounded-md text-[11px] font-bold transition-colors shrink-0",
-                        i === 0
+                        isYesBtn
                           ? "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-500"
                           : "bg-red-500/15 hover:bg-red-500/25 text-red-500",
                       )}
@@ -696,7 +730,8 @@ function EventCard({
                     >
                       {o.name}
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               );
             })}
@@ -716,12 +751,16 @@ function EventCard({
                 style={{ width: `${singleBinary.noPct}%` }} />
             </div>
             <div className="flex items-center gap-2">
-              {singleOutcomes.map((o, i) => {
-                const pct = Math.round(o.price * 100);
-                const isYes = o.name.toLowerCase() === "yes" || i === 0;
+              {/* Always render Yes first, then No — never rely on API order */}
+              {[
+                singleOutcomes.find(o => o.name.toLowerCase() === "yes"),
+                singleOutcomes.find(o => o.name.toLowerCase() === "no"),
+              ].filter(Boolean).map((o, i) => {
+                const pct = Math.round(o!.price * 100);
+                const isYes = o!.name.toLowerCase() === "yes";
                 return (
                   <button
-                    key={i}
+                    key={o!.name}
                     className={cn(
                       "flex-1 h-9 rounded-xl text-sm font-bold transition-colors",
                       isYes
@@ -729,31 +768,53 @@ function EventCard({
                         : "bg-red-500/15 hover:bg-red-500/25 text-red-500",
                     )}
                     onClick={e => { e.stopPropagation(); onNavigate(navId); }}
-                  >{o.name} · {pct}¢</button>
+                  >{o!.name} · {pct}¢</button>
+                );
+              })}
+            </div>
+          </div>
+        ) : singleOutcomes.length === 2 ? (
+          /* 2-outcome non-binary market (e.g. Canadiens vs Hurricanes) —
+             same side-by-side layout as binary, using actual outcome names */
+          <div className="space-y-2">
+            <div className="relative h-1.5 rounded-full bg-muted overflow-hidden">
+              <div className="absolute left-0 top-0 h-full bg-emerald-500 rounded-l-full transition-all duration-500"
+                style={{ width: `${Math.round(singleOutcomes[0].price * 100)}%` }} />
+              <div className="absolute right-0 top-0 h-full bg-red-500 rounded-r-full transition-all duration-500"
+                style={{ width: `${Math.round(singleOutcomes[1].price * 100)}%` }} />
+            </div>
+            <div className="flex items-center gap-2">
+              {singleOutcomes.map((o, i) => {
+                const pct = Math.round(o.price * 100);
+                return (
+                  <button
+                    key={i}
+                    className={cn(
+                      "flex-1 h-9 rounded-xl text-sm font-bold truncate px-2 transition-colors",
+                      i === 0
+                        ? "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-500"
+                        : "bg-red-500/15 hover:bg-red-500/25 text-red-500",
+                    )}
+                    onClick={e => { e.stopPropagation(); onNavigate(navId); }}
+                  >{o.name} · {pct}%</button>
                 );
               })}
             </div>
           </div>
         ) : singleOutcomes.filter(o => o.price > 0).length > 0 ? (
-          /* Single market with named outcomes (e.g. team matchup, multi-choice) */
+          /* Multi-choice outcome list (3+ outcomes, e.g. election with candidates) */
           <div className="space-y-1.5">
             {singleOutcomes.filter(o => o.price > 0).slice(0, 4).map((o, i) => {
               const pct = Math.round(o.price * 100);
-              const isTop = i === 0;
               return (
                 <div key={i} className="flex items-center gap-2 rounded-lg hover:bg-muted/50 px-1 py-0.5 transition-colors"
                   onClick={e => { e.stopPropagation(); onNavigate(navId); }}>
                   <span className="flex-1 text-xs font-medium truncate">{o.name}</span>
                   <span className="text-xs font-bold tabular-nums shrink-0">{pct}%</span>
                   <button
-                    className={cn(
-                      "h-6 px-2.5 rounded-md text-[11px] font-bold transition-colors shrink-0",
-                      isTop
-                        ? "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-500"
-                        : "bg-muted hover:bg-muted/80 text-muted-foreground",
-                    )}
+                    className="h-6 px-2.5 rounded-md text-[11px] font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-500 transition-colors shrink-0"
                     onClick={e => { e.stopPropagation(); onNavigate(navId); }}
-                  >Buy</button>
+                  >{o.name}</button>
                 </div>
               );
             })}
