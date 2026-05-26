@@ -17,6 +17,24 @@
       "destination": "https://www.pexly.app/shop",
       "has": [{ "type": "host", "value": "shop.pexly.app" }],
       "permanent": false
+    },
+    {
+      "source": "/checkouts/:path*",
+      "destination": "https://checkout.pexly.app/checkouts/:path*",
+      "has": [{ "type": "host", "value": "shop.pexly.app" }],
+      "permanent": false
+    },
+    {
+      "source": "/cart/:path*",
+      "destination": "https://checkout.pexly.app/cart/:path*",
+      "has": [{ "type": "host", "value": "shop.pexly.app" }],
+      "permanent": false
+    },
+    {
+      "source": "/payments/:path*",
+      "destination": "https://checkout.pexly.app/payments/:path*",
+      "has": [{ "type": "host", "value": "shop.pexly.app" }],
+      "permanent": false
     }
   ],
   "rewrites": [
