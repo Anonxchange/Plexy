@@ -11,12 +11,6 @@
       "destination": "https://www.pexly.app/signin",
       "has": [{ "type": "host", "value": "auth.pexly.app" }],
       "permanent": false
-    },
-    {
-      "source": "/(.*)",
-      "destination": "https://www.pexly.app/shop",
-      "has": [{ "type": "host", "value": "shop.pexly.app" }],
-      "permanent": false
     }
   ],
   "rewrites": [
