@@ -1,19 +1,19 @@
 {
   "redirects": [
     {
-      "source": "/",
+      "source": "/(.*)",
       "destination": "https://www.pexly.app/support",
       "has": [{ "type": "host", "value": "help.pexly.app" }],
       "permanent": false
     },
     {
-      "source": "/",
+      "source": "/(.*)",
       "destination": "https://www.pexly.app/signin",
       "has": [{ "type": "host", "value": "auth.pexly.app" }],
       "permanent": false
     },
     {
-      "source": "/",
+      "source": "/(.*)",
       "destination": "https://www.pexly.app/shop",
       "has": [{ "type": "host", "value": "shop.pexly.app" }],
       "permanent": false
