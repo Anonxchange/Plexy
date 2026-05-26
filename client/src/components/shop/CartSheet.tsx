@@ -30,8 +30,8 @@ export function CartSheet() {
 
   const handleCheckout = () => {
     if (checkoutUrl) {
-      window.open(checkoutUrl, '_blank');
       setIsOpen(false);
+      window.location.href = checkoutUrl;
     }
   };
 
