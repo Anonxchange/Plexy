@@ -101,12 +101,7 @@ export function formatPrice(amount: string | number, currencyCode: string) {
 }
 
 function formatCheckoutUrl(checkoutUrl: string): string {
-  try {
-    const url = new URL(checkoutUrl);
-    return `https://shop.pexly.app${url.pathname}${url.search}`;
-  } catch {
-    return checkoutUrl;
-  }
+  return checkoutUrl;
 }
 
 function isCartNotFoundError(userErrors: Array<{ field: string[] | null; message: string }>): boolean {
