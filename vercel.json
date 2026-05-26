@@ -17,41 +17,23 @@
       "destination": "https://www.pexly.app/shop",
       "has": [{ "type": "host", "value": "shop.pexly.app" }],
       "permanent": false
-    },
-    {
-      "source": "/checkouts/:path*",
-      "destination": "https://checkout.pexly.app/checkouts/:path*",
-      "has": [{ "type": "host", "value": "shop.pexly.app" }],
-      "permanent": false
-    },
-    {
-      "source": "/cart/:path*",
-      "destination": "https://checkout.pexly.app/cart/:path*",
-      "has": [{ "type": "host", "value": "shop.pexly.app" }],
-      "permanent": false
-    },
-    {
-      "source": "/payments/:path*",
-      "destination": "https://checkout.pexly.app/payments/:path*",
-      "has": [{ "type": "host", "value": "shop.pexly.app" }],
-      "permanent": false
     }
   ],
   "rewrites": [
     {
-      "source": "/checkouts/:path*",
-      "destination": "https://qm0yih-vd.myshopify.com/checkouts/:path*",
-      "has": [{ "type": "host", "value": "checkout.pexly.app" }]
-    },
-    {
       "source": "/cart/:path*",
       "destination": "https://qm0yih-vd.myshopify.com/cart/:path*",
-      "has": [{ "type": "host", "value": "checkout.pexly.app" }]
+      "has": [{ "type": "host", "value": "shop.pexly.app" }]
+    },
+    {
+      "source": "/checkouts/:path*",
+      "destination": "https://qm0yih-vd.myshopify.com/checkouts/:path*",
+      "has": [{ "type": "host", "value": "shop.pexly.app" }]
     },
     {
       "source": "/payments/:path*",
       "destination": "https://qm0yih-vd.myshopify.com/payments/:path*",
-      "has": [{ "type": "host", "value": "checkout.pexly.app" }]
+      "has": [{ "type": "host", "value": "shop.pexly.app" }]
     },
     {
       "source": "/(.*)",
@@ -69,7 +51,7 @@
       ]
     },
     {
-      "source": "/(.*\\.html|)",
+      "source": "/(.*\\.html)",
       "headers": [
         {
           "key": "Cache-Control",
