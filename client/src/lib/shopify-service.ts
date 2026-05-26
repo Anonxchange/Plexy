@@ -100,7 +100,7 @@ export function formatPrice(amount: string | number, currencyCode: string) {
   }).format(Number(amount));
 }
 
-function formatCheckoutUrl(checkoutUrl: string): string {
+export function formatCheckoutUrl(checkoutUrl: string): string {
   try {
     const url = new URL(checkoutUrl);
     if (url.hostname === 'shop.pexly.app') {
@@ -163,7 +163,7 @@ export const shopifyService = {
     return {
       id: cart.id,
       totalQuantity: cart.totalQuantity,
-      checkoutUrl: cart.checkoutUrl,
+      checkoutUrl: formatCheckoutUrl(cart.checkoutUrl),
       items
     };
   },
