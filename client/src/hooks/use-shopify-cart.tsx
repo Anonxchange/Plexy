@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { shopifyService } from '@/lib/shopify-service';
+import { shopifyService, formatCheckoutUrl } from '@/lib/shopify-service';
 import { toast } from 'sonner';
 
 interface CartItem {
@@ -37,7 +37,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
-    return localStorage.getItem(CHECKOUT_URL_KEY);
+    const stored = localStorage.getItem(CHECKOUT_URL_KEY);
+    return stored ? formatCheckoutUrl(stored) : null;
   });
   const [items, setItems] = useState<CartItem[]>(() => {
     if (typeof window === 'undefined') return [];
@@ -146,8 +147,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const storedCartId = localStorage.getItem(CART_ID_KEY);
       const storedCheckoutUrl = localStorage.getItem(CHECKOUT_URL_KEY);
 
+      const sanitizedCheckoutUrl = storedCheckoutUrl ? formatCheckoutUrl(storedCheckoutUrl) : storedCheckoutUrl;
       setCartId(prev => storedCartId !== prev ? storedCartId : prev);
-      setCheckoutUrl(prev => storedCheckoutUrl !== prev ? storedCheckoutUrl : prev);
+      setCheckoutUrl(prev => sanitizedCheckoutUrl !== prev ? sanitizedCheckoutUrl : prev);
 
       if (storedCartId) {
         const storedItems = localStorage.getItem(`${ITEMS_PREFIX}${storedCartId}`);
@@ -179,7 +181,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const timer = setTimeout(() => {
       const initialCheckoutUrl = localStorage.getItem(CHECKOUT_URL_KEY);
       if (initialCheckoutUrl && !checkoutUrlRef.current) {
-        setCheckoutUrl(initialCheckoutUrl);
+        setCheckoutUrl(formatCheckoutUrl(initialCheckoutUrl));
       }
       const initialCartId = localStorage.getItem(CART_ID_KEY);
       if (initialCartId && itemsRef.current.length === 0) {
