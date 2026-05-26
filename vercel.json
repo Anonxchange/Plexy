@@ -21,6 +21,16 @@
       ]
     },
     {
+      "source": "/",
+      "destination": "/shop",
+      "has": [
+        {
+          "type": "host",
+          "value": "shop.pexly.app"
+        }
+      ]
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
