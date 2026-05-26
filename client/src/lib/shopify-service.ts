@@ -101,7 +101,15 @@ export function formatPrice(amount: string | number, currencyCode: string) {
 }
 
 function formatCheckoutUrl(checkoutUrl: string): string {
-  return checkoutUrl;
+  try {
+    const url = new URL(checkoutUrl);
+    if (url.hostname === 'shop.pexly.app') {
+      url.hostname = 'qm0yih-vd.myshopify.com';
+    }
+    return url.toString();
+  } catch {
+    return checkoutUrl;
+  }
 }
 
 function isCartNotFoundError(userErrors: Array<{ field: string[] | null; message: string }>): boolean {
