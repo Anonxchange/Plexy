@@ -101,7 +101,18 @@ export function formatPrice(amount: string | number, currencyCode: string) {
 }
 
 function formatCheckoutUrl(checkoutUrl: string): string {
-  return checkoutUrl;
+  try {
+    const url = new URL(checkoutUrl);
+    // If Shopify returns a checkout URL using our custom domain (shop.pexly.app),
+    // rewrite it to the native myshopify.com domain so it reaches Shopify's
+    // checkout servers instead of Vercel (which has no /cart/* route).
+    if (url.hostname === 'shop.pexly.app') {
+      url.hostname = 'qm0yih-vd.myshopify.com';
+    }
+    return url.toString();
+  } catch {
+    return checkoutUrl;
+  }
 }
 
 function isCartNotFoundError(userErrors: Array<{ field: string[] | null; message: string }>): boolean {
