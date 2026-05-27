@@ -179,7 +179,9 @@ export function Shop() {
   useEffect(() => { setVisibleCount(SHOPIFY_DISPLAY_PAGE_SIZE); }, [selectedCategory, searchQuery, sortBy]);
 
   const fetchShopifyProducts = async (isBackground = false) => {
-    const fetchId = ++shopifyFetchIdRef.current;
+    // Background refreshes only update the cache — they must NOT claim a new fetchId
+    // or they would cancel any in-progress foreground fetch.
+    const fetchId = isBackground ? shopifyFetchIdRef.current : ++shopifyFetchIdRef.current;
 
     if (!isBackground) {
       const cached = readShopCache();
