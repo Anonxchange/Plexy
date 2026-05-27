@@ -184,7 +184,7 @@ export function Shop() {
     if (!isBackground) {
       const cached = readShopCache();
       if (cached) {
-        setShopifyProducts(cached.products);
+        setShopifyProducts(shuffleArray(cached.products));
         setShopifyCategories(cached.categories);
         setIsShopifyLoading(false);
       } else {
@@ -243,16 +243,14 @@ export function Shop() {
           });
         }
 
-        const batch = !isBackground ? shuffleArray(fetched) : fetched;
         if (!firstPageDone) {
-          setShopifyProducts(batch);
-          if (!isBackground) { setIsShopifyLoading(false); setVisibleCount(SHOPIFY_DISPLAY_PAGE_SIZE); }
+          // Show first batch immediately so the page isn't blank while remaining pages load
+          if (!isBackground) {
+            setShopifyProducts(shuffleArray(fetched));
+            setIsShopifyLoading(false);
+            setVisibleCount(SHOPIFY_DISPLAY_PAGE_SIZE);
+          }
           firstPageDone = true;
-        } else {
-          setShopifyProducts(prev => {
-            if (fetchId !== shopifyFetchIdRef.current) return prev;
-            return [...prev, ...batch];
-          });
         }
 
         hasMore = result.pageInfo?.hasNextPage || false;
@@ -265,6 +263,11 @@ export function Shop() {
           allFetched.map(p => p.category).filter((c): c is string => c.trim().length > 0)
         )).sort()];
         writeShopCache(allFetched, allCats);
+        // Set the full shuffled list all at once so every product gets equal visibility
+        if (!isBackground) {
+          setShopifyProducts(shuffleArray(allFetched));
+          setShopifyCategories(allCats);
+        }
       }
     } catch (err) {
       if (fetchId === shopifyFetchIdRef.current) devLog.error("Error fetching Shopify products:", err);
