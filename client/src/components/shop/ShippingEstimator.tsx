@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { MapPin, Truck, Clock, CreditCard, ShoppingCart, Loader2, Package, AlertCircle } from "lucide-react";
-import { shopifyService, formatPrice } from "@/lib/shopify-service";
+import { formatPrice } from "@/lib/shopify-service";
 import { useCart } from "@/hooks/use-shopify-cart";
 import { useShippingRates } from "@/hooks/use-shipping-rates";
 import { isValidCjVid } from "@/lib/cj-vid";
@@ -149,7 +149,7 @@ export function ShippingEstimator({
   const [selectedMethodIdx, setSelectedMethodIdx] = useState(0);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
-  const { addToCart } = useCart();
+  const { addToCart, checkoutUrl } = useCart();
   const { rates, isLoading: isLoadingRates, error: ratesError, calculate, reset } = useShippingRates();
 
   // Auto-detect user's country via IP on mount, fall back to first available country
@@ -239,29 +239,22 @@ export function ShippingEstimator({
     }
     setIsCheckingOut(true);
     try {
-      const result = await shopifyService.createCart({ variantId, quantity: 1 });
-      if (!result?.checkoutUrl) {
+      // Add to the shared cart first so the item is included in the checkout
+      await addToCart(variantId, {
+        variantId,
+        title: productTitle,
+        price: productPrice,
+        currency,
+        image: productImage ?? "",
+      });
+      // After addToCart the hook writes the URL to localStorage — read it from
+      // there because React state won't have re-rendered within this call.
+      const url = localStorage.getItem('shopify_checkout_url') || checkoutUrl;
+      if (!url) {
         toast.error("Could not create checkout. Please try again.");
         return;
       }
-      // Validate URL is a safe https destination before redirecting
-      const allowedHosts = ["checkout.shopify.com", "shop.app"];
-      let parsedUrl: URL;
-      try {
-        parsedUrl = new URL(result.checkoutUrl);
-      } catch {
-        toast.error("Invalid checkout URL. Please try again.");
-        return;
-      }
-      const isAllowed =
-        parsedUrl.protocol === "https:" &&
-        (allowedHosts.some(h => parsedUrl.hostname === h || parsedUrl.hostname.endsWith(`.${h}`)) ||
-          parsedUrl.hostname.endsWith(".myshopify.com"));
-      if (!isAllowed) {
-        toast.error("Unexpected checkout destination. Please try again.");
-        return;
-      }
-      window.location.href = parsedUrl.href;
+      window.location.href = url;
     } catch {
       toast.error("Checkout failed. Please try again.");
     } finally {
