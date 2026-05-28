@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { MapPin, Truck, Clock, CreditCard, ShoppingCart, Loader2, Package, AlertCircle } from "lucide-react";
 import { formatPrice } from "@/lib/shopify-service";
+import { getCountryCode } from "@/lib/geo";
 import { useCart } from "@/hooks/use-shopify-cart";
 import { useShippingRates } from "@/hooks/use-shipping-rates";
 import { isValidCjVid } from "@/lib/cj-vid";
@@ -152,21 +153,18 @@ export function ShippingEstimator({
   const { addToCart, checkoutUrl } = useCart();
   const { rates, isLoading: isLoadingRates, error: ratesError, calculate, reset } = useShippingRates();
 
-  // Auto-detect user's country via IP on mount, fall back to first available country
+  // Auto-detect user's country via IP on mount, fall back to US then first available
   useEffect(() => {
     let cancelled = false;
     async function detectCountry() {
-      try {
-        const res = await fetch("https://ipapi.co/country/", { signal: AbortSignal.timeout(3000) });
-        if (!res.ok) throw new Error("failed");
-        const code = (await res.text()).trim().toUpperCase();
-        if (!cancelled) {
-          const match = availableCountries.find((c) => c.code === code);
-          setSelectedCountry(match?.code ?? availableCountries[0]?.code ?? "");
-        }
-      } catch {
-        if (!cancelled) setSelectedCountry(availableCountries[0]?.code ?? "");
-      }
+      const code = await getCountryCode(); // reads CF edge tag → ipapi.co JSON → "US"
+      if (cancelled) return;
+      const match = availableCountries.find((c) => c.code === code);
+      // If detected country isn't in the available list, fall back to US or first entry
+      const fallback =
+        availableCountries.find((c) => c.code === "US") ??
+        availableCountries[0];
+      setSelectedCountry(match?.code ?? fallback?.code ?? "");
     }
     detectCountry();
     return () => { cancelled = true; };
