@@ -183,12 +183,10 @@ export async function signEVMTransaction(
   const encoded = RLP.encode(tx);
   const hash = keccak_256(encoded);
 
-  const sigBytes = await secp.signAsync(hash, privKey, { prehash: false, format: 'recovered' } as any);
-  const recovery = sigBytes[0];
-  const compact = sigBytes.slice(1);
-  const v = BigInt(config.chainId * 2 + 35 + recovery);
-  const r = BigInt("0x" + bytesToHex(compact.slice(0, 32)));
-  const s = BigInt("0x" + bytesToHex(compact.slice(32, 64)));
+  const sig = await secp.signAsync(hash, privKey, { lowS: true });
+  const v = BigInt(config.chainId * 2 + 35 + sig.recovery!);
+  const r = sig.r;
+  const s = sig.s;
 
   const signedTx = RLP.encode([nonce, gasPrice, gasLimit, to, value, data, v, r, s]);
   const txHash = "0x" + bytesToHex(keccak_256(signedTx));
@@ -263,12 +261,10 @@ export async function signEVMContractCall(
     const encoded = RLP.encode(tx);
     const hash = keccak_256(encoded);
 
-    const sigBytes = await secp.signAsync(hash, privKey, { prehash: false, format: 'recovered' } as any);
-    const recovery = sigBytes[0];
-    const compact = sigBytes.slice(1);
-    const v = BigInt(config.chainId * 2 + 35 + recovery);
-    const r = BigInt("0x" + bytesToHex(compact.slice(0, 32)));
-    const s = BigInt("0x" + bytesToHex(compact.slice(32, 64)));
+    const sig = await secp.signAsync(hash, privKey, { lowS: true });
+    const v = BigInt(config.chainId * 2 + 35 + sig.recovery!);
+    const r = sig.r;
+    const s = sig.s;
 
     const signedTx = RLP.encode([nonce, gasPrice, gasLimit, request.to, valueWei, request.data, v, r, s]);
     const txHash = "0x" + bytesToHex(keccak_256(signedTx));
@@ -303,11 +299,11 @@ export async function signEVMMessage(
   try {
     const prefix = `\x19Ethereum Signed Message:\n${message.length}`;
     const msgHash = keccak_256(new TextEncoder().encode(prefix + message));
-    const sigBytes = await secp.signAsync(msgHash, priv, { prehash: false, format: 'recovered' } as any);
-    const recovery = sigBytes[0];
-    const compact = sigBytes.slice(1);
-    const v = (27 + recovery).toString(16).padStart(2, "0");
-    return "0x" + bytesToHex(compact) + v;
+    const sig = await secp.signAsync(msgHash, priv, { lowS: true });
+    const r = sig.r.toString(16).padStart(64, '0');
+    const s = sig.s.toString(16).padStart(64, '0');
+    const v = (27 + sig.recovery!).toString(16).padStart(2, "0");
+    return "0x" + r + s + v;
   } finally {
     wipeBytes(priv);
   }
