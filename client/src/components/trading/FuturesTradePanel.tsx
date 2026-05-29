@@ -144,7 +144,14 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
       if (subs.includes("daily-perpetual")) completeTask("daily-perpetual").catch(() => {});
     },
     onError: (err: Error) => {
-      toast({ title: "Order failed", description: err.message, variant: "destructive" });
+      const isNoAgent = err.message?.toLowerCase().includes("no agent");
+      toast({
+        title: "Order failed",
+        description: isNoAgent
+          ? "Your trading session expired. Please re-link your wallet in Account → Deposit to restore access."
+          : err.message,
+        variant: "destructive",
+      });
     },
   });
 

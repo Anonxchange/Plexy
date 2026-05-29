@@ -223,10 +223,12 @@ const BottomTabs = ({ chartVisible, pair, viewMode, onViewModeChange: setViewMod
 
   const apiSymbol = pair.replace("/", "");
 
+  const hasV1 = !!user?.user_metadata?.aster_api_key;
+
   const { data: openOrders, isLoading: ordersLoading } = useQuery({
     queryKey: ["spot-open-orders", apiSymbol],
     queryFn: () => asterTrading.spotOpenOrders(apiSymbol),
-    enabled: !!user && activeOrderTab === "Open orders",
+    enabled: !!user && hasV1 && activeOrderTab === "Open orders",
     staleTime: 10_000,
     refetchInterval: 15_000,
   });
@@ -234,7 +236,7 @@ const BottomTabs = ({ chartVisible, pair, viewMode, onViewModeChange: setViewMod
   const { data: spotAccount, isLoading: accountLoading } = useQuery({
     queryKey: ["spot-account"],
     queryFn: () => asterTrading.spotAccount(),
-    enabled: !!user && activeOrderTab === "Assets",
+    enabled: !!user && hasV1 && activeOrderTab === "Assets",
     staleTime: 15_000,
     refetchInterval: 30_000,
   });

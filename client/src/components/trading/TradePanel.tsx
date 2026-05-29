@@ -59,10 +59,12 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
   const baseCoin = symbol.split("/")[0];
   const quoteCoin = symbol.split("/")[1] || "USDT";
 
+  const hasV1 = !!user?.user_metadata?.aster_api_key;
+
   const { data: spotAccount } = useQuery({
     queryKey: ["spot-account"],
     queryFn: () => asterTrading.spotAccount(),
-    enabled: !!user,
+    enabled: !!user && hasV1,
     staleTime: 15_000,
     refetchInterval: 30_000,
   });
@@ -133,7 +135,14 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
       if (subs.includes("first-trade"))  completeTask("first-trade").catch(() => {});
     },
     onError: (err: Error) => {
-      toast({ title: "Order failed", description: err.message, variant: "destructive" });
+      const isV1Required = err.message?.toLowerCase().includes("v1 api key");
+      toast({
+        title: "Order failed",
+        description: isV1Required
+          ? "Spot trading requires a V1 API key. Re-link your wallet to enable spot orders."
+          : err.message,
+        variant: "destructive",
+      });
     },
   });
 

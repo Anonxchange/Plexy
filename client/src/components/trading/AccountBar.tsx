@@ -23,10 +23,12 @@ const AccountBar = ({ variant = "bar", pair }: AccountBarProps) => {
   const baseAsset = pair ? pair.split("/")[0] : null;
   const quoteAsset = pair ? (pair.split("/")[1] || "USDT") : "USDT";
 
+  const hasV1 = !!user?.user_metadata?.aster_api_key;
+
   const { data: spotAccount, isLoading } = useQuery({
     queryKey: ["spot-account"],
     queryFn: () => asterTrading.spotAccount(),
-    enabled: !!user,
+    enabled: !!user && hasV1,
     staleTime: 15_000,
     refetchInterval: 30_000,
   });

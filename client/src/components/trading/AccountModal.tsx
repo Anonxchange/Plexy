@@ -1199,7 +1199,8 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
             />
             <button
               onClick={() => !user ? requireAuth() : transferMutation.mutate()}
-              disabled={!user || !amount || amountNum <= 0 || transferMutation.isPending}
+              disabled={!user || !amount || amountNum <= 0 || transferMutation.isPending || !hasV1}
+              title={!hasV1 ? "Transfer between accounts requires a V1 API key" : undefined}
               className="w-full py-3.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {transferMutation.isPending

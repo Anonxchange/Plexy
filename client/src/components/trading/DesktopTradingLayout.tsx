@@ -36,10 +36,12 @@ const DesktopTradingLayout = ({
 
   const apiSymbol = pair.replace("/", "");
 
+  const hasV1 = !!user?.user_metadata?.aster_api_key;
+
   const { data: spotAccount, isLoading: balanceLoading } = useQuery({
     queryKey: ["spot-account"],
     queryFn: () => asterTrading.spotAccount(),
-    enabled: !!user,
+    enabled: !!user && hasV1,
     staleTime: 15_000,
     refetchInterval: 30_000,
   });
@@ -47,7 +49,7 @@ const DesktopTradingLayout = ({
   const { data: openOrders, isLoading: ordersLoading } = useQuery({
     queryKey: ["spot-open-orders", apiSymbol],
     queryFn: () => asterTrading.spotOpenOrders(apiSymbol),
-    enabled: !!user && activeTab === "Open orders",
+    enabled: !!user && hasV1 && activeTab === "Open orders",
     staleTime: 10_000,
     refetchInterval: 15_000,
   });
@@ -55,7 +57,7 @@ const DesktopTradingLayout = ({
   const { data: allOrders, isLoading: allOrdersLoading } = useQuery({
     queryKey: ["spot-all-orders", apiSymbol],
     queryFn: () => asterTrading.spotAllOrders(apiSymbol),
-    enabled: !!user && activeTab === "Order history",
+    enabled: !!user && hasV1 && activeTab === "Order history",
     staleTime: 30_000,
   });
 
