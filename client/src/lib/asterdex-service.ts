@@ -532,13 +532,14 @@ export async function asterCreateApiKeyV3(
   signature: string,
   signerAddress: string,
 ): Promise<{ user: string; signer: string }> {
+  const ts = Date.now();
   const body = new URLSearchParams({
     address,
     userOperationType: 'CREATE_API_KEY',
     userSignature: signature,
     signerAddress,
-    desc: 'pexly-v3',
-    timestamp: String(Date.now()),
+    desc: `pexly-${ts}`,
+    timestamp: String(ts),
   });
   const res = await fetch(`https://sapi.asterdex.com/api/v3/createApiKey`, {
     method: 'POST',
