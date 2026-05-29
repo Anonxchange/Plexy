@@ -634,7 +634,7 @@ export const asterWallet = {
   withdrawFeeEstimate: (coin: string, network: string) => {
     const chainId = NETWORK_TO_CHAIN_ID[network.toUpperCase()] ?? '56';
     const networkType = network.toUpperCase() === 'SOL' ? 'SOL' : 'EVM';
-    return invoke('spot_withdraw_fee_estimate', { coin, chainId, network: networkType }, false);
+    return invoke('spot_withdraw_fee_estimate', { coin, chainId, network: networkType }, true);
   },
 
   // Withdraw from Spot account to an external address
