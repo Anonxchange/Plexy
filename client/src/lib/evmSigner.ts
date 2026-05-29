@@ -6,9 +6,11 @@ import { keccak_256 } from "@noble/hashes/sha3";
 import { bytesToHex } from "@noble/hashes/utils";
 import { wipeBytes, wipeHDKey } from "./secureMemory";
 
-// @noble/secp256k1 v3.x: use signAsync() which uses WebCrypto internally —
-// no secp.hashes setup required. Always pass { prehash: false } because our
-// callers supply already-keccak256-hashed data.
+// @noble/secp256k1 v3.x: signAsync() default format is 'compact' (raw Uint8Array),
+// NOT a Signature object — so sig.r / sig.s are undefined in that mode.
+// Always pass { format: 'recovered', prehash: false }:
+//   format:'recovered' → 65-byte [recovery, r[32], s[32]] Uint8Array with recovery byte
+//   prehash:false      → callers supply already-keccak256-hashed data; skip internal SHA-256
 
 /* -------------------------------------------------------------------------- */
 /*                                   CONFIG                                   */
@@ -183,10 +185,11 @@ export async function signEVMTransaction(
   const encoded = RLP.encode(tx);
   const hash = keccak_256(encoded);
 
-  const sig = await secp.signAsync(hash, privKey, { lowS: true });
-  const v = BigInt(config.chainId * 2 + 35 + sig.recovery!);
-  const r = sig.r;
-  const s = sig.s;
+  const sigBytes = await secp.signAsync(hash, privKey, { lowS: true, format: 'recovered', prehash: false } as any);
+  const recovery = sigBytes[0];
+  const v = BigInt(config.chainId * 2 + 35 + recovery);
+  const r = BigInt('0x' + bytesToHex(sigBytes.slice(1, 33)));
+  const s = BigInt('0x' + bytesToHex(sigBytes.slice(33, 65)));
 
   const signedTx = RLP.encode([nonce, gasPrice, gasLimit, to, value, data, v, r, s]);
   const txHash = "0x" + bytesToHex(keccak_256(signedTx));
@@ -261,10 +264,11 @@ export async function signEVMContractCall(
     const encoded = RLP.encode(tx);
     const hash = keccak_256(encoded);
 
-    const sig = await secp.signAsync(hash, privKey, { lowS: true });
-    const v = BigInt(config.chainId * 2 + 35 + sig.recovery!);
-    const r = sig.r;
-    const s = sig.s;
+    const sigBytes = await secp.signAsync(hash, privKey, { lowS: true, format: 'recovered', prehash: false } as any);
+    const recovery = sigBytes[0];
+    const v = BigInt(config.chainId * 2 + 35 + recovery);
+    const r = BigInt('0x' + bytesToHex(sigBytes.slice(1, 33)));
+    const s = BigInt('0x' + bytesToHex(sigBytes.slice(33, 65)));
 
     const signedTx = RLP.encode([nonce, gasPrice, gasLimit, request.to, valueWei, request.data, v, r, s]);
     const txHash = "0x" + bytesToHex(keccak_256(signedTx));
@@ -299,10 +303,11 @@ export async function signEVMMessage(
   try {
     const prefix = `\x19Ethereum Signed Message:\n${message.length}`;
     const msgHash = keccak_256(new TextEncoder().encode(prefix + message));
-    const sig = await secp.signAsync(msgHash, priv, { lowS: true });
-    const r = sig.r.toString(16).padStart(64, '0');
-    const s = sig.s.toString(16).padStart(64, '0');
-    const v = (27 + sig.recovery!).toString(16).padStart(2, "0");
+    const sigBytes = await secp.signAsync(msgHash, priv, { lowS: true, format: 'recovered', prehash: false } as any);
+    const recovery = sigBytes[0];
+    const r = bytesToHex(sigBytes.slice(1, 33));
+    const s = bytesToHex(sigBytes.slice(33, 65));
+    const v = (27 + recovery).toString(16).padStart(2, "0");
     return "0x" + r + s + v;
   } finally {
     wipeBytes(priv);
