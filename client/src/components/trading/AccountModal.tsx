@@ -330,6 +330,36 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     },
   });
 
+  // Unlink — clears all AsterDEX credentials from Supabase and localStorage so
+  // the user can run the full registration flow again (e.g. after a broken V3
+  // registration where the futures agent was never approved).
+  const unlinkMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          aster_user:       null,
+          aster_signer:     null,
+          aster_signer_key: null,
+          aster_api_key:    null,
+          aster_api_secret: null,
+        },
+      });
+      if (error) throw new Error("Failed to unlink wallet: " + error.message);
+    },
+    onSuccess: () => {
+      if (user) localStorage.removeItem(asterRegKey(user.id));
+      setIsAsterRegistered(false);
+      setWalletPassword("");
+      queryClient.removeQueries({ queryKey: ["spot-account"] });
+      queryClient.removeQueries({ queryKey: ["futures-balance"] });
+      queryClient.removeQueries({ queryKey: ["deposit-address"] });
+      toast({ title: "Wallet unlinked", description: "Enter your password to re-activate your deposit address." });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Unlink failed", description: err.message, variant: "destructive" });
+    },
+  });
+
   // ── Queries ───────────────────────────────────────────
   // Defined early so it can be used in query keys below without hitting TDZ
   const chainAccountType = isSpot ? 'spot' : 'perp';
@@ -1041,7 +1071,19 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
     <>
         {/* ── Header ── */}
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-semibold text-foreground">Account</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-foreground">Account</h2>
+            {isAsterRegistered && (
+              <button
+                onClick={() => unlinkMutation.mutate()}
+                disabled={unlinkMutation.isPending}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                title="Unlink wallet and re-activate"
+              >
+                {unlinkMutation.isPending ? "Unlinking…" : "Re-link"}
+              </button>
+            )}
+          </div>
           <button onClick={() => onOpenChange(false)} className="text-muted-foreground hover:text-foreground">
             <X className="h-5 w-5" />
           </button>
