@@ -9,7 +9,6 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   asterTrading, asterWallet,
-  asterGetNonce, asterCreateApiKey,
   asterGetNonceV3, asterCreateApiKeyV3, asterGenerateSignerWallet, asterApproveAgentFutures,
   asterGetDepositAddress, asterGetChainAssets, CoinInfo,
 } from "@/lib/asterdex-service";
@@ -269,47 +268,26 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
       // Generate a dedicated signer keypair for V3 EIP-712 authentication
       const signerWallet = asterGenerateSignerWallet();
 
-      // Step 3: Attempt V3 registration — each path fetches its OWN nonce so that
-      // a failed V3 attempt (which may consume or invalidate that nonce) doesn't
-      // poison the V1 fallback.
-      let v3Registered = false;
-      try {
-        // 3a: Fetch V3 nonce and sign — nonce is JSON-wrapped on the V3 endpoint
-        const nonceV3 = await asterGetNonceV3(userEvmWallet.address);
-        const signatureV3 = await signEVMMessage(mnemonic, `You are signing into Astherus ${nonceV3}`);
+      // Step 3a: Fetch V3 nonce and sign
+      const nonceV3 = await asterGetNonceV3(userEvmWallet.address);
+      const signatureV3 = await signEVMMessage(mnemonic, `You are signing into Astherus ${nonceV3}`);
 
-        // 3b: Register signer on SPOT gateway (sapi.asterdex.com/api/v3/createApiKey)
-        await asterCreateApiKeyV3(userEvmWallet.address, signatureV3, signerWallet.address);
-        v3Registered = true;
-      } catch (err) {
-        console.warn("[AsterDEX] V3 createApiKey unavailable, falling back to V1:", err);
-      }
+      // Step 3b: Register signer on SPOT gateway (sapi.asterdex.com/api/v3/createApiKey)
+      await asterCreateApiKeyV3(userEvmWallet.address, signatureV3, signerWallet.address);
 
-      if (v3Registered) {
-        // 3c: Register the agent on FUTURES gateway (fapi.asterdex.com/fapi/v3/approveAgent).
-        // Without this every /fapi/v3 request returns "No agent found".
-        // Must succeed before credentials are saved.
-        await asterApproveAgentFutures(mnemonic, userEvmWallet.address, signerWallet.address);
+      // Step 3c: Register the agent on FUTURES gateway (fapi.asterdex.com/fapi/v3/approveAgent).
+      // Without this every /fapi/v3 request returns "No agent found".
+      await asterApproveAgentFutures(mnemonic, userEvmWallet.address, signerWallet.address);
 
-        // Step 4a: Both registrations succeeded — persist V3 credentials
-        const { error: updateError } = await supabase.auth.updateUser({
-          data: {
-            aster_user:       userEvmWallet.address,
-            aster_signer:     signerWallet.address,
-            aster_signer_key: signerWallet.privateKey,
-          },
-        });
-        if (updateError) throw new Error("Wallet linked but failed to save credentials: " + updateError.message);
-      } else {
-        // Step 4b: V3 not available — fetch a FRESH V1 nonce (independent of the V3 attempt)
-        const nonceV1 = await asterGetNonce(userEvmWallet.address);
-        const signatureV1 = await signEVMMessage(mnemonic, `You are signing into Astherus ${nonceV1}`);
-        const { apiKey, apiSecret } = await asterCreateApiKey(userEvmWallet.address, signatureV1);
-        const { error: updateError } = await supabase.auth.updateUser({
-          data: { aster_api_key: apiKey, aster_api_secret: apiSecret },
-        });
-        if (updateError) throw new Error("Wallet linked but failed to save credentials: " + updateError.message);
-      }
+      // Step 4: Both registrations succeeded — persist V3 credentials
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: {
+          aster_user:       userEvmWallet.address,
+          aster_signer:     signerWallet.address,
+          aster_signer_key: signerWallet.privateKey,
+        },
+      });
+      if (updateError) throw new Error("Wallet linked but failed to save credentials: " + updateError.message);
     },
     onSuccess: () => {
       if (user) localStorage.setItem(asterRegKey(user.id), "true");
