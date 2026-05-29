@@ -720,9 +720,11 @@ export async function asterApproveAgentFutures(
   try {
     const nonce = BigInt(Date.now()) * 1000n;
 
+    const agentName = `pexly-${nonce}`;
+
     const signingParams = new URLSearchParams({
       agentAddress: signerAddress,
-      agentName:    'pexly-v3',
+      agentName,
       canSpotTrade: 'false',
       canPerpTrade: 'true',
       canWithdraw:  'false',
@@ -742,7 +744,7 @@ export async function asterApproveAgentFutures(
       signer:       userAddress,
       nonce:        nonce.toString(),
       signature,
-      agentName:    'pexly-v3',
+      agentName,
       canSpotTrade: 'false',
       canPerpTrade: 'true',
       canWithdraw:  'false',
