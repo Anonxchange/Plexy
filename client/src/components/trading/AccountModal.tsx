@@ -273,7 +273,6 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
       // a failed V3 attempt (which may consume or invalidate that nonce) doesn't
       // poison the V1 fallback.
       let v3Registered = false;
-      let v3Err: unknown;
       try {
         // 3a: Fetch V3 nonce and sign — nonce is JSON-wrapped on the V3 endpoint
         const nonceV3 = await asterGetNonceV3(userEvmWallet.address);
@@ -283,7 +282,6 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
         await asterCreateApiKeyV3(userEvmWallet.address, signatureV3, signerWallet.address);
         v3Registered = true;
       } catch (err) {
-        v3Err = err;
         console.warn("[AsterDEX] V3 createApiKey unavailable, falling back to V1:", err);
       }
 
