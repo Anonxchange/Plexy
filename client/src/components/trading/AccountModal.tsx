@@ -202,6 +202,10 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
   const queryClient = useQueryClient();
   const isSpot = accountType === "Spot account";
 
+  // V1 HMAC key check — spot endpoints (/api/v1/*) require a legacy V1 API key.
+  // V3-only users have aster_signer_key but no aster_api_key → spot calls guaranteed fail.
+  const hasV1 = !!user?.user_metadata?.aster_api_key;
+
   // Reset state when modal opens
   useEffect(() => {
     if (open) {
@@ -327,7 +331,8 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
   const { data: spotAccount, isLoading: spotLoading } = useQuery({
     queryKey: ["spot-account"],
     queryFn: () => asterTrading.spotAccount(),
-    enabled: !!user,
+    // Spot endpoints require a V1 HMAC key — skip for V3-only users
+    enabled: !!user && hasV1,
     staleTime: 15_000,
     refetchInterval: 30_000,
   });
@@ -343,7 +348,8 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
   const { data: coinInfoData } = useQuery({
     queryKey: ["coin-info"],
     queryFn: () => asterWallet.coinInfo(),
-    enabled: !!user && open,
+    // spot_coin_info is a V1-only endpoint — skip for V3-only users
+    enabled: !!user && open && hasV1,
     staleTime: 60_000,
     retry: 1,
   });
@@ -1066,6 +1072,15 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
 
             {isSpot && (
               <>
+                {/* V3-only users have no V1 key — spot endpoints not available */}
+                {isAsterRegistered && !hasV1 && (
+                  <div className="flex items-start gap-2 mb-4 p-3 rounded-lg bg-secondary border border-border">
+                    <AlertCircle className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Your linked wallet uses V3 authentication (futures only). Spot account features require a legacy V1 API key. Switch to <strong>Perpetual account</strong> to deposit and withdraw using your current wallet.
+                    </p>
+                  </div>
+                )}
                 {/* Chain first (drives coin list), then coin picker */}
                 <ChainSelector />
                 <CoinAmountRow />
