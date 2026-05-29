@@ -59,12 +59,10 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
   const baseCoin = symbol.split("/")[0];
   const quoteCoin = symbol.split("/")[1] || "USDT";
 
-  const hasV1 = !!user?.user_metadata?.aster_api_key;
-
   const { data: spotAccount } = useQuery({
     queryKey: ["spot-account"],
     queryFn: () => asterTrading.spotAccount(),
-    enabled: !!user && hasV1,
+    enabled: !!user,
     staleTime: 15_000,
     refetchInterval: 30_000,
   });
