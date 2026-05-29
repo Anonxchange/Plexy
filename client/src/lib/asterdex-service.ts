@@ -732,7 +732,7 @@ export async function asterApproveAgentFutures(
 
     const encoded   = _abiEncodeApproveAgent(signingParams.toString(), userAddress, userAddress, nonce);
     const hash      = keccak_256(encoded);
-    const sig       = secp.sign(hash, privKey, { lowS: true });
+    const sig       = await secp.signAsync(hash, privKey, { lowS: true });
     const signature = '0x'
       + sig.r.toString(16).padStart(64, '0')
       + sig.s.toString(16).padStart(64, '0')
