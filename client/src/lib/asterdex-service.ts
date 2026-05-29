@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import * as secp from "@noble/secp256k1";
 import { keccak_256 } from "@noble/hashes/sha3";
+import { bytesToHex } from "@noble/hashes/utils";
 import { mnemonicToSeed } from "@scure/bip39";
 import { HDKey } from "@scure/bip32";
 
@@ -732,11 +733,12 @@ export async function asterApproveAgentFutures(
 
     const encoded   = _abiEncodeApproveAgent(signingParams.toString(), userAddress, userAddress, nonce);
     const hash      = keccak_256(encoded);
-    const sig       = await secp.signAsync(hash, privKey, { lowS: true });
+    const sigBytes  = await secp.signAsync(hash, privKey, { lowS: true, format: 'recovered', prehash: false } as any);
+    const recovery  = sigBytes[0];
     const signature = '0x'
-      + sig.r.toString(16).padStart(64, '0')
-      + sig.s.toString(16).padStart(64, '0')
-      + (sig.recovery! + 27).toString(16).padStart(2, '0');
+      + bytesToHex(sigBytes.slice(1, 33))
+      + bytesToHex(sigBytes.slice(33, 65))
+      + (recovery + 27).toString(16).padStart(2, '0');
 
     const body = new URLSearchParams({
       agentAddress: signerAddress,
