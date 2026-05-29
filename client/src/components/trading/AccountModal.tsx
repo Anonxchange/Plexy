@@ -269,35 +269,28 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
       // Generate a dedicated signer keypair for V3 EIP-712 authentication
       const signerWallet = asterGenerateSignerWallet();
 
-      // Step 1: Get a one-time signing challenge from AsterDEX (V3 endpoint, fall back to V1)
-      let nonce: string;
-      try {
-        nonce = await asterGetNonceV3(userEvmWallet.address);
-      } catch {
-        nonce = await asterGetNonce(userEvmWallet.address);
-      }
-
-      const message = `You are signing into Astherus ${nonce}`;
-      // Step 2: Sign the challenge with the user's main wallet — proves ownership
-      const signature = await signEVMMessage(mnemonic, message);
-
-      // Step 3: Attempt V3 registration (EIP-712).
-      // If createApiKeyV3 itself fails, fall back to V1 HMAC.
-      // If createApiKeyV3 succeeds but approveAgent fails, throw so the user retries —
-      // credentials must NOT be saved until both steps succeed, otherwise every
-      // /fapi/v3 call returns {"code":-1000,"msg":"No agent found"}.
+      // Step 3: Attempt V3 registration — each path fetches its OWN nonce so that
+      // a failed V3 attempt (which may consume or invalidate that nonce) doesn't
+      // poison the V1 fallback.
       let v3Registered = false;
+      let v3Err: unknown;
       try {
-        // 3a: Register signer on the SPOT gateway (sapi.asterdex.com/api/v3/createApiKey)
-        await asterCreateApiKeyV3(userEvmWallet.address, signature, signerWallet.address);
+        // 3a: Fetch V3 nonce and sign — nonce is JSON-wrapped on the V3 endpoint
+        const nonceV3 = await asterGetNonceV3(userEvmWallet.address);
+        const signatureV3 = await signEVMMessage(mnemonic, `You are signing into Astherus ${nonceV3}`);
+
+        // 3b: Register signer on SPOT gateway (sapi.asterdex.com/api/v3/createApiKey)
+        await asterCreateApiKeyV3(userEvmWallet.address, signatureV3, signerWallet.address);
         v3Registered = true;
-      } catch (v3Err) {
-        console.warn("[AsterDEX] V3 createApiKey unavailable, falling back to V1:", v3Err);
+      } catch (err) {
+        v3Err = err;
+        console.warn("[AsterDEX] V3 createApiKey unavailable, falling back to V1:", err);
       }
 
       if (v3Registered) {
-        // 3b: Register the agent on the FUTURES gateway (fapi.asterdex.com/fapi/v3/approveAgent).
-        // This is a separate registration — without it every /fapi/v3 request returns "No agent found".
+        // 3c: Register the agent on FUTURES gateway (fapi.asterdex.com/fapi/v3/approveAgent).
+        // Without this every /fapi/v3 request returns "No agent found".
+        // Must succeed before credentials are saved.
         await asterApproveAgentFutures(mnemonic, userEvmWallet.address, signerWallet.address);
 
         // Step 4a: Both registrations succeeded — persist V3 credentials
@@ -310,8 +303,10 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
         });
         if (updateError) throw new Error("Wallet linked but failed to save credentials: " + updateError.message);
       } else {
-        // Step 4b: V3 not available — use V1 HMAC key
-        const { apiKey, apiSecret } = await asterCreateApiKey(userEvmWallet.address, signature);
+        // Step 4b: V3 not available — fetch a FRESH V1 nonce (independent of the V3 attempt)
+        const nonceV1 = await asterGetNonce(userEvmWallet.address);
+        const signatureV1 = await signEVMMessage(mnemonic, `You are signing into Astherus ${nonceV1}`);
+        const { apiKey, apiSecret } = await asterCreateApiKey(userEvmWallet.address, signatureV1);
         const { error: updateError } = await supabase.auth.updateUser({
           data: { aster_api_key: apiKey, aster_api_secret: apiSecret },
         });
