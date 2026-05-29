@@ -281,19 +281,26 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
       // Step 2: Sign the challenge with the user's main wallet — proves ownership
       const signature = await signEVMMessage(mnemonic, message);
 
-      // Step 3: Register the signer with AsterDEX (V3) — links signerWallet to this account
+      // Step 3: Attempt V3 registration (EIP-712).
+      // If createApiKeyV3 itself fails, fall back to V1 HMAC.
+      // If createApiKeyV3 succeeds but approveAgent fails, throw so the user retries —
+      // credentials must NOT be saved until both steps succeed, otherwise every
+      // /fapi/v3 call returns {"code":-1000,"msg":"No agent found"}.
+      let v3Registered = false;
       try {
+        // 3a: Register signer on the SPOT gateway (sapi.asterdex.com/api/v3/createApiKey)
         await asterCreateApiKeyV3(userEvmWallet.address, signature, signerWallet.address);
+        v3Registered = true;
+      } catch (v3Err) {
+        console.warn("[AsterDEX] V3 createApiKey unavailable, falling back to V1:", v3Err);
+      }
 
-        // Step 3b: Register the agent for FUTURES endpoints too.
-        // createApiKeyV3 only covers spot (sapi). Without this, /fapi/v3 returns "No agent found".
-        try {
-          await asterApproveAgentFutures(mnemonic, userEvmWallet.address, signerWallet.address);
-        } catch (futuresErr) {
-          console.warn("[AsterDEX] Futures agent approval failed (spot still registered):", futuresErr);
-        }
+      if (v3Registered) {
+        // 3b: Register the agent on the FUTURES gateway (fapi.asterdex.com/fapi/v3/approveAgent).
+        // This is a separate registration — without it every /fapi/v3 request returns "No agent found".
+        await asterApproveAgentFutures(mnemonic, userEvmWallet.address, signerWallet.address);
 
-        // Step 4a: Persist V3 credentials
+        // Step 4a: Both registrations succeeded — persist V3 credentials
         const { error: updateError } = await supabase.auth.updateUser({
           data: {
             aster_user:       userEvmWallet.address,
@@ -302,9 +309,8 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
           },
         });
         if (updateError) throw new Error("Wallet linked but failed to save credentials: " + updateError.message);
-      } catch (v3Err) {
-        // V3 createApiKey not available — fall back to V1 HMAC key creation
-        console.warn("[AsterDEX] V3 registration failed, falling back to V1:", v3Err);
+      } else {
+        // Step 4b: V3 not available — use V1 HMAC key
         const { apiKey, apiSecret } = await asterCreateApiKey(userEvmWallet.address, signature);
         const { error: updateError } = await supabase.auth.updateUser({
           data: { aster_api_key: apiKey, aster_api_secret: apiSecret },
@@ -1072,15 +1078,6 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
 
             {isSpot && (
               <>
-                {/* V3-only users have no V1 key — spot endpoints not available */}
-                {isAsterRegistered && !hasV1 && (
-                  <div className="flex items-start gap-2 mb-4 p-3 rounded-lg bg-secondary border border-border">
-                    <AlertCircle className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      Your linked wallet uses V3 authentication (futures only). Spot account features require a legacy V1 API key. Switch to <strong>Perpetual account</strong> to deposit and withdraw using your current wallet.
-                    </p>
-                  </div>
-                )}
                 {/* Chain first (drives coin list), then coin picker */}
                 <ChainSelector />
                 <CoinAmountRow />
