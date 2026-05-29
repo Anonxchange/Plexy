@@ -10,7 +10,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   asterTrading, asterWallet,
   asterGetNonce, asterCreateApiKey,
-  asterGetNonceV3, asterCreateApiKeyV3, asterGenerateSignerWallet,
+  asterGetNonceV3, asterCreateApiKeyV3, asterGenerateSignerWallet, asterApproveAgentFutures,
   asterGetDepositAddress, asterGetChainAssets, CoinInfo,
 } from "@/lib/asterdex-service";
 import { supabase } from "@/lib/supabase";
@@ -280,6 +280,15 @@ export function AccountModal({ open, onOpenChange, defaultTab, defaultAccountTyp
       // Step 3: Register the signer with AsterDEX (V3) — links signerWallet to this account
       try {
         await asterCreateApiKeyV3(userEvmWallet.address, signature, signerWallet.address);
+
+        // Step 3b: Register the agent for FUTURES endpoints too.
+        // createApiKeyV3 only covers spot (sapi). Without this, /fapi/v3 returns "No agent found".
+        try {
+          await asterApproveAgentFutures(mnemonic, userEvmWallet.address, signerWallet.address);
+        } catch (futuresErr) {
+          console.warn("[AsterDEX] Futures agent approval failed (spot still registered):", futuresErr);
+        }
+
         // Step 4a: Persist V3 credentials
         const { error: updateError } = await supabase.auth.updateUser({
           data: {
