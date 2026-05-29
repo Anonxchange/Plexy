@@ -517,11 +517,16 @@ export async function asterGetNonceV3(address: string): Promise<string> {
   });
   const text = await res.text();
   if (!res.ok) {
-    // Fall through to V1 nonce if V3 endpoint not found
     let msg = 'Failed to get nonce';
     try { msg = JSON.parse(text).msg ?? msg; } catch {}
     throw new Error(msg);
   }
+  // Server may return plain-text nonce OR JSON { code: 0, data: "nonce_value" }
+  try {
+    const json = JSON.parse(text);
+    if (json.data !== undefined && json.data !== null) return String(json.data).trim();
+    if (json.nonce !== undefined)                      return String(json.nonce).trim();
+  } catch {}
   return text.trim();
 }
 
