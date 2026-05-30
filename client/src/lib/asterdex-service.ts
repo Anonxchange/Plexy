@@ -508,8 +508,11 @@ export function asterGenerateSignerWallet(): { address: string; privateKey: stri
 }
 
 // V3 version of getNonce — uses /api/v3/getNonce
-export async function asterGetNonceV3(address: string): Promise<string> {
-  const body = new URLSearchParams({ address, userOperationType: 'CREATE_API_KEY' });
+export async function asterGetNonceV3(
+  address: string,
+  userOperationType: string = 'CREATE_API_KEY',
+): Promise<string> {
+  const body = new URLSearchParams({ address, userOperationType });
   const res = await fetch(`https://sapi.asterdex.com/api/v3/getNonce`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -834,7 +837,10 @@ export async function asterApproveAgentFuturesWithKey(
   userAddress: string,
   signerAddress: string,
 ): Promise<void> {
-    const nonce = BigInt(Date.now()) * 1000n;
+    // Fetch a server-issued nonce for the APPROVE_AGENT operation.
+    // AsterDEX validates that the nonce came from their system, so a
+    // self-generated timestamp nonce causes "Signature check failed".
+    const nonce = await asterGetNonceV3(userAddress, 'APPROVE_AGENT');
     const agentName = `pexly-${nonce}`;
 
     const params: Record<string, string> = {
