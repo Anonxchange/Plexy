@@ -4,8 +4,7 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   asterTrading, asterWallet,
-  asterGetNonceV3, asterCreateApiKeyV3WithKey, asterGenerateSignerWallet,
-  asterApproveAgentFuturesWithKey, hexToBytes,
+  asterRegisterAndApproveAgent, asterGenerateSignerWallet,
   asterGetDepositAddress, asterGetChainAssets, CoinInfo,
 } from "@/lib/asterdex-service";
 import { supabase } from "@/lib/supabase";
@@ -132,28 +131,15 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
 
       try {
         const signerWallet = asterGenerateSignerWallet();
-
-        setSigningStep("Connecting…");
-        await new Promise(r => setTimeout(r, 30));
-        const nonceV3 = await asterGetNonceV3(userEvmWallet.address);
+        const agentName    = `pexly-${userEvmWallet.address.slice(2, 8).toLowerCase()}`;
 
         setSigningStep("Signing…");
         await new Promise(r => setTimeout(r, 30));
-        // V3 uses EIP-712 typed-data signing (not EIP-191 personal_sign).
-        // asterCreateApiKeyV3WithKey builds the sorted param string, hashes it
-        // with the AsterDEX EIP-712 domain, and signs with the main wallet key.
-        setSigningStep("Activating…");
-        await new Promise(r => setTimeout(r, 30));
-        await asterCreateApiKeyV3WithKey(privKey, userEvmWallet.address, nonceV3, signerWallet.address);
 
-        setSigningStep("Activating…");
-        await new Promise(r => setTimeout(r, 30));
-        const signerPrivKey = hexToBytes(signerWallet.privateKey);
-        try {
-          await asterApproveAgentFuturesWithKey(signerPrivKey, userEvmWallet.address, signerWallet.address);
-        } finally {
-          signerPrivKey.fill(0);
-        }
+        // Single-call V3 registration — POST /fapi/v3/registerAndApproveAgent.
+        // Signs with the main wallet key using EIP-712 (chainId=1666, Message.msg).
+        // Field order in the signed message is FIXED per AsterDEX docs.
+        await asterRegisterAndApproveAgent(privKey, userEvmWallet.address, signerWallet.address, agentName);
 
         setSigningStep("Almost done…");
         await new Promise(r => setTimeout(r, 30));
