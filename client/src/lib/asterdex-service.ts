@@ -637,6 +637,74 @@ export async function asterCreateApiKeyV3WithKey(
   };
 }
 
+/**
+ * Unified V3 agent registration — POST /fapi/v3/registerAndApproveAgent.
+ *
+ * Replaces the old two-step createApiKey + approveAgent flow.
+ * Signs a single message with the user's MAIN wallet private key (EIP-712).
+ *
+ * Signed message field order is FIXED per AsterDEX docs — do NOT reorder or sort:
+ *   user, nonce, agentName, agentAddress, expired, signatureChainId,
+ *   canSpotTrade, canPerpTrade, canWithdraw, ipWhitelist
+ *
+ * CALLER must wipe `mainPrivKey` after all operations complete.
+ */
+export async function asterRegisterAndApproveAgent(
+  mainPrivKey: Uint8Array,
+  userAddress: string,
+  signerAddress: string,
+  agentName: string,
+): Promise<void> {
+  const nonce           = String(Math.trunc(Date.now() * 1000));
+  const expired         = String(Date.now() + 90 * 24 * 60 * 60 * 1000);
+  const signatureChainId = '56';
+
+  const msg = [
+    `user=${userAddress}`,
+    `nonce=${nonce}`,
+    `agentName=${agentName}`,
+    `agentAddress=${signerAddress}`,
+    `expired=${expired}`,
+    `signatureChainId=${signatureChainId}`,
+    `canSpotTrade=false`,
+    `canPerpTrade=true`,
+    `canWithdraw=false`,
+    `ipWhitelist=`,
+  ].join('&');
+
+  const hash     = _asterEip712Hash(msg);
+  const sigBytes = await secp.signAsync(hash, mainPrivKey, { lowS: true, format: 'recovered', prehash: false } as any);
+  const recovery = sigBytes[0];
+  const signature = '0x'
+    + bytesToHex(sigBytes.slice(1, 33))
+    + bytesToHex(sigBytes.slice(33, 65))
+    + (recovery + 27).toString(16).padStart(2, '0');
+
+  const body = new URLSearchParams({
+    user:              userAddress,
+    nonce,
+    agentName,
+    agentAddress:      signerAddress,
+    expired,
+    signatureChainId,
+    signature,
+    canSpotTrade:      'false',
+    canPerpTrade:      'true',
+    canWithdraw:       'false',
+    ipWhitelist:       '',
+  });
+
+  const res  = await fetch('https://fapi.asterdex.com/fapi/v3/registerAndApproveAgent', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body:    body.toString(),
+  });
+  const json = await res.json();
+  if (!res.ok || (json.code !== undefined && json.code !== 0 && json.code !== 200)) {
+    throw new Error(json.msg ?? 'Failed to register agent: ' + JSON.stringify(json));
+  }
+}
+
 // Fetch the AsterDEX deposit address for a given chain and coin.
 // - EVM chains (ETH/BSC/ARB): shared treasury contract address from ae/deposit-address.
 // - Solana (chainId 101): per-coin program bank address from the deposit/assets endpoint.
