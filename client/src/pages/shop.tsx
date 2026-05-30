@@ -189,6 +189,7 @@ export function Shop() {
         setShopifyProducts(shuffleArray(cached.products));
         setShopifyCategories(cached.categories);
         setIsShopifyLoading(false);
+        return; // cache is fresh — skip the Shopify re-fetch
       } else {
         setIsShopifyLoading(true);
         setShopifyProducts([]);
