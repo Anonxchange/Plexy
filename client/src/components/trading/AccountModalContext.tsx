@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   asterTrading, asterWallet,
   asterGetNonceV3, asterCreateApiKeyV3, asterGenerateSignerWallet,
-  asterApproveAgentFuturesWithKey,
+  asterApproveAgentFuturesWithKey, hexToBytes,
   asterGetDepositAddress, asterGetChainAssets, CoinInfo,
 } from "@/lib/asterdex-service";
 import { supabase } from "@/lib/supabase";
@@ -137,7 +137,12 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
 
         setSigningStep("Activating…");
         await new Promise(r => setTimeout(r, 30));
-        await asterApproveAgentFuturesWithKey(privKey, userEvmWallet.address, signerWallet.address);
+        const signerPrivKey = hexToBytes(signerWallet.privateKey);
+        try {
+          await asterApproveAgentFuturesWithKey(signerPrivKey, userEvmWallet.address, signerWallet.address);
+        } finally {
+          signerPrivKey.fill(0);
+        }
 
         setSigningStep("Almost done…");
         await new Promise(r => setTimeout(r, 30));
