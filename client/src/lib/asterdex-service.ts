@@ -681,80 +681,111 @@ export const asterWallet = {
 //   1. sapi.asterdex.com/api/v3/createApiKey  → spot endpoints  (asterCreateApiKeyV3)
 //   2. fapi.asterdex.com/fapi/v3/approveAgent → futures endpoints (this function)
 // Without step 2, all /fapi/v3 requests return {"code":-1000,"msg":"No agent found"}.
-// Signed by the user's main wallet — only the 65-byte signature leaves the device.
+//
+// approveAgent signing (per official AsterDEX V3 docs / aster-skills-hub):
+//   - EIP-712 domain: name="AsterSignTransaction", version="1", chainId=1666,
+//     verifyingContract="0x0000000000000000000000000000000000000000"
+//   - Type: Message(string msg), where msg = ASCII-sorted key=value param string
+//     (must include nonce, user, signer)
+//   - Signed with the SIGNER (API wallet) private key — NOT the main wallet.
 
-function _abiEncodeApproveAgent(
-  queryString: string,
-  user: string,
-  signer: string,
-  nonce: bigint,
-): Uint8Array {
-  function hexToBytes(hex: string): Uint8Array {
-    const h = hex.replace('0x', '');
-    const padded = h.length % 2 === 0 ? h : '0' + h;
-    const b = new Uint8Array(padded.length / 2);
-    for (let i = 0; i < padded.length; i += 2) b[i / 2] = parseInt(padded.slice(i, i + 2), 16);
+function _asterEip712Hash(paramStr: string): Uint8Array {
+  const enc = new TextEncoder();
+
+  function u256(n: bigint): Uint8Array {
+    const hex = n.toString(16).padStart(64, '0');
+    const b = new Uint8Array(32);
+    for (let i = 0; i < 32; i++) b[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
     return b;
   }
-  const strBytes = new TextEncoder().encode(queryString);
-  const paddedLen = Math.max(Math.ceil(strBytes.length / 32) * 32, 32);
-  const paddedStr = new Uint8Array(paddedLen);
-  paddedStr.set(strBytes);
-  const u256 = (v: bigint) => hexToBytes(v.toString(16).padStart(64, '0'));
-  const addr  = (a: string) => hexToBytes(a.toLowerCase().replace('0x', '').padStart(64, '0'));
-  const chunks = [u256(128n), addr(user), addr(signer), u256(nonce), u256(BigInt(strBytes.length)), paddedStr];
-  const total = chunks.reduce((s, c) => s + c.length, 0);
-  const out = new Uint8Array(total);
-  let off = 0;
-  for (const c of chunks) { out.set(c, off); off += c.length; }
-  return out;
+  function addrPad(a: string): Uint8Array {
+    const hex = a.toLowerCase().replace('0x', '').padStart(64, '0');
+    const b = new Uint8Array(32);
+    for (let i = 0; i < 32; i++) b[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+    return b;
+  }
+
+  const domainTypeHash = keccak_256(enc.encode(
+    'EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)',
+  ));
+  const msgTypeHash = keccak_256(enc.encode('Message(string msg)'));
+
+  const domainData = new Uint8Array(5 * 32);
+  domainData.set(domainTypeHash,                                         0);
+  domainData.set(keccak_256(enc.encode('AsterSignTransaction')),        32);
+  domainData.set(keccak_256(enc.encode('1')),                           64);
+  domainData.set(u256(1666n),                                           96);
+  domainData.set(addrPad('0x0000000000000000000000000000000000000000'), 128);
+  const domainSeparator = keccak_256(domainData);
+
+  const structData = new Uint8Array(2 * 32);
+  structData.set(msgTypeHash,                     0);
+  structData.set(keccak_256(enc.encode(paramStr)), 32);
+  const structHash = keccak_256(structData);
+
+  const payload = new Uint8Array(66);
+  payload[0] = 0x19;
+  payload[1] = 0x01;
+  payload.set(domainSeparator, 2);
+  payload.set(structHash,      34);
+
+  return keccak_256(payload);
+}
+
+export function hexToBytes(hex: string): Uint8Array {
+  const h = hex.replace('0x', '');
+  const padded = h.length % 2 === 0 ? h : '0' + h;
+  const b = new Uint8Array(padded.length / 2);
+  for (let i = 0; i < padded.length; i += 2) b[i / 2] = parseInt(padded.slice(i, i + 2), 16);
+  return b;
 }
 
 export async function asterApproveAgentFutures(
   mnemonic: string,
   userAddress: string,
   signerAddress: string,
+  signerPrivateKeyHex: string,
 ): Promise<void> {
-  // Derive main wallet private key (m/44'/60'/0'/0/0) — same path as evmSigner.ts
-  const seed = await mnemonicToSeed(mnemonic);
-  const root = HDKey.fromMasterSeed(seed);
-  const child = root.derive("m/44'/60'/0'/0/0");
-  const privKey = child.privateKey!.slice();
-  seed.fill(0);
-  if (child.privateKey) child.privateKey.fill(0);
-
+  const signerPrivKey = hexToBytes(signerPrivateKeyHex);
   try {
-    await asterApproveAgentFuturesWithKey(privKey, userAddress, signerAddress);
+    await asterApproveAgentFuturesWithKey(signerPrivKey, userAddress, signerAddress);
   } finally {
-    privKey.fill(0);
+    signerPrivKey.fill(0);
   }
 }
 
 /**
- * Same as asterApproveAgentFutures but accepts a pre-derived private key to
- * avoid an extra mnemonicToSeed (PBKDF2) call when the key is already in memory.
+ * Approves the signer (API wallet) for futures trading on AsterDEX V3.
+ * signerPrivKey must be the SIGNER (API wallet) private key — not the main wallet.
  * CALLER is responsible for wiping the key after all operations complete.
  */
 export async function asterApproveAgentFuturesWithKey(
-  privKey: Uint8Array,
+  signerPrivKey: Uint8Array,
   userAddress: string,
   signerAddress: string,
 ): Promise<void> {
     const nonce = BigInt(Date.now()) * 1000n;
     const agentName = `pexly-${nonce}`;
 
-    const signingParams = new URLSearchParams({
+    const params: Record<string, string> = {
       agentAddress: signerAddress,
       agentName,
-      canSpotTrade: 'false',
       canPerpTrade: 'true',
+      canSpotTrade: 'false',
       canWithdraw:  'false',
-    });
+      nonce:        nonce.toString(),
+      signer:       signerAddress,
+      user:         userAddress,
+    };
 
-    const encoded   = _abiEncodeApproveAgent(signingParams.toString(), userAddress, userAddress, nonce);
-    const hash      = keccak_256(encoded);
-    const sigBytes  = await secp.signAsync(hash, privKey, { lowS: true, format: 'recovered', prehash: false } as any);
-    const recovery  = sigBytes[0];
+    const paramStr = Object.keys(params)
+      .sort()
+      .map(k => `${k}=${params[k]}`)
+      .join('&');
+
+    const hash     = _asterEip712Hash(paramStr);
+    const sigBytes = await secp.signAsync(hash, signerPrivKey, { lowS: true, format: 'recovered', prehash: false } as any);
+    const recovery = sigBytes[0];
     const signature = '0x'
       + bytesToHex(sigBytes.slice(1, 33))
       + bytesToHex(sigBytes.slice(33, 65))
@@ -763,7 +794,7 @@ export async function asterApproveAgentFuturesWithKey(
     const body = new URLSearchParams({
       agentAddress: signerAddress,
       user:         userAddress,
-      signer:       userAddress,
+      signer:       signerAddress,
       nonce:        nonce.toString(),
       signature,
       agentName,
