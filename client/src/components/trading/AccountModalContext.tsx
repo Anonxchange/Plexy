@@ -139,17 +139,15 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
         // Mismatch — try interpreting the stored value as a raw private key hex (legacy format).
         wipeBytes(privKey);
         const cleanHex = mnemonicOrKey.replace(/^0x/, "");
-        let recovered = false;
         if (/^[0-9a-fA-F]{64}$/.test(cleanHex)) {
           privKey = new Uint8Array(cleanHex.match(/.{2}/g)!.map(b => parseInt(b, 16)));
-          if (getAddressFromPrivKey(privKey).toLowerCase() === userEvmWallet.address.toLowerCase()) {
-            recovered = true;
-          } else {
+          const legacyAddr = getAddressFromPrivKey(privKey);
+          if (legacyAddr.toLowerCase() !== userEvmWallet.address.toLowerCase()) {
             wipeBytes(privKey);
+            throw new Error("Wallet key mismatch. Please recreate your wallet in the Wallet section.");
           }
-        }
-        if (!recovered) {
-          throw new Error("Wallet data doesn't match your address. Please contact support or create a new wallet.");
+        } else {
+          throw new Error("Wallet data is corrupted. Please recreate your wallet in the Wallet section.");
         }
       }
 
