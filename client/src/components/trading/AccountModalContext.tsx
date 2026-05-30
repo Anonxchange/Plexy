@@ -10,7 +10,7 @@ import {
 } from "@/lib/asterdex-service";
 import { supabase } from "@/lib/supabase";
 import type { NonCustodialWallet } from "@/lib/non-custodial-wallet";
-import { deriveEVMPrivateKey, signEVMMessageWithKey, getAddressFromPrivKey } from "@/lib/evmSigner";
+import { deriveEVMPrivateKey, signEVMMessageWithKey } from "@/lib/evmSigner";
 import { wipeBytes } from "@/lib/secureMemory";
 import { broadcastDeposit } from "@/lib/deposit-broadcaster";
 import { useToast } from "@/hooks/use-toast";
@@ -123,33 +123,12 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
       await new Promise(r => setTimeout(r, 30));
 
       const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
-      const mnemonicOrKey = await nonCustodialWalletManager.getWalletMnemonic(userEvmWallet.id, walletPassword, user.id);
-      if (!mnemonicOrKey) throw new Error("Incorrect password or wallet not found.");
+      const mnemonic = await nonCustodialWalletManager.getWalletMnemonic(userEvmWallet.id, walletPassword, user.id);
+      if (!mnemonic) throw new Error("Incorrect password or wallet not found.");
 
       setSigningStep("Preparing wallet…");
       await new Promise(r => setTimeout(r, 30));
-
-      // Derive private key from mnemonic and verify it matches the stored wallet address.
-      // Legacy wallets may have stored the raw hex private key in encryptedMnemonic instead
-      // of the BIP39 mnemonic phrase. In that case mnemonicToSeed() produces the wrong key
-      // → wrong recovered address → Asterdex returns "Signature check failed".
-      let privKey = await deriveEVMPrivateKey(mnemonicOrKey);
-      const derivedAddr = getAddressFromPrivKey(privKey);
-      if (derivedAddr.toLowerCase() !== userEvmWallet.address.toLowerCase()) {
-        // Mismatch — try interpreting the stored value as a raw private key hex (legacy format).
-        wipeBytes(privKey);
-        const cleanHex = mnemonicOrKey.replace(/^0x/, "");
-        if (/^[0-9a-fA-F]{64}$/.test(cleanHex)) {
-          privKey = new Uint8Array(cleanHex.match(/.{2}/g)!.map(b => parseInt(b, 16)));
-          const legacyAddr = getAddressFromPrivKey(privKey);
-          if (legacyAddr.toLowerCase() !== userEvmWallet.address.toLowerCase()) {
-            wipeBytes(privKey);
-            throw new Error("Wallet key mismatch. Please recreate your wallet in the Wallet section.");
-          }
-        } else {
-          throw new Error("Wallet data is corrupted. Please recreate your wallet in the Wallet section.");
-        }
-      }
+      const privKey = await deriveEVMPrivateKey(mnemonic);
 
       try {
         const signerWallet = asterGenerateSignerWallet();
