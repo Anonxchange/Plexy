@@ -4,12 +4,14 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   asterTrading, asterWallet,
-  asterGetNonceV3, asterCreateApiKeyV3, asterGenerateSignerWallet, asterApproveAgentFutures,
+  asterGetNonceV3, asterCreateApiKeyV3, asterGenerateSignerWallet,
+  asterApproveAgentFuturesWithKey,
   asterGetDepositAddress, asterGetChainAssets, CoinInfo,
 } from "@/lib/asterdex-service";
 import { supabase } from "@/lib/supabase";
 import type { NonCustodialWallet } from "@/lib/non-custodial-wallet";
-import { signEVMMessage } from "@/lib/evmSigner";
+import { deriveEVMPrivateKey, signEVMMessageWithKey } from "@/lib/evmSigner";
+import { wipeBytes } from "@/lib/secureMemory";
 import { broadcastDeposit } from "@/lib/deposit-broadcaster";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -41,6 +43,7 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
   const [sendPassword, setSendPassword]       = useState("");
   const [showSendPwd, setShowSendPwd]         = useState(false);
   const [sendLoading, setSendLoading]         = useState(false);
+  const [signingStep, setSigningStep]         = useState("");
   const [sendTxHash, setSendTxHash]           = useState<string | null>(null);
   const [sendTxUrl, setSendTxUrl]             = useState<string | null>(null);
   const [sendError, setSendError]             = useState<string | null>(null);
@@ -104,24 +107,54 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
     mutationFn: async () => {
       if (!userEvmWallet || !user) throw new Error("No EVM wallet found. Create one in Wallet first.");
       if (!walletPassword) throw new Error("Enter your wallet password to sign.");
+
+      // Yield to event loop so "Decrypting…" label renders before PBKDF2 blocks the thread
+      setSigningStep("Verifying password…");
+      await new Promise(r => setTimeout(r, 30));
+
       const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
       const mnemonic = await nonCustodialWalletManager.getWalletMnemonic(userEvmWallet.id, walletPassword, user.id);
       if (!mnemonic) throw new Error("Incorrect password or wallet not found.");
-      const signerWallet = asterGenerateSignerWallet();
-      const nonceV3 = await asterGetNonceV3(userEvmWallet.address);
-      const signatureV3 = await signEVMMessage(mnemonic, `You are signing into Astherus ${nonceV3}`);
-      await asterCreateApiKeyV3(userEvmWallet.address, signatureV3, signerWallet.address);
-      await asterApproveAgentFutures(mnemonic, userEvmWallet.address, signerWallet.address);
-      const { error: updateError } = await supabase.auth.updateUser({
-        data: {
-          aster_user:       userEvmWallet.address,
-          aster_signer:     signerWallet.address,
-          aster_signer_key: signerWallet.privateKey,
-        },
-      });
-      if (updateError) throw new Error("Wallet linked but failed to save credentials: " + updateError.message);
+
+      setSigningStep("Preparing wallet…");
+      await new Promise(r => setTimeout(r, 30));
+      const privKey = await deriveEVMPrivateKey(mnemonic);
+
+      try {
+        const signerWallet = asterGenerateSignerWallet();
+
+        setSigningStep("Connecting…");
+        await new Promise(r => setTimeout(r, 30));
+        const nonceV3 = await asterGetNonceV3(userEvmWallet.address);
+
+        setSigningStep("Signing…");
+        await new Promise(r => setTimeout(r, 30));
+        const signatureV3 = await signEVMMessageWithKey(privKey, `You are signing into Astherus ${nonceV3}`);
+
+        setSigningStep("Activating…");
+        await new Promise(r => setTimeout(r, 30));
+        await asterCreateApiKeyV3(userEvmWallet.address, signatureV3, signerWallet.address);
+
+        setSigningStep("Activating…");
+        await new Promise(r => setTimeout(r, 30));
+        await asterApproveAgentFuturesWithKey(privKey, userEvmWallet.address, signerWallet.address);
+
+        setSigningStep("Almost done…");
+        await new Promise(r => setTimeout(r, 30));
+        const { error: updateError } = await supabase.auth.updateUser({
+          data: {
+            aster_user:       userEvmWallet.address,
+            aster_signer:     signerWallet.address,
+            aster_signer_key: signerWallet.privateKey,
+          },
+        });
+        if (updateError) throw new Error("Wallet linked but failed to save credentials: " + updateError.message);
+      } finally {
+        wipeBytes(privKey);
+      }
     },
     onSuccess: () => {
+      setSigningStep("");
       if (user) localStorage.setItem(asterRegKey(user.id), "true");
       setIsAsterRegistered(true);
       setWalletPassword("");
@@ -129,6 +162,7 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
       queryClient.invalidateQueries({ queryKey: ["deposit-address"] });
     },
     onError: (err: Error) => {
+      setSigningStep("");
       toast({ title: "Sign-in failed", description: err.message, variant: "destructive" });
     },
   });
@@ -462,6 +496,7 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
     depositHistory, depositHistoryLoading, withdrawHistory, withdrawHistoryLoading,
     // Mutations
     registerMutation, unlinkMutation, withdrawMutation, transferMutation,
+    signingStep,
     // Auth
     user, requireAuth, onOpenChange,
   };

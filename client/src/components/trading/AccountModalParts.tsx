@@ -217,7 +217,7 @@ export function DepositAddressBlock() {
 
 // ── Deposit CTA (sign-in / sign & activate / nothing) ────
 export function DepositCTA() {
-  const { user, isAsterRegistered, walletLoading, userEvmWallet, walletPassword, registerMutation, requireAuth } = useAccountModal();
+  const { user, isAsterRegistered, walletLoading, userEvmWallet, walletPassword, registerMutation, requireAuth, signingStep } = useAccountModal();
   if (!user) return (
     <button onClick={requireAuth}
       className="w-full py-3.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90">
@@ -242,7 +242,7 @@ export function DepositCTA() {
         className="w-full py-3.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
       >
         {registerMutation.isPending
-          ? <><Loader2 className="h-4 w-4 animate-spin" />Signing…</>
+          ? <><Loader2 className="h-4 w-4 animate-spin" />{signingStep || "Signing…"}</>
           : "Sign & Activate"}
       </button>
     );
