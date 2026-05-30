@@ -118,7 +118,7 @@ function WithdrawTab() {
 
 // ── Transfer tab ──────────────────────────────────────────
 function TransferTab() {
-  const { isSpot, coin, amountNum, spotBalanceFor, futuresAvailFor, transferMutation, user, requireAuth, hasV1 } = useAccountModal();
+  const { isSpot, coin, amountNum, spotBalanceFor, futuresAvailFor, transferMutation, user, requireAuth, hasV3 } = useAccountModal();
   return (
     <>
       <AccountTypeSelector />
@@ -129,8 +129,8 @@ function TransferTab() {
       />
       <button
         onClick={() => !user ? requireAuth() : transferMutation.mutate()}
-        disabled={!user || !amountNum || amountNum <= 0 || transferMutation.isPending || !hasV1}
-        title={!hasV1 ? "Transfer between accounts requires a V1 API key" : undefined}
+        disabled={!user || !amountNum || amountNum <= 0 || transferMutation.isPending || !hasV3}
+        title={!hasV3 ? "Connect your wallet to enable transfers" : undefined}
         className="w-full py-3.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
       >
         {transferMutation.isPending

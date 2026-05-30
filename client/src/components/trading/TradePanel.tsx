@@ -133,12 +133,9 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
       if (subs.includes("first-trade"))  completeTask("first-trade").catch(() => {});
     },
     onError: (err: Error) => {
-      const isV1Required = err.message?.toLowerCase().includes("v1 api key");
       toast({
         title: "Order failed",
-        description: isV1Required
-          ? "Spot trading requires a V1 API key. Re-link your wallet to enable spot orders."
-          : err.message,
+        description: err.message,
         variant: "destructive",
       });
     },

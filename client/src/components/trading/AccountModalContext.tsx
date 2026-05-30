@@ -4,13 +4,13 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   asterTrading, asterWallet,
-  asterGetNonceV3, asterCreateApiKeyV3, asterGenerateSignerWallet,
+  asterGetNonceV3, asterCreateApiKeyV3WithKey, asterGenerateSignerWallet,
   asterApproveAgentFuturesWithKey, hexToBytes,
   asterGetDepositAddress, asterGetChainAssets, CoinInfo,
 } from "@/lib/asterdex-service";
 import { supabase } from "@/lib/supabase";
 import type { NonCustodialWallet } from "@/lib/non-custodial-wallet";
-import { deriveEVMPrivateKey, signEVMMessageWithKey } from "@/lib/evmSigner";
+import { deriveEVMPrivateKey } from "@/lib/evmSigner";
 import { wipeBytes } from "@/lib/secureMemory";
 import { broadcastDeposit } from "@/lib/deposit-broadcaster";
 import { useToast } from "@/hooks/use-toast";
@@ -54,7 +54,7 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isSpot = accountType === "Spot account";
-  const hasV1 = !!user?.user_metadata?.aster_api_key;
+  const hasV3 = !!(user?.user_metadata?.aster_signer_key);
 
   // ── Effects ────────────────────────────────────────────
 
@@ -73,7 +73,7 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
 
   useEffect(() => {
     if (user) {
-      const hasApiKey = !!(user.user_metadata?.aster_api_key || user.user_metadata?.aster_signer_key);
+      const hasApiKey = !!(user.user_metadata?.aster_signer_key);
       setIsAsterRegistered(hasApiKey);
       if (hasApiKey) localStorage.setItem(asterRegKey(user.id), "true");
     }
@@ -139,11 +139,12 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
 
         setSigningStep("Signing…");
         await new Promise(r => setTimeout(r, 30));
-        const signatureV3 = await signEVMMessageWithKey(privKey, `You are signing into Astherus ${nonceV3}`);
-
+        // V3 uses EIP-712 typed-data signing (not EIP-191 personal_sign).
+        // asterCreateApiKeyV3WithKey builds the sorted param string, hashes it
+        // with the AsterDEX EIP-712 domain, and signs with the main wallet key.
         setSigningStep("Activating…");
         await new Promise(r => setTimeout(r, 30));
-        await asterCreateApiKeyV3(userEvmWallet.address, signatureV3, signerWallet.address);
+        await asterCreateApiKeyV3WithKey(privKey, userEvmWallet.address, nonceV3, signerWallet.address);
 
         setSigningStep("Activating…");
         await new Promise(r => setTimeout(r, 30));
@@ -187,7 +188,6 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
       const { error } = await supabase.auth.updateUser({
         data: {
           aster_user: null, aster_signer: null, aster_signer_key: null,
-          aster_api_key: null, aster_api_secret: null,
         },
       });
       if (error) throw new Error("Failed to unlink wallet: " + error.message);
@@ -213,7 +213,7 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
   const { data: spotAccount, isLoading: spotLoading } = useQuery({
     queryKey: ["spot-account"],
     queryFn: () => asterTrading.spotAccount(),
-    enabled: !!user && hasV1,
+    enabled: !!user && hasV3,
     staleTime: 15_000,
     refetchInterval: 30_000,
   });
@@ -229,7 +229,7 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
   const { data: coinInfoData } = useQuery({
     queryKey: ["coin-info"],
     queryFn: () => asterWallet.coinInfo(),
-    enabled: !!user && open && hasV1,
+    enabled: !!user && open && hasV3,
     staleTime: 60_000,
     retry: 1,
   });
@@ -486,7 +486,7 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
     // Navigation
     activeTab, setActiveTab, handleTabChange,
     // Account type
-    accountType, accountTypeOpen, setAccountTypeOpen, handleAccountTypeChange, isSpot, hasV1,
+    accountType, accountTypeOpen, setAccountTypeOpen, handleAccountTypeChange, isSpot, hasV3,
     // Coin
     coin, coinOpen, setCoinOpen, handleCoinChange, selectorCoins, selectedCoinInfo, chainAssetsStale,
     // Network
