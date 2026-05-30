@@ -50,10 +50,6 @@ export async function uploadToR2(
     const timestamp = Date.now();
     const key = `${folder}/${safeUserId}/${timestamp}.${fileExtension}`;
 
-    console.log(`[R2] Starting upload via Edge Function - File: ${file.name}, Size: ${file.size} bytes, Type: ${file.type}`);
-    console.log(`[R2] Sending to Edge Function with direct-upload...`);
-    const startTime = Date.now();
-
     const token = await getAuthToken();
     const uploadUrl = `${EDGE_FUNCTION_URL}?action=direct-upload&key=${encodeURIComponent(key)}`;
 
@@ -68,14 +64,9 @@ export async function uploadToR2(
 
     const result = await response.json();
 
-    const uploadTime = Date.now() - startTime;
-    console.log(`[R2] Upload completed in ${uploadTime}ms`);
-
     if (!response.ok || !result.success) {
       throw new Error(result.error || 'Upload failed');
     }
-
-    console.log(`[R2] Public URL: ${result.url}`);
 
     return {
       success: true,
@@ -125,9 +116,6 @@ export async function uploadBase64ToR2(
     const timestamp = Date.now();
     const key = `${folder}/${safeUserId}/${timestamp}.${safeExtension}`;
 
-    console.log(`[R2] Starting base64 upload via Edge Function with direct-upload...`);
-    const startTime = Date.now();
-
     const base64Content = base64Data.split(',')[1] || base64Data;
     const binaryData = Uint8Array.from(atob(base64Content), c => c.charCodeAt(0));
     const blob = new Blob([binaryData], { type: contentType });
@@ -145,9 +133,6 @@ export async function uploadBase64ToR2(
     });
 
     const result = await response.json();
-
-    const uploadTime = Date.now() - startTime;
-    console.log(`[R2] Upload completed in ${uploadTime}ms`);
 
     if (!response.ok || !result.success) {
       throw new Error(result.error || 'Upload failed');
