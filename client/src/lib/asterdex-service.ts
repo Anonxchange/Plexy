@@ -533,6 +533,7 @@ export async function asterGetNonceV3(address: string): Promise<string> {
 // Register a V3 signer wallet with AsterDEX via /api/v3/createApiKey.
 // The signerAddress is the address we generated locally — AsterDEX links it to the user account.
 // Returns the confirmed signer address (may differ from input if AsterDEX normalises it).
+// NOTE: this legacy variant accepts a pre-built signature for callers that sign externally.
 export async function asterCreateApiKeyV3(
   address: string,
   signature: string,
@@ -556,10 +557,79 @@ export async function asterCreateApiKeyV3(
   if (!res.ok || (json.code !== undefined && json.code !== 0 && json.code !== 200)) {
     throw new Error(json.msg ?? 'Failed to register V3 API key');
   }
-  // Normalise response — some builds return { data: { signer } }, others return { signer } directly
   const data = json.data ?? json;
   return {
     user: address,
+    signer: (data.signer ?? data.signerAddress ?? signerAddress) as string,
+  };
+}
+
+/**
+ * EIP-712 variant of asterCreateApiKeyV3.
+ *
+ * V3 requires every authenticated request to be signed with EIP-712 typed-data
+ * (not EIP-191 personal_sign).  The signed message is the ASCII-sorted
+ * `key=value` param string, hashed through _asterEip712Hash, then signed with
+ * the MAIN wallet's secp256k1 private key.
+ *
+ * Params included in the signed string (sorted):
+ *   address, desc, nonce (from getNonce), signerAddress, timestamp, userOperationType
+ *
+ * CALLER must wipe `mainPrivKey` after all operations complete.
+ */
+export async function asterCreateApiKeyV3WithKey(
+  mainPrivKey: Uint8Array,
+  address: string,
+  nonce: string,
+  signerAddress: string,
+): Promise<{ user: string; signer: string }> {
+  const ts   = Date.now();
+  const desc = `pexly-${ts}`;
+
+  const params: Record<string, string> = {
+    address,
+    desc,
+    nonce,
+    signerAddress,
+    timestamp:          String(ts),
+    userOperationType:  'CREATE_API_KEY',
+  };
+
+  const paramStr = Object.keys(params)
+    .sort()
+    .map(k => `${k}=${params[k]}`)
+    .join('&');
+
+  const hash     = _asterEip712Hash(paramStr);
+  const sigBytes = await secp.signAsync(hash, mainPrivKey, { lowS: true, format: 'recovered', prehash: false } as any);
+  const recovery = sigBytes[0];
+  const signature = '0x'
+    + bytesToHex(sigBytes.slice(1, 33))
+    + bytesToHex(sigBytes.slice(33, 65))
+    + (recovery + 27).toString(16).padStart(2, '0');
+
+  const body = new URLSearchParams({
+    address,
+    userOperationType: 'CREATE_API_KEY',
+    userSignature:     signature,
+    signerAddress,
+    desc,
+    timestamp:         String(ts),
+    nonce,
+  });
+
+  const res  = await fetch(`https://sapi.asterdex.com/api/v3/createApiKey`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body:    body.toString(),
+  });
+  const json = await res.json();
+  if (!res.ok || (json.code !== undefined && json.code !== 0 && json.code !== 200)) {
+    throw new Error(json.msg ?? 'Failed to register V3 API key');
+  }
+  const data = json.data ?? json;
+  return {
+    user:   address,
     signer: (data.signer ?? data.signerAddress ?? signerAddress) as string,
   };
 }
