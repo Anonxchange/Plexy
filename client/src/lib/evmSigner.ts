@@ -96,6 +96,31 @@ async function derivePrivateKey(mnemonic: string) {
   return priv;
 }
 
+/**
+ * Derives the EVM private key from a mnemonic (m/44'/60'/0'/0/0).
+ * Call once and reuse the key for multiple signing operations to avoid
+ * repeated PBKDF2 (mnemonicToSeed) which takes 2-5 s in the browser.
+ * CALLER MUST wipeBytes(key) after use.
+ */
+export async function deriveEVMPrivateKey(mnemonic: string): Promise<Uint8Array> {
+  return derivePrivateKey(mnemonic);
+}
+
+/**
+ * Signs an Ethereum personal_sign message with a pre-derived private key.
+ * Use this instead of signEVMMessage when you already have the key in memory.
+ */
+export async function signEVMMessageWithKey(privKey: Uint8Array, message: string): Promise<string> {
+  const prefix = `\x19Ethereum Signed Message:\n${message.length}`;
+  const msgHash = keccak_256(new TextEncoder().encode(prefix + message));
+  const sigBytes = await secp.signAsync(msgHash, privKey, { lowS: true, format: 'recovered', prehash: false } as any);
+  const recovery = sigBytes[0];
+  const r = bytesToHex(sigBytes.slice(1, 33));
+  const s = bytesToHex(sigBytes.slice(33, 65));
+  const v = (27 + recovery).toString(16).padStart(2, "0");
+  return "0x" + r + s + v;
+}
+
 async function deriveAddress(mnemonic: string) {
   const priv = await derivePrivateKey(mnemonic);
   const pub = secp.getPublicKey(priv, false);

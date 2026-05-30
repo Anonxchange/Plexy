@@ -428,14 +428,6 @@ export async function sendPexlyPayment(
   error?: string;
 }> {
   try {
-    console.log('🚀 DEBUG: Calling pexly-pay-send edge function:', {
-      sender_id: senderId,
-      recipient_id: recipientId,
-      amount,
-      crypto_symbol: cryptoSymbol,
-      note
-    });
-
     const { data, error } = await supabase.functions.invoke('pexly-pay-send', {
       body: {
         sender_id: senderId,
@@ -455,8 +447,6 @@ export async function sendPexlyPayment(
     }
 
     const result = data as any;
-    console.log('📦 DEBUG: Edge function response:', result);
-
     return {
       success: true,
       transactionId: result.transaction_id || result.transactionId,

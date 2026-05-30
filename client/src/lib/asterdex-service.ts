@@ -724,8 +724,23 @@ export async function asterApproveAgentFutures(
   if (child.privateKey) child.privateKey.fill(0);
 
   try {
-    const nonce = BigInt(Date.now()) * 1000n;
+    await asterApproveAgentFuturesWithKey(privKey, userAddress, signerAddress);
+  } finally {
+    privKey.fill(0);
+  }
+}
 
+/**
+ * Same as asterApproveAgentFutures but accepts a pre-derived private key to
+ * avoid an extra mnemonicToSeed (PBKDF2) call when the key is already in memory.
+ * CALLER is responsible for wiping the key after all operations complete.
+ */
+export async function asterApproveAgentFuturesWithKey(
+  privKey: Uint8Array,
+  userAddress: string,
+  signerAddress: string,
+): Promise<void> {
+    const nonce = BigInt(Date.now()) * 1000n;
     const agentName = `pexly-${nonce}`;
 
     const signingParams = new URLSearchParams({
@@ -766,7 +781,4 @@ export async function asterApproveAgentFutures(
     if (!res.ok || (json.code !== undefined && json.code !== 0 && json.code !== 200)) {
       throw new Error(json.msg ?? 'Failed to approve futures agent: ' + JSON.stringify(json));
     }
-  } finally {
-    privKey.fill(0);
-  }
 }
