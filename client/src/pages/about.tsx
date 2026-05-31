@@ -1,6 +1,7 @@
 import { useHead } from "@unhead/react";
 import { Link } from "wouter";
 import { ArrowRight, Linkedin, MapPin, Twitter } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { AppFooter } from "@/components/app-footer";
 
@@ -67,46 +68,154 @@ const team = [
   { name: "Yuki Tanaka",     role: "Head of Compliance",  img: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=400&q=80" },
 ];
 
-const press = [
+const S = "currentColor";
+const svgProps = { viewBox: "0 0 24 24", fill: "none", stroke: S, strokeWidth: 1.6, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, className: "w-5 h-5" };
+
+const services = [
   {
-    outlet: "FINANCIAL TIMES",
-    outletStyle: "font-serif italic",
-    quote: "Pexly is redefining what a digital asset platform looks like for the next generation of crypto users.",
+    label: "Spot Trading",
+    tag: "120+ trading pairs, deep liquidity, real-time order books.",
+    desc: "Buy and sell crypto at real-time market prices across 120+ assets.",
+    icon: (
+      <svg {...svgProps}>
+        {/* 3 candlestick bars */}
+        <line x1="5"  y1="3"  x2="5"  y2="21" strokeOpacity=".25" />
+        <rect x="3.5" y="7"  width="3" height="7" rx=".6" />
+        <line x1="5"  y1="5"  x2="5"  y2="7" />
+        <line x1="5"  y1="14" x2="5"  y2="17" />
+        <rect x="10.5" y="5" width="3" height="9" rx=".6" />
+        <line x1="12" y1="3"  x2="12" y2="5" />
+        <line x1="12" y1="14" x2="12" y2="16" />
+        <rect x="17.5" y="9" width="3" height="6" rx=".6" />
+        <line x1="19" y1="7"  x2="19" y2="9" />
+        <line x1="19" y1="15" x2="19" y2="18" />
+      </svg>
+    ),
   },
   {
-    outlet: "CoinDesk",
-    outletStyle: "font-bold tracking-wide",
-    quote: "The platform has grown 300% year-over-year, making it one of the fastest-growing digital asset platforms in Europe.",
+    label: "Perpetual Futures",
+    tag: "Long and short positions with up to 100x leverage.",
+    desc: "Trade perpetual contracts with leverage on major crypto pairs.",
+    icon: (
+      <svg {...svgProps}>
+        {/* Infinity ∞ with arrowheads */}
+        <path d="M7 12c0-2.21 1.79-4 4-4s4 1.79 4 4-1.79 4-4 4-4-1.79-4-4z" strokeOpacity=".3" />
+        <path d="M12 12c0-2.21 1.79-4 4-4s4 1.79 4 4-1.79 4-4 4" />
+        <path d="M12 12c0 2.21-1.79 4-4 4" />
+        <polyline points="9.5,14.5 8,16 6.5,14.5" />
+        <polyline points="14.5,9.5 16,8 17.5,9.5" />
+      </svg>
+    ),
   },
   {
-    outlet: "TechCrunch",
-    outletStyle: "font-bold",
-    quote: "Pexly's compliance-first approach puts it in a strong position as regulators tighten the screws on crypto.",
+    label: "Crypto Swap",
+    tag: "No account needed. Swap directly from your self-custody wallet.",
+    desc: "Instantly swap between hundreds of tokens at the best available rates.",
+    icon: (
+      <svg {...svgProps}>
+        {/* Two curved opposing arrows */}
+        <path d="M4 8h13a3 3 0 0 1 0 6H7" />
+        <polyline points="7,11 4,8 7,5" />
+        <polyline points="17,19 20,16 17,13" />
+        <path d="M20 16H7a3 3 0 0 1 0-6h10" strokeOpacity=".3"/>
+      </svg>
+    ),
   },
   {
-    outlet: "Bloomberg",
-    outletStyle: "font-bold tracking-tight",
-    quote: "In a crowded market, Pexly stands out by offering a genuinely unified experience from trading to custody.",
+    label: "Staking",
+    tag: "Flexible and fixed-term options across multiple blockchains.",
+    desc: "Earn yield by staking your crypto assets directly from your wallet.",
+    icon: (
+      <svg {...svgProps}>
+        {/* Stacked layers + upward arrow */}
+        <ellipse cx="12" cy="17" rx="7" ry="2.2" />
+        <ellipse cx="12" cy="13.5" rx="7" ry="2.2" />
+        <path d="M5 13.5V17" />
+        <path d="M19 13.5V17" />
+        <ellipse cx="12" cy="10" rx="7" ry="2.2" />
+        <path d="M5 10V13.5" />
+        <path d="M19 10V13.5" />
+        <line x1="12" y1="7.8" x2="12" y2="4" />
+        <polyline points="9.5,6 12,3.5 14.5,6" />
+      </svg>
+    ),
   },
   {
-    outlet: "Forbes",
-    outletStyle: "font-bold",
-    quote: "Pexly's P2P model has unlocked crypto access for users in markets where traditional exchanges simply don't operate.",
+    label: "Prediction Markets",
+    tag: "Bet on outcomes in crypto, sports, politics, and more.",
+    desc: "Forecast real-world events and earn rewards when you get it right.",
+    icon: (
+      <svg {...svgProps}>
+        {/* Target crosshair + pulse line */}
+        <circle cx="12" cy="12" r="8" strokeOpacity=".25" />
+        <circle cx="12" cy="12" r="4" />
+        <line x1="12" y1="2" x2="12" y2="6" />
+        <line x1="12" y1="18" x2="12" y2="22" />
+        <line x1="2"  y1="12" x2="6"  y2="12" />
+        <line x1="18" y1="12" x2="22" y2="12" />
+        <circle cx="12" cy="12" r="1.2" fill={S} stroke="none" />
+      </svg>
+    ),
   },
   {
-    outlet: "Wired",
-    outletStyle: "font-black uppercase tracking-widest text-sm",
-    quote: "A rare crypto platform that takes both user experience and regulatory compliance seriously from day one.",
+    label: "Gift Cards",
+    tag: "Amazon, Apple, Google Play, Netflix, Steam and hundreds more.",
+    desc: "Buy gift cards for hundreds of global brands using your crypto.",
+    icon: (
+      <svg {...svgProps}>
+        {/* Card with ribbon */}
+        <rect x="2" y="7" width="20" height="13" rx="2" />
+        <line x1="2" y1="11" x2="22" y2="11" />
+        <path d="M12 7c0 0-2.5-4 0-4s2.5 4 0 4z" />
+        <path d="M12 7c0 0 2.5-4 0-4" strokeOpacity=".4"/>
+        <line x1="12" y1="7" x2="12" y2="20" strokeOpacity=".4"/>
+      </svg>
+    ),
   },
   {
-    outlet: "The Block",
-    outletStyle: "font-bold tracking-wide",
-    quote: "With over 500 payment methods and 180 countries supported, Pexly is quietly becoming the infrastructure of global P2P trading.",
+    label: "Mobile Top-up",
+    tag: "200+ operators across 150 countries, instant delivery.",
+    desc: "Recharge any mobile number worldwide in seconds with crypto.",
+    icon: (
+      <svg {...svgProps}>
+        {/* Phone with lightning bolt */}
+        <rect x="6" y="2" width="12" height="20" rx="2.5" />
+        <circle cx="12" cy="18.5" r=".8" fill={S} stroke="none" />
+        <line x1="9" y1="5" x2="15" y2="5" strokeOpacity=".4"/>
+        {/* lightning */}
+        <path d="M13.5 8.5 L10.5 12.5 L12.5 12.5 L10.5 16.5" strokeWidth="1.5" />
+      </svg>
+    ),
   },
   {
-    outlet: "Decrypt",
-    outletStyle: "font-bold",
-    quote: "Pexly's non-custodial wallet combined with its P2P marketplace is exactly the kind of product the next wave of crypto users needs.",
+    label: "Utility Bills",
+    tag: "Electricity, water, internet, TV and more — paid instantly.",
+    desc: "Pay electricity, water, internet, and other bills using crypto.",
+    icon: (
+      <svg {...svgProps}>
+        {/* House with bolt */}
+        <path d="M3 12 L12 4 L21 12" />
+        <path d="M5 10.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9.5" />
+        <path d="M13 21v-6h-2v6" strokeOpacity=".4"/>
+        {/* bolt inside house */}
+        <path d="M13.2 11 L11 14 L12.6 14 L11 17.5" strokeWidth="1.4" />
+      </svg>
+    ),
+  },
+  {
+    label: "Shop",
+    tag: "Physical and digital goods, paid entirely with crypto.",
+    desc: "Browse and buy products from our integrated crypto-native marketplace.",
+    icon: (
+      <svg {...svgProps}>
+        {/* Shopping bag with tag */}
+        <path d="M6 2 L4 22 L20 22 L18 2 Z" rx="1" />
+        <path d="M9 2 C9 2 9 6 12 6 C15 6 15 2 15 2" />
+        <circle cx="15.5" cy="13" r="1" fill={S} stroke="none" />
+        <path d="M8 13 L13.5 13" strokeOpacity=".5"/>
+        <path d="M8 16.5 L16 16.5" strokeOpacity=".5"/>
+      </svg>
+    ),
   },
 ];
 
@@ -372,27 +481,25 @@ const About = () => {
         </div>
       </section>
 
-      {/* ══ 7. IN THE MEDIA — dark, curved bottom ═════════════════════════ */}
+      {/* ══ 7. WHAT WE OFFER — dark, curved bottom ════════════════════════ */}
       <section className="relative z-30 rounded-b-3xl bg-[hsl(0_0%_8%)] pt-14 pb-24">
         <div className="max-w-7xl mx-auto px-6 lg:px-10">
           <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-3">
-            Featured On
+            Our Services
           </p>
           <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white mb-10">
-            Pexly in the media
+            Everything you need, in one place
           </h2>
 
-          {/* Mobile: stacked, 2-col on sm, Desktop: 4-col */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {press.map((p, i) => (
-              <div key={i} className="bg-white/5 border border-white/8 rounded-2xl px-6 py-6 flex flex-col justify-between">
-                <div>
-                  <p className={`text-white/40 text-base mb-4 ${p.outletStyle}`}>{p.outlet}</p>
-                  <p className="text-white text-base leading-relaxed mb-5">"{p.quote}"</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {services.map(({ label, tag, desc, icon }, i) => (
+              <div key={i} className="bg-white/5 border border-white/8 rounded-2xl px-6 py-6 flex flex-col gap-3">
+                <div className="w-11 h-11 rounded-xl bg-primary/15 flex items-center justify-center text-primary">
+                  {icon}
                 </div>
-                <a href="#" className="inline-flex items-center gap-1.5 text-primary text-sm font-semibold hover:underline">
-                  Read full article <ArrowRight className="w-3.5 h-3.5" />
-                </a>
+                <p className="text-white font-bold text-lg">{label}</p>
+                <p className="text-primary/70 text-xs font-medium tracking-wide uppercase">{tag}</p>
+                <p className="text-white/50 text-sm leading-relaxed">{desc}</p>
               </div>
             ))}
           </div>
