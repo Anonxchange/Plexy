@@ -228,21 +228,21 @@ const CryptoCard = ({ name, symbol, price, change24h, chartData, color, icon }: 
   return (
     <Card className="overflow-hidden border-border hover:border-primary/40 transition-all duration-200 hover:shadow-lg hover:shadow-primary/5">
       <CardContent className="p-0">
-        <div className="p-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="p-5 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             {iconUrl ? (
-              <img src={iconUrl} alt={symbol} className="w-11 h-11 rounded-full" />
+              <img src={iconUrl} alt={symbol} className="w-11 h-11 rounded-full flex-shrink-0" />
             ) : (
-              <div className={`w-11 h-11 rounded-full ${color} flex items-center justify-center text-white text-lg font-bold`}>
+              <div className={`w-11 h-11 rounded-full flex-shrink-0 ${color} flex items-center justify-center text-white text-lg font-bold`}>
                 {icon}
               </div>
             )}
-            <div>
-              <span className="font-bold text-base text-foreground">{name}</span>
-              <span className="text-muted-foreground text-sm ml-2">{symbol}</span>
+            <div className="min-w-0">
+              <span className="font-bold text-base text-foreground truncate block">{name}</span>
+              <span className="text-muted-foreground text-sm">{symbol}</span>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <span className="font-bold text-xl text-foreground">{formattedPrice}</span>
             <span className={`text-sm font-semibold px-2.5 py-1 rounded-full ${isPositive ? 'bg-[#B4F22E]/15 text-[#B4F22E]' : 'bg-destructive/10 text-destructive'}`}>
               {formattedChange}
