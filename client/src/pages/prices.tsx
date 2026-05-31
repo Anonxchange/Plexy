@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { MarketInfo } from "@/components/market-info";
 import { PriceChart } from "@/components/price-chart";
-import { Search, Menu, X, TrendingUp, TrendingDown, ArrowRight, Github, Twitter } from "lucide-react";
+import { Search, Menu, X, TrendingUp, TrendingDown, ArrowRight, Github, Twitter, ChevronRight } from "lucide-react";
+import { PexlyIcon } from "@/components/pexly-icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
@@ -41,7 +42,7 @@ const Header = () => {
       <div className="container flex h-16 items-center justify-between">
         <a href="/" className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-            <span className="text-lg font-bold text-primary-foreground">P</span>
+            <PexlyIcon className="h-5 w-5 text-primary-foreground" />
           </div>
           <span className="text-xl font-bold">Pexly Explorer</span>
         </a>
@@ -97,40 +98,6 @@ const Header = () => {
   );
 };
 
-const PriceTicker = () => {
-  const { data: prices } = useCryptoPrices([...SYMBOLS]);
-
-  const tickerItems = SYMBOLS.map((symbol) => ({
-    symbol,
-    name: COIN_NAMES[symbol] ?? symbol,
-    price: prices?.[symbol]?.current_price ?? null,
-    change: prices?.[symbol]?.price_change_percentage_24h ?? null,
-  }));
-
-  return (
-    <div className="w-full overflow-hidden border-b border-border bg-white dark:bg-gray-800 py-4 shadow-sm">
-      <div className="flex ticker-scroll">
-        {[...tickerItems, ...tickerItems, ...tickerItems].map((item, index) => (
-          <div key={`${item.symbol}-${index}`} className="flex items-center gap-4 px-6 border-r border-border/20 whitespace-nowrap">
-            <span className="font-semibold text-foreground">{item.symbol}</span>
-            <span className="text-muted-foreground text-sm">{item.name}</span>
-            <span className="font-medium text-foreground">
-              {item.price !== null
-                ? `$${item.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                : "—"}
-            </span>
-            {item.change !== null && (
-              <span className={`flex items-center gap-1 font-medium ${item.change >= 0 ? "text-success" : "text-destructive"}`}>
-                {item.change >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                {item.change >= 0 ? "+" : ""}{item.change.toFixed(2)}%
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
 
 const Footer = () => (
   <footer className="border-t border-border bg-card py-8 md:py-12">
@@ -139,7 +106,7 @@ const Footer = () => (
         <div className="col-span-1 sm:col-span-2 md:col-span-1">
           <a href="/" className="flex items-center gap-2 mb-4">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-              <span className="text-lg font-bold text-primary-foreground">P</span>
+              <PexlyIcon className="h-5 w-5 text-primary-foreground" />
             </div>
             <span className="text-xl font-bold">Pexly Explorer</span>
           </a>
@@ -208,23 +175,12 @@ export default function Prices() {
           -webkit-text-fill-color: transparent;
           background-image: var(--gradient-hero);
         }
-        .ticker-scroll {
-          animation: ticker 60s linear infinite;
-          will-change: transform;
-        }
-        .ticker-scroll:hover {
-          animation-play-state: paused;
-        }
         .animate-fade-in {
           animation: fadeIn 0.6s ease-out forwards;
         }
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
-        }
-        @keyframes ticker {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-33.333%); }
         }
         .container {
           width: 100%;
@@ -241,18 +197,24 @@ export default function Prices() {
           }
         }
       `}</style>
-      <div className="min-h-screen flex flex-col explorer-wrapper bg-gray-100 dark:bg-gray-900 overflow-x-hidden">
+      <div className="min-h-screen flex flex-col explorer-wrapper bg-muted/30 overflow-x-hidden">
         <Header />
 
+        {/* Breadcrumb */}
+        <div className="container flex items-center gap-1.5 py-3 text-sm text-muted-foreground border-b border-border/50">
+          <Link href="/explorer"><span className="hover:text-foreground transition-colors cursor-pointer">Explorer</span></Link>
+          <ChevronRight className="h-3.5 w-3.5 flex-shrink-0" />
+          <span className="text-foreground font-medium">Prices</span>
+        </div>
+
         <main className="flex-1">
-          <PriceTicker />
-          <div className="bg-gray-100 dark:bg-gray-900">
+          <div className="bg-muted/30">
             <MarketInfo />
             <PriceChart />
           </div>
 
           {/* Prices Table */}
-          <section className="py-4 bg-gray-100 dark:bg-gray-900">
+          <section className="py-4 bg-muted/30">
             <div className="container">
               <Card>
                 <CardHeader className="flex-row items-center justify-between border-b py-3">

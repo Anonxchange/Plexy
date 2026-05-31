@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Copy, TrendingUp, TrendingDown, Clock, DollarSign, Search, Menu, X, Github, Twitter, ArrowRight, ArrowDown, CheckCircle2, Zap } from "lucide-react";
+import { Copy, TrendingUp, TrendingDown, Clock, DollarSign, Search, Menu, X, Github, Twitter, ArrowRight, ArrowDown, CheckCircle2, ChevronRight } from "lucide-react";
+import { PexlyIcon } from "@/components/pexly-icon";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +23,7 @@ const Header = () => {
         <Link href="/explorer">
           <a className="flex items-center gap-2 cursor-pointer">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-              <Zap className="h-5 w-5 text-primary-foreground" />
+              <PexlyIcon className="h-5 w-5 text-primary-foreground" />
             </div>
             <span className="text-xl font-bold">Pexly Explorer</span>
           </a>
@@ -182,7 +183,7 @@ export default function AddressDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col">
+      <div className="min-h-screen bg-muted/30 flex flex-col">
         <Header />
         <div className="flex-1 container mx-auto px-4 py-8">
           <div className="text-center py-12">
@@ -199,7 +200,7 @@ export default function AddressDetail() {
 
   if (error || !addressData) {
     return (
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col">
+      <div className="min-h-screen bg-muted/30 flex flex-col">
         <Header />
         <div className="flex-1 container mx-auto px-4 py-8">
           <Card className="border-destructive/50 bg-destructive/5">
@@ -224,19 +225,27 @@ export default function AddressDetail() {
   const paginatedTransactions = transactions.slice(startIdx, endIdx);
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col">
+    <div className="min-h-screen bg-muted/30 flex flex-col">
       <Header />
       
       <main className="flex-1">
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-5">
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-1.5 mb-4 text-sm text-muted-foreground">
+            <Link href="/explorer"><span className="hover:text-foreground transition-colors cursor-pointer">Explorer</span></Link>
+            <ChevronRight className="h-3.5 w-3.5 flex-shrink-0" />
+            <Link href="/explorer/transactions"><span className="hover:text-foreground transition-colors cursor-pointer">Transactions</span></Link>
+            <ChevronRight className="h-3.5 w-3.5 flex-shrink-0" />
+            <span className="text-foreground font-medium font-mono">{address ? `${address.substring(0, 8)}…${address.substring(address.length - 6)}` : 'Address'}</span>
+          </div>
           {/* Title */}
-          <div className="mb-8">
-            <h2 className="text-4xl font-bold mb-2">Bitcoin Address</h2>
-            <p className="text-muted-foreground">View address details, balance, and transaction history</p>
+          <div className="mb-4">
+            <h2 className="text-2xl font-bold mb-1">Bitcoin Address</h2>
+            <p className="text-sm text-muted-foreground">View address details, balance, and transaction history</p>
           </div>
 
           {/* Address Hash Card */}
-          <Card className="mb-6">
+          <Card className="mb-4">
             <CardContent className="pt-6">
               <div className="space-y-4">
                 <div>
@@ -258,7 +267,7 @@ export default function AddressDetail() {
           </Card>
 
           {/* Stats Grid */}
-          <div className="grid md:grid-cols-2 gap-6 mb-6">
+          <div className="grid md:grid-cols-2 gap-4 mb-4">
             <Card>
               <CardContent className="pt-6">
                 <p className="text-sm text-muted-foreground mb-2">MAIN BALANCE</p>

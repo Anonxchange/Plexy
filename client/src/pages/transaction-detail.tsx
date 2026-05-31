@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Copy, Search, Menu, X, Github, Twitter, CheckCircle2, Download, Zap } from "lucide-react";
+import { Copy, Search, Menu, X, Github, Twitter, CheckCircle2, Download, ChevronRight } from "lucide-react";
+import { PexlyIcon } from "@/components/pexly-icon";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +23,7 @@ const Header = () => {
         <Link href="/explorer">
           <a className="flex items-center gap-2 cursor-pointer">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-              <Zap className="h-5 w-5 text-primary-foreground" />
+              <PexlyIcon className="h-5 w-5 text-primary-foreground" />
             </div>
             <span className="text-xl font-bold">Pexly Explorer</span>
           </a>
@@ -218,15 +219,17 @@ export default function TransactionDetail() {
     <div className="flex flex-col min-h-screen bg-background">
       <Header />
       
-      <main className="flex-1 container py-8 max-w-7xl mx-auto">
+      <main className="flex-1 container py-5 max-w-7xl mx-auto">
         {/* Breadcrumb */}
-        <div className="mb-8 flex items-center gap-2 text-sm text-muted-foreground">
-          <span>BITCOIN</span>
-          <span>{' > '}</span>
-          <span className="text-foreground font-medium">TRANSACTION {txHash?.substring(0, 6)}...{txHash?.substring(txHash.length - 6)}</span>
+        <div className="mb-4 flex items-center gap-1.5 text-sm text-muted-foreground">
+          <Link href="/explorer"><span className="hover:text-foreground transition-colors cursor-pointer">Explorer</span></Link>
+          <ChevronRight className="h-3.5 w-3.5 flex-shrink-0" />
+          <Link href="/explorer/transactions"><span className="hover:text-foreground transition-colors cursor-pointer">Transactions</span></Link>
+          <ChevronRight className="h-3.5 w-3.5 flex-shrink-0" />
+          <span className="text-foreground font-medium font-mono">{txHash ? `${txHash.substring(0, 8)}…${txHash.substring(txHash.length - 6)}` : 'TX'}</span>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Left Column: Title and Key Status Info */}
           <div className="lg:col-span-2 space-y-6">
             {/* Title */}

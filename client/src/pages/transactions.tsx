@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Search, Menu, X, TrendingUp, TrendingDown, ArrowRight, Github, Twitter, RefreshCw, Zap } from "lucide-react";
+import { Search, Menu, X, ArrowRight, Github, Twitter, RefreshCw, ChevronRight } from "lucide-react";
+import { PexlyIcon } from "@/components/pexly-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,16 +17,6 @@ const navLinks = [
   { name: "Transactions", href: "/explorer/transactions" },
 ];
 
-const tickerData = [
-  { symbol: "BTC", name: "Bitcoin", price: "$88,696.00", change: 1.57 },
-  { symbol: "ETH", name: "Ethereum", price: "$2,970.09", change: 1.80 },
-  { symbol: "USDT", name: "Tether", price: "$1.00", change: 0.00 },
-  { symbol: "USDC", name: "USDC", price: "$1.00", change: 0.01 },
-  { symbol: "SOL", name: "Solana", price: "$123.68", change: -0.42 },
-  { symbol: "BNB", name: "BNB", price: "$631.42", change: 0.85 },
-  { symbol: "XRP", name: "XRP", price: "$1.87", change: 2.14 },
-  { symbol: "ADA", name: "Cardano", price: "$0.56", change: -1.23 },
-];
 
 const defaultMempoolData = [
   { time: "12:00", bytes: 1.2 },
@@ -103,7 +94,7 @@ const Header = () => {
       <div className="container flex h-16 items-center justify-between">
         <a href="/" className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-            <Zap className="h-5 w-5 text-primary-foreground" />
+            <PexlyIcon className="h-5 w-5 text-primary-foreground" />
           </div>
           <span className="text-xl font-bold">Pexly Explorer</span>
         </a>
@@ -159,26 +150,9 @@ const Header = () => {
   );
 };
 
-const TransactionsTicker = () => (
-  <div className="w-full overflow-hidden border-b border-border bg-white dark:bg-gray-800 py-4 shadow-sm">
-    <div className="flex ticker-scroll">
-      {[...tickerData, ...tickerData, ...tickerData].map((item, index) => (
-        <div key={`${item.symbol}-${index}`} className="flex items-center gap-4 px-6 border-r border-border/20 whitespace-nowrap">
-          <span className="font-semibold text-foreground">{item.symbol}</span>
-          <span className="text-muted-foreground text-sm">{item.name}</span>
-          <span className="font-medium text-foreground">{item.price}</span>
-          <span className={`flex items-center gap-1 font-medium ${item.change >= 0 ? "text-success" : "text-destructive"}`}>
-            {item.change >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-            {item.change >= 0 ? "+" : ""}{item.change}%
-          </span>
-        </div>
-      ))}
-    </div>
-  </div>
-);
 
 const TransactionsHeader = () => (
-  <section className="py-12 md:py-16 bg-gray-100 dark:bg-gray-900">
+  <section className="py-4 bg-muted/30">
     <div className="container">
       <div className="max-w-3xl mx-auto text-center animate-fade-in">
         <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
@@ -199,7 +173,7 @@ const Footer = () => (
         <div className="col-span-1 sm:col-span-2 md:col-span-1">
           <a href="/" className="flex items-center gap-2 mb-4">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-              <span className="text-lg font-bold text-primary-foreground">P</span>
+              <PexlyIcon className="h-5 w-5 text-primary-foreground" />
             </div>
             <span className="text-xl font-bold">Pexly Explorer</span>
           </a>
@@ -368,15 +342,6 @@ export default function Transactions() {
           background-image: var(--gradient-hero);
         }
 
-        .ticker-scroll {
-          animation: ticker 60s linear infinite;
-          will-change: transform;
-        }
-        
-        .ticker-scroll:hover {
-          animation-play-state: paused;
-        }
-
         .animate-fade-in {
           animation: fadeIn 0.6s ease-out forwards;
         }
@@ -387,15 +352,6 @@ export default function Transactions() {
           }
           to {
             opacity: 1;
-          }
-        }
-
-        @keyframes ticker {
-          0% {
-            transform: translateX(0);
-          }
-          100% {
-            transform: translateX(-50%);
           }
         }
 
@@ -421,16 +377,22 @@ export default function Transactions() {
           margin-bottom: 1.5rem;
         }
       `}</style>
-      <div className="min-h-screen flex flex-col explorer-wrapper bg-gray-100 dark:bg-gray-900 overflow-x-hidden">
+      <div className="min-h-screen flex flex-col explorer-wrapper bg-muted/30 overflow-x-hidden">
         <Header />
-        
+
+        {/* Breadcrumb */}
+        <div className="container flex items-center gap-1.5 py-3 text-sm text-muted-foreground border-b border-border/50">
+          <Link href="/explorer"><span className="hover:text-foreground transition-colors cursor-pointer">Explorer</span></Link>
+          <ChevronRight className="h-3.5 w-3.5 flex-shrink-0" />
+          <span className="text-foreground font-medium">Transactions</span>
+        </div>
+
         <main className="flex-1">
-          <TransactionsTicker />
           <TransactionsHeader />
           
           {/* Charts Section */}
-          <section className="py-8 bg-gray-100 dark:bg-gray-900">
-            <div className="container space-y-8">
+          <section className="py-4 bg-muted/30">
+            <div className="container space-y-4">
               {/* Mempool Chart */}
               <Card>
                 <CardHeader className="border-b">
@@ -568,9 +530,9 @@ export default function Transactions() {
           </section>
 
           {/* Unconfirmed Transactions */}
-          <section className="py-8 bg-gray-100 dark:bg-gray-900">
+          <section className="py-4 bg-muted/30">
             <div className="container">
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-4">
                 <div>
                   <h2 className="text-2xl font-bold">Unconfirmed BTC Transactions (Live Mempool)</h2>
                   <p className="text-sm text-muted-foreground mt-1">Last updated: {lastUpdated.toLocaleTimeString()} • Total: {unconfirmedTransactions.length} pending</p>
