@@ -62,7 +62,7 @@ export function Checkout() {
   const { user, loading } = useAuth();
   const [, setLocation] = useLocation();
   const { items, updateQuantity, removeItem } = useGiftCardCart();
-  const { createAndCaptureOrder, loading: paypalLoading } = usePayPal();
+  const { checkout: paypalCheckout, loading: paypalLoading } = usePayPal();
 
   const [activePayment, setActivePayment] = useState<PaymentMethod>("card");
   const [deliveryTarget, setDeliveryTarget] = useState<DeliveryTarget>("self");
@@ -290,7 +290,7 @@ export function Checkout() {
                 <Button
                   className="h-12 bg-[#0070BA] hover:bg-[#005ea6] text-white font-bold rounded-xl"
                   disabled={paypalLoading}
-                  onClick={() => createAndCaptureOrder(total)}
+                  onClick={() => paypalCheckout({ productType: "total", amount: total, currency: "USD" })}
                 >
                   {paypalLoading ? (
                     <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -503,7 +503,7 @@ export function Checkout() {
                       <Button
                         className="w-full h-12 bg-[#0070BA] text-white hover:bg-[#005ea6] font-bold rounded-xl"
                         disabled={paypalLoading}
-                        onClick={() => createAndCaptureOrder(total)}
+                        onClick={() => paypalCheckout({ productType: "total", amount: total, currency: "USD" })}
                       >
                         {paypalLoading ? (
                           <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
