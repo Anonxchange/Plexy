@@ -66,7 +66,7 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const { countries: countriesQuery, operators: operatorsQuery, processTopup } = useAirtime(selectedCountry);
-  const { createAndCaptureOrder, loading: paypalLoading } = usePayPal();
+  const { checkout: paypalCheckout, loading: paypalLoading } = usePayPal();
   const countries = countriesQuery.data || [];
   const isLoadingCountries = countriesQuery.isLoading;
   const operators = operatorsQuery.data || [];
@@ -493,7 +493,11 @@ const Index = () => {
                       className="w-full h-12 bg-[#0070BA] text-white hover:bg-[#005ea6] font-bold rounded-2xl gap-2"
                       disabled={paypalLoading || processTopup.isPending}
                       onClick={async () => {
-                        await createAndCaptureOrder(Number(amount) || 0);
+                        await paypalCheckout({
+                          productType: "airtime",
+                          operatorId: selectedOperator?.operatorId,
+                          amount: Number(amount) || 0,
+                        });
                         await handleTopup();
                       }}
                     >
