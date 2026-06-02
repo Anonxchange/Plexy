@@ -135,6 +135,22 @@ const Index = () => {
         operatorName: selectedOperator.name,
       });
       if (result.success) {
+        // Save to My Orders history
+        try {
+          const saved = JSON.parse(localStorage.getItem("pexly_digital_orders") || "[]");
+          saved.unshift({
+            id: `topup_${Date.now()}`,
+            type: "topup",
+            title: `${selectedOperator.name} Top-up`,
+            amount: Number(amount),
+            currency: "USD",
+            phone: phoneNumber,
+            paypalOrderId: "",
+            placedAt: new Date().toISOString(),
+            status: "fulfilled",
+          });
+          localStorage.setItem("pexly_digital_orders", JSON.stringify(saved.slice(0, 100)));
+        } catch {}
         toast.success("Top-up processed successfully!");
         setView("operators");
         setAmount("");
