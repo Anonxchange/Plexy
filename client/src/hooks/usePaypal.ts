@@ -43,37 +43,46 @@ export function usePayPal() {
 
   /**
    * Full PayPal checkout flow:
-   *  1. Tell the edge function WHAT the user is buying (product/operator + denomination).
-   *     The server fetches the real price from Reloadly — the browser never sets the amount.
-   *  2. Open the PayPal popup for user approval.
-   *  3. Capture the order — the server retrieves the amount from PayPal's own API.
+   *  1. Open a blank popup immediately (must be synchronous — direct user gesture).
+   *  2. Tell the edge function WHAT the user is buying; server fetches the real
+   *     price from Reloadly — the browser never sets the amount.
+   *  3. Navigate the already-open popup to the PayPal approval URL.
+   *  4. Capture the order — server retrieves the amount from PayPal's own API.
    *
    * Returns the capture result on success, or null on failure/cancellation.
    */
   const checkout = async (
     payload: PayPalProductPayload,
   ): Promise<PayPalCaptureResult | null> => {
+    /* ── Step 1: open popup synchronously so the browser allows it ── */
+    const popup = window.open("about:blank", "paypal", "width=500,height=700");
+    if (!popup) {
+      toast({
+        title: "Popup blocked",
+        description: "Please allow popups for this site to complete payment.",
+        variant: "destructive",
+      });
+      return null;
+    }
+
     setLoading(true);
     try {
       const supabase = await getSupabase();
 
-      /* Step 1 — create order (amount set server-side from Reloadly) */
+      /* ── Step 2: create order (amount set server-side from Reloadly) ── */
       const { data: createData, error: createError } = await supabase.functions.invoke("paypal", {
         body: { action: "create", ...payload },
       });
-      if (createError) throw new Error(createError.message);
-
-      const orderId: string         = createData.id;
-      const verifiedAmount: number  = createData.verifiedAmount;
-      const currency: string        = createData.currency ?? "USD";
-
-      /* Step 2 — open PayPal popup */
-      const approvalUrl = `https://www.paypal.com/checkoutnow?token=${orderId}`;
-      const popup = window.open(approvalUrl, "paypal", "width=500,height=700");
-
-      if (!popup) {
-        throw new Error("Popup blocked. Please allow popups for this site to complete payment.");
+      if (createError) {
+        popup.close();
+        throw new Error(createError.message);
       }
+
+      const orderId: string        = createData.id;
+      const currency: string       = createData.currency ?? "USD";
+
+      /* ── Step 3: navigate the already-open popup to PayPal ── */
+      popup.location.href = `https://www.paypal.com/checkoutnow?token=${orderId}`;
 
       await new Promise<void>((resolve, reject) => {
         const poll = setInterval(() => {
@@ -91,7 +100,7 @@ export function usePayPal() {
         }, 600_000);
       });
 
-      /* Step 3 — capture (only order_id goes to the server; amount comes from PayPal) */
+      /* ── Step 4: capture (only order_id goes to server; amount from PayPal) ── */
       const { data: captureData, error: captureError } = await supabase.functions.invoke("paypal", {
         body: { action: "capture", order_id: orderId },
       });
@@ -109,6 +118,7 @@ export function usePayPal() {
       return captureData as PayPalCaptureResult;
 
     } catch (e: any) {
+      if (!popup.closed) popup.close();
       toast({
         title: "PayPal error",
         description: e.message ?? "Something went wrong",
