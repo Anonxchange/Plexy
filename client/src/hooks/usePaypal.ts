@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
 
 /* ── Payload types ─────────────────────────────────────────────────────── */
@@ -55,6 +55,8 @@ export function usePayPal() {
   ): Promise<PayPalCaptureResult | null> => {
     setLoading(true);
     try {
+      const supabase = await getSupabase();
+
       /* Step 1 — create order (amount set server-side from Reloadly) */
       const { data: createData, error: createError } = await supabase.functions.invoke("paypal", {
         body: { action: "create", ...payload },
