@@ -3,6 +3,8 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
 import { usePayPal } from "@/hooks/usePaypal";
+import { placeReloadlyOrder } from "@/hooks/use-utility-billers";
+import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -61,8 +63,9 @@ function SectionTitle({ step, title, sub }: { step: number; title: string; sub?:
 export function Checkout() {
   const { user, loading } = useAuth();
   const [, setLocation] = useLocation();
-  const { items, updateQuantity, removeItem } = useGiftCardCart();
+  const { items, updateQuantity, removeItem, clearCart } = useGiftCardCart();
   const { checkout: paypalCheckout, loading: paypalLoading } = usePayPal();
+  const [fulfilling, setFulfilling] = useState(false);
 
   const [activePayment, setActivePayment] = useState<PaymentMethod>("card");
   const [deliveryTarget, setDeliveryTarget] = useState<DeliveryTarget>("self");
@@ -156,6 +159,35 @@ export function Checkout() {
   const recipientValid = deliveryTarget === "self" || /^\S+@\S+\.\S+$/.test(recipientEmail);
 
   const orderId = `gc_${Date.now()}`;
+
+  const handlePaypalCheckout = async () => {
+    const result = await paypalCheckout({ productType: "total", amount: total, currency: "USD" });
+    if (!result) return;
+    setFulfilling(true);
+    try {
+      await Promise.all(
+        items.map((item) =>
+          placeReloadlyOrder({
+            productId: Number(item.productId),
+            quantity: item.quantity,
+            unitPrice: item.price,
+            recipientEmail: deliveryEmail || undefined,
+          })
+        )
+      );
+      clearCart();
+      toast({ title: "Order placed!", description: "Your gift cards will be emailed to you shortly." });
+      setLocation("/orders");
+    } catch (e: any) {
+      toast({
+        title: "Delivery error",
+        description: e.message ?? "Payment captured but gift card delivery failed. Please contact support.",
+        variant: "destructive",
+      });
+    } finally {
+      setFulfilling(false);
+    }
+  };
 
   const goCryptoPayment = () => {
     if (!recipientValid) return;
@@ -289,10 +321,10 @@ export function Checkout() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Button
                   className="h-12 bg-[#0070BA] hover:bg-[#005ea6] text-white font-bold rounded-xl"
-                  disabled={paypalLoading}
-                  onClick={() => paypalCheckout({ productType: "total", amount: total, currency: "USD" })}
+                  disabled={paypalLoading || fulfilling}
+                  onClick={handlePaypalCheckout}
                 >
-                  {paypalLoading ? (
+                  {paypalLoading || fulfilling ? (
                     <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <>
@@ -502,10 +534,10 @@ export function Checkout() {
                       </p>
                       <Button
                         className="w-full h-12 bg-[#0070BA] text-white hover:bg-[#005ea6] font-bold rounded-xl"
-                        disabled={paypalLoading}
-                        onClick={() => paypalCheckout({ productType: "total", amount: total, currency: "USD" })}
+                        disabled={paypalLoading || fulfilling}
+                        onClick={handlePaypalCheckout}
                       >
-                        {paypalLoading ? (
+                        {paypalLoading || fulfilling ? (
                           <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                         ) : (
                           <>
