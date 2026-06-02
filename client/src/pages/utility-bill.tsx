@@ -88,7 +88,7 @@ const UtilityBill = () => {
     selectedCountry || undefined,
     selectedService && selectedService !== "ALL" ? selectedService : undefined
   );
-  const { createAndCaptureOrder, loading: paypalLoading } = usePayPal();
+  const { checkout: paypalCheckout, loading: paypalLoading } = usePayPal();
 
   const countries = useMemo(() => {
     if (countriesData && Array.isArray(countriesData) && countriesData.length > 0) {
@@ -501,7 +501,11 @@ const UtilityBill = () => {
                       className="w-full h-12 bg-[#0070BA] text-white hover:bg-[#005ea6] font-bold rounded-2xl gap-2"
                       disabled={paypalLoading || isSubmitting}
                       onClick={async () => {
-                        await createAndCaptureOrder(Number(amount) || 0);
+                        await paypalCheckout({
+                          productType: "total",
+                          amount: Number(amount) || 0,
+                          currency: "USD",
+                        });
                         await handlePayment();
                       }}
                     >
