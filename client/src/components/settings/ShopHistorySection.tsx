@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import {
   ShoppingBag, Loader2, Trash2, ExternalLink, PackageSearch,
-  Clock, Package, Search, RotateCcw,
+  Clock, Package, Search, RotateCcw, Smartphone, Zap, Gift,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,6 +33,19 @@ export interface SavedOrder {
   status: "pending" | "processing" | "shipped" | "delivered";
 }
 
+export interface DigitalOrder {
+  id: string;
+  type: "giftcard" | "topup" | "utility";
+  title: string;
+  amount: number;
+  currency: string;
+  phone?: string;
+  recipientEmail?: string;
+  paypalOrderId: string;
+  placedAt: string;
+  status: "fulfilled";
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -53,6 +66,20 @@ function loadSavedOrders(): SavedOrder[] {
     return [];
   }
 }
+
+function loadDigitalOrders(): DigitalOrder[] {
+  try {
+    return JSON.parse(localStorage.getItem("pexly_digital_orders") || "[]");
+  } catch {
+    return [];
+  }
+}
+
+const DIGITAL_TYPE_META: Record<DigitalOrder["type"], { label: string; icon: React.ReactNode; color: string }> = {
+  giftcard: { label: "Gift Card", icon: <Gift className="h-5 w-5 text-purple-500" />, color: "bg-purple-500/10 text-purple-600" },
+  topup:    { label: "Top-up",   icon: <Smartphone className="h-5 w-5 text-blue-500" />,   color: "bg-blue-500/10 text-blue-600" },
+  utility:  { label: "Utility",  icon: <Zap className="h-5 w-5 text-yellow-500" />,  color: "bg-yellow-500/10 text-yellow-600" },
+};
 
 const STATUS_COLORS: Record<SavedOrder["status"], string> = {
   pending: "bg-yellow-500/10 text-yellow-600",
@@ -83,6 +110,7 @@ export function ShopHistorySection() {
 
   // ── My Orders ──
   const [orders, setOrders] = useState<SavedOrder[]>([]);
+  const [digitalOrders, setDigitalOrders] = useState<DigitalOrder[]>([]);
 
   // ── Order Status lookup ──
   const [orderNumber, setOrderNumber] = useState("");
@@ -91,6 +119,7 @@ export function ShopHistorySection() {
   useEffect(() => {
     if (user) fetchHistory();
     setOrders(loadSavedOrders());
+    setDigitalOrders(loadDigitalOrders());
   }, [user]);
 
   async function fetchHistory() {
@@ -146,8 +175,16 @@ export function ShopHistorySection() {
 
   function clearOrders() {
     localStorage.removeItem("pexly_orders");
+    localStorage.removeItem("pexly_digital_orders");
     setOrders([]);
+    setDigitalOrders([]);
     toast.success("Order history cleared.");
+  }
+
+  function removeDigitalOrder(id: string) {
+    const updated = digitalOrders.filter((o) => o.id !== id);
+    localStorage.setItem("pexly_digital_orders", JSON.stringify(updated));
+    setDigitalOrders(updated);
   }
 
   function handleTrackOrder() {
@@ -263,18 +300,18 @@ export function ShopHistorySection() {
       {activeTab === "orders" && (
         <Card>
           <CardContent className="p-4">
-            {orders.length === 0 ? (
+            {orders.length === 0 && digitalOrders.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <Package className="h-12 w-12 mx-auto mb-3 opacity-20" />
                 <p className="text-sm font-medium">No orders yet.</p>
                 <p className="text-xs mt-1 max-w-xs mx-auto">
-                  Orders placed through the shop will appear here automatically.
+                  Orders placed through the shop, gift cards, top-ups, and utility bills will appear here.
                 </p>
                 <Button
                   variant="outline" size="sm" className="mt-4 text-xs"
-                  onClick={() => navigate("/shop")}
+                  onClick={() => navigate("/gift-cards")}
                 >
-                  Browse the shop
+                  Browse products
                 </Button>
               </div>
             ) : (
@@ -290,6 +327,50 @@ export function ShopHistorySection() {
                   </Button>
                 </div>
                 <div className="space-y-3">
+                  {/* Digital orders (gift cards, top-ups, utility bills) */}
+                  {digitalOrders.map((order) => {
+                    const meta = DIGITAL_TYPE_META[order.type];
+                    return (
+                      <div
+                        key={order.id}
+                        className="flex items-center gap-3 p-3 rounded-lg border border-border/60 hover:bg-muted/40 transition-colors group"
+                      >
+                        <div className="h-14 w-14 rounded-lg overflow-hidden bg-muted flex-shrink-0 flex items-center justify-center">
+                          {meta.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{order.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {order.currency} {order.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                          {order.recipientEmail && (
+                            <p className="text-xs text-muted-foreground truncate">To: {order.recipientEmail}</p>
+                          )}
+                          {order.phone && (
+                            <p className="text-xs text-muted-foreground">{order.phone}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground">{timeAgo(order.placedAt)}</p>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${meta.color}`}>
+                            {meta.label}
+                          </span>
+                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-500/10 text-green-600">
+                            Delivered
+                          </span>
+                          <Button
+                            variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => removeDigitalOrder(order.id)}
+                            title="Remove"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Shopify orders */}
                   {orders.map((order) => (
                     <div
                       key={order.id}
