@@ -145,6 +145,21 @@ const UtilityBill = () => {
         billerName: selectedProvider.name,
         countryCode: selectedProvider.countryCode,
       });
+      // Save to My Orders history
+      try {
+        const saved = JSON.parse(localStorage.getItem("pexly_digital_orders") || "[]");
+        saved.unshift({
+          id: `util_${Date.now()}`,
+          type: "utility",
+          title: `${selectedProvider.name} Bill Payment`,
+          amount: Number(amount),
+          currency: "USD",
+          paypalOrderId: "",
+          placedAt: new Date().toISOString(),
+          status: "fulfilled",
+        });
+        localStorage.setItem("pexly_digital_orders", JSON.stringify(saved.slice(0, 100)));
+      } catch {}
       toast.success("Utility bill payment processed successfully!");
       setView("providers");
       setAmount("");
