@@ -262,7 +262,7 @@ function AppRoutes() {
       <Route path="/analysis">{() => <ProtectedRoute component={Analysis} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/checkout">{() => <ProtectedRoute component={Checkout} />}</Route>
       <Route path="/checkout/pay/crypto">{() => <ProtectedRoute component={CheckoutPayCrypto} />}</Route>
-
+ <Route path="/orders">{() => { window.location.replace("/account-settings?section=shop-history"); return null; }}</Route>
       {/* ── Admin pages (require session; pages enforce is_admin internally) ── */}
       <Route path="/admin">{() => <ProtectedRoute component={adminPage} skeleton={<PageSkeleton />} />}</Route>
       <Route path="/admin/verifications">{() => <ProtectedRoute component={adminVerificationsPage} skeleton={<PageSkeleton />} />}</Route>
