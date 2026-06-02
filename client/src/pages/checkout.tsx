@@ -176,8 +176,24 @@ export function Checkout() {
         )
       );
       clearCart();
+      // Save order record to localStorage so it appears in My Orders
+      try {
+        const saved = JSON.parse(localStorage.getItem("pexly_digital_orders") || "[]");
+        saved.unshift({
+          id: `gc_${result.orderID ?? Date.now()}`,
+          type: "giftcard",
+          title: items.length === 1 ? items[0].title : `${items.length} gift card${items.length > 1 ? "s" : ""}`,
+          amount: total,
+          currency: "USD",
+          recipientEmail: deliveryEmail || undefined,
+          paypalOrderId: result.orderID ?? "",
+          placedAt: new Date().toISOString(),
+          status: "fulfilled",
+        });
+        localStorage.setItem("pexly_digital_orders", JSON.stringify(saved.slice(0, 100)));
+      } catch {}
       toast({ title: "Order placed!", description: "Your gift cards will be emailed to you shortly." });
-      setLocation("/orders");
+      setLocation("/account-settings?section=shop-history");
     } catch (e: any) {
       toast({
         title: "Delivery error",
