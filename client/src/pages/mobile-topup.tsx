@@ -493,12 +493,12 @@ const Index = () => {
                       className="w-full h-12 bg-[#0070BA] text-white hover:bg-[#005ea6] font-bold rounded-2xl gap-2"
                       disabled={paypalLoading || processTopup.isPending}
                       onClick={async () => {
-                        await paypalCheckout({
+                        const result = await paypalCheckout({
                           productType: "airtime",
                           operatorId: selectedOperator?.operatorId,
                           amount: Number(amount) || 0,
                         });
-                        await handleTopup();
+                        if (result) await handleTopup();
                       }}
                     >
                       {paypalLoading || processTopup.isPending ? (
