@@ -19,7 +19,7 @@ import {
   CheckCircle2, Wallet, ChevronDown, ChevronUp, Users,
   Eye, EyeOff, ExternalLink, History, ArrowDownToLine,
   ArrowUpFromLine, RefreshCw,
-} from "lucide-react";
+} from '@/lib/icons';
 import { format } from "date-fns";
 import React, { useState, useMemo, useEffect } from "react";
 import {

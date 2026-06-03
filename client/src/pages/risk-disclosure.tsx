@@ -1,6 +1,6 @@
 
 import { useHead } from "@unhead/react";
-import { ShieldOff, AlertTriangle, Scale, Cpu, Globe, AlertCircle, ChevronDown } from "lucide-react";
+import { ShieldOff, AlertTriangle, Scale, Cpu, Globe, AlertCircle, ChevronDown } from '@/lib/icons';
 import { PexlyFooter } from "@/components/pexly-footer";
 import { LegalPageHero } from "@/components/legal-page-hero";
 import { Link } from "wouter";

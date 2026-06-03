@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { BlockchainBlocks } from "@/components/blockchain-blocks";
-import { Search, Menu, X, ArrowRight, Github, Twitter, Loader, ChevronRight } from "lucide-react";
+import { Search, Menu, X, ArrowRight, Github, Twitter, Loader, ChevronRight } from '@/lib/icons';
 import { PexlyIcon } from "@/components/pexly-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

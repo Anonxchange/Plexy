@@ -5,7 +5,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X, ArrowDownToLine, Landmark, Users } from "lucide-react";
+import { X, ArrowDownToLine, Landmark, Users } from '@/lib/icons';
 import { Badge } from "@/components/ui/badge";
 
 interface ReceiveMethodDialogProps {

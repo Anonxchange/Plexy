@@ -1,6 +1,6 @@
 import { useHead } from "@unhead/react";
 import { useState, useEffect } from "react";
-import { ArrowLeft, ExternalLink, ChevronDown, RefreshCw, Calendar, BarChart3, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, ExternalLink, ChevronDown, RefreshCw, Calendar, BarChart3, ChevronLeft, ChevronRight } from '@/lib/icons';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, PieChart, Pie, Cell } from "recharts";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";

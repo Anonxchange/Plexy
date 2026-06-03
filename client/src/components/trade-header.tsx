@@ -1,7 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ThumbsUp, ThumbsDown, ArrowLeft, User, Info, Clock, Circle } from "lucide-react";
+import { ThumbsUp, ThumbsDown, ArrowLeft, User, Info, Clock, Circle } from '@/lib/icons';
 import { useLocation } from "wouter";
 import { UserInfoDialog } from "@/components/user-info-dialog";
 import { useState } from "react";

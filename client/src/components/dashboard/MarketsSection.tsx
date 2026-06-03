@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { ChevronDown, TrendingUp, TrendingDown, ArrowRight, Check } from "lucide-react";
+import { ChevronDown, TrendingUp, TrendingDown, ArrowRight, Check } from '@/lib/icons';
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { asterMarket, type Ticker24h } from "@/lib/asterdex-service";

@@ -20,7 +20,7 @@ import {
   ChevronDown,
   MoreVertical,
   ExternalLink,
-} from "lucide-react";
+} from '@/lib/icons';
 import { Link, useLocation } from "wouter";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";

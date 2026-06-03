@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight } from '@/lib/icons';
 
 // ─── SVG Illustrations ─────────────────────────────────────────────────────────
 

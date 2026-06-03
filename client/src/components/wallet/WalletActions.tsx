@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Send, Download, RefreshCw, Smartphone } from "lucide-react";
+import { Send, Download, RefreshCw, Smartphone } from '@/lib/icons';
 
 interface WalletActionsProps {
   onSend?: () => void;

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, ArrowDownLeft, ArrowUpRight, RefreshCw, ShoppingCart, Lock, Unlock, Percent } from "lucide-react";
+import { MoreHorizontal, ArrowDownLeft, ArrowUpRight, RefreshCw, ShoppingCart, Lock, Unlock, Percent } from '@/lib/icons';
 import { getWalletTransactions, WalletTransaction } from "@/lib/wallet-api";
 import { useAuth } from "@/lib/auth-context";
 import { format } from "date-fns";

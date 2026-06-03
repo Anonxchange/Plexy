@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { ChevronDown, Globe, HelpCircle, Accessibility, X as XIcon } from "lucide-react";
+import { ChevronDown, Globe, HelpCircle, Accessibility, X as XIcon } from '@/lib/icons';
 import { PexlyIcon } from "@/components/pexly-icon";
 import { SiDiscord, SiInstagram, SiFacebook, SiYoutube, SiReddit } from "react-icons/si";
 import { Button } from "@/components/ui/button";

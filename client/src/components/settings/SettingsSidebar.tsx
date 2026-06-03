@@ -1,4 +1,4 @@
-import { User, Globe, Bell, Shield, Smartphone, CheckCircle2, Link2, HeadphonesIcon, ShoppingBag } from "lucide-react";
+import { User, Globe, Bell, Shield, Smartphone, CheckCircle2, Link2, HeadphonesIcon, ShoppingBag } from '@/lib/icons';
 import { useLocation } from "wouter";
 
 const settingsSections = [

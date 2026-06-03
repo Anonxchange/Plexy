@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Plus, ArrowLeft, Upload, Image as ImageIcon, X, Copy, CheckCircle } from "lucide-react";
+import { Edit, Trash2, Plus, ArrowLeft, Upload, Image as ImageIcon, X, Copy, CheckCircle } from '@/lib/icons';
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { uploadToR2 } from "@/lib/r2-storage";

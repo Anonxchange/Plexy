@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
-import { Mail, Loader2, CheckCircle2, ArrowLeft } from "lucide-react";
+import { Mail, Loader2, CheckCircle2, ArrowLeft } from '@/lib/icons';
 
 interface ForgotPasswordDialogProps {
   open: boolean;

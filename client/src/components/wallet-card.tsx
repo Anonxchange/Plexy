@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowUpRight, ArrowDownLeft, TrendingUp, TrendingDown } from "lucide-react";
+import { ArrowUpRight, ArrowDownLeft, TrendingUp, TrendingDown } from '@/lib/icons';
 
 export interface WalletCardProps {
   crypto: string;

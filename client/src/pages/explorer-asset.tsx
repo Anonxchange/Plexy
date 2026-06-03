@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
-import { ArrowRight, Info, ExternalLink, FileText, Github, Twitter, Search, Menu, X, Zap } from "lucide-react";
+import { ArrowRight, Info, ExternalLink, FileText, Github, Twitter, Search, Menu, X, Zap } from '@/lib/icons';
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
 import { cryptoIconUrls } from "@/lib/crypto-icons";

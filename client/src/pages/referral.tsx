@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import {
   Copy, Share2, ChevronDown, Users, Coins,
   CheckCircle2, ArrowRight, Zap, Star, TrendingUp,
-} from "lucide-react";
+} from '@/lib/icons';
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";

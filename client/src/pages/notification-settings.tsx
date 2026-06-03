@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Bell, Mail, MessageSquare, DollarSign, TrendingUp, Megaphone } from "lucide-react";
+import { ArrowLeft, Bell, Mail, MessageSquare, DollarSign, TrendingUp, Megaphone } from '@/lib/icons';
 import { PexlyFooter } from "@/components/pexly-footer";
 
 export default function NotificationSettings() {

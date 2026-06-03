@@ -45,7 +45,7 @@ import {
   MapPin,
   Wifi,
   ChevronLeft,
-} from "lucide-react";
+} from '@/lib/icons';
 import { PexlyFooter } from "@/components/pexly-footer";
 import { SettingsSidebar } from "@/components/settings/SettingsSidebar";
 import { deviceFingerprint, DeviceFingerprint } from "@/lib/security/device-fingerprint";

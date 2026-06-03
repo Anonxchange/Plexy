@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, Copy, Blocks, Clock, HardDrive } from "lucide-react";
+import { ArrowLeft, Copy, Blocks, Clock, HardDrive } from '@/lib/icons';
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

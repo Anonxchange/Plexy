@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Bitcoin, Building2, Lock, Shield, Award, TrendingUp, CheckCircle } from "lucide-react";
+import { ArrowLeft, Bitcoin, Building2, Lock, Shield, Award, TrendingUp, CheckCircle } from '@/lib/icons';
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";

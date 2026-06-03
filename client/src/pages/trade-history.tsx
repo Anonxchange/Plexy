@@ -59,7 +59,7 @@ import {
   Settings,
   Code,
   MoreVertical
-} from "lucide-react";
+} from '@/lib/icons';
 import { PexlyFooter } from "@/components/pexly-footer";
 import { useIsMobile } from "@/hooks/use-mobile";
 

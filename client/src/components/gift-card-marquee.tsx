@@ -1,7 +1,7 @@
 import { useGiftCardProducts } from "@/hooks/use-reloadly";
 import { useLocation } from "wouter";
 import { useRef, useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight } from '@/lib/icons';
 
 const SEED_CARDS = [
   { name: "Netflix",     logo: "https://logo.clearbit.com/netflix.com",      bg: "#E50914" },

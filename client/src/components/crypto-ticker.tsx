@@ -1,5 +1,5 @@
 
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown } from '@/lib/icons';
 import { useCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
 import { useMemo } from "react";
 

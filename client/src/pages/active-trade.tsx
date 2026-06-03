@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Button } from "@/components/ui/button";
-import { Info, CheckCircle, XCircle } from "lucide-react";
+import { Info, CheckCircle, XCircle } from '@/lib/icons';
 import { uploadToR2 } from "@/lib/r2-storage";
 import { createMessageNotification } from "@/lib/notifications-api";
 import { notificationSounds } from "@/lib/notification-sounds";

@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Circle, ThumbsUp, Bitcoin, X, ChevronDown, ShieldCheck, Lock, Loader2 } from "lucide-react";
+import { Circle, ThumbsUp, Bitcoin, X, ChevronDown, ShieldCheck, Lock, Loader2 } from '@/lib/icons';
 import { OfferCardProps } from "./offer-card";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";

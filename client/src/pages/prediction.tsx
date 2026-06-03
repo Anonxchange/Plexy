@@ -6,7 +6,7 @@ import {
   TrendingUp, Search, Flame, BarChart2,
   AlertTriangle, Zap, Sparkles, Bookmark, Globe,
   SlidersHorizontal, ChevronDown, Check, X, ChevronRight,
-} from "lucide-react";
+} from '@/lib/icons';
 import { Input } from "@/components/ui/input";
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";

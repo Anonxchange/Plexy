@@ -6,7 +6,7 @@ import {
   ChevronRight, CheckCircle2, Clock, Ticket, Coins,
   Repeat2, TrendingUp, BarChart2, Lock, Users, Copy,
   Bell, BellOff, X, ArrowRight,
-} from "lucide-react";
+} from '@/lib/icons';
 import { useLocation } from "wouter";
 import {
   FilterAllIcon, FilterGiftCardIcon, FilterAirtimeIcon, FilterDataIcon,

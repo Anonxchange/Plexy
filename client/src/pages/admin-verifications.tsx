@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Shield, CheckCircle, XCircle, Eye, User } from "lucide-react";
+import { Shield, CheckCircle, XCircle, Eye, User } from '@/lib/icons';
 import { getSupabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 

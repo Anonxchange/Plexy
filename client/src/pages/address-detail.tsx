@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Copy, TrendingUp, TrendingDown, Clock, DollarSign, Search, Menu, X, Github, Twitter, ArrowRight, ArrowDown, CheckCircle2, ChevronRight } from "lucide-react";
+import { Copy, TrendingUp, TrendingDown, Clock, DollarSign, Search, Menu, X, Github, Twitter, ArrowRight, ArrowDown, CheckCircle2, ChevronRight } from '@/lib/icons';
 import { PexlyIcon } from "@/components/pexly-icon";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";

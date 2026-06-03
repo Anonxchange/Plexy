@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { ArrowLeft, Lock, ShieldCheck, Clock, Bitcoin } from "lucide-react";
+import { ArrowLeft, Lock, ShieldCheck, Clock, Bitcoin } from '@/lib/icons';
 import { PexlyIcon } from "@/components/pexly-icon";
 import { Button } from "@/components/ui/button";
 import NowPaymentsCheckout from "@/components/nowpayments-checkout";

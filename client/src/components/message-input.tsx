@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Send, Plus, ChevronDown, ChevronUp } from "lucide-react";
+import { Send, Plus, ChevronDown, ChevronUp } from '@/lib/icons';
 import { Button } from "@/components/ui/button";
 
 interface MessageInputProps {

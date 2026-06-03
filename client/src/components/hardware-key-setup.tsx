@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { webAuthnService, type WebAuthnCredential } from "@/lib/webauthn";
-import { Shield, Key, Trash2, Plus } from "lucide-react";
+import { Shield, Key, Trash2, Plus } from '@/lib/icons';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface HardwareKeySetupProps {

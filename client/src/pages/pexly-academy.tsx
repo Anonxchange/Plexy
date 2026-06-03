@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen, Clock, GraduationCap, ArrowRight } from "lucide-react";
+import { BookOpen, Clock, GraduationCap, ArrowRight } from '@/lib/icons';
 import { Link } from "wouter";
 import { useSchema, academyPageSchema } from "@/hooks/use-schema";
 

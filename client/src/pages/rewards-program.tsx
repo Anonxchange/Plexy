@@ -1,6 +1,6 @@
 
 import { useHead } from "@unhead/react";
-import { Crown, Gift, TrendingUp, Star, AlertCircle, ChevronDown } from "lucide-react";
+import { Crown, Gift, TrendingUp, Star, AlertCircle, ChevronDown } from '@/lib/icons';
 import { PexlyFooter } from "@/components/pexly-footer";
 import { LegalPageHero } from "@/components/legal-page-hero";
 import { Link } from "wouter";

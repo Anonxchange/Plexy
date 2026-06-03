@@ -2,7 +2,7 @@ import { useState, lazy, Suspense, memo, useCallback, useTransition } from "reac
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
-import { Menu, ChevronDown, Globe, Search } from "lucide-react";
+import { Menu, ChevronDown, Globe, Search } from '@/lib/icons';
 import { Badge } from "@/components/ui/badge";
 import { PexlyIcon } from "@/components/pexly-icon";
 import { Link, useLocation } from "wouter";

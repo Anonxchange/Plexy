@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ChevronDown, ArrowRight, Search, Bot, Smartphone, Lock } from "lucide-react";
+import { ChevronDown, ArrowRight, Search, Bot, Smartphone, Lock } from '@/lib/icons';
 import { PexlyFooter } from "@/components/pexly-footer";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useAirtime } from "@/hooks/user-airtime";

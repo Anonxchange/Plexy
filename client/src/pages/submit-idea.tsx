@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Lightbulb, Send, CheckCircle2 } from "lucide-react";
+import { Lightbulb, Send, CheckCircle2 } from '@/lib/icons';
 import { useToast } from "@/hooks/use-toast";
 import { PexlyFooter } from "@/components/pexly-footer";
 

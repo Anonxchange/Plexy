@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CheckCircle2, XCircle, Zap } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Zap } from '@/lib/icons';
 import { useTheme } from "@/components/theme-provider";
 import { useAuth } from "@/lib/auth-context";
 

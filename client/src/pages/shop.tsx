@@ -17,7 +17,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { Search, Package, Plus, Store, LayoutGrid, ChevronRight } from "lucide-react";
+import { Search, Package, Plus, Store, LayoutGrid, ChevronRight } from '@/lib/icons';
 import { useLocation } from "wouter";
 import { getSupabase } from "@/lib/supabase";
 import { shopifyService } from "@/lib/shopify-service";

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Shield, Send, ArrowRight, Loader2 } from "lucide-react";
+import { Shield, Send, ArrowRight, Loader2 } from '@/lib/icons';
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";

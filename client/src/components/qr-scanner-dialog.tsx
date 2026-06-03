@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Camera, X } from "lucide-react";
+import { Camera, X } from '@/lib/icons';
 import { useToast } from "@/hooks/use-toast";
 
 interface QRScannerDialogProps {

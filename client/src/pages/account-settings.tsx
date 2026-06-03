@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Menu } from "lucide-react";
+import { Menu } from '@/lib/icons';
 import { PexlyFooter } from "@/components/pexly-footer";
 import { SettingsSidebar } from "@/components/settings/SettingsSidebar";
 import { ProfileSection } from "@/components/settings/ProfileSection";

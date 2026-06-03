@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Coins, ArrowRight, Zap, TrendingUp, Users, Flame, Gift, Star, CheckCircle2, ChevronDown } from "lucide-react";
+import { Coins, ArrowRight, Zap, TrendingUp, Users, Flame, Gift, Star, CheckCircle2, ChevronDown } from '@/lib/icons';
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";

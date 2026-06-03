@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Check, CreditCard, Building2, Smartphone, Wallet, X } from "lucide-react";
+import { Check, CreditCard, Building2, Smartphone, Wallet, X } from '@/lib/icons';
 import { cn } from "@/lib/utils";
 
 interface BankAccount {

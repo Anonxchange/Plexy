@@ -11,7 +11,7 @@ import { useWalletData } from "@/hooks/use-wallet-data";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { MoreHorizontal, ArrowDownToLine, Send, RefreshCw } from "lucide-react";
+import { MoreHorizontal, ArrowDownToLine, Send, RefreshCw } from '@/lib/icons';
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {

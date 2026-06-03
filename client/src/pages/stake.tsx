@@ -11,7 +11,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useHead } from "@unhead/react";
 import { Link } from "wouter";
-import { ArrowRight, ArrowUpRight, ExternalLink, Loader2, ShieldCheck, X, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight, Lock, KeyRound, BellRing, Timer, Building2, Scale, Landmark } from "lucide-react";
+import { ArrowRight, ArrowUpRight, ExternalLink, Loader2, ShieldCheck, X, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight, Lock, KeyRound, BellRing, Timer, Building2, Scale, Landmark } from '@/lib/icons';
 
 import securityPadlockImg from "@assets/IMG_5449.webp";
 import iconTrophyImg from "@assets/IMG_5464.webp";

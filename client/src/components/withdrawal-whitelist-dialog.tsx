@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Clock, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Trash2, Plus, Clock, CheckCircle2, AlertCircle, Loader2 } from '@/lib/icons';
 import { withdrawalWhitelist, WhitelistAddress } from "@/lib/security/withdrawal-whitelist";
 
 const formatDistanceToNow = (date: Date | number | string, _options?: any) => {

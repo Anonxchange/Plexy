@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ListFilter, Loader2, XCircle } from "lucide-react";
+import { ListFilter, Loader2, XCircle } from '@/lib/icons';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import CandlestickChart from "./CandlestickChart";
 import DesktopOrderBook from "./DesktopOrderBook";

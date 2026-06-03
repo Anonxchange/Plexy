@@ -1,7 +1,7 @@
 import { useHead } from "@unhead/react";
 import React, { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import DOMPurify from "dompurify";
-import { Eye, EyeOff, ChevronDown, TrendingDown, TrendingUp, MoreHorizontal, ArrowRight, Star, ChevronRight, Gift, ShieldAlert, Search } from "lucide-react";
+import { Eye, EyeOff, ChevronDown, TrendingDown, TrendingUp, MoreHorizontal, ArrowRight, Star, ChevronRight, Gift, ShieldAlert, Search } from '@/lib/icons';
 import { PexlyFooter } from "@/components/pexly-footer";
 import { DashboardMoreModal } from "@/components/dashboard-more-modal";
 import { useAuth } from "@/lib/auth-context";

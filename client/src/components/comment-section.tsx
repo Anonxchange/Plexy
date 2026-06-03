@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { MessageSquare, Send, User, Loader2, ChevronDown } from "lucide-react";
+import { MessageSquare, Send, User, Loader2, ChevronDown } from '@/lib/icons';
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { useComments, PolymarketComment } from "@/hooks/use-polymarket";

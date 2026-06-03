@@ -7,7 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import {
   Star, CheckCircle2, ExternalLink, PenLine, ChevronDown,
   MapPin, Mail, Globe, Info, ChevronRight, Shield, Zap,
-} from "lucide-react";
+} from '@/lib/icons';
 import { PexlyFooter } from "@/components/pexly-footer";
 
 const TRUSTPILOT_URL = "https://www.trustpilot.com/review/pexly.app";

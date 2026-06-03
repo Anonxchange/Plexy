@@ -6,7 +6,7 @@ import { PexlyFooter } from "@/components/pexly-footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Clock, Eye, Share2, BookOpen, ChevronRight } from "lucide-react";
+import { ArrowLeft, Clock, Eye, Share2, BookOpen, ChevronRight } from '@/lib/icons';
 
 interface ArticleContent {
   id: string;

@@ -8,7 +8,7 @@ import { useSchema, marketsPageSchema } from "@/hooks/use-schema";
 import {
   Search, Star, TrendingUp, TrendingDown,
   ChevronUp, ChevronDown, Loader2, ArrowUpDown,
-} from "lucide-react";
+} from '@/lib/icons';
 import { asterMarket, Ticker24h } from "@/lib/asterdex-service";
 import { CoinIcon } from "@/components/trading/CoinIcon";
 

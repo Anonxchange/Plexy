@@ -1,5 +1,5 @@
 import { useHead } from "@unhead/react";
-import { Globe, MapPin, AlertCircle, Ban } from "lucide-react";
+import { Globe, MapPin, AlertCircle, Ban } from '@/lib/icons';
 import { Card } from "@/components/ui/card";
 import { PexlyFooter } from "@/components/pexly-footer";
 

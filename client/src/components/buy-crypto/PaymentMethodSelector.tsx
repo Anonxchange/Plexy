@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, CreditCard, Landmark, Wallet } from "lucide-react";
+import { ChevronDown, CreditCard, Landmark, Wallet } from '@/lib/icons';
 import { cn } from "@/lib/utils";
 
 const paymentMethods = [

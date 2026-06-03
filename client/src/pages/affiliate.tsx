@@ -1,7 +1,7 @@
 import { useHead } from "@unhead/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Crown, Users, Coins, Layers, ChevronRight } from "lucide-react";
+import { Crown, Users, Coins, Layers, ChevronRight } from '@/lib/icons';
 import { Link } from "wouter";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { SiAmazonwebservices, SiGooglecloud, SiIntercom, SiHackerone, SiCircleci } from "react-icons/si";

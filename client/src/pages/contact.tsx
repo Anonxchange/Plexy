@@ -15,7 +15,7 @@ import {
   Clock,
   ShieldCheck,
   Home as HomeIcon,
-} from "lucide-react";
+} from '@/lib/icons';
 import { useState, useRef } from "react";
 import {
   Select,

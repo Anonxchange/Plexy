@@ -18,7 +18,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Wallet as WalletIcon, Landmark, ChevronRight, Gift } from "lucide-react";
+import { Wallet as WalletIcon, Landmark, ChevronRight, Gift } from '@/lib/icons';
 
 export default function WalletPage() {
   useHead({ title: "My Wallet | Pexly", meta: [{ name: "description", content: "Send, receive, swap, stake, pay bills, and manage all your crypto assets in one place." }] });

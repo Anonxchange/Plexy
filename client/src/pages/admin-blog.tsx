@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Edit, Trash2, Plus, ArrowLeft, Upload, Image as ImageIcon, X, Clock, Copy, CheckCircle } from "lucide-react";
+import { Calendar, Edit, Trash2, Plus, ArrowLeft, Upload, Image as ImageIcon, X, Clock, Copy, CheckCircle } from '@/lib/icons';
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { uploadToR2 } from "@/lib/r2-storage";

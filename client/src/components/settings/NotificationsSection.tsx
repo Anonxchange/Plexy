@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Check, Loader2, Bell, Mail, MessageSquare, Shield, TrendingUp, Megaphone, Smartphone } from "lucide-react";
+import { Check, Loader2, Bell, Mail, MessageSquare, Shield, TrendingUp, Megaphone, Smartphone } from '@/lib/icons';
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";

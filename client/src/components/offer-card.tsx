@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { ThumbsUp, Circle, Bitcoin, ArrowRight, DollarSign, Globe, Shield, Award } from "lucide-react";
+import { ThumbsUp, Circle, Bitcoin, ArrowRight, DollarSign, Globe, Shield, Award } from '@/lib/icons';
 import { TradeDialog } from "./trade-dialog";
 import { UserProfileDialog } from "./user-profile-dialog";
 import { useAuth } from "@/lib/auth-context";

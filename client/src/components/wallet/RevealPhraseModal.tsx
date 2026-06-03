@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { AlertTriangle, Copy, Check, Eye, EyeOff, Loader2, ShieldOff, Lock } from "lucide-react";
+import { AlertTriangle, Copy, Check, Eye, EyeOff, Loader2, ShieldOff, Lock } from '@/lib/icons';
 // SVG is imported as a static asset URL and rendered via <img>.
 // Browsers fully sandbox SVGs loaded this way — no scripts or event
 // handlers inside the file can execute. The file itself contains only

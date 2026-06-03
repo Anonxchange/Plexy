@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ThumbsUp, ThumbsDown, X, ChevronDown, ChevronUp, Check } from "lucide-react";
+import { ThumbsUp, ThumbsDown, X, ChevronDown, ChevronUp, Check } from '@/lib/icons';
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase";
 

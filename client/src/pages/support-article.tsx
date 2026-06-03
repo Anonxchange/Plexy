@@ -1,6 +1,6 @@
 import { useHead } from "@unhead/react";
 import { useRoute, Link } from "wouter";
-import { ChevronRight, Clock, ThumbsUp, ThumbsDown, Home as HomeIcon, ArrowLeft } from "lucide-react";
+import { ChevronRight, Clock, ThumbsUp, ThumbsDown, Home as HomeIcon, ArrowLeft } from '@/lib/icons';
 import { useState } from "react";
 import { FloatingChatButton } from "@/components/floating-chat-button";
 import { supportArticles, supportCategories } from "@/lib/support-content";

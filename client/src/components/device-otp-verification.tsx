@@ -6,7 +6,7 @@ import {
   InputOTPSlot,
   InputOTPSeparator,
 } from '@/components/ui/input-otp';
-import { Monitor, Laptop, RefreshCw, HelpCircle } from 'lucide-react';
+import { Monitor, Laptop, RefreshCw, HelpCircle } from '@/lib/icons';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { supabase } from '@/lib/supabase';

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { MarketInfo } from "@/components/market-info";
 import { PriceChart } from "@/components/price-chart";
-import { Search, Menu, X, TrendingUp, TrendingDown, ArrowRight, Github, Twitter, ChevronRight } from "lucide-react";
+import { Search, Menu, X, TrendingUp, TrendingDown, ArrowRight, Github, Twitter, ChevronRight } from '@/lib/icons';
 import { PexlyIcon } from "@/components/pexly-icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

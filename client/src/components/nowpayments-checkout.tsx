@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { createNowPayment, getNowPaymentsEstimate, getNowPaymentStatus } from "@/hooks/use-nowpayments";
-import { Loader2, Bitcoin, Copy, RefreshCw, ArrowLeft } from "lucide-react";
+import { Loader2, Bitcoin, Copy, RefreshCw, ArrowLeft } from '@/lib/icons';
 
 interface NowPaymentsCheckoutProps {
   amount: number;

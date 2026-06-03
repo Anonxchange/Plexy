@@ -5,7 +5,7 @@ import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, TrendingDown, ArrowRight, RefreshCw } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowRight, RefreshCw } from '@/lib/icons';
 import { FaBitcoin } from "react-icons/fa";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { getCryptoPrices, getExchangeRates, formatPrice } from "@/lib/crypto-prices";

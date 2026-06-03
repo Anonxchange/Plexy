@@ -1,4 +1,4 @@
-import { Info } from "lucide-react";
+import { Info } from '@/lib/icons';
 
 interface TradeInstructionsProps {
   isUserBuyer: boolean;

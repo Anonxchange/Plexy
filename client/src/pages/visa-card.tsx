@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { AppFooter } from '@/components/app-footer';
-import { ArrowRight, CheckCircle, Shield, Snowflake, Lock, BellRing, Ban, Zap, Globe } from 'lucide-react';
+import { ArrowRight, CheckCircle, Shield, Snowflake, Lock, BellRing, Ban, Zap, Globe } from '@/lib/icons';
 import { SiBitcoin, SiEthereum, SiTether, SiBinance, SiSolana, SiXrp } from 'react-icons/si';
 
 // ─── SVG: Realistic Virtual Card ────────────────────────────────────────────

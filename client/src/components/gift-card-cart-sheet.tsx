@@ -2,7 +2,7 @@ import React from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { X, Minus, Plus, Trash2, Lock, Star, ShoppingBag } from "lucide-react";
+import { X, Minus, Plus, Trash2, Lock, Star, ShoppingBag } from '@/lib/icons';
 import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
 import { useLocation } from "wouter";
 

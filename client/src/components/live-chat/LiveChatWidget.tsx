@@ -36,7 +36,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { X, ChevronLeft, Send, Loader2, Sparkles, Search, ArrowRight } from "lucide-react";
+import { X, ChevronLeft, Send, Loader2, Sparkles, Search, ArrowRight } from '@/lib/icons';
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
 

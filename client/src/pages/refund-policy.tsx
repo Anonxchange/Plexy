@@ -9,7 +9,7 @@ import {
   Mail,
   CheckCircle2,
   XCircle,
-} from "lucide-react";
+} from '@/lib/icons';
 import { AppFooter } from "@/components/app-footer";
 import { LegalPageHero } from "@/components/legal-page-hero";
 import { Link } from "wouter";

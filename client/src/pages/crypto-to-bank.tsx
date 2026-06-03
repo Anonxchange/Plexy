@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Search } from "lucide-react";
+import { Search } from '@/lib/icons';
 
 export default function CryptoToBank() {
   const [sendAmount, setSendAmount] = useState("0.00001116");

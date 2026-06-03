@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import {
   ShoppingBag, Loader2, Trash2, ExternalLink, PackageSearch,
   Clock, Package, Search, RotateCcw, Smartphone, Zap, Gift,
-} from "lucide-react";
+} from '@/lib/icons';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";

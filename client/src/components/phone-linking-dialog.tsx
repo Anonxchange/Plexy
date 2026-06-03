@@ -13,7 +13,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { CountryCodeSelector } from "./country-code-selector";
 import { getCountryByPhoneCode } from "@/lib/localization";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from '@/lib/icons';
 
 interface PhoneLinkingDialogProps {
   open: boolean;

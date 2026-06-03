@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Menu, X, ArrowRight, Github, Twitter, RefreshCw, ChevronRight } from "lucide-react";
+import { Search, Menu, X, ArrowRight, Github, Twitter, RefreshCw, ChevronRight } from '@/lib/icons';
 import { PexlyIcon } from "@/components/pexly-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -1,4 +1,4 @@
-import { ShieldCheck, AlertTriangle, Search, FileCheck, AlertCircle, ChevronDown } from "lucide-react";
+import { ShieldCheck, AlertTriangle, Search, FileCheck, AlertCircle, ChevronDown } from '@/lib/icons';
 import { Card } from "@/components/ui/card";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { Link } from "wouter";

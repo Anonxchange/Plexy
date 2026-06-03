@@ -1,4 +1,4 @@
-import { File, Download, XCircle } from "lucide-react";
+import { File, Download, XCircle } from '@/lib/icons';
 
 interface TradeMessage {
   id: string;

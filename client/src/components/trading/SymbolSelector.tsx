@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { X, Search, Star, Loader2 } from "lucide-react";
+import { X, Search, Star, Loader2 } from '@/lib/icons';
 import { useQuery } from "@tanstack/react-query";
 import { asterMarket, Ticker24h } from "@/lib/asterdex-service";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";

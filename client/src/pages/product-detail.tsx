@@ -16,7 +16,7 @@ import {
   Heart,
   PlayCircle,
   Flag,
-} from "lucide-react";
+} from '@/lib/icons';
 import {
   AlertDialog,
   AlertDialogAction,

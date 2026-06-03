@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ThumbsUp, ThumbsDown, Shield, Award, Circle } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Shield, Award, Circle } from '@/lib/icons';
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase";
 import { formatLastSeen } from "@/lib/presence";

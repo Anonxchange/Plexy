@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Check } from "lucide-react";
+import { Check } from '@/lib/icons';
 import { cn } from "@/lib/utils";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { 
@@ -46,7 +46,7 @@ import {
   ArrowRight,
   ThumbsUp,
   ChevronsUpDown
-} from "lucide-react";
+} from '@/lib/icons';
 import { PexlyFooter } from "@/components/pexly-footer";
 import { Separator } from "@/components/ui/separator";
 import { P2PFiltersDialog } from "@/components/p2p-filters-dialog";

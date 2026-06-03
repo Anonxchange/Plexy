@@ -1,6 +1,6 @@
 
 import { useHead } from "@unhead/react";
-import { FileText, Shield, AlertCircle, ChevronDown } from "lucide-react";
+import { FileText, Shield, AlertCircle, ChevronDown } from '@/lib/icons';
 import { AppFooter } from "@/components/app-footer";
 import { LegalPageHero } from "@/components/legal-page-hero";
 import { Link } from "wouter";

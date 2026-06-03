@@ -1,6 +1,6 @@
 
 import { useHead } from "@unhead/react";
-import { Cookie, Settings, BarChart3, AlertCircle, ChevronDown } from "lucide-react";
+import { Cookie, Settings, BarChart3, AlertCircle, ChevronDown } from '@/lib/icons';
 import { AppFooter } from "@/components/app-footer";
 import { LegalPageHero } from "@/components/legal-page-hero";
 import { Link } from "wouter";

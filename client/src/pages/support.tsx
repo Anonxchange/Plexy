@@ -14,7 +14,7 @@ import {
   Mail,
   Home as HomeIcon,
   Phone,
-} from "lucide-react";
+} from '@/lib/icons';
 import { LiveChatWidget } from "@/components/live-chat/LiveChatWidget";
 import { useState } from "react";
 import { Link } from "wouter";

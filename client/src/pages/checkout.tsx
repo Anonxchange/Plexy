@@ -26,7 +26,7 @@ import {
   Bitcoin,
   ChevronRight,
   HeartHandshake,
-} from "lucide-react";
+} from '@/lib/icons';
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { devLog } from "@/lib/dev-logger";
 import { getExchangeRates } from "@/lib/crypto-prices";

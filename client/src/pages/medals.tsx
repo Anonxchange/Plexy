@@ -22,7 +22,7 @@ import {
   Medal,
   Settings,
   Code
-} from "lucide-react";
+} from '@/lib/icons';
 import { useEffect, useState } from "react";
 import { getUserMedalStats, UserMedalStats } from "@/lib/medals-api";
 import { useLocation } from "wouter";

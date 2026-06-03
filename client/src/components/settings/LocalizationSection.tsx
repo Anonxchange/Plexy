@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Check } from "lucide-react";
+import { Check } from '@/lib/icons';
 
 const LANGUAGES: { code: string; label: string }[] = [
   { code: "en", label: "English" },

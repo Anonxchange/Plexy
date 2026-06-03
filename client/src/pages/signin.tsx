@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import portraitImage from "@assets/young-woman-portrait-close-up_1_3_optimized.webp";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, Sun, Moon, ShieldCheck, Fingerprint } from "lucide-react";
+import { Eye, EyeOff, Sun, Moon, ShieldCheck, Fingerprint } from '@/lib/icons';
 import { PexlyIcon } from "@/components/pexly-icon";
 import { FcGoogle } from "react-icons/fc";
 import { FaApple, FaFacebook } from "react-icons/fa";

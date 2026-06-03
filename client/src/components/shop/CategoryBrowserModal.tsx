@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { X, ChevronRight, LayoutGrid, Search, Package } from "lucide-react";
+import { X, ChevronRight, LayoutGrid, Search, Package } from '@/lib/icons';
 import { sanitizeImageUrl } from "@/lib/sanitize";
 
 const CAT_SEPARATOR = " > ";

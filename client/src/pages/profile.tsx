@@ -9,7 +9,7 @@ import { getCountryFlag } from "@/lib/localization";
 import { ProfileOverviewCards, ProfilePredictionsTab, ProfileShopTab, ProfileActivityTab } from "@/components/profile-overview-cards";
 import { GiftCardMarquee } from "@/components/gift-card-marquee";
 import { cn } from "@/lib/utils";
-import { Upload, User } from "lucide-react";
+import { Upload, User } from '@/lib/icons';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";

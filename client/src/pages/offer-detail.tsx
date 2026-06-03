@@ -19,7 +19,7 @@ import {
   ChevronDown,
   ArrowLeft,
   Star
-} from "lucide-react";
+} from '@/lib/icons';
 import { createClient } from "@/lib/supabase";
 import { getCountryFlag } from "@/lib/localization";
 import { PexlyFooter } from "@/components/pexly-footer";

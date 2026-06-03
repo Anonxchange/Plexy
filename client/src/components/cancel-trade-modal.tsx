@@ -1,4 +1,4 @@
-import { X, CheckSquare, Square } from "lucide-react";
+import { X, CheckSquare, Square } from '@/lib/icons';
 import { Button } from "@/components/ui/button";
 
 interface CancelTradeModalProps {

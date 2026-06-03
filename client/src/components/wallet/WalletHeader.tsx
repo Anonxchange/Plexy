@@ -7,7 +7,7 @@ import {
   RefreshCw,
   Send,
   ArrowDownToLine,
-} from "lucide-react";
+} from '@/lib/icons';
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 

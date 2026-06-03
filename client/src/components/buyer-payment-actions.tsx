@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Info, ChevronDown } from "lucide-react";
+import { Info, ChevronDown } from '@/lib/icons';
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { notificationSounds } from "@/lib/notification-sounds";

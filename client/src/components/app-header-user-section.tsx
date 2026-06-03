@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Eye, EyeOff, LayoutDashboard, User, Settings, Lightbulb, LogOut,
   Bell, CheckCircle2, XCircle, Menu,
-} from "lucide-react";
+} from '@/lib/icons';
 import { SecurityShieldIcon } from "@/components/ui/security-shield";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {

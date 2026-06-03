@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LayoutList, SlidersVertical, ClipboardList, Loader2, XCircle } from "lucide-react";
+import { LayoutList, SlidersVertical, ClipboardList, Loader2, XCircle } from '@/lib/icons';
 import CandlestickChart from "./CandlestickChart";
 import OrderBook from "./OrderBook";
 import FuturesTradePanel from "./FuturesTradePanel";

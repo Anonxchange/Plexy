@@ -1,5 +1,5 @@
 import { useHead } from "@unhead/react";
-import { ArrowRight, MapPin } from "lucide-react";
+import { ArrowRight, MapPin } from '@/lib/icons';
 import { Button } from "@/components/ui/button";
 import { AppFooter } from "@/components/app-footer";
 

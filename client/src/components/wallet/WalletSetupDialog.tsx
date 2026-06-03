@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { deriveVaultKey } from "@/lib/webCrypto";
 import { createClient } from "@/lib/supabase";
-import { ShieldCheck, Lock, AlertTriangle, CheckCircle2, Loader2, X, RefreshCw } from "lucide-react";
+import { ShieldCheck, Lock, AlertTriangle, CheckCircle2, Loader2, X, RefreshCw } from '@/lib/icons';
 
 const COMMON_PASSWORDS = [
   "password","password1","password123","12345678","123456789","1234567890",

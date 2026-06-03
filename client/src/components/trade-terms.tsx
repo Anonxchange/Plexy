@@ -1,5 +1,5 @@
 
-import { Info, CheckCircle } from "lucide-react";
+import { Info, CheckCircle } from '@/lib/icons';
 
 interface TradeTermsProps {
   offerTerms?: string;

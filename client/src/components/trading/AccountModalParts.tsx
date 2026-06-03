@@ -1,4 +1,4 @@
-import { ChevronDown, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { ChevronDown, Loader2, AlertCircle, Eye, EyeOff } from '@/lib/icons';
 import { useAccountModal } from "./AccountModalContext";
 import { ChainIcon, CoinIcon } from "./AccountModalIcons";
 import { CHAIN_MAP, ACCOUNT_TYPES } from "./AccountModalConfig";

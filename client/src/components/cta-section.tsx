@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Smartphone } from "lucide-react";
+import { Smartphone } from '@/lib/icons';
 import { SiApple, SiGoogleplay } from "react-icons/si";
 import { useTranslation } from "react-i18next";
 

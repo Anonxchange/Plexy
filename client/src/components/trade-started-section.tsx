@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Info } from "lucide-react";
+import { Info } from '@/lib/icons';
 import { BuyerPaymentActions } from "./buyer-payment-actions";
 import { SellerReleaseActions } from "./seller-release-actions";
 

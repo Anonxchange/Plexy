@@ -30,7 +30,7 @@ import {
   AlertTriangle,
   Trash2,
   KeyRound,
-} from "lucide-react";
+} from '@/lib/icons';
 
 
 export function SecuritySection() {

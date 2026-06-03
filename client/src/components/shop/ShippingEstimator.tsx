@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { MapPin, Truck, Clock, CreditCard, ShoppingCart, Loader2, Package, AlertCircle } from "lucide-react";
+import { MapPin, Truck, Clock, CreditCard, ShoppingCart, Loader2, Package, AlertCircle } from '@/lib/icons';
 import { formatPrice } from "@/lib/shopify-service";
 import { getCountryCode } from "@/lib/geo";
 import { useCart } from "@/hooks/use-shopify-cart";

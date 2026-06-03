@@ -1,7 +1,7 @@
 import { useHead } from "@unhead/react";
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { Calendar, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, Search, ChevronLeft, ChevronRight } from '@/lib/icons';
 import { PexlyFooter } from "@/components/pexly-footer";
 import { createClient } from "@/lib/supabase";
 import { useSchema, blogPageSchema } from "@/hooks/use-schema";

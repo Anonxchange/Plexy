@@ -1,6 +1,6 @@
 import { useHead } from "@unhead/react";
 import { Link } from "wouter";
-import { ArrowRight, Linkedin, MapPin, Twitter } from "lucide-react";
+import { ArrowRight, Linkedin, MapPin, Twitter } from '@/lib/icons';
 
 import { Button } from "@/components/ui/button";
 import { AppFooter } from "@/components/app-footer";

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { Lock, Trophy, CheckCircle2, Coins, Gem } from "lucide-react";
+import { Lock, Trophy, CheckCircle2, Coins, Gem } from '@/lib/icons';
 import {
   TierIconNewcomer, TierIconBronze, TierIconSilver, TierIconGold, TierIconDiamond,
   TierCrystalNewcomer, TierCrystalBronze, TierCrystalSilver, TierCrystalGold, TierCrystalDiamond,

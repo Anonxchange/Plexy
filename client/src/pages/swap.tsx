@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ArrowUpDown, TrendingDown, Shield, Gift, Loader2, Lock, BarChart3, Zap, CheckCircle2, ChevronRight, ArrowRight } from "lucide-react";
+import { ArrowUpDown, TrendingDown, Shield, Gift, Loader2, Lock, BarChart3, Zap, CheckCircle2, ChevronRight, ArrowRight } from '@/lib/icons';
 import { PexlyFooter } from "@/components/pexly-footer";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";

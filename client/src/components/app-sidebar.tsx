@@ -1,7 +1,7 @@
 import {
   ChevronDown,
   Globe,
-} from "lucide-react";
+} from '@/lib/icons';
 import { PexlyIcon } from "@/components/pexly-icon";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";

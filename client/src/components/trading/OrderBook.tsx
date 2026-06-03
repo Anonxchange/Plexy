@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from '@/lib/icons';
 import { useIsMobile } from "@/hooks/use-mobile";
 import { asterMarket } from "@/lib/asterdex-service";
 import { useQuery } from "@tanstack/react-query";

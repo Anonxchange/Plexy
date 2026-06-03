@@ -2,7 +2,7 @@ import {
   TrendingUp, Tag, HeadphonesIcon, Coins, Percent, TicketCheck, Medal,
   Shield, Bolt, PartyPopper, Trophy, Sparkles, Crown,
   Activity, Repeat2, BarChart2, Gift, BadgeCheck, Users, Flame,
-} from "lucide-react";
+} from '@/lib/icons';
 import {
   IconLightning, IconShieldCheck, IconFlame, IconCrystalEye,
   IconHandshake, IconSwapArrows, IconDiamond, IconChartTrend,

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Menu, X, TrendingUp, TrendingDown, Box, ArrowRightLeft, ArrowRight, Github, Twitter, Database, Loader, Zap, Activity } from "lucide-react";
+import { Search, Menu, X, TrendingUp, TrendingDown, Box, ArrowRightLeft, ArrowRight, Github, Twitter, Database, Loader, Zap, Activity } from '@/lib/icons';
 import { PexlyIcon } from "@/components/pexly-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

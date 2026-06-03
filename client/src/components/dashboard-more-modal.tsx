@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { X } from '@/lib/icons';
 import { useLocation } from "wouter";
 import type { ReactElement } from "react";
 

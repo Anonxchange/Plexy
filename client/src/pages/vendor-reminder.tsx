@@ -1,5 +1,5 @@
 
-import { Store, ShieldAlert, CheckCircle2, AlertTriangle, AlertCircle, ChevronDown } from "lucide-react";
+import { Store, ShieldAlert, CheckCircle2, AlertTriangle, AlertCircle, ChevronDown } from '@/lib/icons';
 import { Card } from "@/components/ui/card";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { Link } from "wouter";

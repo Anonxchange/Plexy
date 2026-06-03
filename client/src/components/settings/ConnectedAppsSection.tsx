@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase";
-import { Link2, HelpCircle, Info } from "lucide-react";
+import { Link2, HelpCircle, Info } from '@/lib/icons';
 
 export function ConnectedAppsSection() {
   const { user } = useAuth();

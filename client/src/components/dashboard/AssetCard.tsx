@@ -1,4 +1,4 @@
-import { Eye, EyeOff, ChevronDown, TrendingDown, TrendingUp } from "lucide-react";
+import { Eye, EyeOff, ChevronDown, TrendingDown, TrendingUp } from '@/lib/icons';
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface AssetCardProps {

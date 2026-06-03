@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Shield, CheckCircle, XCircle, Award, DollarSign, User, Clock } from "lucide-react";
+import { Shield, CheckCircle, XCircle, Award, DollarSign, User, Clock } from '@/lib/icons';
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";

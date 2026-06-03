@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Copy, Search, Menu, X, Github, Twitter, CheckCircle2, Download, ChevronRight } from "lucide-react";
+import { Copy, Search, Menu, X, Github, Twitter, CheckCircle2, Download, ChevronRight } from '@/lib/icons';
 import { PexlyIcon } from "@/components/pexly-icon";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";

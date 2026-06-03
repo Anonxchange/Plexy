@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ChevronDown, ArrowRight, Search, Zap, Bot, Check, Receipt, Filter, Lock } from "lucide-react";
+import { ChevronDown, ArrowRight, Search, Zap, Bot, Check, Receipt, Filter, Lock } from '@/lib/icons';
 import { PexlyFooter } from "@/components/pexly-footer";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { Skeleton } from "@/components/ui/skeleton";

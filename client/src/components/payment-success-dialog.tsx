@@ -3,7 +3,7 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Copy } from "lucide-react";
+import { CheckCircle2, Copy } from '@/lib/icons';
 import { useToast } from "@/hooks/use-toast";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 

@@ -1,4 +1,4 @@
-import { ShoppingCart, Trash2, Plus, Minus, ExternalLink, Loader2 } from "lucide-react";
+import { ShoppingCart, Trash2, Plus, Minus, ExternalLink, Loader2 } from '@/lib/icons';
 import {
   Sheet,
   SheetContent,

@@ -5,7 +5,7 @@ import { useWalletData } from "@/hooks/use-wallet-data";
 import { createCDPSession } from "@/lib/wallet-api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Wallet } from "lucide-react";
+import { AlertCircle, Wallet } from '@/lib/icons';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 

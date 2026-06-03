@@ -1,7 +1,7 @@
 import { useHead } from "@unhead/react";
 import { useState, useEffect } from "react";
 import { useRoute, useLocation } from "wouter";
-import { ArrowLeft, Mail, Calendar, Clock } from "lucide-react";
+import { ArrowLeft, Mail, Calendar, Clock } from '@/lib/icons';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase";

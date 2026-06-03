@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Upload, X, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Upload, X, AlertCircle, Loader2 } from '@/lib/icons';
 import { useLocation } from "wouter";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { Alert, AlertDescription } from "@/components/ui/alert";

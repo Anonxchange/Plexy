@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { CreditCard, CheckCircle2, UserPlus, Shield, Video, BookOpen, Headphones, ChevronRight } from "lucide-react";
+import { CreditCard, CheckCircle2, UserPlus, Shield, Video, BookOpen, Headphones, ChevronRight } from '@/lib/icons';
 
 export default function VisaCardDetails() {
   return (

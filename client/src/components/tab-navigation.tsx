@@ -1,4 +1,4 @@
-import { MessageCircle, FileText } from "lucide-react";
+import { MessageCircle, FileText } from '@/lib/icons';
 import { Button } from "@/components/ui/button";
 
 interface TabNavigationProps {

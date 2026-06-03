@@ -1,6 +1,6 @@
 import { useHead } from "@unhead/react";
 import { useRoute, Link } from "wouter";
-import { ChevronRight, Home as HomeIcon, Clock, ArrowLeft } from "lucide-react";
+import { ChevronRight, Home as HomeIcon, Clock, ArrowLeft } from '@/lib/icons';
 import { FloatingChatButton } from "@/components/floating-chat-button";
 import { supportCategories, supportArticles } from "@/lib/support-content";
 

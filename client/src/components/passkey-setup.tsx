@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { webAuthnService, type WebAuthnCredential } from "@/lib/webauthn";
-import { Fingerprint, Trash2, Plus, Smartphone, Loader2, CheckCircle2, Info } from "lucide-react";
+import { Fingerprint, Trash2, Plus, Smartphone, Loader2, CheckCircle2, Info } from '@/lib/icons';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 

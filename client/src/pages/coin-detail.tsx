@@ -7,7 +7,7 @@ import { asterMarket, Ticker24h } from "@/lib/asterdex-service";
 import {
   TrendingUp, TrendingDown, ArrowLeft,
   BarChart2, Star, Share2, ExternalLink,
-} from "lucide-react";
+} from '@/lib/icons';
 import { useState, useMemo } from "react";
 
 // ─── helpers ────────────────────────────────────────────────────────────────

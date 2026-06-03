@@ -18,7 +18,7 @@ import {
   BookOpen,
   GitBranch,
   Lock,
-} from "lucide-react";
+} from '@/lib/icons';
 import { useToast } from "@/hooks/use-toast";
 
 const FEATURES = [

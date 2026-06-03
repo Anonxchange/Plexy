@@ -1,6 +1,6 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { X, ClipboardList, Loader2 } from "lucide-react";
+import { X, ClipboardList, Loader2 } from '@/lib/icons';
 import { AccountModalProvider, useAccountModal } from "./AccountModalContext";
 import type { AccountModalProps } from "./AccountModalConfig";
 import {

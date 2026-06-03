@@ -20,7 +20,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { X, Search, Info, Check } from "lucide-react";
+import { X, Search, Info, Check } from '@/lib/icons';
 
 interface P2PFiltersDialogProps {
   open: boolean;

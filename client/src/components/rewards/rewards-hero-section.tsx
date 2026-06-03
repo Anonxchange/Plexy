@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { Coins, Flame, CheckCircle2 } from "lucide-react";
+import { Coins, Flame, CheckCircle2 } from '@/lib/icons';
 import { TIERS } from "./rewards-data";
 
 // ─── XP Ring ─────────────────────────────────────────────────────────────────

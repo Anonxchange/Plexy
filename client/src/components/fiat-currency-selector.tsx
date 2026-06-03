@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Check } from "lucide-react";
+import { Check } from '@/lib/icons';
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -11,7 +11,7 @@ import {
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from '@/lib/icons';
 import { countries } from "@/lib/localization";
 
 interface FiatCurrencySelectorProps {

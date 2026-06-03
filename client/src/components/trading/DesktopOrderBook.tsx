@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from '@/lib/icons';
 import { asterMarket } from "@/lib/asterdex-service";
 
 interface OrderRow {

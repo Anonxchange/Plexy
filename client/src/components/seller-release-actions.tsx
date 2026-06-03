@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Info, ChevronDown, CheckCircle } from "lucide-react";
+import { Info, ChevronDown, CheckCircle } from '@/lib/icons';
 import { useToast } from "@/hooks/use-toast";
 import { notificationSounds } from "@/lib/notification-sounds";
 

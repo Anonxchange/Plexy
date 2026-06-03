@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Star, ChevronDown, BarChart3, TrendingUp, TrendingDown } from "lucide-react";
+import { Star, ChevronDown, BarChart3, TrendingUp, TrendingDown } from '@/lib/icons';
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useQuery } from "@tanstack/react-query";
 import { asterMarket } from "@/lib/asterdex-service";

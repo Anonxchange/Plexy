@@ -6,7 +6,7 @@ import {
   CandlestickChart as CandleIcon, BarChart2, TrendingUp, AreaChart,
   Volume2, VolumeX, Loader2, Search, Star, Activity,
   AlignLeft, Sliders, Layers, Target, Minus
-} from "lucide-react";
+} from '@/lib/icons';
 import { useTheme } from "@/components/theme-provider";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";

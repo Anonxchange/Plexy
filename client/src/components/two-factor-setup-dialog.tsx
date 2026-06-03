@@ -11,7 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { RefreshCw, Shield } from "lucide-react";
+import { RefreshCw, Shield } from '@/lib/icons';
 import { getSupabase } from "@/lib/supabase";
 
 const FRIENDLY_NAME = "Pexly Authenticator";

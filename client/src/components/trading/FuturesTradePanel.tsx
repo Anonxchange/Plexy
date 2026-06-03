@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, ChevronUp, PlusCircle, Info, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, PlusCircle, Info, Loader2 } from '@/lib/icons';
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";

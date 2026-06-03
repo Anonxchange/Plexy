@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Camera, CheckCircle, XCircle, Video, Loader2, ArrowDown, ArrowUp, ArrowLeft, ArrowRight } from "lucide-react";
+import { Camera, CheckCircle, XCircle, Video, Loader2, ArrowDown, ArrowUp, ArrowLeft, ArrowRight } from '@/lib/icons';
 import { checkLiveness, LivenessResult } from "@/lib/liveness-api";
 
 interface LivenessCheckProps {

@@ -1,6 +1,6 @@
 
 import { useHead } from "@unhead/react";
-import { Lock, Eye, Database, Shield, UserCheck, AlertCircle, Globe, FileText, Users, Bell, ChevronDown } from "lucide-react";
+import { Lock, Eye, Database, Shield, UserCheck, AlertCircle, Globe, FileText, Users, Bell, ChevronDown } from '@/lib/icons';
 import { AppFooter } from "@/components/app-footer";
 import { LegalPageHero } from "@/components/legal-page-hero";
 import { Link } from "wouter";

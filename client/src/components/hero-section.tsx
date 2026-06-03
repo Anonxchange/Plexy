@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "wouter";
-import { ArrowDown } from "lucide-react";
+import { ArrowDown } from '@/lib/icons';
 import { useTranslation } from "react-i18next";
 
 const BRANDS = [

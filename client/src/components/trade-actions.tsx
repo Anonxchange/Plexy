@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Info, XCircle, CheckCircle, AlertTriangle, ArrowLeft } from "lucide-react";
+import { Info, XCircle, CheckCircle, AlertTriangle, ArrowLeft } from '@/lib/icons';
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { createClient } from "@/lib/supabase";
