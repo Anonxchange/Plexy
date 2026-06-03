@@ -5,7 +5,7 @@ import path from "path";
 export default defineConfig({
   root: "client",
   envDir: "../",
-  envPrefix: "VITE_",  // only VITE_* vars are ever baked into the bundle
+  envPrefix: "VITE_",
 
   base: "/",
 
@@ -17,9 +17,6 @@ export default defineConfig({
       "@shared": path.resolve(__dirname, "shared"),
       "@assets": path.resolve(__dirname, "attached_assets"),
 
-      // @noble/hashes exports map is broken — these aliases are required for
-      // Vite 7 to resolve subpath imports. Pin @noble/hashes in package.json
-      // and verify these filenames still exist after any version bump.
       "@noble/hashes/sha256":    path.resolve(__dirname, "node_modules/@noble/hashes/sha2.js"),
       "@noble/hashes/sha512":    path.resolve(__dirname, "node_modules/@noble/hashes/sha2.js"),
       "@noble/hashes/sha3":      path.resolve(__dirname, "node_modules/@noble/hashes/sha3.js"),
@@ -56,8 +53,6 @@ export default defineConfig({
           "vendor-ui-x",
           "vendor-charts",
           "vendor-canvas",
-          // vendor-crypto removed: crypto runs at auth/signing time, not on
-          // demand — stripping its preload causes race conditions on load
           "vendor-motion",
         ];
         if (lazyPrefixes.some((p) => filename.includes(p))) return [];
@@ -100,7 +95,7 @@ export default defineConfig({
             "@radix-ui/react-toggle",
             "@radix-ui/react-toggle-group",
           ],
-          "vendor-icons": ["lucide-react"],
+          "vendor-icons": ["@hugeicons/react", "@hugeicons/core-free-icons"],
           "vendor-db": ["@supabase/ssr"],
           "vendor-utils": ["@tanstack/react-query", "wouter", "zod"],
         },
