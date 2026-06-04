@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { Search, Menu, X, TrendingUp, TrendingDown, Box, ArrowRightLeft, ArrowRight, Github, Twitter, Database, Loader, Zap, Activity } from '@/lib/icons';
+import { Search, Menu, X, TrendingUp, TrendingDown, Box, ArrowRightLeft, ArrowRight, Github, Twitter, Database, Loader, Flame, Activity } from '@/lib/icons';
 import { PexlyIcon } from "@/components/pexly-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Pie, Cell, AreaChart, Area, ResponsiveContainer, CartesianGrid, XAxis, YAxis } from "recharts";
+import { PieChart, Pie, Cell, AreaChart, Area, ResponsiveContainer, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import {
   getLatestBlocks, getStats, formatHash, formatTimestamp,
@@ -214,9 +214,36 @@ const SearchBar = ({ onSearchResults }: { onSearchResults: (results: any) => voi
   );
 };
 
-const CryptoCard = ({ name, symbol, price, change24h, chartData, color, icon }: {
+const ChartTooltip = ({ active, payload, label, symbol }: any) => {
+  if (!active || !payload?.length) return null;
+  const value = payload[0]?.value;
+  return (
+    <div className="rounded-lg border border-border bg-background/95 backdrop-blur-sm px-3 py-2 shadow-lg text-xs">
+      {label && <p className="text-muted-foreground mb-1">{label}</p>}
+      <p className="font-semibold text-foreground">
+        {symbol ? `${symbol} ` : ''}
+        {typeof value === 'number'
+          ? value > 1000
+            ? `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            : `$${value.toFixed(2)}`
+          : '—'}
+      </p>
+    </div>
+  );
+};
+
+const COIN_GECKO_IDS: Record<string, string> = { BTC: 'bitcoin', ETH: 'ethereum' };
+const CRYPTO_INTERVALS = [
+  { key: '1h', label: '1H', days: 1 },
+  { key: '1d', label: '1D', days: 1 },
+  { key: '1w', label: '1W', days: 7 },
+  { key: '1m', label: '1M', days: 30 },
+  { key: '1y', label: '1Y', days: 365 },
+];
+
+const CryptoCard = ({ name, symbol, price, change24h, color, icon }: {
   name: string; symbol: string; price: number; change24h: number;
-  chartData: { value: number }[]; color: string; icon: string;
+  chartData?: { value: number }[]; color: string; icon: string;
 }) => {
   const iconUrl = cryptoIconUrls[symbol as keyof typeof cryptoIconUrls] || '';
   const isPositive = change24h >= 0;
@@ -225,11 +252,35 @@ const CryptoCard = ({ name, symbol, price, change24h, chartData, color, icon }: 
     : '—';
   const formattedChange = price > 0 ? `${isPositive ? '+' : ''}${change24h.toFixed(2)}%` : '—';
 
+  const [interval, setInterval] = useState('1m');
+  const [chartData, setChartData] = useState<{ date: string; price: number }[]>([]);
+  const [loadingChart, setLoadingChart] = useState(true);
+
+  useEffect(() => {
+    const coinId = COIN_GECKO_IDS[symbol];
+    if (!coinId) return;
+    setLoadingChart(true);
+    const days = CRYPTO_INTERVALS.find(i => i.key === interval)?.days ?? 30;
+    fetch(`https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${days}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.prices) {
+          setChartData(data.prices.map(([ts, p]: [number, number]) => ({
+            date: new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            price: p,
+          })));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingChart(false));
+  }, [symbol, interval]);
+
   return (
-    <Card className="overflow-hidden border-border hover:border-primary/40 transition-all duration-200 hover:shadow-lg hover:shadow-primary/5">
-      <CardContent className="p-0">
-        <div className="p-5 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
+    <Card className="overflow-hidden border-border shadow-sm">
+      <CardContent className="p-6 md:p-8">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-3">
             {iconUrl ? (
               <img src={iconUrl} alt={symbol} className="w-11 h-11 rounded-full flex-shrink-0" />
             ) : (
@@ -237,37 +288,84 @@ const CryptoCard = ({ name, symbol, price, change24h, chartData, color, icon }: 
                 {icon}
               </div>
             )}
-            <div className="min-w-0">
-              <span className="font-bold text-base text-foreground truncate block">{name}</span>
-              <span className="text-muted-foreground text-sm">{symbol}</span>
+            <div>
+              <h2 className="font-semibold text-base">{name}</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">{symbol} / USD · Market data</p>
+            </div>
+            <div className={`ml-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${isPositive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-600 dark:text-red-400'}`}>
+              {isPositive ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+              {formattedChange}
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="font-bold text-xl text-foreground">{formattedPrice}</span>
-            <span className={`text-sm font-semibold px-2.5 py-1 rounded-full ${isPositive ? 'bg-[#B4F22E]/15 text-[#B4F22E]' : 'bg-destructive/10 text-destructive'}`}>
-              {formattedChange}
-            </span>
+          <div className="flex items-center gap-4 flex-shrink-0">
+            <span className="font-bold text-2xl text-foreground">{formattedPrice}</span>
+            <div className="flex items-center gap-1 rounded-lg border border-border p-1">
+              {CRYPTO_INTERVALS.map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setInterval(key)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                    interval === key ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-        <div className="h-40 w-full bg-muted/20 px-2 pb-2">
-          {chartData.length > 0 ? (
+
+        {/* Chart */}
+        <div className="h-[320px] w-full">
+          {loadingChart ? (
+            <div className="flex flex-col items-center justify-center h-full gap-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-border border-t-primary" />
+              <p className="text-sm text-muted-foreground">Loading chart…</p>
+            </div>
+          ) : chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+              <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                 <defs>
-                  <linearGradient id={`gradient-${symbol}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  <linearGradient id={`grad-${symbol}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#a3e635" stopOpacity={0.15} />
+                    <stop offset="100%" stopColor="#a3e635" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                <XAxis dataKey="value" hide />
-                <YAxis hide domain={['auto', 'auto']} />
-                <Area type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} fill={`url(#gradient-${symbol})`} />
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.06} vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                  tickLine={false}
+                  axisLine={false}
+                  dy={8}
+                  interval="preserveStartEnd"
+                />
+                <YAxis
+                  tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                  tickLine={false}
+                  axisLine={false}
+                  domain={['auto', 'auto']}
+                  tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                  dx={-8}
+                />
+                <Tooltip
+                  content={<ChartTooltip symbol={symbol} />}
+                  cursor={{ stroke: '#a3e635', strokeWidth: 1, strokeDasharray: '4 2' }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="price"
+                  stroke="#a3e635"
+                  strokeWidth={2}
+                  fill={`url(#grad-${symbol})`}
+                  dot={false}
+                  activeDot={{ r: 4, fill: '#a3e635', strokeWidth: 0 }}
+                />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
+            <div className="flex flex-col items-center justify-center h-full gap-3">
+              <p className="text-sm text-muted-foreground">No chart data available</p>
             </div>
           )}
         </div>
@@ -276,52 +374,91 @@ const CryptoCard = ({ name, symbol, price, change24h, chartData, color, icon }: 
   );
 };
 
-const NetworkStatsGrid = ({ stats, chartData }: { stats: LiveNetworkStat[]; chartData: { value: number }[] }) => (
-  <Card className="overflow-hidden border-border">
-    <CardHeader className="pb-0 border-b border-border">
-      <div className="flex items-center gap-2 pb-4">
-        <div className="w-8 h-8 rounded-lg bg-[#B4F22E]/15 flex items-center justify-center">
-          <Activity className="h-4 w-4 text-[#B4F22E]" />
-        </div>
-        <div>
-          <CardTitle className="text-base">Network Stats</CardTitle>
-          <p className="text-xs text-muted-foreground">Live Bitcoin network data</p>
-        </div>
-      </div>
-    </CardHeader>
-    <CardContent className="p-0">
-      <div className="h-36 w-full relative bg-gradient-to-b from-[#B4F22E]/10 to-transparent">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData.length > 0 ? chartData : [{ value: 0 }]} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
-            <defs>
-              <linearGradient id="networkGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#B4F22E" stopOpacity={0.4} />
-                <stop offset="100%" stopColor="#B4F22E" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <Area type="monotone" dataKey="value" stroke="#B4F22E" strokeWidth={2} fill="url(#networkGradient)" />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-px bg-border">
-        {stats.length > 0 ? stats.map((stat) => (
-          <div key={stat.label} className="bg-card p-4 hover:bg-muted/40 transition-colors">
-            <p className="text-xl font-bold text-foreground">{stat.value}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {stat.label}
-              {stat.sub && <span className="ml-1">· {stat.sub}</span>}
-            </p>
+const NetworkStatsGrid = ({ stats, chartData }: { stats: LiveNetworkStat[]; chartData: { value: number }[] }) => {
+  const formattedChartData = chartData.map((d, i) => ({
+    date: `${i}`,
+    price: d.value,
+  }));
+
+  return (
+    <Card className="overflow-hidden border-border shadow-sm">
+      <CardContent className="p-6 md:p-8">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-8 h-8 rounded-lg bg-[#B4F22E]/15 flex items-center justify-center">
+            <Activity className="h-4 w-4 text-[#B4F22E]" />
           </div>
-        )) : Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="bg-card p-4">
-            <div className="h-6 w-20 bg-muted/50 rounded animate-pulse mb-2" />
-            <div className="h-3 w-28 bg-muted/30 rounded animate-pulse" />
+          <div>
+            <h2 className="font-semibold text-base">Network Stats</h2>
+            <p className="text-xs text-muted-foreground">Live Bitcoin network data</p>
           </div>
-        ))}
-      </div>
-    </CardContent>
-  </Card>
-);
+        </div>
+
+        {/* Chart */}
+        <div className="h-[260px] w-full mb-6">
+          {formattedChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={formattedChartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                <defs>
+                  <linearGradient id="networkGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#a3e635" stopOpacity={0.15} />
+                    <stop offset="100%" stopColor="#a3e635" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.06} vertical={false} />
+                <XAxis dataKey="date" hide />
+                <YAxis
+                  tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                  tickLine={false}
+                  axisLine={false}
+                  domain={['auto', 'auto']}
+                  tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                  dx={-8}
+                />
+                <Tooltip
+                  content={<ChartTooltip />}
+                  cursor={{ stroke: '#a3e635', strokeWidth: 1, strokeDasharray: '4 2' }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="price"
+                  stroke="#a3e635"
+                  strokeWidth={2}
+                  fill="url(#networkGradient)"
+                  dot={false}
+                  activeDot={{ r: 4, fill: '#a3e635', strokeWidth: 0 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full gap-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-border border-t-primary" />
+              <p className="text-sm text-muted-foreground">Loading chart…</p>
+            </div>
+          )}
+        </div>
+
+        {/* Stats grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-px bg-border rounded-lg overflow-hidden">
+          {stats.length > 0 ? stats.map((stat) => (
+            <div key={stat.label} className="bg-card p-4 hover:bg-muted/40 transition-colors">
+              <p className="text-xl font-bold text-foreground">{stat.value}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {stat.label}
+                {stat.sub && <span className="ml-1">· {stat.sub}</span>}
+              </p>
+            </div>
+          )) : Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="bg-card p-4">
+              <div className="h-6 w-20 bg-muted/50 rounded animate-pulse mb-2" />
+              <div className="h-3 w-28 bg-muted/30 rounded animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 const HashrateChart = ({ distribution }: { distribution: PoolEntry[] }) => (
   <Card className="border-border hover:border-border/80 transition-colors">
@@ -372,7 +509,7 @@ const QuickStats = ({ fastestFee, pendingCount }: { fastestFee: number; pendingC
   <div className="flex flex-wrap items-center gap-6 md:gap-10">
     <div className="flex items-center gap-3">
       <div className="w-9 h-9 rounded-xl bg-[#B4F22E]/15 flex items-center justify-center flex-shrink-0">
-        <Zap className="h-4 w-4 text-[#B4F22E]" />
+        <Flame className="h-4 w-4 text-[#B4F22E]" />
       </div>
       <div>
         <p className="text-xl font-bold text-foreground">{fastestFee > 0 ? `${fastestFee} sat/vB` : '—'}</p>
