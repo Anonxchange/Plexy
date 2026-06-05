@@ -50,7 +50,6 @@ const GiftCardDetail = lazy(() => import("@/pages/gift-card-detail").then(m => (
 const Checkout = lazy(() => import("@/pages/checkout").then(m => ({ default: m.Checkout })));
 const CheckoutPayCrypto = lazy(() => import("@/pages/checkout-pay-crypto").then(m => ({ default: m.CheckoutPayCrypto })));
 const VisaCard = lazy(() => import("@/pages/visa-card"));
-const VisaCardDetails = lazy(() => import("@/pages/visa-card-details"));
 const MobileTopup = lazy(() => import("@/pages/mobile-topup"));
 const UtilityBill = lazy(() => import("@/pages/utility-bill"));
 const Stake = lazy(() => import("@/pages/stake"));
@@ -244,7 +243,6 @@ function AppRoutes() {
       <Route path="/dashboard">{() => <ProtectedRoute component={Dashboard} />}</Route>
       <Route path="/wallet">{() => <ProtectedRoute component={Wallet} skeleton={<WalletPageSkeleton />} />}</Route>
       <Route path="/wallet/visa-card">{() => <LazyRoute component={VisaCard} />}</Route>
-      <Route path="/wallet/visa-card/details">{() => <LazyRoute component={VisaCardDetails} />}</Route>
       <Route path="/wallet/mobile-topup">{() => <ProtectedRoute component={MobileTopup} />}</Route>
       <Route path="/utility">{() => <ProtectedRoute component={UtilityBill} />}</Route>
       <Route path="/wallet/utility-bill">{() => <ProtectedRoute component={UtilityBill} />}</Route>
