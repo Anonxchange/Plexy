@@ -39,6 +39,7 @@ import {
   type Announcement,
   type WalletTx,
 } from "@/lib/notifications-api";
+import { TransactionDetailSheet, type TxForDetail } from "@/components/wallet/TransactionDetailSheet";
 import { useAuth } from "@/lib/auth-context";
 import { sanitizeImageUrl, sanitizeRichText } from "@/lib/sanitize";
 import {
@@ -127,11 +128,11 @@ function TxStatusBadge({ status }: { status: WalletTx["status"] }) {
   );
 }
 
-function WalletTxItem({ tx, onNavigate }: { tx: WalletTx; onNavigate: () => void }) {
+function WalletTxItem({ tx, onNavigate }: { tx: WalletTx; onNavigate: (tx: WalletTx) => void }) {
   const isDeposit = tx.type === "deposit";
   return (
     <button
-      onClick={onNavigate}
+      onClick={() => onNavigate(tx)}
       className="w-full flex items-start gap-3 px-4 py-4 text-left transition-colors hover:bg-muted/50 border-b border-border last:border-0"
     >
       <div className={cn(
@@ -340,6 +341,8 @@ export default function NotificationsPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [deposits, setDeposits] = useState<WalletTx[]>([]);
   const [withdrawals, setWithdrawals] = useState<WalletTx[]>([]);
+  const [selectedTx, setSelectedTx] = useState<TxForDetail | null>(null);
+  const [txSheetOpen, setTxSheetOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("all");
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [readAnnouncementIds, setReadAnnouncementIds] = useState<Set<string>>(() => {
@@ -412,6 +415,11 @@ export default function NotificationsPage() {
   const handleAnnouncementClick = (announcement: Announcement) => {
     markAnnouncementRead(announcement.id);
     navigate(`/blog/${announcement.id}`);
+  };
+
+  const handleTxClick = (tx: WalletTx) => {
+    setSelectedTx(tx as TxForDetail);
+    setTxSheetOpen(true);
   };
 
   const handleMarkAllAsRead = async () => {
@@ -567,7 +575,7 @@ export default function NotificationsPage() {
         return <EmptyState icon={ArrowDownLeft} title="No deposits yet" subtitle="Your crypto deposits will appear here" />;
       }
       return deposits.map((tx) => (
-        <WalletTxItem key={tx.id} tx={tx} onNavigate={() => navigate("/wallet")} />
+        <WalletTxItem key={tx.id} tx={tx} onNavigate={handleTxClick} />
       ));
     }
 
@@ -576,7 +584,7 @@ export default function NotificationsPage() {
         return <EmptyState icon={ArrowUpRight} title="No withdrawals yet" subtitle="Your crypto withdrawals will appear here" />;
       }
       return withdrawals.map((tx) => (
-        <WalletTxItem key={tx.id} tx={tx} onNavigate={() => navigate("/wallet")} />
+        <WalletTxItem key={tx.id} tx={tx} onNavigate={handleTxClick} />
       ));
     }
 
@@ -592,6 +600,7 @@ export default function NotificationsPage() {
   }
 
   return (
+    <>
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-2xl lg:max-w-6xl lg:px-8">
 
@@ -756,5 +765,12 @@ export default function NotificationsPage() {
 
       </div>
     </div>
+
+    <TransactionDetailSheet
+      tx={selectedTx}
+      open={txSheetOpen}
+      onClose={() => setTxSheetOpen(false)}
+    />
+    </>
   );
 }
