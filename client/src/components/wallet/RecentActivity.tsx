@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, ArrowDownLeft, ArrowUpRight, RefreshCw, ShoppingCart, Lock, Unlock, Percent } from '@/lib/icons';
+import { MoreHorizontal, ArrowDownLeft, ArrowUpRight, RefreshCw, ShoppingCart, Lock, Unlock, Percent, ArrowRight } from '@/lib/icons';
 import { getWalletTransactions, WalletTransaction } from "@/lib/wallet-api";
 import { useAuth } from "@/lib/auth-context";
 import { format } from "date-fns";
+import { TransactionDetailSheet } from "@/components/wallet/TransactionDetailSheet";
 
 interface RecentActivityProps {
   type: "activity" | "operations";
@@ -33,11 +34,12 @@ const FilterItem = ({ label, value, isPrimary = false }: { label: string; value:
   </div>
 );
 
-const ActivityTable = ({ isOperations, onDeposit, transactions, isLoading }: { 
-  isOperations: boolean; 
+const ActivityTable = ({ isOperations, onDeposit, transactions, isLoading, onRowClick }: {
+  isOperations: boolean;
   onDeposit?: (symbol?: string) => void;
   transactions: WalletTransaction[];
   isLoading: boolean;
+  onRowClick: (tx: WalletTransaction) => void;
 }) => (
   <div className="rounded-lg border bg-card dark:bg-card/50 overflow-x-auto no-scrollbar">
     <Table className="min-w-full">
@@ -63,7 +65,11 @@ const ActivityTable = ({ isOperations, onDeposit, transactions, isLoading }: {
           </TableRow>
         ) : transactions.length > 0 ? (
           transactions.map((tx) => (
-            <TableRow key={tx.id} className="hover:bg-muted/5 border-b last:border-none">
+            <TableRow
+              key={tx.id}
+              className="hover:bg-muted/5 border-b last:border-none cursor-pointer"
+              onClick={() => onRowClick(tx)}
+            >
               <TableCell className="py-4">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-muted/10 flex items-center justify-center">
@@ -88,12 +94,15 @@ const ActivityTable = ({ isOperations, onDeposit, transactions, isLoading }: {
                     {format(new Date(tx.created_at), 'MMM dd, HH:mm')}
                   </TableCell>
                   <TableCell className="py-4 text-right">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                      tx.status === 'completed' ? 'bg-green-500/10 text-green-500' : 
-                      tx.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500' : 'bg-red-500/10 text-red-500'
-                    }`}>
-                      {tx.status}
-                    </span>
+                    <div className="flex items-center justify-end gap-1">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                        tx.status === 'completed' ? 'bg-green-500/10 text-green-500' :
+                        tx.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500' : 'bg-red-500/10 text-red-500'
+                      }`}>
+                        {tx.status}
+                      </span>
+                      <ArrowRight className="h-3 w-3 text-muted-foreground/40" />
+                    </div>
                   </TableCell>
                 </>
               )}
@@ -111,13 +120,13 @@ const ActivityTable = ({ isOperations, onDeposit, transactions, isLoading }: {
                 <div className="space-y-1">
                   <p className="text-base font-bold text-muted-foreground">Nothing to show yet</p>
                   <p className="text-xs text-muted-foreground/60 max-w-[300px] mx-auto">
-                    {isOperations 
+                    {isOperations
                       ? "No results match your current filters. Adjust the filters and try again."
                       : "You currently have no assets deposited in your wallet"}
                   </p>
                 </div>
                 {!isOperations && (
-                  <Button 
+                  <Button
                     onClick={() => onDeposit?.()}
                     className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-8 rounded-lg transition-all"
                   >
@@ -138,6 +147,8 @@ export function RecentActivity({ type, onDeposit }: RecentActivityProps) {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedTx, setSelectedTx] = useState<WalletTransaction | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   useEffect(() => {
     async function loadTransactions() {
@@ -145,7 +156,6 @@ export function RecentActivity({ type, onDeposit }: RecentActivityProps) {
       try {
         setIsLoading(true);
         const data = await getWalletTransactions(user.id, 50);
-        console.log("Loaded transactions in RecentActivity:", data);
         setTransactions(data);
       } catch (error) {
         console.error("Failed to load transactions:", error);
@@ -156,19 +166,22 @@ export function RecentActivity({ type, onDeposit }: RecentActivityProps) {
     loadTransactions();
   }, [user]);
 
+  const handleRowClick = (tx: WalletTransaction) => {
+    setSelectedTx(tx);
+    setSheetOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <span className="font-bold text-foreground mr-1">Filter</span>
-        
+
         {isOperations ? (
-          <>
           <div className="flex flex-wrap items-center gap-2">
             <FilterItem label="Filter" value="Transactions: All" />
             <FilterItem label="Action" value="All" />
             <FilterItem label="Date" value="All" isPrimary />
           </div>
-          </>
         ) : (
           <>
             <FilterItem label="Asset" value="All" />
@@ -179,11 +192,18 @@ export function RecentActivity({ type, onDeposit }: RecentActivityProps) {
         )}
       </div>
 
-      <ActivityTable 
-        isOperations={isOperations} 
-        onDeposit={onDeposit} 
+      <ActivityTable
+        isOperations={isOperations}
+        onDeposit={onDeposit}
         transactions={transactions}
         isLoading={isLoading}
+        onRowClick={handleRowClick}
+      />
+
+      <TransactionDetailSheet
+        tx={selectedTx}
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
       />
     </div>
   );
