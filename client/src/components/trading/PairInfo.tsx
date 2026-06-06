@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { asterMarket } from "@/lib/asterdex-service";
 import SymbolSelector from "./SymbolSelector";
 import { CoinIcon } from "./CoinIcon";
+import { useFavorites } from "@/hooks/use-favorites";
 
 interface PairInfoProps {
   pair: string;
@@ -23,7 +24,8 @@ function formatVolume(v: number): string {
 
 const PairInfo = ({ pair, onPairChange, chartVisible, onToggleChart, viewMode = "list" }: PairInfoProps) => {
   const [selectorOpen, setSelectorOpen] = useState(false);
-  const [starred, setStarred] = useState(false);
+  const { toggle, isFavorite } = useFavorites();
+  const starred = isFavorite(pair);
   const isMobile = useIsMobile();
 
   const apiSymbol = pair.replace("/", "");
@@ -94,7 +96,7 @@ const PairInfo = ({ pair, onPairChange, chartVisible, onToggleChart, viewMode = 
     );
 
     const starBtn = (
-      <button onClick={() => setStarred(s => !s)} className="p-1.5 rounded hover:bg-accent transition-colors" aria-label="Favourite">
+      <button onClick={() => toggle(pair)} className="p-1.5 rounded hover:bg-accent transition-colors" aria-label="Favourite">
         <Star className={`w-[18px] h-[18px] transition-colors ${starred ? "fill-trading-amber text-trading-amber" : "text-muted-foreground"}`} />
       </button>
     );
@@ -167,7 +169,7 @@ const PairInfo = ({ pair, onPairChange, chartVisible, onToggleChart, viewMode = 
         {/* ── Pair selector ── */}
         <div className="flex items-center gap-1.5 flex-shrink-0 pr-4 border-r border-panel-border h-full">
           <button
-            onClick={() => setStarred(s => !s)}
+            onClick={() => toggle(pair)}
             className="p-1 rounded hover:bg-accent transition-colors flex-shrink-0"
             aria-label="Favourite"
           >

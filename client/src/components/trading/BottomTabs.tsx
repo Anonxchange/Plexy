@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LayoutList, SlidersVertical, ClipboardList, Loader2, XCircle } from '@/lib/icons';
+import { LayoutList, SlidersVertical, ClipboardList, Loader2, XCircle, Wallet } from '@/lib/icons';
 import CandlestickChart from "./CandlestickChart";
 import OrderBook from "./OrderBook";
 import TradePanel from "./TradePanel";
@@ -215,6 +215,7 @@ const BottomTabs = ({ chartVisible, pair, viewMode, onViewModeChange: setViewMod
   const [activeOrderTab, setActiveOrderTab] = useState("Open orders");
   const [activeChartTab, setActiveChartTab] = useState("Chart");
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyTab, setHistoryTab] = useState<"order" | "position" | "trade" | "transaction">("order");
 
   const { user } = useAuth();
   const [, navigate] = useLocation();
@@ -256,7 +257,14 @@ const BottomTabs = ({ chartVisible, pair, viewMode, onViewModeChange: setViewMod
   const { data: allOrders, isLoading: allOrdersLoading } = useQuery({
     queryKey: ["spot-all-orders", apiSymbol],
     queryFn: () => asterTrading.spotAllOrders(apiSymbol),
-    enabled: !!user && activeOrderTab === "Order history",
+    enabled: !!user && historyOpen && historyTab === "order",
+    staleTime: 30_000,
+  });
+
+  const { data: spotTrades, isLoading: spotTradesLoading } = useQuery({
+    queryKey: ["spot-my-trades", apiSymbol],
+    queryFn: () => asterTrading.spotMyTrades(apiSymbol),
+    enabled: !!user && historyOpen && historyTab === "trade",
     staleTime: 30_000,
   });
 
@@ -439,42 +447,87 @@ const BottomTabs = ({ chartVisible, pair, viewMode, onViewModeChange: setViewMod
       {renderTabContent()}
 
       <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
-        <SheetContent side="bottom" className="h-[70vh] p-0 flex flex-col">
-          <SheetHeader className="px-4 pt-4 pb-2 border-b border-border flex-shrink-0">
-            <SheetTitle className="text-sm">Order History</SheetTitle>
+        <SheetContent side="bottom" className="h-[75vh] p-0 flex flex-col rounded-t-2xl">
+          <SheetHeader className="px-4 pt-4 pb-0 flex-shrink-0">
+            <SheetTitle className="text-sm font-semibold text-center">History</SheetTitle>
+            <div className="flex overflow-x-auto mt-2 border-b border-border">
+              {(["order", "position", "trade", "transaction"] as const).map((id) => (
+                <button
+                  key={id}
+                  onClick={() => setHistoryTab(id)}
+                  className={`whitespace-nowrap px-3 pb-2 text-[11px] font-medium border-b-2 transition-colors ${historyTab === id ? "border-primary text-foreground" : "border-transparent text-muted-foreground"}`}
+                >
+                  {id === "order" ? "Order History" : id === "position" ? "Position History" : id === "trade" ? "Trade History" : "Transaction History"}
+                </button>
+              ))}
+            </div>
           </SheetHeader>
           <div className="flex-1 overflow-y-auto">
             {!user ? (
-              <div className="flex flex-col items-center py-10 gap-3">
-                <span className="text-sm text-muted-foreground">Sign in to view order history</span>
+              <div className="flex flex-col items-center py-12 gap-3">
+                <Wallet className="w-10 h-10 text-muted-foreground/40" />
+                <span className="text-sm text-muted-foreground">Please connect a wallet first</span>
               </div>
-            ) : allOrdersLoading ? (
-              <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-            ) : (Array.isArray(allOrders) && allOrders.length > 0) ? (
-              <table className="w-full text-xs">
-                <thead className="sticky top-0 bg-background">
-                  <tr className="text-muted-foreground border-b border-border">
-                    <th className="text-left px-3 py-2 font-normal text-[10px]">Symbol</th>
-                    <th className="text-left px-3 py-2 font-normal text-[10px]">Side</th>
-                    <th className="text-right px-3 py-2 font-normal text-[10px]">Price</th>
-                    <th className="text-right px-3 py-2 font-normal text-[10px]">Amount</th>
-                    <th className="text-right px-3 py-2 font-normal text-[10px]">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {allOrders.slice(0, 50).map((o: any) => (
-                    <tr key={o.orderId} className="border-b border-border/50">
-                      <td className="px-3 py-1.5 text-[11px] text-foreground">{o.symbol}</td>
-                      <td className={`px-3 py-1.5 text-[11px] font-medium ${o.side === "BUY" ? "text-trading-green" : "text-trading-red"}`}>{o.side}</td>
-                      <td className="px-3 py-1.5 text-right font-mono-num text-[11px]">{parseFloat(o.price).toFixed(4)}</td>
-                      <td className="px-3 py-1.5 text-right font-mono-num text-[11px]">{parseFloat(o.origQty).toFixed(4)}</td>
-                      <td className="px-3 py-1.5 text-right text-[11px] text-muted-foreground">{o.status}</td>
+            ) : historyTab === "order" ? (
+              allOrdersLoading ? (
+                <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+              ) : (Array.isArray(allOrders) && allOrders.length > 0) ? (
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-background">
+                    <tr className="text-muted-foreground border-b border-border">
+                      <th className="text-left px-3 py-2 font-normal text-[10px]">Symbol</th>
+                      <th className="text-left px-3 py-2 font-normal text-[10px]">Side</th>
+                      <th className="text-right px-3 py-2 font-normal text-[10px]">Price</th>
+                      <th className="text-right px-3 py-2 font-normal text-[10px]">Amount</th>
+                      <th className="text-right px-3 py-2 font-normal text-[10px]">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {allOrders.slice(0, 50).map((o: any) => (
+                      <tr key={o.orderId} className="border-b border-border/50">
+                        <td className="px-3 py-1.5 text-[11px] text-foreground">{o.symbol}</td>
+                        <td className={`px-3 py-1.5 text-[11px] font-medium ${o.side === "BUY" ? "text-trading-green" : "text-trading-red"}`}>{o.side}</td>
+                        <td className="px-3 py-1.5 text-right font-mono-num text-[11px]">{parseFloat(o.price || "0").toFixed(4)}</td>
+                        <td className="px-3 py-1.5 text-right font-mono-num text-[11px]">{parseFloat(o.origQty || "0").toFixed(4)}</td>
+                        <td className="px-3 py-1.5 text-right text-[11px] text-muted-foreground">{o.status}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="flex justify-center py-8 text-sm text-muted-foreground">No order history</div>
+              )
+            ) : historyTab === "position" ? (
+              <div className="flex justify-center py-8 text-sm text-muted-foreground">Positions are only available on the perpetual trading page</div>
+            ) : historyTab === "trade" ? (
+              spotTradesLoading ? (
+                <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+              ) : (Array.isArray(spotTrades) && spotTrades.length > 0) ? (
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-background">
+                    <tr className="text-muted-foreground border-b border-border">
+                      <th className="text-left px-3 py-2 font-normal text-[10px]">Symbol</th>
+                      <th className="text-left px-3 py-2 font-normal text-[10px]">Side</th>
+                      <th className="text-right px-3 py-2 font-normal text-[10px]">Price</th>
+                      <th className="text-right px-3 py-2 font-normal text-[10px]">Qty</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {spotTrades.slice(0, 50).map((t: any) => (
+                      <tr key={t.id} className="border-b border-border/50">
+                        <td className="px-3 py-1.5 text-[11px] text-foreground">{t.symbol}</td>
+                        <td className={`px-3 py-1.5 text-[11px] font-medium ${t.isBuyer ? "text-trading-green" : "text-trading-red"}`}>{t.isBuyer ? "BUY" : "SELL"}</td>
+                        <td className="px-3 py-1.5 text-right font-mono-num text-[11px]">{parseFloat(t.price || "0").toFixed(4)}</td>
+                        <td className="px-3 py-1.5 text-right font-mono-num text-[11px]">{parseFloat(t.qty || "0").toFixed(4)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="flex justify-center py-8 text-sm text-muted-foreground">No trade history</div>
+              )
             ) : (
-              <div className="flex justify-center py-8 text-sm text-muted-foreground">No order history</div>
+              <div className="flex justify-center py-8 text-sm text-muted-foreground">No transaction history</div>
             )}
           </div>
         </SheetContent>

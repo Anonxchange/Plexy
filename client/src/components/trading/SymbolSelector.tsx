@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
-import { X, Search, Star, Loader2 } from '@/lib/icons';
+import { X, Search, Star, Loader2, Zap, Flame, TrendingUp, Bot, Globe, Tag, BarChart2 } from '@/lib/icons';
 import { useQuery } from "@tanstack/react-query";
 import { asterMarket, Ticker24h } from "@/lib/asterdex-service";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CoinIcon } from "./CoinIcon";
+import { useFavorites } from "@/hooks/use-favorites";
 
 const NEW_LISTING_DAYS = 60;
 
@@ -19,7 +20,20 @@ const FUTURES_FILTER_LABELS: Record<string, string> = {
 };
 
 const FUTURES_FILTER_ORDER = ["All markets", "Top", "New", "Meme", "AI", "STOCK", "RWA", "pre-launch"];
-const SPOT_FILTERS         = ["All markets", "🚀 Rocket Launch", "🐸 Meme"];
+const SPOT_FILTERS         = ["All markets", "Rocket Launch", "Meme"];
+
+type IconComp = React.ComponentType<{ className?: string }>;
+const FILTER_ICONS: Record<string, IconComp | null> = {
+  "All markets":   null,
+  "Rocket Launch": Zap,
+  "Meme":          Flame,
+  "Top":           TrendingUp,
+  "New":           Zap,
+  "AI":            Bot,
+  "Stocks":        BarChart2,
+  "RWA":           Globe,
+  "Pre-launch":    Tag,
+};
 
 const categories = ["Favorites", "Futures", "Spot"];
 
@@ -79,7 +93,7 @@ function buildRows(
   addressMap: Record<string, string> = {},
 ): MarketRow[] {
   return tickers
-    .filter(t => !t.symbol.startsWith("TEST"))
+    .filter(t => !t.symbol.startsWith("TEST") && !t.symbol.includes("_UP_DOWN_"))
     .map(t => {
       const pct         = parseFloat(t.priceChangePercent);
       const displayPair = toDisplayPair(t.symbol);
@@ -108,6 +122,7 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot", var
   const [search,         setSearch]         = useState(initialSearch);
   const [activeCategory, setActiveCategory] = useState(defaultCategory);
   const [activeFilter,   setActiveFilter]   = useState("All markets");
+  const { toggle, isFavorite } = useFavorites();
 
   const { data: spotTickers,    isLoading: spotLoading }    = useQuery({
     queryKey: ["spot-tickers-all"],
@@ -161,7 +176,11 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot", var
 
   const spotMemeSubTypeMap: Record<string, string[]> = useMemo(() => {
     const map: Record<string, string[]> = {};
-    futuresMemeSet.forEach(base => { map[base] = ["Meme"]; });
+    futuresMemeSet.forEach(base => {
+      map[base] = ["Meme"];
+      // Futures prefix "1000SHIB" → spot base "SHIB", "1000PEPE" → "PEPE" etc.
+      if (/^\d+/.test(base)) map[base.replace(/^\d+/, "")] = ["Meme"];
+    });
     return map;
   }, [futuresMemeSet]);
 
@@ -236,7 +255,15 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot", var
   const currentFilters = activeCategory === "Spot" ? SPOT_FILTERS : presentFuturesSubTypes.map(f => FUTURES_FILTER_LABELS[f] ?? f);
 
   const filtered: MarketRow[] = (() => {
-    if (activeCategory === "Favorites") return [];
+    if (activeCategory === "Favorites") {
+      const allRows = [...spotRows, ...futuresRows];
+      const seen = new Set<string>();
+      return allRows.filter(m => {
+        if (!isFavorite(m.symbol) || seen.has(m.symbol)) return false;
+        seen.add(m.symbol);
+        return true;
+      });
+    }
 
     if (search.length > 0) {
       return [...spotRows, ...futuresRows].filter(m =>
@@ -248,7 +275,9 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot", var
 
     if (activeFilter === "All markets") return base;
 
-    if (activeFilter === "Rocket Launch") return base.filter(m => m.isNew);
+    // "Rocket Launch" = top gainers (coins up >3% in 24h), sorted biggest first
+    if (activeFilter === "Rocket Launch")
+      return base.filter(m => m.changePct > 3).sort((a, b) => b.changePct - a.changePct);
 
     if (activeFilter === "Meme") return base.filter(m => m.subTypes.includes("Meme"));
 
@@ -301,19 +330,23 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot", var
 
       {/* Filter pills */}
       <div className="flex items-center gap-2 px-4 pb-3 overflow-x-auto no-scrollbar shrink-0">
-        {currentFilters.map(f => (
-          <button
-            key={f}
-            onClick={() => setActiveFilter(f)}
-            className={`shrink-0 px-3 py-1 rounded text-xs border transition-colors ${
-              activeFilter === f
-                ? "border-trading-amber text-trading-amber bg-trading-amber/10"
-                : "border-border text-muted-foreground bg-transparent"
-            }`}
-          >
-            {f}
-          </button>
-        ))}
+        {currentFilters.map(f => {
+          const Icon = FILTER_ICONS[f] ?? null;
+          return (
+            <button
+              key={f}
+              onClick={() => setActiveFilter(f)}
+              className={`shrink-0 flex items-center gap-1 px-3 py-1 rounded text-xs border transition-colors ${
+                activeFilter === f
+                  ? "border-trading-amber text-trading-amber bg-trading-amber/10"
+                  : "border-border text-muted-foreground bg-transparent"
+              }`}
+            >
+              {Icon && <Icon className="w-3 h-3" />}
+              {f}
+            </button>
+          );
+        })}
       </div>
 
       {/* Column headers */}
@@ -343,7 +376,13 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot", var
               className="flex items-center w-full px-4 py-3 hover:bg-accent/50 transition-colors"
             >
               <div className="flex items-center gap-2 flex-1 min-w-0">
-                <Star className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <button
+                  onClick={e => { e.stopPropagation(); toggle(m.symbol); }}
+                  className="p-0.5 flex-shrink-0"
+                  aria-label={isFavorite(m.symbol) ? "Remove from favorites" : "Add to favorites"}
+                >
+                  <Star className={`w-4 h-4 transition-colors ${isFavorite(m.symbol) ? "fill-trading-amber text-trading-amber" : "text-muted-foreground"}`} />
+                </button>
                 <CoinIcon symbol={m.base} address={m.address} />
                 <div className="flex flex-col items-start">
                   <span className="text-sm text-foreground font-medium">{m.symbol}</span>

@@ -35,6 +35,8 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
   const [totalValue, setTotalValue] = useState("");
   const [sliderValue, setSliderValue] = useState(0);
   const [tpsl, setTpsl] = useState(false);
+  const [takeProfit, setTakeProfit] = useState("");
+  const [stopLoss, setStopLoss] = useState("");
   const [hiddenOrder, setHiddenOrder] = useState(false);
   const [reduceOnly, setReduceOnly] = useState(false);
   const [sizeUnit, setSizeUnit] = useState<"USDT" | string>("USDT");
@@ -119,10 +121,21 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
   const showStopPrice = isStopLimit || isStopMarket;
   const showTotalValue = isLimit || isStopLimit || isMakerOnly;
 
+  const marginMutation = useMutation({
+    mutationFn: (mode: "cross" | "isolated") =>
+      asterTrading.futuresSetMarginType(apiSymbol, mode === "isolated" ? "ISOLATED" : "CROSSED"),
+    onSuccess: (_data, mode) => {
+      setMarginMode(mode);
+      toast({ title: `Margin mode set to ${mode === "isolated" ? "Isolated" : "Cross"}` });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Margin mode change failed", description: err.message, variant: "destructive" });
+    },
+  });
+
   const orderMutation = useMutation({
     mutationFn: async () => {
       await asterTrading.futuresSetLeverage(apiSymbol, leverage);
-      await asterTrading.futuresSetMarginType(apiSymbol, marginMode === "isolated" ? "ISOLATED" : "CROSSED");
       return asterTrading.futuresPlaceOrder({
         symbol: apiSymbol,
         side: side === "buy" ? "BUY" : "SELL",
@@ -132,6 +145,8 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
         ...(showStopPrice && stopPrice ? { stopPrice } : {}),
         ...((isLimit || isMakerOnly) ? { timeInForce } : {}),
         ...(reduceOnly ? { reduceOnly: "true" } : {}),
+        ...(tpsl && takeProfit ? { takeProfit: JSON.stringify({ type: "LIMIT", price: takeProfit, workingType: "CONTRACT_PRICE", priceProtect: "FALSE" }) } : {}),
+        ...(tpsl && stopLoss   ? { stopLoss:   JSON.stringify({ type: "STOP_MARKET", price: stopLoss, workingType: "CONTRACT_PRICE", priceProtect: "FALSE" }) } : {}),
       });
     },
     onSuccess: (data) => {
@@ -139,7 +154,7 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
         title: "Order placed",
         description: `${side === "buy" ? "Long" : "Short"} ${size} ${baseCoin} submitted (ID: ${data?.orderId ?? "—"})`,
       });
-      setSize(""); setTotalValue(""); setSliderValue(0);
+      setSize(""); setTotalValue(""); setSliderValue(0); setTakeProfit(""); setStopLoss("");
       const subs = getSubscribedTaskIds();
       if (subs.includes("daily-perpetual")) completeTask("daily-perpetual").catch(() => {});
     },
@@ -175,13 +190,15 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
       <div className="grid grid-cols-2 gap-1 px-2 pt-1.5 pb-0.5">
         <div className="flex items-center bg-secondary rounded overflow-hidden">
           <button
-            onClick={() => setMarginMode("cross")}
+            onClick={() => { if (marginMode !== "cross") marginMutation.mutate("cross"); }}
+            disabled={marginMutation.isPending}
             className={`flex-1 py-1 text-[11px] font-medium transition-colors ${marginMode === "cross" ? "bg-accent text-foreground" : "text-muted-foreground"}`}
           >
             Cross
           </button>
           <button
-            onClick={() => setMarginMode("isolated")}
+            onClick={() => { if (marginMode !== "isolated") marginMutation.mutate("isolated"); }}
+            disabled={marginMutation.isPending}
             className={`flex-1 py-1 text-[11px] font-medium transition-colors ${marginMode === "isolated" ? "bg-accent text-foreground" : "text-muted-foreground"}`}
           >
             Isolated
@@ -432,10 +449,36 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
         {/* Checkboxes + TIF */}
         <div className="flex flex-col gap-1">
           <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none">
-            <input type="checkbox" checked={tpsl} onChange={(e) => setTpsl(e.target.checked)}
+            <input type="checkbox" checked={tpsl} onChange={(e) => { setTpsl(e.target.checked); if (!e.target.checked) { setTakeProfit(""); setStopLoss(""); } }}
               className="w-3 h-3 rounded accent-primary" />
             <span className="border-b border-dashed border-muted-foreground/50 whitespace-nowrap">TP/SL</span>
           </label>
+          {tpsl && (
+            <div className="flex flex-col gap-1 pl-0.5">
+              <div className="flex items-center gap-1.5 rounded border border-border bg-secondary/40 px-2 py-1">
+                <span className="text-[10px] text-trading-green font-medium w-6 shrink-0">TP</span>
+                <input
+                  type="number"
+                  placeholder="Take Profit Price"
+                  value={takeProfit}
+                  onChange={e => setTakeProfit(e.target.value)}
+                  className="flex-1 bg-transparent text-[11px] text-foreground placeholder:text-muted-foreground/50 outline-none min-w-0"
+                />
+                <span className="text-[10px] text-muted-foreground shrink-0">{quoteCoin}</span>
+              </div>
+              <div className="flex items-center gap-1.5 rounded border border-border bg-secondary/40 px-2 py-1">
+                <span className="text-[10px] text-trading-red font-medium w-6 shrink-0">SL</span>
+                <input
+                  type="number"
+                  placeholder="Stop Loss Price"
+                  value={stopLoss}
+                  onChange={e => setStopLoss(e.target.value)}
+                  className="flex-1 bg-transparent text-[11px] text-foreground placeholder:text-muted-foreground/50 outline-none min-w-0"
+                />
+                <span className="text-[10px] text-muted-foreground shrink-0">{quoteCoin}</span>
+              </div>
+            </div>
+          )}
           {isLimit && (
             <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none">
               <input type="checkbox" checked={hiddenOrder} onChange={(e) => setHiddenOrder(e.target.checked)}
