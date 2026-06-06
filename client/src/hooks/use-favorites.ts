@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 const KEY = "pexly_favorites";
 
@@ -7,17 +7,28 @@ function load(): Set<string> {
   catch { return new Set(); }
 }
 
+let shared = load();
+const listeners = new Set<(favs: Set<string>) => void>();
+
+function broadcast(next: Set<string>) {
+  shared = next;
+  listeners.forEach(fn => fn(new Set(next)));
+}
+
 export function useFavorites() {
-  const [favorites, setFavorites] = useState<Set<string>>(load);
+  const [favorites, setFavorites] = useState<Set<string>>(() => new Set(shared));
+
+  useEffect(() => {
+    listeners.add(setFavorites);
+    return () => { listeners.delete(setFavorites); };
+  }, []);
 
   const toggle = useCallback((symbol: string) => {
-    setFavorites(prev => {
-      const next = new Set(prev);
-      if (next.has(symbol)) next.delete(symbol);
-      else next.add(symbol);
-      localStorage.setItem(KEY, JSON.stringify([...next]));
-      return next;
-    });
+    const next = new Set(shared);
+    if (next.has(symbol)) next.delete(symbol);
+    else next.add(symbol);
+    localStorage.setItem(KEY, JSON.stringify([...next]));
+    broadcast(next);
   }, []);
 
   const isFavorite = useCallback((symbol: string) => favorites.has(symbol), [favorites]);
