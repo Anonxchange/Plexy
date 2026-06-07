@@ -129,12 +129,13 @@ export default function WalletPage() {
       }
 
       if (serverResult.address) {
-        // Server has a wallet but this device doesn't — sync flow
-        setImportExpectedAddress(serverResult.address);
-      } else {
-        // Genuinely no wallet anywhere — fresh creation flow
-        setImportExpectedAddress(null);
+        // Server has wallets — IDB will be populated by auth-context's
+        // loadWalletsFromSupabase. Do not open the dialog.
+        return;
       }
+
+      // Genuinely no wallet anywhere — fresh creation flow
+      setImportExpectedAddress(null);
       setSetupDialogOpen(true);
     };
 
