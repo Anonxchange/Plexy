@@ -87,16 +87,16 @@ export const MarketsSection = ({ className = "" }: MarketsSectionProps) => {
   }, []);
 
   const { data: spotRaw,    isLoading: spotLoading }    = useQuery<Ticker24h[]>({
-    queryKey: ["dashboard-spot-tickers"],
+    queryKey: ["spot-tickers-all"],
     queryFn:  () => asterMarket.spotTicker(),
-    staleTime: 30_000,
+    staleTime: 15_000,
     refetchInterval: 30_000,
   });
 
   const { data: futuresRaw, isLoading: futuresLoading } = useQuery<Ticker24h[]>({
-    queryKey: ["dashboard-futures-tickers"],
+    queryKey: ["futures-tickers-all"],
     queryFn:  () => asterMarket.futuresTicker(),
-    staleTime: 30_000,
+    staleTime: 15_000,
     refetchInterval: 30_000,
   });
 
