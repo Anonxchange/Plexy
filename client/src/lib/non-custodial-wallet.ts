@@ -3,7 +3,6 @@ import { wordlist } from "@scure/bip39/wordlists/english.js";
 import { HDKey } from "@scure/bip32";
 import { sha256 } from "@noble/hashes/sha256";
 import { ripemd160 } from "@noble/hashes/ripemd160";
-import { base58 } from "@scure/base";
 import { getValue, setValue } from "./ids";
 import { devLog } from "./dev-logger";
 
@@ -22,39 +21,8 @@ import {
 } from "./webCrypto";
 import { runWithUnlockGate } from "./security/wallet-unlock-gate";
 
-import { recordTransaction } from "./wallet-api";
-
 // Constants for Encoding
-const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 const XRP_ALPHABET = "rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz";
-const xrpCodec = {
-  encode: (bytes: Uint8Array) => base58.encode(bytes),
-  decode: (str: string) => base58.decode(str)
-};
-
-/**
- * 100% Buffer-free Base58 Encoder for general use
- */
-function base58Encode(inputBytes: Uint8Array): string {
-  if (inputBytes.length === 0) return '';
-  let digits = [0];
-  for (let i = 0; i < inputBytes.length; i++) {
-    let carry = inputBytes[i];
-    for (let j = 0; j < digits.length; j++) {
-      carry += digits[j] << 8;
-      digits[j] = carry % 58;
-      carry = (carry / 58) | 0;
-    }
-    while (carry > 0) {
-      digits.push(carry % 58);
-      carry = (carry / 58) | 0;
-    }
-  }
-  let result = '';
-  for (let i = 0; i < inputBytes.length && inputBytes[i] === 0; i++) result += ALPHABET[0];
-  for (let i = digits.length - 1; i >= 0; i--) result += ALPHABET[digits[i]];
-  return result;
-}
 
 function toHex(uint8: Uint8Array): string {
   return Array.from(uint8)
@@ -406,6 +374,7 @@ class NonCustodialWalletManager {
 
     if (error) {
       devLog.error("Error saving wallet:", error);
+      throw error;
     }
 
     // Pin ETH address to user_profiles for cross-device wallet detection
