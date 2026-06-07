@@ -1,5 +1,5 @@
 import { nonCustodialWalletManager } from "./non-custodial-wallet";
-import { supabase, getSupabase } from "./supabase";
+import { supabase } from "./supabase";
 
 export interface Wallet {
   id: string;
@@ -84,46 +84,17 @@ function mapChainIdToSymbol(chainId: string): string {
 
 export async function getUserWallets(userId: string): Promise<Wallet[]> {
   try {
-    // 1. Try local IDB cache first (fast, offline-capable).
     const localWallets = await (nonCustodialWalletManager as any).getWalletsFromStorage(userId);
     if (import.meta.env.DEV) console.log(`[getUserWallets] Found ${localWallets.length} local wallets`);
-
-    if (localWallets.length > 0) {
-      return localWallets.map((w: any) => ({
-        id: w.id,
-        user_id: userId,
-        crypto_symbol: mapChainIdToSymbol(w.chainId),
-        balance: typeof w.balance === 'number' ? w.balance : (typeof w.balance === 'string' ? parseFloat(w.balance) || 0 : 0),
-        locked_balance: 0,
-        deposit_address: w.address,
-        created_at: w.createdAt,
-        updated_at: w.createdAt,
-        isNonCustodial: true
-      }));
-    }
-
-    // 2. IDB is empty — fall back to Supabase (user_wallets_safe) so deposit
-    //    addresses are always available even before loadWalletsFromSupabase
-    //    has run (e.g. send/receive dialogs opened before auth-context finishes).
-    if (import.meta.env.DEV) console.log(`[getUserWallets] IDB empty, falling back to user_wallets_safe`);
-    const client = await getSupabase();
-    const { data, error } = await client
-      .from('user_wallets_safe')
-      .select('id, chain_id, address, is_active, created_at')
-      .eq('user_id', userId)
-      .eq('is_active', 'true');
-
-    if (error || !data || data.length === 0) return [];
-
-    return data.map((w: any) => ({
+    return localWallets.map((w: any) => ({
       id: w.id,
       user_id: userId,
-      crypto_symbol: mapChainIdToSymbol(w.chain_id),
-      balance: 0,
+      crypto_symbol: mapChainIdToSymbol(w.chainId),
+      balance: typeof w.balance === 'number' ? w.balance : (typeof w.balance === 'string' ? parseFloat(w.balance) || 0 : 0),
       locked_balance: 0,
       deposit_address: w.address,
-      created_at: w.created_at,
-      updated_at: w.created_at,
+      created_at: w.createdAt,
+      updated_at: w.createdAt,
       isNonCustodial: true
     }));
   } catch (e) {
@@ -141,7 +112,7 @@ export async function getWalletTransactions(userId: string, limit: number = 29):
   // Resolve wallet addresses directly from Supabase so this works on any
   // browser — even before the local IndexedDB cache has been populated.
   const { data: walletRows } = await supabase
-    .from('user_wallets_safe')
+    .from('user_wallets')
     .select('address')
     .eq('user_id', userId)
     .eq('is_active', 'true');
