@@ -696,7 +696,6 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
 
           </div>
           </div>
-          </div>
 
           {/* Sticky action buttons — always visible, never scrolled away */}
           <div className="flex gap-2 pt-3 pb-1 flex-shrink-0 border-t border-border mt-2">
