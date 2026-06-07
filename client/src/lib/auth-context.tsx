@@ -490,6 +490,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   const checkedUsersRef = useRef<Set<string>>(new Set());
   const lastForceCheckRef = useRef<number>(0);
+  const mmFiredRef = useRef(false); // market movers: run once per app load regardless of event type
   const sessionTokenRef = useRef<string | null>(null);
   const isSigningOutRef = useRef(false);
   const activeUserIdRef = useRef<string | null>(null);
@@ -847,8 +848,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               const { isNewDevice, ipAddress, country, isp } = await trackDevice(userId);
               checkWalletOnAuthRef.current(userId);
               if (isNewDevice) sendLoginNotificationIfEnabled(userId, deviceInfo, ipAddress, country, isp);
-              fetchAndCreateMarketMoversNotifications(userId);
             }, 1500);
+          }
+
+          // Market movers: run once per app load for ANY session event
+          // (INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED).
+          // The function itself deduplicates via localStorage + Supabase,
+          // so firing it here on every auth state change is safe and cheap.
+          if (!mmFiredRef.current) {
+            mmFiredRef.current = true;
+            setTimeout(() => {
+              if (aborted) return;
+              fetchAndCreateMarketMoversNotifications(currentSession.user.id);
+            }, 2000);
           }
         }
 
