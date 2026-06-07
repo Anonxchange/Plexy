@@ -288,9 +288,10 @@ export async function sendLoginNotificationIfEnabled(
     const now = new Date();
     const timeStr = now.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
 
-    // Build location string: "Nigeria, 102.89.x.x" etc.
+    // Build location string: "Nigeria, Airtel Nigeria, 102.89.x.x" etc.
     const locationParts: string[] = [];
-    if (country)   locationParts.push(country);
+    if (country) locationParts.push(country);
+    if (isp && isp !== country) locationParts.push(isp);
     if (ipAddress && ipAddress !== 'unknown') locationParts.push(ipAddress);
     const locationStr = locationParts.length > 0 ? ` from ${locationParts.join(', ')}` : '';
 
@@ -366,10 +367,16 @@ export async function fetchAndCreateMarketMoversNotifications(userId: string): P
     const prefs = data?.notification_preferences as Record<string, boolean> | null;
     if (prefs && prefs.market_movers === false) return;
 
-    // 24-hour cooldown per user (per device — localStorage)
-    const lsKey = `pexly_mm_ts_${userId}`;
-    const lastRun = parseInt(localStorage.getItem(lsKey) || '0', 10);
-    if (Date.now() - lastRun < 24 * 60 * 60 * 1000) return;
+    // Two slots per day: morning (8–11 AM) and night (8–11 PM).
+    // Each slot fires at most once per calendar day, tracked separately in localStorage.
+    const hour = new Date().getHours();
+    const isMorning = hour >= 8  && hour < 12;
+    const isNight   = hour >= 20 && hour < 24;
+    if (!isMorning && !isNight) return;   // outside both windows — skip
+
+    const slotKey  = `pexly_mm_${isMorning ? 'morning' : 'night'}_${userId}`;
+    const today    = new Date().toDateString();                // e.g. "Mon Jun 07 2026"
+    if (localStorage.getItem(slotKey) === today) return;      // already fired for this slot today
 
     const [spotRaw, futuresRaw] = await Promise.all([
       fetchSpotTickers(),
@@ -440,7 +447,7 @@ export async function fetchAndCreateMarketMoversNotifications(userId: string): P
       metadata: pick.metadata,
     });
 
-    localStorage.setItem(lsKey, String(Date.now()));
+    localStorage.setItem(slotKey, today);
   } catch {
     // Never block the auth flow
   }
