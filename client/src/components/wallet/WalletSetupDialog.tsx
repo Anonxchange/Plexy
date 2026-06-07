@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { deriveVaultKey } from "@/lib/webCrypto";
 import { createClient } from "@/lib/supabase";
+import { devLog } from "@/lib/dev-logger";
 import { ShieldCheck, Lock, AlertTriangle, CheckCircle2, Loader2, X, RefreshCw } from '@/lib/icons';
 
 const COMMON_PASSWORDS = [
@@ -93,32 +94,41 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expec
         // which takes 15–30 s on a mobile CPU. Now it runs once (~1–3 s).
         const vaultKey = await deriveVaultKey(password);
 
-        const { mnemonicPhrase } = await nonCustodialWalletManager.generateNonCustodialWallet(
-          "ethereum",
-          password,
-          supabase,
-          userId,
-          undefined,
-          vaultKey
-        );
+        // Pass null supabase so each generation skips individual RPC saves.
+        // All wallets are collected and batch-saved atomically at the end.
+        const { mnemonicPhrase, wallet: ethWallet } =
+          await nonCustodialWalletManager.generateNonCustodialWallet(
+            "ethereum",
+            password,
+            null,      // skip individual save
+            userId,
+            undefined,
+            vaultKey
+          );
 
+        const generatedWallets = [ethWallet];
         const chains = ["Bitcoin (SegWit)", "Solana", "Tron (TRC-20)", "XRP", "BNB"];
         const failed: string[] = [];
         for (const chain of chains) {
           try {
-            await nonCustodialWalletManager.generateNonCustodialWallet(
+            const { wallet } = await nonCustodialWalletManager.generateNonCustodialWallet(
               chain,
               password,
-              supabase,
+              null,      // skip individual save
               userId,
               mnemonicPhrase,
               vaultKey
             );
+            generatedWallets.push(wallet);
           } catch (chainErr: any) {
-            console.error(`Failed to generate ${chain} wallet:`, chainErr);
+            devLog.error(`Failed to generate ${chain} wallet:`, chainErr);
             failed.push(chain);
           }
         }
+
+        // Atomic batch save — all wallets succeed or none do
+        await nonCustodialWalletManager.saveWalletsToSupabase(supabase, generatedWallets, userId);
+
         if (failed.length > 0) {
           toast({
             title: "Some wallets failed to generate",
