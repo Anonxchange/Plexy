@@ -372,7 +372,8 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
           </div>
         </ScrollArea>
       ) : (
-        <ScrollArea className="max-h-[65vh] pr-4">
+        <div className="flex flex-col flex-1 min-h-0">
+          <div className="overflow-y-auto flex-1 min-h-0 pr-1">
           <div className="space-y-4">
             {isWalletUnlocked ? (
               <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 mb-4">
@@ -693,32 +694,36 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
               </div>
             )}
 
-            <div className="flex gap-2 pt-4 pb-2">
-              <Button
-                variant="outline"
-                onClick={handleClose}
-                className="flex-1 h-12"
-                disabled={loading}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSend}
-                className="flex-1 h-12"
-                disabled={loading || !selectedCrypto || !toAddress || !amount}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  "Continue"
-                )}
-              </Button>
-            </div>
           </div>
-        </ScrollArea>
+          </div>
+          </div>
+
+          {/* Sticky action buttons — always visible, never scrolled away */}
+          <div className="flex gap-2 pt-3 pb-1 flex-shrink-0 border-t border-border mt-2">
+            <Button
+              variant="outline"
+              onClick={handleClose}
+              className="flex-1 h-12"
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSend}
+              className="flex-1 h-12"
+              disabled={loading || !selectedCrypto || !toAddress || !amount}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                "Continue"
+              )}
+            </Button>
+          </div>
+        </div>
       )}
     </>
   );
@@ -746,8 +751,8 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] bg-background">
-        <DialogHeader className="flex flex-row items-center justify-between">
+      <DialogContent className="sm:max-w-[500px] bg-background flex flex-col max-h-[85vh]">
+        <DialogHeader className="flex flex-row items-center justify-between flex-shrink-0">
           <DialogTitle>{title}</DialogTitle>
           <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8">
             <X className="h-4 w-4" />
