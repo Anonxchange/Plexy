@@ -1,4 +1,5 @@
 import { getSupabase } from "@/lib/supabase";
+import { asterMarket, type Ticker24h } from "@/lib/asterdex-service";
 
 export interface Notification {
   id: string;
@@ -297,15 +298,11 @@ export async function sendLoginNotificationIfEnabled(
 }
 
 // ─── Market Movers ───────────────────────────────────────────────────────────
-// Fires once per 24h per user (localStorage gate) when price_alerts pref is on.
-// Pulls the Binance public 24hr ticker, derives top-3 gainers / losers / hot
-// coins and inserts one price_alert notification per coin, staggered 300ms apart.
+// Fires once per 24h per user (localStorage gate) when market_movers pref is on.
+// Reuses asterMarket.spotTicker() / futuresTicker() — the same AsterDex public API
+// that MarketsSection already calls. Derives top-3 gainers / losers / hot coins
+// and inserts one price_alert notification per coin, staggered 300ms apart.
 
-const PERP_SYMBOLS = new Set([
-  'BTC','ETH','BNB','SOL','XRP','DOGE','ADA','AVAX','DOT','MATIC',
-  'LINK','LTC','UNI','ATOM','NEAR','APT','ARB','OP','INJ','TIA',
-  'SEI','SUI','PEPE','WIF','TON','NOT','BONK','FIL','IMX','BLUR',
-]);
 
 const COIN_NAMES: Record<string, string> = {
   BTC:'Bitcoin', ETH:'Ethereum', BNB:'BNB', SOL:'Solana', XRP:'XRP',
@@ -325,9 +322,6 @@ function mmFmtPrice(p: number) {
   return `$${p.toFixed(6)}`;
 }
 
-function mmMarketType(sym: string): 'perp' | 'spot' {
-  return PERP_SYMBOLS.has(sym.toUpperCase()) ? 'perp' : 'spot';
-}
 
 export async function fetchAndCreateMarketMoversNotifications(userId: string): Promise<void> {
   try {
@@ -342,25 +336,33 @@ export async function fetchAndCreateMarketMoversNotifications(userId: string): P
     const prefs = data?.notification_preferences as Record<string, boolean> | null;
     if (prefs && prefs.market_movers === false) return;
 
-    // 24-hour cooldown per user
+    // 24-hour cooldown per user (per device — localStorage)
     const lsKey = `pexly_mm_ts_${userId}`;
     const lastRun = parseInt(localStorage.getItem(lsKey) || '0', 10);
     if (Date.now() - lastRun < 24 * 60 * 60 * 1000) return;
 
-    // Fetch Binance public 24hr ticker (no auth needed)
-    const res = await fetch('https://api.binance.com/api/v3/ticker/24hr');
-    if (!res.ok) return;
-    const raw: any[] = await res.json();
+    // Use the same AsterDex public API that MarketsSection already uses — proven to work
+    const [spotRaw, futuresRaw]: [Ticker24h[], Ticker24h[]] = await Promise.all([
+      asterMarket.spotTicker(),
+      asterMarket.futuresTicker(),
+    ]);
 
-    // USDT pairs only, min $2M volume
-    const coins = raw
+    // Build a set of symbols that have a perpetual contract — used for routing
+    const futuresSymbols = new Set(
+      (futuresRaw as Ticker24h[]).filter(t => t.symbol.endsWith('USDT')).map(t => t.symbol)
+    );
+
+    // USDT pairs only, min $2M 24h volume
+    const coins = (spotRaw as Ticker24h[])
       .filter(t => t.symbol.endsWith('USDT') && parseFloat(t.quoteVolume) > 2_000_000)
       .map(t => ({
-        symbol: t.symbol.replace('USDT', ''),
-        pair:   t.symbol,
-        price:  parseFloat(t.lastPrice),
-        change: parseFloat(t.priceChangePercent),
-        volume: parseFloat(t.quoteVolume),
+        symbol:  t.symbol.replace('USDT', ''),
+        // Pair format must match what MarketsSection stores: "BTC/USDT" not "BTCUSDT"
+        pair:    `${t.symbol.replace('USDT', '')}/USDT`,
+        price:   parseFloat(t.lastPrice),
+        change:  parseFloat(t.priceChangePercent),
+        volume:  parseFloat(t.quoteVolume),
+        isPerp:  futuresSymbols.has(t.symbol),
       }));
 
     const byChange = [...coins].sort((a, b) => b.change - a.change);
@@ -373,17 +375,17 @@ export async function fetchAndCreateMarketMoversNotifications(userId: string): P
       ...gainers.map(c => ({
         title:    `${c.symbol} up ${c.change.toFixed(1)}% today 🚀`,
         message:  `${mmCoinName(c.symbol)} is surging, currently at ${mmFmtPrice(c.price)}. Tap to trade.`,
-        metadata: { symbol: c.symbol, pair: c.pair, marketType: mmMarketType(c.symbol), priceChange: c.change, price: c.price, category: 'gainer' },
+        metadata: { symbol: c.symbol, pair: c.pair, marketType: c.isPerp ? 'perp' : 'spot', priceChange: c.change, price: c.price, category: 'gainer' },
       })),
       ...losers.map(c => ({
         title:    `${c.symbol} down ${Math.abs(c.change).toFixed(1)}% today 📉`,
         message:  `${mmCoinName(c.symbol)} has dropped to ${mmFmtPrice(c.price)} in 24h. Tap to view.`,
-        metadata: { symbol: c.symbol, pair: c.pair, marketType: mmMarketType(c.symbol), priceChange: c.change, price: c.price, category: 'loser' },
+        metadata: { symbol: c.symbol, pair: c.pair, marketType: c.isPerp ? 'perp' : 'spot', priceChange: c.change, price: c.price, category: 'loser' },
       })),
       ...hot.map(c => ({
         title:    `${c.symbol} is trending 🔥`,
         message:  `${mmCoinName(c.symbol)} is one of today's most traded coins — at ${mmFmtPrice(c.price)}. Tap to trade.`,
-        metadata: { symbol: c.symbol, pair: c.pair, marketType: mmMarketType(c.symbol), priceChange: c.change, price: c.price, category: 'hot' },
+        metadata: { symbol: c.symbol, pair: c.pair, marketType: c.isPerp ? 'perp' : 'spot', priceChange: c.change, price: c.price, category: 'hot' },
       })),
     ];
 
