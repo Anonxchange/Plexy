@@ -5,6 +5,7 @@ import { getSupabase } from "./supabase";
 import { getClientIP } from "./get-client-ip";
 import { devLog } from "./dev-logger";
 import { sendLoginNotificationIfEnabled } from "./notifications-api";
+import { deviceFingerprint } from "./security/device-fingerprint";
 
 interface PendingAuth {
   userId: string;
@@ -219,40 +220,49 @@ function getDeviceInfo() {
   };
 }
 
-async function trackDevice(userId: string) {
+async function trackDevice(userId: string): Promise<{ isNewDevice: boolean; ipAddress: string }> {
+  const STALE_THRESHOLD_DAYS = 30;
   try {
     const supabase = await getSupabase();
     const deviceInfo = getDeviceInfo();
-    const ipAddress = await getClientIP();
+    const ipAddress = await getClientIP().catch(() => '');
+    // Use browser fingerprint hash as stable dedup key — survives IP/network changes
+    const fingerprintHash = await deviceFingerprint.getCurrentFingerprint();
+    const now = new Date().toISOString();
 
-    const { data: existingDevices } = await supabase
+    const { data: existing } = await supabase
       .from('user_devices')
-      .select('id, ip_address')
+      .select('id, last_active')
       .eq('user_id', userId)
-      .eq('user_agent', deviceInfo.userAgent)
-      .eq('ip_address', ipAddress);
+      .eq('fingerprint_hash', fingerprintHash)
+      .maybeSingle();
 
-    if (existingDevices && existingDevices.length > 0) {
-      const deviceId = existingDevices[0].id;
+    if (existing) {
+      const daysSince = (Date.now() - new Date(existing.last_active).getTime()) / 86_400_000;
+      const isStale = daysSince > STALE_THRESHOLD_DAYS;
       await supabase.from('user_devices').update({ is_current: false }).eq('user_id', userId);
       await supabase.from('user_devices')
-        .update({ is_current: true, last_active: new Date().toISOString() })
-        .eq('id', deviceId);
-    } else {
-      await supabase.from('user_devices').update({ is_current: false }).eq('user_id', userId);
-      await supabase.from('user_devices').insert({
-        user_id: userId,
-        device_name: deviceInfo.deviceName,
-        browser: deviceInfo.browser,
-        os: deviceInfo.os,
-        ip_address: ipAddress,
-        user_agent: deviceInfo.userAgent,
-        is_current: true,
-        last_active: new Date().toISOString(),
-      });
+        .update({ is_current: true, last_active: now, ip_address: ipAddress })
+        .eq('id', existing.id);
+      return { isNewDevice: isStale, ipAddress };
     }
+
+    // Genuinely new device — insert a record and signal caller to fire notification
+    await supabase.from('user_devices').update({ is_current: false }).eq('user_id', userId);
+    await supabase.from('user_devices').insert({
+      user_id: userId,
+      fingerprint_hash: fingerprintHash,
+      device_name: deviceInfo.deviceName,
+      browser: deviceInfo.browser,
+      os: deviceInfo.os,
+      ip_address: ipAddress,
+      user_agent: deviceInfo.userAgent,
+      is_current: true,
+      last_active: now,
+    });
+    return { isNewDevice: true, ipAddress };
   } catch {
-    // Silent fail for tracking
+    return { isNewDevice: false, ipAddress: '' };
   }
 }
 
@@ -801,11 +811,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               if (aborted) return;
               const userId = currentSession.user.id;
               const deviceInfo = getDeviceInfo();
-              await trackDevice(userId);
+              const { isNewDevice, ipAddress } = await trackDevice(userId);
               checkWalletOnAuthRef.current(userId);
-              // Fire login notification if the user has it enabled
-              const ip = await getClientIP().catch(() => '');
-              sendLoginNotificationIfEnabled(userId, deviceInfo, ip);
+              if (isNewDevice) sendLoginNotificationIfEnabled(userId, deviceInfo, ipAddress);
             }, 1500);
           }
         }
@@ -1007,9 +1015,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Replicate the async post-login tasks normally run in the SIGNED_IN handler
         setTimeout(async () => {
           const deviceInfo = getDeviceInfo();
+          const { isNewDevice, ipAddress } = await trackDevice(dUser.id);
           checkWalletOnAuthRef.current(dUser.id);
-          const ip = await getClientIP().catch(() => '');
-          sendLoginNotificationIfEnabled(dUser.id, deviceInfo, ip);
+          if (isNewDevice) sendLoginNotificationIfEnabled(dUser.id, deviceInfo, ipAddress);
         }, 1500);
       }
     } else {
@@ -1032,12 +1040,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession(pendingSessionData);
     setUser(pendingUser);
     
-    await trackDevice(pendingUser.id);
-
-    // Fire login notification if the user has it enabled
+    const { isNewDevice, ipAddress } = await trackDevice(pendingUser.id);
     const deviceInfo = getDeviceInfo();
-    const ip = await getClientIP().catch(() => '');
-    sendLoginNotificationIfEnabled(pendingUser.id, deviceInfo, ip);
+    if (isNewDevice) sendLoginNotificationIfEnabled(pendingUser.id, deviceInfo, ipAddress);
     
     // Clear pending state
     setPendingOTPWithTimestamp(null);
@@ -1076,9 +1081,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session.user);
       setTimeout(async () => {
         const deviceInfo = getDeviceInfo();
+        const { isNewDevice, ipAddress } = await trackDevice(session.user.id);
         checkWalletOnAuthRef.current(session.user.id);
-        const ip = await getClientIP().catch(() => '');
-        sendLoginNotificationIfEnabled(session.user.id, deviceInfo, ip);
+        if (isNewDevice) sendLoginNotificationIfEnabled(session.user.id, deviceInfo, ipAddress);
       }, 1500);
     }
   }, []);
