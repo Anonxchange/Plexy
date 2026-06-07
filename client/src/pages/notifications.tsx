@@ -42,6 +42,7 @@ import {
 import { TransactionDetailSheet, type TxForDetail } from "@/components/wallet/TransactionDetailSheet";
 import { useAuth } from "@/lib/auth-context";
 import { sanitizeImageUrl, sanitizeRichText } from "@/lib/sanitize";
+import { createClient } from "@/lib/supabase";
 import {
   DAILY_TASKS,
   ONE_TIME_TASKS,
@@ -188,11 +189,17 @@ function formatTime(dateString: string): string {
   return `${Math.floor(diffDays / 30)}mo ago`;
 }
 
+/** True for any notification that should appear in the Security tab only. */
+function isSecurityNotif(n: Notification): boolean {
+  return n.type === "account_change" ||
+    (n.type === "system" && (n.metadata as Record<string, unknown> | null)?.notificationSubtype === "account_change");
+}
+
 function getNotificationIcon(notification: Notification) {
   const msg = notification.message.toLowerCase();
   const cls = "h-5 w-5";
 
-  if (notification.type === "account_change") {
+  if (isSecurityNotif(notification)) {
     const changeType = notification.metadata?.changeType as string | undefined;
     if (changeType === "login_attempt" || msg.includes("sign-in") || msg.includes("signed in") || msg.includes("login")) return <LogIn className={cn(cls, "text-purple-500")} />;
     if (changeType === "password_changed" || msg.includes("password")) return <Shield className={cn(cls, "text-orange-500")} />;
@@ -200,7 +207,6 @@ function getNotificationIcon(notification: Notification) {
     return <Shield className={cn(cls, "text-orange-500")} />;
   }
   if (notification.type === "system") {
-    if (msg.includes("login") || msg.includes("sign-in")) return <LogIn className={cn(cls, "text-purple-500")} />;
     if (msg.includes("verified") || msg.includes("approved")) return <Shield className={cn(cls, "text-green-500")} />;
     if (msg.includes("rejected") || msg.includes("failed")) return <AlertTriangle className={cn(cls, "text-red-500")} />;
     return <Info className={cn(cls, "text-blue-500")} />;
@@ -230,18 +236,19 @@ interface NotificationItemProps {
 
 function NotificationItem({ notification, onClick }: NotificationItemProps) {
   const type = notification.type;
+  const isSecurity = isSecurityNotif(notification);
   const accentColor =
-    type === "account_change" ? "bg-orange-500/5 border-orange-500/10" :
-    type === "payment"        ? "bg-emerald-500/5 border-emerald-500/10" :
-                                "bg-purple-500/5 border-purple-500/10";
+    isSecurity          ? "bg-orange-500/5 border-orange-500/10" :
+    type === "payment"  ? "bg-emerald-500/5 border-emerald-500/10" :
+                          "bg-purple-500/5 border-purple-500/10";
   const dotColor =
-    type === "account_change" ? "bg-orange-500" :
-    type === "payment"        ? "bg-emerald-500" :
-                                "bg-primary";
+    isSecurity          ? "bg-orange-500" :
+    type === "payment"  ? "bg-emerald-500" :
+                          "bg-primary";
   const iconBg =
-    type === "account_change" ? "bg-orange-100 dark:bg-orange-900/20" :
-    type === "payment"        ? "bg-emerald-100 dark:bg-emerald-900/20" :
-                                "bg-purple-100 dark:bg-purple-900/20";
+    isSecurity          ? "bg-orange-100 dark:bg-orange-900/20" :
+    type === "payment"  ? "bg-emerald-100 dark:bg-emerald-900/20" :
+                          "bg-purple-100 dark:bg-purple-900/20";
 
   return (
     <button
@@ -337,6 +344,7 @@ export default function NotificationsPage() {
 
   const [, navigate] = useLocation();
   const { user } = useAuth();
+  const supabase = createClient();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [deposits, setDeposits] = useState<WalletTx[]>([]);
@@ -383,6 +391,21 @@ export default function NotificationsPage() {
     loadDeposits();
     loadWithdrawals();
 
+    // Sync read announcement IDs from DB so state persists across devices
+    supabase
+      .from('user_announcement_reads')
+      .select('announcement_id')
+      .eq('user_id', user.id)
+      .then(({ data }) => {
+        if (!data?.length) return;
+        setReadAnnouncementIds((prev) => {
+          const merged = new Set(prev);
+          data.forEach((r) => merged.add(r.announcement_id));
+          try { localStorage.setItem("readAnnouncementIds", JSON.stringify(Array.from(merged))); } catch {}
+          return merged;
+        });
+      });
+
     const unsubscribe = subscribeToNotifications(user.id, (newNotif) => {
       setNotifications((prev) => [newNotif, ...prev]);
     });
@@ -407,9 +430,12 @@ export default function NotificationsPage() {
     const updated = new Set(readAnnouncementIds);
     updated.add(id);
     setReadAnnouncementIds(updated);
-    try {
-      localStorage.setItem("readAnnouncementIds", JSON.stringify(Array.from(updated)));
-    } catch {}
+    try { localStorage.setItem("readAnnouncementIds", JSON.stringify(Array.from(updated))); } catch {}
+    if (user?.id) {
+      supabase.from('user_announcement_reads')
+        .upsert({ user_id: user.id, announcement_id: id }, { onConflict: 'user_id,announcement_id' })
+        .then(() => {});
+    }
   };
 
   const handleAnnouncementClick = (announcement: Announcement) => {
@@ -427,22 +453,30 @@ export default function NotificationsPage() {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     const allAnnouncementIds = new Set(announcements.map((a) => a.id));
     setReadAnnouncementIds(allAnnouncementIds);
-    try {
-      localStorage.setItem("readAnnouncementIds", JSON.stringify(Array.from(allAnnouncementIds)));
-    } catch {}
+    try { localStorage.setItem("readAnnouncementIds", JSON.stringify(Array.from(allAnnouncementIds))); } catch {}
+    if (user?.id && announcements.length > 0) {
+      supabase.from('user_announcement_reads')
+        .upsert(
+          announcements.map((a) => ({ user_id: user.id, announcement_id: a.id })),
+          { onConflict: 'user_id,announcement_id' }
+        )
+        .then(() => {});
+    }
   };
 
-  // Categorise — no P2P types (trade / offer)
-  const systemNotifications = notifications.filter((n) => n.type === "system");
-  const securityNotifications = notifications.filter((n) => n.type === "account_change");
+  // Categorise — security notifications go only to Security tab, not All
+  const securityNotifications = notifications.filter(isSecurityNotif);
+  const systemNotifications = notifications.filter((n) => n.type === "system" && !isSecurityNotif(n));
   const generalNotifications = notifications.filter(
-    (n) => n.type !== "system" && n.type !== "account_change"
+    (n) => n.type !== "system" && !isSecurityNotif(n)
   );
+  // "All" tab excludes security notifications — they live only in the Security tab
+  const allTabNotifications = notifications.filter((n) => !isSecurityNotif(n));
 
   const unreadAnnouncements = announcements.filter((a) => !readAnnouncementIds.has(a.id)).length;
   const unreadSystem = systemNotifications.filter((n) => !n.read).length + unreadAnnouncements;
   const unreadSecurity = securityNotifications.filter((n) => !n.read).length;
-  const unreadAll = notifications.filter((n) => !n.read).length + unreadAnnouncements;
+  const unreadAll = allTabNotifications.filter((n) => !n.read).length + unreadAnnouncements;
 
   const badgeCounts: Record<TabId, number> = {
     all:         unreadAll,
@@ -460,7 +494,7 @@ export default function NotificationsPage() {
       unreadOnly ? items.filter((i) => !i.read) : items;
 
     if (activeTab === "all") {
-      const filteredNotifs = applyUnreadFilter(notifications);
+      const filteredNotifs = applyUnreadFilter(allTabNotifications);
       const filteredAnnouncements = unreadOnly
         ? announcements.filter((a) => !readAnnouncementIds.has(a.id))
         : announcements;
