@@ -379,8 +379,8 @@ export async function fetchAndCreateMarketMoversNotifications(userId: string): P
     // Slot schedule (local time):  morning=08:00  afternoon=13:00  night=20:00
     // Dedup key: metadata.dateStr + metadata.slot (server-side via Supabase).
 
-    type MMSlot = 'morning' | 'afternoon' | 'night';
-    const SLOT_HOUR: Record<MMSlot, number> = { morning: 8, afternoon: 13, night: 20 };
+    type MMSlot = 'morning' | 'night';
+    const SLOT_HOUR: Record<MMSlot, number> = { morning: 8, night: 20 };
 
     type SlotEntry = { dateStr: string; slot: MMSlot; scheduledAt: Date };
 
@@ -394,7 +394,7 @@ export async function fetchAndCreateMarketMoversNotifications(userId: string): P
       day.setDate(day.getDate() - daysBack);
       const dateStr = day.toDateString(); // e.g. "Sun Jun 06 2026"
 
-      for (const slot of (['morning', 'afternoon', 'night'] as MMSlot[])) {
+      for (const slot of (['morning', 'night'] as MMSlot[])) {
         const scheduled = new Date(day);
         scheduled.setHours(SLOT_HOUR[slot], 0, 0, 0);
         // Only include if the scheduled time has already passed
