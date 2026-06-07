@@ -217,7 +217,7 @@ export async function createAccountChangeNotification(
     const supabase = await getSupabase();
     const { error } = await supabase.from('notifications').insert({
       user_id: userId, title: change.title, message: change.message,
-      type: 'account_change', read: false, metadata: { changeType, ...metadata },
+      type: 'system', read: false, metadata: { changeType, notificationSubtype: 'account_change', ...metadata },
     });
     if (error) { console.error('Error creating account change notification:', error); return false; }
     return true;
@@ -288,8 +288,8 @@ export async function sendLoginNotificationIfEnabled(
 
     await supabase.from('notifications').insert({
       user_id: userId, title: 'New Sign-In to Your Account', message,
-      type: 'account_change', read: false,
-      metadata: { changeType: 'login_attempt', browser: deviceInfo.browser, os: deviceInfo.os, deviceName: deviceInfo.deviceName, ipAddress, signedInAt: now.toISOString() },
+      type: 'system', read: false,
+      metadata: { changeType: 'login_attempt', notificationSubtype: 'account_change', browser: deviceInfo.browser, os: deviceInfo.os, deviceName: deviceInfo.deviceName, ipAddress, signedInAt: now.toISOString() },
     });
   } catch {
     // Never block the auth flow
