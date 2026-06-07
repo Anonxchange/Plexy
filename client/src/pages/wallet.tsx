@@ -35,6 +35,7 @@ export default function WalletPage() {
   const [importExpectedAddress, setImportExpectedAddress] = useState<string | null>(null);
   // Must be declared here (before any early return) to satisfy Rules of Hooks.
   const [selectedAsset, setSelectedAsset] = useState<string | undefined>();
+  const [showBalance, setShowBalance] = useState(true);
 
   // showSkeleton is true while loading (includes live balance fetch) or fetching without existing data.
   // Only show skeleton on error when there's no cached data to fall back to.
@@ -173,14 +174,12 @@ export default function WalletPage() {
     }
   };
 
-  const handleSelectReceiveMethod = (method: "crypto" | "fiat" | "p2p") => {
+  const handleSelectReceiveMethod = (method: "crypto" | "fiat") => {
     setReceiveMethodDialogOpen(false);
     if (method === "crypto") {
       setReceiveDialogOpen(true);
     } else if (method === "fiat") {
       setLocation("/buy-crypto");
-    } else if (method === "p2p") {
-      setLocation("/p2p");
     }
   };
 
@@ -223,6 +222,8 @@ export default function WalletPage() {
                       onReceive={() => handleReceive()}
                       onSwap={() => setLocation("/swap")}
                       onTopup={() => setLocation("/wallet/mobile-topup")}
+                      showBalance={showBalance}
+                      onToggleBalance={() => setShowBalance(v => !v)}
                     />
                     
                     <div className="p-6">
@@ -249,6 +250,7 @@ export default function WalletPage() {
                           onSend={handleSend}
                           onReceive={handleReceive}
                           onSwap={(symbol) => setLocation(symbol ? `/swap?symbol=${symbol}` : "/swap")}
+                          showBalance={showBalance}
                         />
                       )}
                     </div>
