@@ -1,5 +1,5 @@
 import { nonCustodialWalletManager } from "./non-custodial-wallet";
-import { supabase } from "./supabase";
+import { supabase, getSupabase } from "./supabase";
 
 export interface Wallet {
   id: string;
@@ -72,32 +72,60 @@ export async function recordTransaction(
   return data as WalletTransaction;
 }
 
+function mapChainIdToSymbol(chainId: string): string {
+  if (chainId === 'Ethereum (ERC-20)' || chainId === 'ethereum') return 'ETH';
+  if (chainId === 'Bitcoin (SegWit)'  || chainId === 'bitcoin')  return 'BTC';
+  if (chainId === 'Binance Smart Chain (BEP-20)' || chainId === 'BNB' || chainId === 'BSC') return 'BNB';
+  if (chainId === 'Solana')           return 'SOL';
+  if (chainId === 'Tron (TRC-20)')    return 'TRX';
+  if (chainId === 'XRP')              return 'XRP';
+  return chainId;
+}
+
 export async function getUserWallets(userId: string): Promise<Wallet[]> {
   try {
-    // Remote sync logic removed as requested (custodial logic/duplicate calls)
+    // 1. Try local IDB cache first (fast, offline-capable).
     const localWallets = await (nonCustodialWalletManager as any).getWalletsFromStorage(userId);
     if (import.meta.env.DEV) console.log(`[getUserWallets] Found ${localWallets.length} local wallets`);
-    return localWallets.map((w: any) => {
-      let symbol = w.chainId;
-      if (w.chainId === 'Ethereum (ERC-20)' || w.chainId === 'ethereum') symbol = 'ETH';
-      else if (w.chainId === 'Bitcoin (SegWit)' || w.chainId === 'bitcoin') symbol = 'BTC';
-      else if (w.chainId === 'Binance Smart Chain (BEP-20)' || w.chainId === 'BNB' || w.chainId === 'BSC') symbol = 'BNB';
-      else if (w.chainId === 'Solana') symbol = 'SOL';
-      else if (w.chainId === 'Tron (TRC-20)') symbol = 'TRX';
-      else if (w.chainId === 'XRP') symbol = 'XRP';
 
-      return {
+    if (localWallets.length > 0) {
+      return localWallets.map((w: any) => ({
         id: w.id,
         user_id: userId,
-        crypto_symbol: symbol,
+        crypto_symbol: mapChainIdToSymbol(w.chainId),
         balance: typeof w.balance === 'number' ? w.balance : (typeof w.balance === 'string' ? parseFloat(w.balance) || 0 : 0),
         locked_balance: 0,
         deposit_address: w.address,
         created_at: w.createdAt,
         updated_at: w.createdAt,
         isNonCustodial: true
-      };
-    });
+      }));
+    }
+
+    // 2. IDB is empty — fall back to Supabase (user_wallets_safe) so deposit
+    //    addresses are always available even before loadWalletsFromSupabase
+    //    has run (e.g. send/receive dialogs opened before auth-context finishes).
+    if (import.meta.env.DEV) console.log(`[getUserWallets] IDB empty, falling back to user_wallets_safe`);
+    const client = await getSupabase();
+    const { data, error } = await client
+      .from('user_wallets_safe')
+      .select('id, chain_id, address, is_active, created_at')
+      .eq('user_id', userId)
+      .eq('is_active', 'true');
+
+    if (error || !data || data.length === 0) return [];
+
+    return data.map((w: any) => ({
+      id: w.id,
+      user_id: userId,
+      crypto_symbol: mapChainIdToSymbol(w.chain_id),
+      balance: 0,
+      locked_balance: 0,
+      deposit_address: w.address,
+      created_at: w.created_at,
+      updated_at: w.created_at,
+      isNonCustodial: true
+    }));
   } catch (e) {
     console.error(`[getUserWallets] Error fetching wallets:`, e);
     return [];
