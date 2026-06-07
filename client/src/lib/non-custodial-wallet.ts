@@ -359,30 +359,35 @@ class NonCustodialWalletManager {
   }
 
   public async saveWalletToSupabase(supabase: any, wallet: NonCustodialWallet, userId: string): Promise<void> {
-    // TODO: RLS now blocks direct client writes to user_wallets.
-    // This must be migrated to a Supabase edge function that accepts the wallet
-    // payload, validates ownership, and writes with service_role.
-    // Until that edge function exists this call will fail silently (logged below).
+    // Writes go through the save_wallet SECURITY DEFINER RPC which:
+    //   • enforces auth.uid() === user_id before touching the table
+    //   • validates the encrypted vault payload is non-empty
+    //   • never overwrites created_at on updates
     const { error } = await supabase
-      .from('user_wallets')
-      .upsert({
-        id: wallet.id,
-        user_id: userId,
-        chain_id: wallet.chainId,
-        address: wallet.address,
-        wallet_type: wallet.walletType,
-        encrypted_private_key: wallet.encryptedPrivateKey,
-        encrypted_mnemonic: wallet.encryptedMnemonic,
-        is_active: wallet.isActive ? 'true' : 'false',
-        is_backed_up: wallet.isBackedUp ? 'true' : 'false',
-        asset_type: wallet.assetType,
-        base_chain_wallet_id: wallet.baseChainWalletId,
-        balance: wallet.balance,
-        created_at: wallet.createdAt
+      .rpc('save_wallet', {
+        p_id:                    wallet.id,
+        p_user_id:               userId,
+        p_chain_id:              wallet.chainId,
+        p_address:               wallet.address,
+        p_wallet_type:           wallet.walletType,
+        p_encrypted_private_key: typeof wallet.encryptedPrivateKey === 'string'
+          ? wallet.encryptedPrivateKey
+          : JSON.stringify(wallet.encryptedPrivateKey),
+        p_encrypted_mnemonic:    wallet.encryptedMnemonic
+          ? (typeof wallet.encryptedMnemonic === 'string'
+              ? wallet.encryptedMnemonic
+              : JSON.stringify(wallet.encryptedMnemonic))
+          : null,
+        p_is_active:             wallet.isActive    ? 'true' : 'false',
+        p_is_backed_up:          wallet.isBackedUp  ? 'true' : 'false',
+        p_asset_type:            wallet.assetType            ?? null,
+        p_base_chain_wallet_id:  wallet.baseChainWalletId    ?? null,
+        p_balance:               wallet.balance              ?? null,
+        p_created_at:            wallet.createdAt,
       });
 
     if (error) {
-      devLog.error("Error saving wallet to Supabase:", error);
+      devLog.error("Error saving wallet via RPC:", error);
     }
   }
 
