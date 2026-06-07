@@ -110,11 +110,12 @@ export function NotificationsSection() {
       } catch {}
 
       if (user?.id) {
-        const { error } = await supabase
+        await supabase
           .from("user_profiles")
           .update({ notification_preferences: prefs })
           .eq("id", user.id);
-        if (error) throw error;
+        // Silently ignore DB errors — column may not exist in this deployment;
+        // preferences are already persisted to localStorage above.
       }
 
       setSaved(true);
