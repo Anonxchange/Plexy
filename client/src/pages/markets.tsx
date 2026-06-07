@@ -88,18 +88,45 @@ function ChangePill({ pct }: { pct: number }) {
 
 // ─── Stats bar ───────────────────────────────────────────────────────────────
 
-const STATS = [
-  { label: "Total Mkt Cap",  value: "$2.71T", change: "+1.8%",  up: true  },
-  { label: "24h Volume",     value: "$217.4B",change: "-3.1%",  up: false },
-  { label: "BTC Dominance",  value: "54.3%",  change: "+0.4%",  up: true  },
-  { label: "Fear & Greed",   value: "68 — Greed", change: "", up: true },
-  { label: "ETH Gas",        value: "0.035 Gwei",  change: "", up: true },
-];
+function fmtGlobal(n: number) {
+  return n >= 1e12 ? `$${(n / 1e12).toFixed(2)}T` : `$${(n / 1e9).toFixed(1)}B`;
+}
 
-function StatsBar() {
+interface GlobalData { total_market_cap: { usd: number }; total_volume: { usd: number }; market_cap_percentage: { btc: number }; market_cap_change_percentage_24h_usd: number; }
+interface FngData { value: string; value_classification: string; }
+
+function StatsBar({ g, fng, ethGas }: { g?: GlobalData; fng?: FngData; ethGas?: string }) {
+  const stats = [
+    {
+      label: "Total Mkt Cap",
+      value: g ? fmtGlobal(g.total_market_cap.usd) : "—",
+      change: g ? `${g.market_cap_change_percentage_24h_usd >= 0 ? "+" : ""}${g.market_cap_change_percentage_24h_usd.toFixed(1)}%` : "",
+      up: g ? g.market_cap_change_percentage_24h_usd >= 0 : true,
+    },
+    {
+      label: "24h Volume",
+      value: g ? fmtGlobal(g.total_volume.usd) : "—",
+      change: "", up: true,
+    },
+    {
+      label: "BTC Dominance",
+      value: g ? `${g.market_cap_percentage.btc.toFixed(1)}%` : "—",
+      change: "", up: true,
+    },
+    {
+      label: "Fear & Greed",
+      value: fng ? `${fng.value} — ${fng.value_classification}` : "—",
+      change: "", up: fng ? parseInt(fng.value) >= 50 : true,
+    },
+    {
+      label: "ETH Gas",
+      value: ethGas ? `${ethGas} Gwei` : "—",
+      change: "", up: true,
+    },
+  ];
   return (
     <div className="bg-card rounded-xl px-5 py-4 flex flex-wrap gap-x-8 gap-y-3 overflow-x-auto">
-      {STATS.map((s, i) => (
+      {stats.map((s, i) => (
         <div key={i} className="flex flex-col min-w-[90px]">
           <span className="text-[11px] font-semibold text-muted-foreground mb-0.5">{s.label}</span>
           <span className="text-sm font-bold text-foreground">{s.value}</span>
@@ -212,6 +239,45 @@ export default function MarketsPage() {
     staleTime: 300_000,
   });
 
+  const { data: globalData } = useQuery<GlobalData>({
+    queryKey: ["coingecko-global"],
+    queryFn: async () => {
+      const res = await fetch("https://api.coingecko.com/api/v3/global");
+      if (!res.ok) throw new Error("CoinGecko unavailable");
+      const json = await res.json();
+      return json.data;
+    },
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+  });
+
+  const { data: fngData } = useQuery<FngData>({
+    queryKey: ["fear-greed"],
+    queryFn: async () => {
+      const res = await fetch("https://api.alternative.me/fng/?limit=1");
+      if (!res.ok) throw new Error("FNG unavailable");
+      const json = await res.json();
+      return json.data[0];
+    },
+    staleTime: 300_000,
+    refetchInterval: 600_000,
+  });
+
+  const { data: ethGasGwei } = useQuery<string>({
+    queryKey: ["eth-gas-gwei"],
+    queryFn: async () => {
+      const res = await fetch("https://eth.llamarpc.com", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", method: "eth_gasPrice", params: [], id: 1 }),
+      });
+      const json = await res.json();
+      return (parseInt(json.result, 16) / 1e9).toFixed(3);
+    },
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+
   // ── build helper maps from exchange info ──────────────────────────────────
   const spotAddressMap = useMemo<Record<string, string>>(() => {
     const m: Record<string, string> = {};
@@ -272,6 +338,7 @@ export default function MarketsPage() {
     if (!Array.isArray(tickers)) return [];
     return tickers
       .filter(t => !t.symbol.startsWith("TEST"))
+      .filter(t => !t.symbol.includes("_UP_DOWN_") && !t.symbol.includes("_UP_") && !t.symbol.includes("_DOWN_") && !t.symbol.match(/^[A-Z]+_(BULL|BEAR|CALL|PUT|UP|DOWN)\d/i))
       .map(t => {
         const dp   = toDisplayPair(t.symbol);
         const base = getBase(dp);
@@ -352,6 +419,36 @@ export default function MarketsPage() {
   const topLosers   = useMemo(() => [...allRows].sort((a, b) => a.change - b.change).slice(0, 5), [allRows]);
   const byVolume    = useMemo(() => [...allRows].sort((a, b) => b.volume - a.volume).slice(0, 5), [allRows]);
 
+  // ── live computed key-metrics ─────────────────────────────────────────────
+  const trendDist = useMemo(() => {
+    const up      = allRows.filter(r => r.change > 0.5).length;
+    const down    = allRows.filter(r => r.change < -0.5).length;
+    const neutral = allRows.length - up - down;
+    const total   = allRows.length || 1;
+    return { up, down, neutral, total };
+  }, [allRows]);
+
+  const trendingSectors = useMemo(() => {
+    const sectorMap: Record<string, number[]> = {};
+    futuresRows.forEach(r => {
+      r.subTypes.forEach(st => {
+        if (!sectorMap[st]) sectorMap[st] = [];
+        sectorMap[st].push(r.change);
+      });
+    });
+    return Object.entries(sectorMap)
+      .filter(([, changes]) => changes.length >= 2)
+      .map(([name, changes]) => {
+        const avg = changes.reduce((a, b) => a + b, 0) / changes.length;
+        const topCoin = futuresRows
+          .filter(r => r.subTypes.includes(name))
+          .sort((a, b) => Math.abs(b.change) - Math.abs(a.change))[0];
+        return { name, change: avg, coin: topCoin?.base ?? "", cp: topCoin?.change ?? 0 };
+      })
+      .sort((a, b) => b.change - a.change)
+      .slice(0, 8);
+  }, [futuresRows]);
+
   // ── SVG gauge (for Key Metrics sentiment) ─────────────────────────────────
   function Gauge({ value }: { value: number }) {
     const pct = value / 100;
@@ -400,7 +497,7 @@ export default function MarketsPage() {
         {mainTab === "overview" && (
           <>
             {/* Stats bar */}
-            <StatsBar />
+            <StatsBar g={globalData} fng={fngData} ethGas={ethGasGwei} />
 
             {/* Top movers panels */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -708,32 +805,42 @@ export default function MarketsPage() {
         {mainTab === "key-metrics" && (
           <div className="space-y-3">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[
-                { label: "Market Sentiment", gauge: true },
-                { label: "Market Cap",   value: "$3.36T", change: "-2.77%", red: true },
-                { label: "24h Volume",   value: "$529.5B", change: "-25.65%", red: true },
-                { label: "ETH Gas",      value: "0.039 Gwei", sub: "≈ $0.003" },
-              ].map((m, i) => (
-                <div key={i} className="bg-card rounded-xl p-5">
-                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">{m.label}</p>
-                  {m.gauge
-                    ? <div className="flex flex-col items-center"><Gauge value={44} /></div>
-                    : <>
-                        <p className={`text-lg font-bold ${m.red ? "text-red-500" : "text-foreground"} mb-0.5`}>{m.value}</p>
-                        {m.change && <p className="text-xs font-semibold text-red-400">{m.change}</p>}
-                        {m.sub && <p className="text-xs text-muted-foreground">{m.sub}</p>}
-                        {m.red && (
-                          <div className="h-6 mt-3 w-full rounded overflow-hidden">
-                            <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="w-full h-full">
-                              <path d="M0,40 L20,35 L40,38 L60,25 L80,30 L100,20 L100,40 Z" fill="#FEE2E2" />
-                              <path d="M0,40 L20,35 L40,38 L60,25 L80,30 L100,20" fill="none" stroke="#EF4444" strokeWidth="2" />
-                            </svg>
-                          </div>
-                        )}
-                      </>
-                  }
+              {/* Market Sentiment — fear & greed gauge */}
+              <div className="bg-card rounded-xl p-5">
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Market Sentiment</p>
+                <div className="flex flex-col items-center">
+                  <Gauge value={fngData ? parseInt(fngData.value) : 50} />
+                  {fngData && <p className="text-[11px] text-muted-foreground mt-1">{fngData.value_classification}</p>}
                 </div>
-              ))}
+              </div>
+              {/* Market Cap */}
+              <div className="bg-card rounded-xl p-5">
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Market Cap</p>
+                {globalData ? (
+                  <>
+                    <p className={`text-lg font-bold mb-0.5 ${globalData.market_cap_change_percentage_24h_usd < 0 ? "text-red-500" : "text-green-500"}`}>
+                      {fmtGlobal(globalData.total_market_cap.usd)}
+                    </p>
+                    <p className={`text-xs font-semibold ${globalData.market_cap_change_percentage_24h_usd < 0 ? "text-red-400" : "text-green-500"}`}>
+                      {globalData.market_cap_change_percentage_24h_usd >= 0 ? "+" : ""}{globalData.market_cap_change_percentage_24h_usd.toFixed(2)}%
+                    </p>
+                  </>
+                ) : <p className="text-lg font-bold text-muted-foreground">—</p>}
+              </div>
+              {/* 24h Volume */}
+              <div className="bg-card rounded-xl p-5">
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">24h Volume</p>
+                {globalData
+                  ? <p className="text-lg font-bold text-foreground mb-0.5">{fmtGlobal(globalData.total_volume.usd)}</p>
+                  : <p className="text-lg font-bold text-muted-foreground">—</p>}
+              </div>
+              {/* ETH Gas */}
+              <div className="bg-card rounded-xl p-5">
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">ETH Gas</p>
+                {ethGasGwei
+                  ? <><p className="text-lg font-bold text-foreground mb-0.5">{ethGasGwei} Gwei</p><p className="text-xs text-muted-foreground">≈ ${(parseFloat(ethGasGwei) * 21000 * 3000 / 1e9).toFixed(4)}</p></>
+                  : <p className="text-lg font-bold text-muted-foreground">—</p>}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
@@ -743,12 +850,12 @@ export default function MarketsPage() {
                     <h3 className="font-bold text-foreground">Price Trend Distribution</h3>
                   </div>
                   <div className="flex h-3 w-full rounded-full overflow-hidden mb-4">
-                    <div className="bg-red-500 h-full" style={{ width: "85%" }} />
-                    <div className="bg-muted h-full" style={{ width: "5%" }} />
-                    <div className="bg-green-500 h-full" style={{ width: "10%" }} />
+                    <div className="bg-red-500 h-full" style={{ width: `${Math.round(trendDist.down / trendDist.total * 100)}%` }} />
+                    <div className="bg-muted h-full" style={{ width: `${Math.round(trendDist.neutral / trendDist.total * 100)}%` }} />
+                    <div className="bg-green-500 h-full" style={{ width: `${Math.round(trendDist.up / trendDist.total * 100)}%` }} />
                   </div>
                   <div className="grid grid-cols-3 text-center gap-2">
-                    {[["429", "Down", "text-red-500"], ["16", "No Change", "text-foreground/70"], ["45", "Up", "text-green-500"]].map(([n, l, c]) => (
+                    {([[String(trendDist.down), "Down", "text-red-500"], [String(trendDist.neutral), "No Change", "text-foreground/70"], [String(trendDist.up), "Up", "text-green-500"]] as [string,string,string][]).map(([n, l, c]) => (
                       <div key={l}>
                         <p className={`text-xl font-bold ${c}`}>{n}</p>
                         <p className="text-xs text-muted-foreground font-semibold">{l}</p>
@@ -760,25 +867,22 @@ export default function MarketsPage() {
                 <div className="bg-card rounded-xl p-5">
                   <h3 className="font-bold text-foreground mb-4">Trending Sectors</h3>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {[
-                      { name: "Privacy Coins", change: "+15.77%", coin: "ROSE", cp: "+39.92%" },
-                      { name: "AI Tokens",     change: "+12.76%", coin: "ROSE", cp: "+39.92%" },
-                      { name: "Pantera",       change: "+7.88%",  coin: "ROSE", cp: "+39.92%" },
-                      { name: "Polychain",     change: "+7.86%",  coin: "ROSE", cp: "+39.92%" },
-                      { name: "a16z",          change: "+7.51%",  coin: "ROSE", cp: "+39.92%" },
-                      { name: "Rollups",       change: "+3.89%",  coin: "MINA", cp: "+7.44%" },
-                      { name: "DeFi",          change: "+3.66%",  coin: "RPL",  cp: "+10.16%" },
-                      { name: "Liquid Staking",change: "+3.48%",  coin: "RPL",  cp: "+10.16%" },
-                    ].map((s, i) => (
+                    {trendingSectors.length > 0 ? trendingSectors.map((s, i) => (
                       <div key={i} className="p-3 bg-muted/50 rounded-xl hover:border-primary border border-transparent transition-colors cursor-pointer">
                         <p className="text-xs font-bold text-foreground/80 mb-1">{s.name}</p>
-                        <p className="text-green-500 font-bold text-base">{s.change}</p>
+                        <p className={`font-bold text-base ${s.change >= 0 ? "text-green-500" : "text-red-500"}`}>
+                          {s.change >= 0 ? "+" : ""}{s.change.toFixed(2)}%
+                        </p>
                         <div className="flex items-center justify-between mt-1">
                           <span className="text-[10px] text-muted-foreground font-semibold">{s.coin}</span>
-                          <span className="text-[10px] text-green-500 font-bold">{s.cp}</span>
+                          <span className={`text-[10px] font-bold ${s.cp >= 0 ? "text-green-500" : "text-red-500"}`}>
+                            {s.cp >= 0 ? "+" : ""}{s.cp.toFixed(2)}%
+                          </span>
                         </div>
                       </div>
-                    ))}
+                    )) : (
+                      <p className="col-span-4 text-sm text-muted-foreground py-4">No sector data yet — futures data loading…</p>
+                    )}
                   </div>
                 </div>
               </div>
