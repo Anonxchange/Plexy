@@ -308,88 +308,38 @@ class NonCustodialWalletManager {
   }
 
   public async loadWalletsFromSupabase(supabase: any, userId: string): Promise<NonCustodialWallet[]> {
-    // Step 1: fetch non-sensitive metadata from the safe view.
-    // NOTE: base_chain_wallet_id is NOT in user_wallets_safe — fetched from IDB cache instead.
-    const { data: safeData, error: safeError } = await supabase
-      .from('user_wallets_safe')
-      .select('id, chain_id, address, wallet_type, is_active, is_backed_up, created_at')
+    // Query user_wallets directly with the session JWT.
+    // RLS (SELECT USING auth.uid() = user_id) scopes the result to the calling
+    // user's own rows automatically — no view or separate vault RPC needed.
+    // The encrypted blobs are client-side ciphertext, so returning them to the
+    // same user's browser is safe; only they can decrypt with their password.
+    const { data, error } = await supabase
+      .from('user_wallets')
+      .select('id, user_id, chain_id, address, wallet_type, encrypted_private_key, encrypted_mnemonic, is_active, is_backed_up, asset_type, base_chain_wallet_id, created_at')
       .eq('user_id', userId);
 
-    if (safeError) {
-      devLog.error("Error loading wallets from user_wallets_safe:", safeError);
-      // Throw so auth-context treats this as "Supabase unreachable" — prevents
-      // a false "no wallet exists" conclusion that would open the create dialog
-      // over real funds when the view simply doesn't exist yet or has bad RLS.
-      throw safeError;
+    if (error) {
+      devLog.error("Error loading wallets from Supabase:", error);
+      throw error;
     }
 
-    if (!safeData || safeData.length === 0) {
-      // The view exists but returned 0 rows. This is ambiguous: could be genuinely
-      // no wallets, OR the SELECT policy on user_wallets is missing (RLS silently
-      // blocks rows without an error). Probe get_wallet_vault as a tiebreaker.
-      const { data: probeData } = await supabase.rpc('get_wallet_vault', { p_user_id: userId });
-      if (probeData && probeData.length > 0) {
-        // Vault has rows → wallets exist but the safe view can't read them.
-        // Throw so auth-context stays silent instead of showing create dialog.
-        throw new Error(
-          "user_wallets exist in vault but user_wallets_safe returned empty — " +
-          "add SELECT policy: CREATE POLICY users_select_own ON user_wallets FOR SELECT USING (auth.uid() = user_id);"
-        );
-      }
-      return [];
-    }
+    if (!data || data.length === 0) return [];
 
-    // Step 2: fetch encrypted key blobs via SECURITY DEFINER RPC.
-    // Decryption always happens in the browser — server never sees plaintext keys.
-    const { data: vaultData, error: vaultError } = await supabase
-      .rpc('get_wallet_vault', { p_user_id: userId });
+    const wallets: NonCustodialWallet[] = data.map((w: any) => ({
+      id:                   w.id,
+      chainId:              w.chain_id,
+      address:              w.address,
+      walletType:           w.wallet_type,
+      encryptedPrivateKey:  parseVaultField(w.encrypted_private_key),
+      encryptedMnemonic:    parseVaultField(w.encrypted_mnemonic),
+      isActive:             w.is_active    === 'true' || w.is_active    === true,
+      isBackedUp:           w.is_backed_up === 'true' || w.is_backed_up === true,
+      createdAt:            w.created_at,
+      assetType:            w.asset_type            ?? undefined,
+      baseChainWalletId:    w.base_chain_wallet_id  ?? undefined,
+    }));
 
-    if (vaultError) {
-      devLog.warn("Vault RPC unavailable, will use local key material:", vaultError);
-    }
-
-    const vaultById = new Map<string, any>();
-    (vaultData ?? []).forEach((v: any) => vaultById.set(v.id, v));
-
-    // Step 3: if vault failed or returned nothing, preserve existing IDB key material.
-    // This prevents overwriting valid cached keys with undefined on a network blip
-    // and handles the case where get_wallet_vault hasn't been deployed yet.
-    const cachedById = new Map<string, NonCustodialWallet>();
-    if (vaultError || !vaultData?.length) {
-      const cached = await this.getWalletsFromStorage(userId);
-      cached.forEach(w => cachedById.set(w.id, w));
-    }
-
-    const wallets: NonCustodialWallet[] = safeData.map((w: any) => {
-      const vault  = vaultById.get(w.id);
-      const cached = cachedById.get(w.id);
-      return {
-        id:        w.id,
-        chainId:   w.chain_id,
-        address:   w.address,
-        walletType: w.wallet_type,
-        // Vault RPC is authoritative; fall back to IDB cache on failure
-        encryptedPrivateKey: vault
-          ? parseVaultField(vault.encrypted_private_key)
-          : cached?.encryptedPrivateKey,
-        encryptedMnemonic: vault
-          ? parseVaultField(vault.encrypted_mnemonic)
-          : cached?.encryptedMnemonic,
-        isActive:   w.is_active    === 'true',
-        isBackedUp: w.is_backed_up === 'true',
-        createdAt:  w.created_at,
-        // Fields not in safe view — preserved from IDB cache
-        assetType:         cached?.assetType,
-        baseChainWalletId: cached?.baseChainWalletId,
-        balance:           cached?.balance,
-      };
-    });
-
-    // Only persist to IDB when we have key material — never overwrite with incomplete data
-    const hasKeyMaterial = wallets.some(w => w.encryptedPrivateKey !== undefined);
-    if (hasKeyMaterial) {
-      await this.saveWalletsToStorage(wallets, userId);
-    }
+    await this.saveWalletsToStorage(wallets, userId);
     return wallets;
   }
 
