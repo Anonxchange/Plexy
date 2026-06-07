@@ -113,7 +113,7 @@ export async function getWalletTransactions(userId: string, limit: number = 29):
   // Resolve wallet addresses directly from Supabase so this works on any
   // browser — even before the local IndexedDB cache has been populated.
   const { data: walletRows } = await supabase
-    .from('user_wallets')
+    .from('user_wallets_safe')
     .select('address')
     .eq('user_id', userId)
     .eq('is_active', 'true');

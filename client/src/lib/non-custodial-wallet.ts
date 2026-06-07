@@ -307,9 +307,12 @@ class NonCustodialWalletManager {
   }
 
   public async loadWalletsFromSupabase(supabase: any, userId: string): Promise<NonCustodialWallet[]> {
+    // user_wallets_safe exposes only non-sensitive fields scoped to auth.uid().
+    // encrypted_private_key / encrypted_mnemonic are never returned to the browser;
+    // key material lives in local IndexedDB only (or is written via edge function).
     const { data, error } = await supabase
-      .from('user_wallets')
-      .select('*')
+      .from('user_wallets_safe')
+      .select('id, chain_id, address, wallet_type, is_active, is_backed_up, created_at')
       .eq('user_id', userId);
 
     if (error) {
@@ -323,14 +326,14 @@ class NonCustodialWalletManager {
         chainId: w.chain_id,
         address: w.address,
         walletType: w.wallet_type,
-        encryptedPrivateKey: parseVaultField(w.encrypted_private_key),
-        encryptedMnemonic: parseVaultField(w.encrypted_mnemonic),
+        encryptedPrivateKey: undefined,   // not available client-side; lives in local IndexedDB
+        encryptedMnemonic: undefined,     // not available client-side; lives in local IndexedDB
         isActive: w.is_active === 'true',
         isBackedUp: w.is_backed_up === 'true',
         createdAt: w.created_at,
-        assetType: w.asset_type,
+        assetType: undefined,
         baseChainWalletId: w.base_chain_wallet_id,
-        balance: w.balance
+        balance: undefined
       }));
 
       await this.saveWalletsToStorage(wallets, userId);
@@ -341,6 +344,10 @@ class NonCustodialWalletManager {
   }
 
   public async saveWalletToSupabase(supabase: any, wallet: NonCustodialWallet, userId: string): Promise<void> {
+    // TODO: RLS now blocks direct client writes to user_wallets.
+    // This must be migrated to a Supabase edge function that accepts the wallet
+    // payload, validates ownership, and writes with service_role.
+    // Until that edge function exists this call will fail silently (logged below).
     const { error } = await supabase
       .from('user_wallets')
       .upsert({
