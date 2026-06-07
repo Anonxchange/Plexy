@@ -13,9 +13,6 @@ import {
   LogIn,
   Megaphone,
   Clock,
-  TrendingUp,
-  TrendingDown,
-  Flame,
   CreditCard,
   AlertTriangle,
   Zap,
@@ -29,6 +26,7 @@ import {
   XCircle,
   Loader2,
 } from '@/lib/icons';
+import { CoinIcon } from "@/components/trading/CoinIcon";
 import {
   getNotifications,
   markAsRead,
@@ -215,11 +213,9 @@ function getNotificationIcon(notification: Notification) {
   }
   if (notification.type === "payment") return <CreditCard className={cn(cls, "text-emerald-500")} />;
   if (notification.type === "price_alert") {
-    const cat = (notification.metadata as any)?.category as string | undefined;
-    if (cat === 'gainer') return <TrendingUp   className={cn(cls, "text-green-500")} />;
-    if (cat === 'loser')  return <TrendingDown className={cn(cls, "text-red-500")} />;
-    if (cat === 'hot')    return <Flame        className={cn(cls, "text-orange-500")} />;
-    return <TrendingUp className={cn(cls, "text-cyan-500")} />;
+    const symbol = (notification.metadata as any)?.symbol as string | undefined;
+    if (symbol) return <CoinIcon symbol={symbol} className="h-8 w-8" />;
+    return <Bell className={cn(cls, "text-cyan-500")} />;
   }
   return <Bell className={cn(cls, "text-muted-foreground")} />;
 }
@@ -265,9 +261,7 @@ function NotificationItem({ notification, onClick }: NotificationItemProps) {
   const iconBg =
     isSecurity           ? "bg-orange-100 dark:bg-orange-900/20" :
     type === "payment"   ? "bg-emerald-100 dark:bg-emerald-900/20" :
-    mmCat === 'gainer'   ? "bg-green-100 dark:bg-green-900/20" :
-    mmCat === 'loser'    ? "bg-red-100 dark:bg-red-900/20" :
-    mmCat === 'hot'      ? "bg-orange-100 dark:bg-orange-900/20" :
+    type === "price_alert" ? "bg-secondary" :
                            "bg-purple-100 dark:bg-purple-900/20";
 
   return (
@@ -495,7 +489,7 @@ export default function NotificationsPage() {
 
   // Categorise — security notifications go only to Security tab, not All
   const securityNotifications = notifications.filter(isSecurityNotif);
-  const systemNotifications = notifications.filter((n) => n.type === "system" && !isSecurityNotif(n));
+  const systemNotifications = notifications.filter((n) => (n.type === "system" || n.type === "price_alert") && !isSecurityNotif(n));
   const generalNotifications = notifications.filter(
     (n) => n.type !== "system" && !isSecurityNotif(n)
   );
