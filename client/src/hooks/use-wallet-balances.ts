@@ -120,7 +120,7 @@ export async function getUserWallets(
   const client = await getSupabase();
 
   const { data: dbWallets, error: dbError } = await client
-    .from('user_wallets_safe')
+    .from('user_wallets')
     .select('id, address, chain_id, is_active')
     .eq('user_id', userId)
     .eq('is_active', 'true');
