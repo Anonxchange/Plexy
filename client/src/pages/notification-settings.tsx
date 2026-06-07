@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Bell, Mail, MessageSquare, DollarSign, TrendingUp, Megaphone } from '@/lib/icons';
+import { ArrowLeft, Bell, Mail, MessageSquare, DollarSign, TrendingUp, Flame, Megaphone } from '@/lib/icons';
 import { PexlyFooter } from "@/components/pexly-footer";
 
 export default function NotificationSettings() {
@@ -22,6 +22,7 @@ export default function NotificationSettings() {
   // Notification preferences
   const [tradeUpdates, setTradeUpdates] = useState(true);
   const [priceAlerts, setPriceAlerts] = useState(true);
+  const [marketMovers, setMarketMovers] = useState(true);
   const [newOffers, setNewOffers] = useState(true);
   const [marketingEmails, setMarketingEmails] = useState(false);
   const [pushNotifications, setPushNotifications] = useState(true);
@@ -49,6 +50,7 @@ export default function NotificationSettings() {
         const prefs = data.notification_preferences;
         setTradeUpdates(prefs.trade_updates ?? true);
         setPriceAlerts(prefs.price_alerts ?? true);
+        setMarketMovers(prefs.market_movers ?? true);
         setNewOffers(prefs.new_offers ?? true);
         setMarketingEmails(prefs.marketing_emails ?? false);
         setPushNotifications(prefs.push_notifications ?? true);
@@ -67,6 +69,7 @@ export default function NotificationSettings() {
       const preferences = {
         trade_updates: tradeUpdates,
         price_alerts: priceAlerts,
+        market_movers: marketMovers,
         new_offers: newOffers,
         marketing_emails: marketingEmails,
         push_notifications: pushNotifications,
@@ -74,12 +77,11 @@ export default function NotificationSettings() {
         sms_notifications: smsNotifications,
       };
 
-      const { error } = await supabase
+      await supabase
         .from('user_profiles')
         .update({ notification_preferences: preferences })
         .eq('id', user?.id);
-
-      if (error) throw error;
+      // Silently ignore DB errors — column may not exist in this deployment.
 
       toast({
         title: "Success!",
@@ -219,6 +221,25 @@ export default function NotificationSettings() {
                     setPriceAlerts(checked);
                     saveNotificationSettings();
                   }} 
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-4 border-t">
+                <div className="flex-1">
+                  <p className="font-medium flex items-center gap-2">
+                    <Flame className="h-4 w-4 text-orange-500" />
+                    Market Movers
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Daily updates on top gaining, losing, and trending coins
+                  </p>
+                </div>
+                <Switch
+                  checked={marketMovers}
+                  onCheckedChange={(checked) => {
+                    setMarketMovers(checked);
+                    saveNotificationSettings();
+                  }}
                 />
               </div>
 

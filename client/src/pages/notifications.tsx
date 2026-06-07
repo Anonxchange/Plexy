@@ -14,6 +14,8 @@ import {
   Megaphone,
   Clock,
   TrendingUp,
+  TrendingDown,
+  Flame,
   CreditCard,
   AlertTriangle,
   Zap,
@@ -212,7 +214,13 @@ function getNotificationIcon(notification: Notification) {
     return <Info className={cn(cls, "text-blue-500")} />;
   }
   if (notification.type === "payment") return <CreditCard className={cn(cls, "text-emerald-500")} />;
-  if (notification.type === "price_alert") return <TrendingUp className={cn(cls, "text-cyan-500")} />;
+  if (notification.type === "price_alert") {
+    const cat = (notification.metadata as any)?.category as string | undefined;
+    if (cat === 'gainer') return <TrendingUp   className={cn(cls, "text-green-500")} />;
+    if (cat === 'loser')  return <TrendingDown className={cn(cls, "text-red-500")} />;
+    if (cat === 'hot')    return <Flame        className={cn(cls, "text-orange-500")} />;
+    return <TrendingUp className={cn(cls, "text-cyan-500")} />;
+  }
   return <Bell className={cn(cls, "text-muted-foreground")} />;
 }
 
@@ -237,18 +245,30 @@ interface NotificationItemProps {
 function NotificationItem({ notification, onClick }: NotificationItemProps) {
   const type = notification.type;
   const isSecurity = isSecurityNotif(notification);
+  const mmCat = type === 'price_alert'
+    ? (notification.metadata as any)?.category as string | undefined
+    : undefined;
   const accentColor =
-    isSecurity          ? "bg-orange-500/5 border-orange-500/10" :
-    type === "payment"  ? "bg-emerald-500/5 border-emerald-500/10" :
-                          "bg-purple-500/5 border-purple-500/10";
+    isSecurity           ? "bg-orange-500/5 border-orange-500/10" :
+    type === "payment"   ? "bg-emerald-500/5 border-emerald-500/10" :
+    mmCat === 'gainer'   ? "bg-green-500/5 border-green-500/10" :
+    mmCat === 'loser'    ? "bg-red-500/5 border-red-500/10" :
+    mmCat === 'hot'      ? "bg-orange-500/5 border-orange-500/10" :
+                           "bg-purple-500/5 border-purple-500/10";
   const dotColor =
-    isSecurity          ? "bg-orange-500" :
-    type === "payment"  ? "bg-emerald-500" :
-                          "bg-primary";
+    isSecurity           ? "bg-orange-500" :
+    type === "payment"   ? "bg-emerald-500" :
+    mmCat === 'gainer'   ? "bg-green-500" :
+    mmCat === 'loser'    ? "bg-red-500" :
+    mmCat === 'hot'      ? "bg-orange-500" :
+                           "bg-primary";
   const iconBg =
-    isSecurity          ? "bg-orange-100 dark:bg-orange-900/20" :
-    type === "payment"  ? "bg-emerald-100 dark:bg-emerald-900/20" :
-                          "bg-purple-100 dark:bg-purple-900/20";
+    isSecurity           ? "bg-orange-100 dark:bg-orange-900/20" :
+    type === "payment"   ? "bg-emerald-100 dark:bg-emerald-900/20" :
+    mmCat === 'gainer'   ? "bg-green-100 dark:bg-green-900/20" :
+    mmCat === 'loser'    ? "bg-red-100 dark:bg-red-900/20" :
+    mmCat === 'hot'      ? "bg-orange-100 dark:bg-orange-900/20" :
+                           "bg-purple-100 dark:bg-purple-900/20";
 
   return (
     <button
@@ -419,6 +439,15 @@ export default function NotificationsPage() {
       setNotifications((prev) =>
         prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n))
       );
+    }
+    // Market mover notifications → set the pair then go to spot or perp
+    const cat = (notification.metadata as any)?.category as string | undefined;
+    if (cat === 'gainer' || cat === 'loser' || cat === 'hot') {
+      const pair       = (notification.metadata as any)?.pair       as string | undefined;
+      const marketType = (notification.metadata as any)?.marketType as string | undefined;
+      if (pair) { try { sessionStorage.setItem("pexly_initial_pair", pair); } catch {} }
+      navigate(marketType === 'perp' ? '/perpetual' : '/spot');
+      return;
     }
     if (notification.metadata?.url) {
       const dest = String(notification.metadata.url).trim();
