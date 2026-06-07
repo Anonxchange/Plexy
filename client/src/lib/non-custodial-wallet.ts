@@ -308,53 +308,70 @@ class NonCustodialWalletManager {
   }
 
   public async loadWalletsFromSupabase(supabase: any, userId: string): Promise<NonCustodialWallet[]> {
-    // Step 1: fetch non-sensitive metadata from the safe view (fast, no special privileges).
+    // Step 1: fetch non-sensitive metadata from the safe view.
+    // NOTE: base_chain_wallet_id is NOT in user_wallets_safe — fetched from IDB cache instead.
     const { data: safeData, error: safeError } = await supabase
       .from('user_wallets_safe')
-      .select('id, chain_id, address, wallet_type, is_active, is_backed_up, created_at, base_chain_wallet_id')
+      .select('id, chain_id, address, wallet_type, is_active, is_backed_up, created_at')
       .eq('user_id', userId);
 
     if (safeError) {
-      devLog.error("Error loading wallets from Supabase:", safeError);
+      devLog.error("Error loading wallets from user_wallets_safe:", safeError);
       return [];
     }
     if (!safeData || safeData.length === 0) return [];
 
-    // Step 2: fetch encrypted key blobs via the SECURITY DEFINER RPC.
-    // The function enforces auth.uid() === p_user_id server-side before returning
-    // anything — so only the owner ever receives their own encrypted material.
-    // Decryption happens here in the browser with the user's password; the server
-    // never sees plaintext keys (non-custodial guarantee is preserved).
+    // Step 2: fetch encrypted key blobs via SECURITY DEFINER RPC.
+    // Decryption always happens in the browser — server never sees plaintext keys.
     const { data: vaultData, error: vaultError } = await supabase
       .rpc('get_wallet_vault', { p_user_id: userId });
 
     if (vaultError) {
-      devLog.warn("Could not load vault from Supabase (key material unavailable):", vaultError);
+      devLog.warn("Vault RPC unavailable, will use local key material:", vaultError);
     }
 
-    // Index vault rows by wallet id for O(1) lookup
     const vaultById = new Map<string, any>();
     (vaultData ?? []).forEach((v: any) => vaultById.set(v.id, v));
 
+    // Step 3: if vault failed or returned nothing, preserve existing IDB key material.
+    // This prevents overwriting valid cached keys with undefined on a network blip
+    // and handles the case where get_wallet_vault hasn't been deployed yet.
+    const cachedById = new Map<string, NonCustodialWallet>();
+    if (vaultError || !vaultData?.length) {
+      const cached = await this.getWalletsFromStorage(userId);
+      cached.forEach(w => cachedById.set(w.id, w));
+    }
+
     const wallets: NonCustodialWallet[] = safeData.map((w: any) => {
-      const vault = vaultById.get(w.id);
+      const vault  = vaultById.get(w.id);
+      const cached = cachedById.get(w.id);
       return {
-        id: w.id,
-        chainId: w.chain_id,
-        address: w.address,
+        id:        w.id,
+        chainId:   w.chain_id,
+        address:   w.address,
         walletType: w.wallet_type,
-        encryptedPrivateKey: vault ? parseVaultField(vault.encrypted_private_key) : undefined,
-        encryptedMnemonic:   vault ? parseVaultField(vault.encrypted_mnemonic)    : undefined,
-        isActive:    w.is_active    === 'true',
-        isBackedUp:  w.is_backed_up === 'true',
-        createdAt:   w.created_at,
-        assetType:   undefined,
-        baseChainWalletId: w.base_chain_wallet_id,
-        balance: undefined,
+        // Vault RPC is authoritative; fall back to IDB cache on failure
+        encryptedPrivateKey: vault
+          ? parseVaultField(vault.encrypted_private_key)
+          : cached?.encryptedPrivateKey,
+        encryptedMnemonic: vault
+          ? parseVaultField(vault.encrypted_mnemonic)
+          : cached?.encryptedMnemonic,
+        isActive:   w.is_active    === 'true',
+        isBackedUp: w.is_backed_up === 'true',
+        createdAt:  w.created_at,
+        // Fields not in safe view — preserved from IDB cache
+        assetType:         cached?.assetType,
+        baseChainWalletId: cached?.baseChainWalletId,
+        balance:           cached?.balance,
       };
     });
 
-    await this.saveWalletsToStorage(wallets, userId);
+    // Only persist to IDB when we have key material — never overwrite with incomplete data
+    const hasKeyMaterial = wallets.some(w => w.encryptedPrivateKey !== undefined);
+    if (hasKeyMaterial) {
+      await this.saveWalletsToStorage(wallets, userId);
+    }
     return wallets;
   }
 
@@ -378,12 +395,11 @@ class NonCustodialWalletManager {
               ? wallet.encryptedMnemonic
               : JSON.stringify(wallet.encryptedMnemonic))
           : null,
-        p_is_active:             wallet.isActive    ? 'true' : 'false',
-        p_is_backed_up:          wallet.isBackedUp  ? 'true' : 'false',
-        p_asset_type:            wallet.assetType            ?? null,
-        p_base_chain_wallet_id:  wallet.baseChainWalletId    ?? null,
-        p_balance:               wallet.balance              ?? null,
-        p_created_at:            wallet.createdAt,
+        p_is_active:    wallet.isActive   ? 'true' : 'false',
+        p_is_backed_up: wallet.isBackedUp ? 'true' : 'false',
+        p_asset_type:           wallet.assetType         ?? null,
+        p_base_chain_wallet_id: wallet.baseChainWalletId ?? null,
+        // balance intentionally omitted — not trusted from client; computed from chain
       });
 
     if (error) {
