@@ -42,13 +42,12 @@ interface NotificationRow {
   read?: boolean | null;
   alerted_at?: string | null;
   created_at?: string | null;
+  metadata?: Record<string, any> | null;
 }
 
 export function GlobalNotificationListener() {
   const { user } = useAuth();
   const { toast } = useToast();
-  // Per-session in-memory dedup so the same id never gets processed twice
-  // even if INSERT and a quick UPDATE both fire.
   const seenIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -58,12 +57,6 @@ export function GlobalNotificationListener() {
     let cleanupFn: (() => void) | undefined;
     let cancelled = false;
 
-    /**
-     * Atomically claim the right to alert for a notification.
-     * Returns true only if THIS call won the race (alerted_at was NULL and
-     * we just set it). Returns false if another device already alerted, the
-     * row doesn't exist, or anything went wrong.
-     */
     const claimAlert = async (notificationId: string): Promise<boolean> => {
       try {
         const supabase = await getSupabase();
@@ -82,25 +75,44 @@ export function GlobalNotificationListener() {
     };
 
     const fireAlert = (n: NotificationRow) => {
+      // Suppress sound + toast for catch-up / historical notifications.
+      // If created_at is older than 5 minutes it arrived via the backlog
+      // query — show it in the bell only, don't interrupt the user.
+      const ageMs = n.created_at
+        ? Date.now() - new Date(n.created_at).getTime()
+        : 0;
+      const isCatchUp = ageMs > 5 * 60 * 1000;
+      if (isCatchUp) return;
+
       notificationSounds.play('message_received');
+
       if (n.type === 'payment') {
         toast({
           title: n.title ?? 'Coins Received',
           description: n.message ?? 'Your wallet has been credited.',
           duration: 6000,
         });
+        return;
       }
+
+      if (n.type === 'price_alert') {
+        const symbol = n.metadata?.symbol as string | undefined;
+        const coinLabel = symbol ? `${symbol} · ` : '';
+        toast({
+          title: n.title ?? 'Market Update',
+          description: `${coinLabel}${n.message ?? ''}`,
+          duration: 7000,
+        });
+        return;
+      }
+
+      // system / account_change — play sound only, no toast (avoid noise for security events)
     };
 
     const handleNotification = async (n: NotificationRow) => {
-      // Local dedup: never process the same id twice within this tab
       if (seenIdsRef.current.has(n.id)) return;
       seenIdsRef.current.add(n.id);
-
-      // Server-side claimed already → silent
       if (n.alerted_at) return;
-
-      // Race-free server claim
       const won = await claimAlert(n.id);
       if (won) fireAlert(n);
     };
@@ -112,7 +124,7 @@ export function GlobalNotificationListener() {
       try {
         const { data: backlog } = await supabase
           .from('notifications')
-          .select('id, user_id, type, title, message, read, alerted_at, created_at')
+          .select('id, user_id, type, title, message, read, alerted_at, created_at, metadata')
           .eq('user_id', user.id)
           .is('alerted_at', null)
           .order('created_at', { ascending: true })
@@ -152,15 +164,13 @@ export function GlobalNotificationListener() {
             filter: `user_id=eq.${user.id}`,
           },
           (payload) => {
-            // Another device claimed the alert — record it so we never
-            // accidentally re-fire if INSERT arrives later in this tab.
             const n = payload.new as NotificationRow;
             if (n.alerted_at) seenIdsRef.current.add(n.id);
           }
         )
         .subscribe();
 
-      // ── 3) Announcements (no per-user state — keep simple session dedup) ─
+      // ── 3) Announcements (no per-user state — simple session dedup) ───────
       const announcementsChannel = supabase
         .channel('global-announcements')
         .on(
