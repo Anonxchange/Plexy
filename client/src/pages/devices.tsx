@@ -61,6 +61,27 @@ interface DeviceLocationInfo {
   isp?: string;
 }
 
+interface LoginSession {
+  id: string;
+  user_id: string;
+  device_name: string | null;
+  browser: string | null;
+  os: string | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  is_current: boolean;
+  last_active: string;
+  fingerprint_hash: string | null;
+}
+
+function getSessionIcon(ua: string | null, os: string | null) {
+  const u = (ua || '').toLowerCase();
+  const o = (os || '').toLowerCase();
+  if (u.includes('mobile') || u.includes('android') || u.includes('iphone') || o.includes('android') || o.includes('ios')) return Smartphone;
+  if (u.includes('ipad') || u.includes('tablet')) return Tablet;
+  if (o.includes('mac') || u.includes('macintosh')) return Laptop;
+  return Monitor;
+}
 
 export default function DevicesPage() {
   useHead({ title: "Trusted Devices | Pexly", meta: [{ name: "description", content: "Review and manage trusted devices that have access to your Pexly account." }] });
@@ -85,12 +106,21 @@ export default function DevicesPage() {
   const [deviceLocation, setDeviceLocation] = useState<DeviceLocationInfo | null>(null);
   const [loadingLocation, setLoadingLocation] = useState(false);
 
+  const [loginSessions, setLoginSessions] = useState<LoginSession[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(true);
+  const [selectedSession, setSelectedSession] = useState<LoginSession | null>(null);
+  const [sessionDetailsOpen, setSessionDetailsOpen] = useState(false);
+  const [sessionLocation, setSessionLocation] = useState<DeviceLocationInfo | null>(null);
+  const [loadingSessionLocation, setLoadingSessionLocation] = useState(false);
+  const [sessionPage, setSessionPage] = useState(1);
+
   useEffect(() => {
     if (!loading && !user) {
       setLocation("/signin");
     } else if (user) {
       fetchDevices();
       loadCurrentFingerprint();
+      fetchLoginSessions();
     }
   }, [user, loading]);
 
@@ -151,6 +181,37 @@ export default function DevicesPage() {
     setDeviceDetailsOpen(true);
     setDeviceLocation(null);
     await fetchDeviceLocation(device.ip_address);
+  };
+
+  const fetchLoginSessions = async () => {
+    if (!user?.id) return;
+    setLoadingSessions(true);
+    try {
+      const { data, error } = await supabase
+        .from('user_devices')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('last_active', { ascending: false });
+      if (!error) setLoginSessions(data || []);
+    } catch {}
+    finally { setLoadingSessions(false); }
+  };
+
+  const handleSessionClick = async (session: LoginSession) => {
+    setSelectedSession(session);
+    setSessionDetailsOpen(true);
+    setSessionLocation(null);
+    if (session.ip_address) {
+      setLoadingSessionLocation(true);
+      try {
+        const res = await fetch(`https://ipapi.co/${session.ip_address}/json/`);
+        if (res.ok) {
+          const d = await res.json();
+          setSessionLocation({ city: d.city, region: d.region, country: d.country_name, isp: d.org });
+        }
+      } catch {}
+      finally { setLoadingSessionLocation(false); }
+    }
   };
 
   const handleRemoveDevice = async (deviceId: string) => {
@@ -593,6 +654,78 @@ export default function DevicesPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Login Sessions — every sign-in recorded per unique device */}
+            <Card className="mt-6">
+              <CardContent className="p-6">
+                <div className="mb-4">
+                  <h2 className="text-xl font-bold mb-1">Login Sessions</h2>
+                  <p className="text-sm text-muted-foreground">Every device that has signed in to your account</p>
+                </div>
+
+                {loadingSessions ? (
+                  <div className="flex items-center justify-center py-10">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : loginSessions.length === 0 ? (
+                  <div className="text-center py-10">
+                    <Shield className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-50" />
+                    <p className="text-sm text-muted-foreground">No sessions recorded yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {loginSessions
+                      .slice((sessionPage - 1) * ITEMS_PER_PAGE, sessionPage * ITEMS_PER_PAGE)
+                      .map((session) => {
+                        const SessionIcon = getSessionIcon(session.user_agent, session.os);
+                        const lastActive = new Date(session.last_active);
+                        const isCurrent = session.is_current;
+                        return (
+                          <button
+                            key={session.id}
+                            onClick={() => handleSessionClick(session)}
+                            className={`w-full flex items-center justify-between p-4 rounded-lg hover:bg-muted/50 transition-colors text-left ${isCurrent ? "bg-primary/5" : ""}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <SessionIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                              <div>
+                                <p className="font-medium flex items-center flex-wrap gap-1.5 text-sm">
+                                  {session.device_name || 'Unknown device'}
+                                  {isCurrent && <Badge variant="secondary" className="text-xs">Current</Badge>}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  {[session.browser, session.os].filter(Boolean).join(' · ')}
+                                  {' · '}Last active: {lastActive.toLocaleDateString()} {lastActive.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                                {session.ip_address && (
+                                  <p className="text-xs text-muted-foreground">{session.ip_address}</p>
+                                )}
+                              </div>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          </button>
+                        );
+                      })}
+                  </div>
+                )}
+
+                {Math.ceil(loginSessions.length / ITEMS_PER_PAGE) > 1 && (
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+                    <p className="text-sm text-muted-foreground">
+                      Page {sessionPage} of {Math.ceil(loginSessions.length / ITEMS_PER_PAGE)} &middot; {loginSessions.length} sessions
+                    </p>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setSessionPage(p => Math.max(1, p - 1))} disabled={sessionPage === 1}>
+                        <ChevronLeft className="h-4 w-4" />Prev
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => setSessionPage(p => Math.min(Math.ceil(loginSessions.length / ITEMS_PER_PAGE), p + 1))} disabled={sessionPage === Math.ceil(loginSessions.length / ITEMS_PER_PAGE)}>
+                        Next<ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
@@ -724,6 +857,83 @@ export default function DevicesPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Login Session Detail Modal */}
+      <Dialog open={sessionDetailsOpen} onOpenChange={setSessionDetailsOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              Session details
+              <Button variant="ghost" size="icon" onClick={() => setSessionDetailsOpen(false)} className="h-6 w-6 rounded-full">
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedSession && (() => {
+            const SessionIcon = getSessionIcon(selectedSession.user_agent, selectedSession.os);
+            return (
+              <div className="space-y-4 py-2">
+                <div className="flex items-center gap-3 pb-2 border-b border-border">
+                  <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                    <SessionIcon className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">{selectedSession.device_name || 'Unknown device'}</p>
+                    <p className="text-sm text-muted-foreground">{[selectedSession.browser, selectedSession.os].filter(Boolean).join(' · ')}</p>
+                  </div>
+                  {selectedSession.is_current && <Badge variant="secondary" className="ml-auto">Current</Badge>}
+                </div>
+
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Last active</span>
+                  <span className="font-medium text-right">
+                    {new Date(selectedSession.last_active).toLocaleDateString()} at {new Date(selectedSession.last_active).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+
+                {selectedSession.browser && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Browser</span>
+                    <span className="font-medium">{selectedSession.browser}</span>
+                  </div>
+                )}
+
+                {selectedSession.os && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Operating system</span>
+                    <span className="font-medium">{selectedSession.os}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">IP address</span>
+                  <span className="font-medium font-mono text-xs">{selectedSession.ip_address || 'Unknown'}</span>
+                </div>
+
+                {loadingSessionLocation ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin" />Fetching location…
+                  </div>
+                ) : sessionLocation && (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />Location</span>
+                      <span className="font-medium">{[sessionLocation.city, sessionLocation.country].filter(Boolean).join(', ')}</span>
+                    </div>
+                    {sessionLocation.isp && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground flex items-center gap-1"><Wifi className="h-3 w-3" />ISP</span>
+                        <span className="font-medium">{sessionLocation.isp}</span>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
