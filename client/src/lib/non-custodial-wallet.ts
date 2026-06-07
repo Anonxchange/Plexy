@@ -308,31 +308,14 @@ class NonCustodialWalletManager {
   }
 
   public async loadWalletsFromSupabase(supabase: any, userId: string): Promise<NonCustodialWallet[]> {
-    // Try the full table first (requires RLS: auth.uid() = user_id).
-    // If that is blocked by policy, fall back to the user_wallets_safe view
-    // which only exposes metadata (no encrypted fields) but is enough to
-    // confirm wallet existence and populate IDB with addresses.
-    let data: any[] | null = null;
-
-    const { data: fullData, error: fullError } = await supabase
+    const { data, error } = await supabase
       .from('user_wallets')
       .select('id, user_id, chain_id, address, wallet_type, encrypted_private_key, encrypted_mnemonic, is_active, is_backed_up, asset_type, base_chain_wallet_id, created_at')
       .eq('user_id', userId);
 
-    if (!fullError) {
-      data = fullData;
-    } else {
-      devLog.warn("user_wallets direct query blocked, trying user_wallets_safe:", fullError.message);
-      const { data: safeData, error: safeError } = await supabase
-        .from('user_wallets_safe')
-        .select('id, user_id, chain_id, address, wallet_type, is_active, is_backed_up, asset_type, base_chain_wallet_id, created_at')
-        .eq('user_id', userId);
-
-      if (safeError) {
-        devLog.error("Error loading wallets from user_wallets_safe:", safeError);
-        throw safeError;
-      }
-      data = safeData;
+    if (error) {
+      devLog.error("Error loading wallets from Supabase:", error);
+      throw error;
     }
 
     if (!data || data.length === 0) return [];
@@ -383,7 +366,7 @@ class NonCustodialWalletManager {
     }
 
     // Pin the ETH wallet address on the user profile so auth-context
-    // can detect the wallet even when user_wallets_safe is unavailable.
+    // can detect the wallet even when user_wallets is temporarily unavailable.
     const ethWallet = wallets.find(w =>
       w.chainId?.toLowerCase().includes('ethereum')
     );
