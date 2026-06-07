@@ -590,18 +590,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const walletAddress = profile?.wallet_address;
-
-      if (walletAddress) {
-        // IMPORT REQUIRED: address on server but no local blob (device loss / new device)
-        setWalletImportState({
-          required: true,
-          expectedAddress: walletAddress,
-        });
+      // Sync flow removed: if wallet_address exists in the profile but
+      // user_wallets came back empty (transient load failure, new device, etc.)
+      // we no longer prompt for a password-based sync. The user can set up
+      // a fresh wallet from their wallet page instead.
+      if (profile?.wallet_address) {
+        setWalletImportState({ required: false, expectedAddress: null });
         return;
       }
 
-      // 5. CREATE REQUIRED: Supabase confirmed no wallet exists anywhere
+      // 5. CREATE REQUIRED: Supabase confirmed no wallet exists anywhere.
+      // Re-query user_wallets as an authoritative double-check before prompting —
+      // loadWalletsFromSupabase may have thrown transiently in step 1.
+      const { count: createCount, error: createCountError } = await supabase
+        .from('user_wallets')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId);
+
+      if (!createCountError && createCount && createCount > 0) {
+        setWalletImportState({ required: false, expectedAddress: null });
+        return;
+      }
+
       setWalletImportState({
         required: true,
         expectedAddress: null,
