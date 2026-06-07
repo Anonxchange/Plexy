@@ -317,9 +317,27 @@ class NonCustodialWalletManager {
 
     if (safeError) {
       devLog.error("Error loading wallets from user_wallets_safe:", safeError);
+      // Throw so auth-context treats this as "Supabase unreachable" — prevents
+      // a false "no wallet exists" conclusion that would open the create dialog
+      // over real funds when the view simply doesn't exist yet or has bad RLS.
+      throw safeError;
+    }
+
+    if (!safeData || safeData.length === 0) {
+      // The view exists but returned 0 rows. This is ambiguous: could be genuinely
+      // no wallets, OR the SELECT policy on user_wallets is missing (RLS silently
+      // blocks rows without an error). Probe get_wallet_vault as a tiebreaker.
+      const { data: probeData } = await supabase.rpc('get_wallet_vault', { p_user_id: userId });
+      if (probeData && probeData.length > 0) {
+        // Vault has rows → wallets exist but the safe view can't read them.
+        // Throw so auth-context stays silent instead of showing create dialog.
+        throw new Error(
+          "user_wallets exist in vault but user_wallets_safe returned empty — " +
+          "add SELECT policy: CREATE POLICY users_select_own ON user_wallets FOR SELECT USING (auth.uid() = user_id);"
+        );
+      }
       return [];
     }
-    if (!safeData || safeData.length === 0) return [];
 
     // Step 2: fetch encrypted key blobs via SECURITY DEFINER RPC.
     // Decryption always happens in the browser — server never sees plaintext keys.
@@ -401,6 +419,18 @@ class NonCustodialWalletManager {
     if (error) {
       devLog.error("Error batch-saving wallets via RPC:", error);
     }
+
+    // Pin the ETH wallet address on the user profile so auth-context
+    // can detect the wallet even when user_wallets_safe is unavailable.
+    const ethWallet = wallets.find(w =>
+      w.chainId?.toLowerCase().includes('ethereum')
+    );
+    if (ethWallet?.address) {
+      await supabase
+        .from('user_profiles')
+        .update({ wallet_address: ethWallet.address })
+        .eq('id', userId);
+    }
   }
 
   public async saveWalletToSupabase(supabase: any, wallet: NonCustodialWallet, userId: string): Promise<void> {
@@ -432,6 +462,14 @@ class NonCustodialWalletManager {
 
     if (error) {
       devLog.error("Error saving wallet via RPC:", error);
+    }
+
+    // Pin ETH address to user_profiles for cross-device wallet detection
+    if (wallet.chainId?.toLowerCase().includes('ethereum') && wallet.address) {
+      await supabase
+        .from('user_profiles')
+        .update({ wallet_address: wallet.address })
+        .eq('id', userId);
     }
   }
 
