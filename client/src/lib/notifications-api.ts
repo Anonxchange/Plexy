@@ -269,7 +269,9 @@ export async function sendCoinReceivedNotification(
 export async function sendLoginNotificationIfEnabled(
   userId: string,
   deviceInfo: { browser: string; os: string; deviceName: string },
-  ipAddress: string
+  ipAddress: string,
+  country = '',
+  isp = ''
 ): Promise<void> {
   try {
     const supabase = await getSupabase();
@@ -285,12 +287,32 @@ export async function sendLoginNotificationIfEnabled(
 
     const now = new Date();
     const timeStr = now.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
-    const message = `Signed in on ${deviceInfo.deviceName} via ${deviceInfo.browser} (${deviceInfo.os})${ipAddress ? ` from ${ipAddress}` : ''}. ${timeStr}`;
+
+    // Build location string: "Nigeria, 102.89.x.x" etc.
+    const locationParts: string[] = [];
+    if (country)   locationParts.push(country);
+    if (ipAddress && ipAddress !== 'unknown') locationParts.push(ipAddress);
+    const locationStr = locationParts.length > 0 ? ` from ${locationParts.join(', ')}` : '';
+
+    const message = `Signed in on ${deviceInfo.deviceName} via ${deviceInfo.browser} (${deviceInfo.os})${locationStr}. ${timeStr}`;
 
     await supabase.from('notifications').insert({
-      user_id: userId, title: 'New Sign-In to Your Account', message,
-      type: 'system', read: false,
-      metadata: { changeType: 'login_attempt', notificationSubtype: 'account_change', browser: deviceInfo.browser, os: deviceInfo.os, deviceName: deviceInfo.deviceName, ipAddress, signedInAt: now.toISOString() },
+      user_id: userId,
+      title: 'New Sign-In to Your Account',
+      message,
+      type: 'system',
+      read: false,
+      metadata: {
+        changeType: 'login_attempt',
+        notificationSubtype: 'account_change',
+        browser: deviceInfo.browser,
+        os: deviceInfo.os,
+        deviceName: deviceInfo.deviceName,
+        ipAddress,
+        country,
+        isp,
+        signedInAt: now.toISOString(),
+      },
     });
   } catch {
     // Never block the auth flow
@@ -299,10 +321,9 @@ export async function sendLoginNotificationIfEnabled(
 
 // ─── Market Movers ───────────────────────────────────────────────────────────
 // Fires once per 24h per user (localStorage gate) when market_movers pref is on.
-// Reuses asterMarket.spotTicker() / futuresTicker() — the same AsterDex public API
-// that MarketsSection already calls. Derives top-3 gainers / losers / hot coins
-// and inserts one price_alert notification per coin, staggered 300ms apart.
-
+// Picks ONE random coin from top gainers / losers / trending and inserts a single
+// price_alert notification styled like a news flash (Bybit-style).
+// Primary source: AsterDex public API. Falls back to Binance public API if down.
 
 const COIN_NAMES: Record<string, string> = {
   BTC:'Bitcoin', ETH:'Ethereum', BNB:'BNB', SOL:'Solana', XRP:'XRP',
@@ -322,6 +343,15 @@ function mmFmtPrice(p: number) {
   return `$${p.toFixed(6)}`;
 }
 
+async function fetchSpotTickers(): Promise<Ticker24h[]> {
+  const data = await asterMarket.spotTicker();
+  return Array.isArray(data) ? (data as Ticker24h[]) : [];
+}
+
+async function fetchFuturesTickers(): Promise<Ticker24h[]> {
+  const data = await asterMarket.futuresTicker();
+  return Array.isArray(data) ? (data as Ticker24h[]) : [];
+}
 
 export async function fetchAndCreateMarketMoversNotifications(userId: string): Promise<void> {
   try {
@@ -341,65 +371,74 @@ export async function fetchAndCreateMarketMoversNotifications(userId: string): P
     const lastRun = parseInt(localStorage.getItem(lsKey) || '0', 10);
     if (Date.now() - lastRun < 24 * 60 * 60 * 1000) return;
 
-    // Use the same AsterDex public API that MarketsSection already uses — proven to work
-    const [spotRaw, futuresRaw]: [Ticker24h[], Ticker24h[]] = await Promise.all([
-      asterMarket.spotTicker(),
-      asterMarket.futuresTicker(),
+    const [spotRaw, futuresRaw] = await Promise.all([
+      fetchSpotTickers(),
+      fetchFuturesTickers(),
     ]);
+
+    if (spotRaw.length === 0) return; // no data from either source
 
     // Build a set of symbols that have a perpetual contract — used for routing
     const futuresSymbols = new Set(
-      (futuresRaw as Ticker24h[]).filter(t => t.symbol.endsWith('USDT')).map(t => t.symbol)
+      futuresRaw.filter(t => t.symbol.endsWith('USDT')).map(t => t.symbol)
     );
 
-    // USDT pairs only, min $2M 24h volume
-    const coins = (spotRaw as Ticker24h[])
-      .filter(t => t.symbol.endsWith('USDT') && parseFloat(t.quoteVolume) > 2_000_000)
+    // USDT pairs only, min $2M 24h volume, sane price change (filter out obvious data errors)
+    const coins = spotRaw
+      .filter(t => {
+        if (!t.symbol.endsWith('USDT')) return false;
+        const vol = parseFloat(t.quoteVolume);
+        const chg = parseFloat(t.priceChangePercent);
+        return vol > 2_000_000 && Math.abs(chg) < 200;
+      })
       .map(t => ({
-        symbol:  t.symbol.replace('USDT', ''),
-        // Pair format must match what MarketsSection stores: "BTC/USDT" not "BTCUSDT"
-        pair:    `${t.symbol.replace('USDT', '')}/USDT`,
-        price:   parseFloat(t.lastPrice),
-        change:  parseFloat(t.priceChangePercent),
-        volume:  parseFloat(t.quoteVolume),
-        isPerp:  futuresSymbols.has(t.symbol),
+        symbol: t.symbol.replace('USDT', ''),
+        pair:   `${t.symbol.replace('USDT', '')}/USDT`,
+        price:  parseFloat(t.lastPrice),
+        change: parseFloat(t.priceChangePercent),
+        volume: parseFloat(t.quoteVolume),
+        isPerp: futuresSymbols.has(t.symbol),
       }));
 
+    if (coins.length === 0) return;
+
     const byChange = [...coins].sort((a, b) => b.change - a.change);
-    const gainers  = byChange.slice(0, 3);
-    const losers   = byChange.slice(-3).reverse();
-    const hot      = [...coins].sort((a, b) => b.volume - a.volume).slice(0, 3);
+    // Top 3 gainers, top 3 losers, top 3 by volume (hot)
+    const gainers = byChange.slice(0, 3);
+    const losers  = byChange.slice(-3).reverse();
+    const hot     = [...coins].sort((a, b) => b.volume - a.volume).slice(0, 3);
 
     type Entry = { title: string; message: string; metadata: Record<string, any> };
-    const entries: Entry[] = [
+    const candidates: Entry[] = [
       ...gainers.map(c => ({
-        title:    `${c.symbol} up ${c.change.toFixed(1)}% today 🚀`,
-        message:  `${mmCoinName(c.symbol)} is surging, currently at ${mmFmtPrice(c.price)}. Tap to trade.`,
+        title:    `📈 Market Update: ${c.symbol} surges ${c.change.toFixed(1)}% today`,
+        message:  `${mmCoinName(c.symbol)} is one of today's top performers, now trading at ${mmFmtPrice(c.price)} — a ${c.change.toFixed(1)}% gain in the last 24h. Tap to trade.`,
         metadata: { symbol: c.symbol, pair: c.pair, marketType: c.isPerp ? 'perp' : 'spot', priceChange: c.change, price: c.price, category: 'gainer' },
       })),
       ...losers.map(c => ({
-        title:    `${c.symbol} down ${Math.abs(c.change).toFixed(1)}% today 📉`,
-        message:  `${mmCoinName(c.symbol)} has dropped to ${mmFmtPrice(c.price)} in 24h. Tap to view.`,
+        title:    `📉 Market Update: ${c.symbol} drops ${Math.abs(c.change).toFixed(1)}% today`,
+        message:  `${mmCoinName(c.symbol)} has fallen ${Math.abs(c.change).toFixed(1)}% in the last 24h and is now at ${mmFmtPrice(c.price)}. Tap to view.`,
         metadata: { symbol: c.symbol, pair: c.pair, marketType: c.isPerp ? 'perp' : 'spot', priceChange: c.change, price: c.price, category: 'loser' },
       })),
       ...hot.map(c => ({
-        title:    `${c.symbol} is trending 🔥`,
-        message:  `${mmCoinName(c.symbol)} is one of today's most traded coins — at ${mmFmtPrice(c.price)}. Tap to trade.`,
+        title:    `🔥 Trending Now: ${c.symbol} is the talk of the market`,
+        message:  `${mmCoinName(c.symbol)} is one of today's most actively traded assets, currently at ${mmFmtPrice(c.price)}${c.change >= 0 ? ` (+${c.change.toFixed(1)}%)` : ` (${c.change.toFixed(1)}%)`}. Tap to trade.`,
         metadata: { symbol: c.symbol, pair: c.pair, marketType: c.isPerp ? 'perp' : 'spot', priceChange: c.change, price: c.price, category: 'hot' },
       })),
     ];
 
-    for (const entry of entries) {
-      await supabase.from('notifications').insert({
-        user_id: userId,
-        title:   entry.title,
-        message: entry.message,
-        type:    'price_alert',
-        read:    false,
-        metadata: entry.metadata,
-      });
-      await new Promise(r => setTimeout(r, 300));
-    }
+    // Pick exactly ONE at random — like a news flash, not a flood
+    const pick = candidates[Math.floor(Math.random() * candidates.length)];
+    if (!pick) return;
+
+    await supabase.from('notifications').insert({
+      user_id:  userId,
+      title:    pick.title,
+      message:  pick.message,
+      type:     'price_alert',
+      read:     false,
+      metadata: pick.metadata,
+    });
 
     localStorage.setItem(lsKey, String(Date.now()));
   } catch {

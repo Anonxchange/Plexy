@@ -1,48 +1,52 @@
 const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 const SUPABASE_EDGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-client-ip`;
 
-let _cachedIP: string | null = null;
+export interface ClientLocation {
+  ip: string;
+  country: string;
+  isp: string;
+}
+
+let _cache: ClientLocation | null = null;
 let _cacheExpiry = 0;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
-async function fetchFromEdge(): Promise<string | null> {
+/**
+ * Returns the client's IP, country name, and ISP/network from the Supabase
+ * edge function, which runs server-side behind Cloudflare and has access to
+ * CF-IPCountry, CF-ISP and other enriched headers.
+ * Result is cached for 5 minutes — safe to call from multiple places.
+ */
+export async function getClientLocation(): Promise<ClientLocation> {
+  const now = Date.now();
+  if (_cache && now < _cacheExpiry) return _cache;
+
   try {
     const res = await fetch(SUPABASE_EDGE_URL, {
       headers: { apikey: ANON_KEY },
     });
     if (res.ok) {
       const data = await res.json();
-      if (data?.ip && data.ip !== 'unknown') return data.ip;
+      const ip = data?.ip && data.ip !== 'unknown' ? String(data.ip) : 'unknown';
+      const result: ClientLocation = {
+        ip,
+        country: String(data?.country || data?.country_name || ''),
+        isp:     String(data?.isp || data?.org || data?.network || ''),
+      };
+      if (ip !== 'unknown') {
+        _cache = result;
+        _cacheExpiry = now + CACHE_TTL_MS;
+      }
+      return result;
     }
   } catch {
-    // Edge function unreachable
+    // Edge function unreachable — return empty location, never block auth
   }
-  return null;
+
+  return { ip: 'unknown', country: '', isp: '' };
 }
 
-async function fetchFromIpify(): Promise<string | null> {
-  try {
-    const res = await fetch('https://api.ipify.org?format=json');
-    if (res.ok) {
-      const data = await res.json();
-      if (data?.ip) return data.ip;
-    }
-  } catch {
-    // ipify unreachable
-  }
-  return null;
-}
-
+/** Backwards-compatible helper — returns IP string only. */
 export async function getClientIP(): Promise<string> {
-  const now = Date.now();
-  if (_cachedIP && now < _cacheExpiry) return _cachedIP;
-
-  const ip = (await fetchFromIpify()) ?? (await fetchFromEdge()) ?? 'unknown';
-
-  if (ip !== 'unknown') {
-    _cachedIP = ip;
-    _cacheExpiry = now + CACHE_TTL_MS;
-  }
-
-  return ip;
+  return (await getClientLocation()).ip;
 }

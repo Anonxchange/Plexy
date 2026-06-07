@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, useRef } f
 import type { User, Session } from "@supabase/supabase-js";
 import { useLocation } from "wouter";
 import { getSupabase } from "./supabase";
-import { getClientIP } from "./get-client-ip";
+import { getClientLocation } from "./get-client-ip";
 import { devLog } from "./dev-logger";
 import { sendLoginNotificationIfEnabled, fetchAndCreateMarketMoversNotifications } from "./notifications-api";
 import { deviceFingerprint } from "./security/device-fingerprint";
@@ -222,14 +222,14 @@ function getDeviceInfo() {
 
 // Module-level lock — prevents two concurrent trackDevice calls from both
 // seeing "no existing row" and both inserting (race condition).
-let _trackDeviceInflight: Promise<{ isNewDevice: boolean; ipAddress: string }> | null = null;
+let _trackDeviceInflight: Promise<{ isNewDevice: boolean; ipAddress: string; country: string; isp: string }> | null = null;
 
-async function trackDevice(userId: string): Promise<{ isNewDevice: boolean; ipAddress: string }> {
+async function trackDevice(userId: string): Promise<{ isNewDevice: boolean; ipAddress: string; country: string; isp: string }> {
   if (_trackDeviceInflight) {
     // Another call is already running — wait for it, then signal "not new"
     // so only the first caller can ever send a notification.
     await _trackDeviceInflight.catch(() => {});
-    return { isNewDevice: false, ipAddress: '' };
+    return { isNewDevice: false, ipAddress: '', country: '', isp: '' };
   }
   _trackDeviceInflight = _doTrackDevice(userId);
   try {
@@ -239,12 +239,16 @@ async function trackDevice(userId: string): Promise<{ isNewDevice: boolean; ipAd
   }
 }
 
-async function _doTrackDevice(userId: string): Promise<{ isNewDevice: boolean; ipAddress: string }> {
+async function _doTrackDevice(userId: string): Promise<{ isNewDevice: boolean; ipAddress: string; country: string; isp: string }> {
   const STALE_THRESHOLD_DAYS = 30;
   try {
     const supabase = await getSupabase();
     const deviceInfo = getDeviceInfo();
-    const ipAddress = await getClientIP().catch(() => '');
+    // Single fetch for IP + country + ISP — no duplicate requests
+    const location = await getClientLocation().catch(() => ({ ip: '', country: '', isp: '' }));
+    const ipAddress = location.ip;
+    const country   = location.country;
+    const isp       = location.isp;
     // Use browser fingerprint hash as stable dedup key — survives IP/network changes
     const fingerprintHash = await deviceFingerprint.getCurrentFingerprint();
     const now = new Date().toISOString();
@@ -263,7 +267,7 @@ async function _doTrackDevice(userId: string): Promise<{ isNewDevice: boolean; i
       await supabase.from('user_devices')
         .update({ is_current: true, last_active: now, ip_address: ipAddress })
         .eq('id', existing.id);
-      return { isNewDevice: isStale, ipAddress };
+      return { isNewDevice: isStale, ipAddress, country, isp };
     }
 
     // Genuinely new device — insert a record and signal caller to fire notification
@@ -279,9 +283,9 @@ async function _doTrackDevice(userId: string): Promise<{ isNewDevice: boolean; i
       is_current: true,
       last_active: now,
     });
-    return { isNewDevice: true, ipAddress };
+    return { isNewDevice: true, ipAddress, country, isp };
   } catch {
-    return { isNewDevice: false, ipAddress: '' };
+    return { isNewDevice: false, ipAddress: '', country: '', isp: '' };
   }
 }
 
@@ -840,9 +844,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               if (aborted) return;
               const userId = currentSession.user.id;
               const deviceInfo = getDeviceInfo();
-              const { isNewDevice, ipAddress } = await trackDevice(userId);
+              const { isNewDevice, ipAddress, country, isp } = await trackDevice(userId);
               checkWalletOnAuthRef.current(userId);
-              if (isNewDevice) sendLoginNotificationIfEnabled(userId, deviceInfo, ipAddress);
+              if (isNewDevice) sendLoginNotificationIfEnabled(userId, deviceInfo, ipAddress, country, isp);
               fetchAndCreateMarketMoversNotifications(userId);
             }, 1500);
           }
@@ -1049,9 +1053,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Replicate the async post-login tasks normally run in the SIGNED_IN handler
         setTimeout(async () => {
           const deviceInfo = getDeviceInfo();
-          const { isNewDevice, ipAddress } = await trackDevice(dUser.id);
+          const { isNewDevice, ipAddress, country, isp } = await trackDevice(dUser.id);
           checkWalletOnAuthRef.current(dUser.id);
-          if (isNewDevice) sendLoginNotificationIfEnabled(dUser.id, deviceInfo, ipAddress);
+          if (isNewDevice) sendLoginNotificationIfEnabled(dUser.id, deviceInfo, ipAddress, country, isp);
         }, 1500);
       }
     } else {
@@ -1074,9 +1078,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession(pendingSessionData);
     setUser(pendingUser);
     
-    const { isNewDevice, ipAddress } = await trackDevice(pendingUser.id);
+    const { isNewDevice, ipAddress, country, isp } = await trackDevice(pendingUser.id);
     const deviceInfo = getDeviceInfo();
-    if (isNewDevice) sendLoginNotificationIfEnabled(pendingUser.id, deviceInfo, ipAddress);
+    if (isNewDevice) sendLoginNotificationIfEnabled(pendingUser.id, deviceInfo, ipAddress, country, isp);
     
     // Clear pending state
     setPendingOTPWithTimestamp(null);
@@ -1115,9 +1119,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session.user);
       setTimeout(async () => {
         const deviceInfo = getDeviceInfo();
-        const { isNewDevice, ipAddress } = await trackDevice(session.user.id);
+        const { isNewDevice, ipAddress, country, isp } = await trackDevice(session.user.id);
         checkWalletOnAuthRef.current(session.user.id);
-        if (isNewDevice) sendLoginNotificationIfEnabled(session.user.id, deviceInfo, ipAddress);
+        if (isNewDevice) sendLoginNotificationIfEnabled(session.user.id, deviceInfo, ipAddress, country, isp);
       }, 1500);
     }
   }, []);
