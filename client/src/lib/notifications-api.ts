@@ -367,60 +367,83 @@ export async function fetchAndCreateMarketMoversNotifications(userId: string): P
     const prefs = data?.notification_preferences as Record<string, boolean> | null;
     if (prefs && prefs.market_movers === false) return;
 
-    // ── Determine which slots should have fired today ────────────────────────
-    // Catch-up model: on every app open we check which slots are due TODAY and
-    // send any that are missing. This guarantees 2 notifications/day even if
-    // the user didn't open the app during the exact 8–11 AM / 8–11 PM windows.
+    // ── Bybit-style catch-up model ───────────────────────────────────────────
+    // On every app open, scan today + yesterday for missing slots and insert
+    // any that are absent — with created_at backdated to the slot's scheduled
+    // time. This means:
+    //   • Notifications always show "8:00 AM" / "1:00 PM" / "8:00 PM",
+    //     not the time the user happened to open the app.
+    //   • A user who was offline all day opens the next morning and sees
+    //     yesterday's 3 notifications timestamped correctly.
     //
-    // Slots defined by the hour they become "due":
-    //   morning → any time after 08:00 local
-    //   night   → any time after 20:00 local
-    //
-    // Dedup is server-side: we query Supabase for existing price_alert rows
-    // whose metadata.slot matches, scoped to today (UTC date). This is
-    // race-free across devices — only the first INSERT wins per slot per day.
+    // Slot schedule (local time):  morning=08:00  afternoon=13:00  night=20:00
+    // Dedup key: metadata.dateStr + metadata.slot (server-side via Supabase).
 
-    // Morning slot is always due once per day — fires on the first app open
-    // regardless of time (even 1 AM), so every user is guaranteed to get it.
-    // Night slot becomes due after noon (12:00), giving natural separation
-    // between the two notifications without missing late-risers.
-    const hour = new Date().getHours();
-    const dueSlots: Array<'morning' | 'night'> = ['morning'];
-    if (hour >= 12) dueSlots.push('night');
+    type MMSlot = 'morning' | 'afternoon' | 'night';
+    const SLOT_HOUR: Record<MMSlot, number> = { morning: 8, afternoon: 13, night: 20 };
 
-    // Fast local gate: skip Supabase round-trip if we already know both slots
-    // fired this session (localStorage as optimistic cache, NOT the truth gate).
-    const today = new Date().toDateString();
-    const slotsNeeded = dueSlots.filter(
-      slot => localStorage.getItem(`pexly_mm_${slot}_${userId}`) !== today
+    type SlotEntry = { dateStr: string; slot: MMSlot; scheduledAt: Date };
+
+    const now = new Date();
+    const pairsToCheck: SlotEntry[] = [];
+
+    // 2 days back → yesterday → today — past first so they
+    // appear in chronological order in the notifications list.
+    for (let daysBack = 2; daysBack >= 0; daysBack--) {
+      const day = new Date(now);
+      day.setDate(day.getDate() - daysBack);
+      const dateStr = day.toDateString(); // e.g. "Sun Jun 06 2026"
+
+      for (const slot of (['morning', 'afternoon', 'night'] as MMSlot[])) {
+        const scheduled = new Date(day);
+        scheduled.setHours(SLOT_HOUR[slot], 0, 0, 0);
+        // Only include if the scheduled time has already passed
+        if (scheduled <= now) pairsToCheck.push({ dateStr, slot, scheduledAt: scheduled });
+      }
+    }
+
+    if (pairsToCheck.length === 0) return;
+
+    // Fast local gate — skip pairs we already confirmed inserted this session
+    const needed = pairsToCheck.filter(
+      ({ dateStr, slot }) =>
+        localStorage.getItem(`pexly_mm_${dateStr}_${slot}_${userId}`) !== 'sent'
     );
-    if (slotsNeeded.length === 0) return;
+    if (needed.length === 0) return;
 
-    // Server-side check — find which of the needed slots already exist in DB
-    const todayUtcStart = new Date();
-    todayUtcStart.setUTCHours(0, 0, 0, 0);
+    // Server-side dedup — query last 3 days of price_alert rows
+    const twoDaysAgo = new Date(now);
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+    twoDaysAgo.setHours(0, 0, 0, 0);
 
     const { data: existing } = await supabase
       .from('notifications')
-      .select('metadata')
+      .select('metadata, created_at')
       .eq('user_id', userId)
       .eq('type', 'price_alert')
-      .gte('created_at', todayUtcStart.toISOString());
+      .gte('created_at', twoDaysAgo.toISOString());
 
-    const sentSlots = new Set<string>(
-      (existing ?? [])
-        .map((r: any) => r.metadata?.slot as string | undefined)
-        .filter(Boolean) as string[]
+    // Build "dateStr:slot" set — handle both new records (metadata.dateStr) and
+    // old records without dateStr (fall back to created_at date).
+    const sentSet = new Set<string>(
+      (existing ?? []).map((r: any) => {
+        const slot    = r.metadata?.slot    as string | undefined;
+        if (!slot) return null;
+        const dateStr = r.metadata?.dateStr as string | undefined
+          ?? new Date(r.created_at as string).toDateString();
+        return `${dateStr}:${slot}`;
+      }).filter(Boolean) as string[]
     );
 
-    const missingSlots = slotsNeeded.filter(s => !sentSlots.has(s));
-    if (missingSlots.length === 0) {
-      // All slots already in DB — update local cache and bail
-      slotsNeeded.forEach(s => localStorage.setItem(`pexly_mm_${s}_${userId}`, today));
+    const missing = needed.filter(({ dateStr, slot }) => !sentSet.has(`${dateStr}:${slot}`));
+    if (missing.length === 0) {
+      needed.forEach(({ dateStr, slot }) =>
+        localStorage.setItem(`pexly_mm_${dateStr}_${slot}_${userId}`, 'sent')
+      );
       return;
     }
 
-    // Fetch market data once for all missing slots
+    // Fetch market data once for all missing pairs
     const [spotRaw, futuresRaw] = await Promise.all([
       fetchSpotTickers(),
       fetchFuturesTickers(),
@@ -428,12 +451,10 @@ export async function fetchAndCreateMarketMoversNotifications(userId: string): P
 
     if (spotRaw.length === 0) return;
 
-    // Build a set of symbols that have a perpetual contract — used for routing
     const futuresSymbols = new Set(
       futuresRaw.filter(t => t.symbol.endsWith('USDT')).map(t => t.symbol)
     );
 
-    // USDT pairs only, min $2M 24h volume, sane price change (filter out obvious data errors)
     const coins = spotRaw
       .filter(t => {
         if (!t.symbol.endsWith('USDT')) return false;
@@ -453,9 +474,9 @@ export async function fetchAndCreateMarketMoversNotifications(userId: string): P
     if (coins.length === 0) return;
 
     const byChange = [...coins].sort((a, b) => b.change - a.change);
-    const gainers = byChange.slice(0, 3);
-    const losers  = byChange.slice(-3).reverse();
-    const hot     = [...coins].sort((a, b) => b.volume - a.volume).slice(0, 3);
+    const gainers  = byChange.slice(0, 3);
+    const losers   = byChange.slice(-3).reverse();
+    const hot      = [...coins].sort((a, b) => b.volume - a.volume).slice(0, 3);
 
     type Entry = { title: string; message: string; metadata: Record<string, any> };
     const buildCandidates = (): Entry[] => [
@@ -476,22 +497,23 @@ export async function fetchAndCreateMarketMoversNotifications(userId: string): P
       })),
     ];
 
-    // Insert one notification per missing slot (different random pick per slot)
-    for (const slot of missingSlots) {
+    // Insert one notification per missing pair with backdated created_at
+    for (const { dateStr, slot, scheduledAt } of missing) {
       const candidates = buildCandidates();
       const pick = candidates[Math.floor(Math.random() * candidates.length)];
       if (!pick) continue;
 
       await supabase.from('notifications').insert({
-        user_id:  userId,
-        title:    pick.title,
-        message:  pick.message,
-        type:     'price_alert',
-        read:     false,
-        metadata: { ...pick.metadata, slot },
+        user_id:    userId,
+        title:      pick.title,
+        message:    pick.message,
+        type:       'price_alert',
+        read:       false,
+        metadata:   { ...pick.metadata, slot, dateStr },
+        created_at: scheduledAt.toISOString(), // ← backdated: shows "8:00 AM" not app-open time
       });
 
-      localStorage.setItem(`pexly_mm_${slot}_${userId}`, today);
+      localStorage.setItem(`pexly_mm_${dateStr}_${slot}_${userId}`, 'sent');
     }
   } catch {
     // Never block the auth flow
