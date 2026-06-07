@@ -541,19 +541,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // 3. Wallets with key material exist -> no dialog needed (user can unlock on demand)
-      // IMPORTANT: check for actual key material, not just wallet rows.
-      // user_wallets_safe returns address/metadata even when get_wallet_vault fails,
-      // giving wallets with encryptedPrivateKey === undefined. Treating those as
-      // "complete" would suppress the import dialog and leave IDB empty — causing
-      // "Generating address…" everywhere and silent failures on any key operation.
-      const hasKeyMaterial = wallets.some((w: any) => w.encryptedPrivateKey !== undefined);
-      if (wallets.length > 0 && hasKeyMaterial) {
+      // 3. Wallets exist → no dialog needed. Encrypted blobs are already in IDB
+      //    (loadWalletsFromSupabase saves them). Password is only required when
+      //    the user signs a transaction, not just to load the wallet page.
+      if (wallets.length > 0) {
         setWalletImportState({ required: false, expectedAddress: null });
         return;
       }
-      // Wallets found but without key material — fall through to profile check
-      // so the correct IMPORT dialog opens and the user can re-sync their vault.
 
       // No local/Supabase blobs. Before opening any dialog we MUST confirm
       // the server state. If Supabase was unreachable in step 1, retry once
