@@ -58,6 +58,29 @@ function pickRandomTasks(n: number): Task[] {
   return [...ALL_REWARD_TASKS].sort(() => Math.random() - 0.5).slice(0, n);
 }
 
+function NotificationSkeleton() {
+  return (
+    <div className="flex items-start gap-3 px-4 py-4 border-b border-border last:border-0">
+      <div className="flex-shrink-0 h-10 w-10 rounded-full bg-muted animate-pulse" />
+      <div className="flex-1 min-w-0 space-y-2 pt-0.5">
+        <div className="h-3.5 w-2/5 rounded bg-muted animate-pulse" />
+        <div className="h-3 w-4/5 rounded bg-muted animate-pulse" />
+        <div className="h-3 w-1/3 rounded bg-muted animate-pulse" />
+      </div>
+    </div>
+  );
+}
+
+function NotificationSkeletonList({ count = 5 }: { count?: number }) {
+  return (
+    <>
+      {Array.from({ length: count }).map((_, i) => (
+        <NotificationSkeleton key={i} />
+      ))}
+    </>
+  );
+}
+
 function RewardTaskItem({ task, onNavigate }: { task: Task; onNavigate: () => void }) {
   return (
     <button
@@ -378,9 +401,12 @@ export default function NotificationsPage() {
   // Randomised on every page mount so the Rewards tab always shows fresh tasks
   const [randomRewardTasks] = useState<Task[]>(() => pickRandomTasks(4));
 
+  const [loading, setLoading] = useState(true);
+
   const loadNotifications = useCallback(async () => {
     const data = await getNotifications();
     setNotifications(data);
+    setLoading(false);
   }, []);
 
   const loadAnnouncements = useCallback(async () => {
@@ -515,6 +541,8 @@ export default function NotificationsPage() {
   function renderItems() {
     const applyUnreadFilter = <T extends { read?: boolean }>(items: T[]) =>
       unreadOnly ? items.filter((i) => !i.read) : items;
+
+    if (loading) return <NotificationSkeletonList count={6} />;
 
     if (activeTab === "all") {
       const filteredNotifs = applyUnreadFilter(allTabNotifications);
