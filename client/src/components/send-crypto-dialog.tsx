@@ -6,6 +6,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertCircle, Loader2, CheckCircle2, X, Copy, ShieldCheck, ShieldAlert, ShieldQuestion } from '@/lib/icons';
+import { AlertCircle, Loader2, CheckCircle2, X, ShieldCheck, ShieldAlert } from '@/lib/icons';
 import { signBitcoinTransaction } from "@/lib/bitcoinSigner";
 import { signEVMTransaction } from "@/lib/evmSigner";
 import { signSolanaTransaction } from "@/lib/solanaSigner";
@@ -28,6 +34,7 @@ import { useSendFee } from "@/hooks/use-fees";
 import { getCryptoPrices, convertCurrency } from "@/lib/crypto-prices";
 import { useToast } from "@/hooks/use-toast";
 import { preTransactionCheck, type AddressSecurityResult, type TokenSecurityResult, GOPLUS_CHAINS } from "@/lib/goplusSecurity";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SendCryptoDialogProps {
   open: boolean;
@@ -42,6 +49,7 @@ type Step = "select" | "details";
 export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, onSuccess }: SendCryptoDialogProps) {
   const { user, isWalletUnlocked, getSessionPassword, setSessionPassword } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [step, setStep] = useState<Step>("select");
   const [selectedCrypto, setSelectedCrypto] = useState<string>("");
@@ -85,7 +93,6 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
     tokenCheck?: TokenSecurityResult;
   }>({ loading: false, safe: true, warnings: [] });
 
-  // GoPlus Security Check
   useEffect(() => {
     const performSecurityCheck = async () => {
       if (!toAddress || toAddress.length < 30 || !selectedCrypto || !selectedNetwork) {
@@ -95,15 +102,10 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
 
       setSecurityCheck(prev => ({ ...prev, loading: true }));
       try {
-        const chainId = GOPLUS_CHAINS[selectedNetwork.toLowerCase().split(' ')[0]] || 
+        const chainId = GOPLUS_CHAINS[selectedNetwork.toLowerCase().split(' ')[0]] ||
                         GOPLUS_CHAINS[selectedCrypto.toLowerCase()] || '1';
-        
-        const result = await preTransactionCheck({
-          chainId,
-          toAddress,
-          // If it's a token (USDT/USDC), we might want to pass the contract address here
-          // For now, focusing on address security
-        });
+
+        const result = await preTransactionCheck({ chainId, toAddress });
 
         setSecurityCheck({
           loading: false,
@@ -132,11 +134,9 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
     USDT: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)"],
   };
 
-  // Fetch crypto price when crypto is selected
   useEffect(() => {
     const fetchPrice = async () => {
       if (!selectedCrypto) return;
-      
       try {
         const prices = await getCryptoPrices([selectedCrypto]);
         if (prices[selectedCrypto]) {
@@ -149,66 +149,47 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
         console.error("Error fetching crypto price:", error);
       }
     };
-
     fetchPrice();
   }, [selectedCrypto, selectedCurrency]);
 
-  // Convert between fiat and crypto amounts
   useEffect(() => {
-    if (!cryptoPrice || cryptoPrice === 0) {
-      return;
-    }
+    if (!cryptoPrice || cryptoPrice === 0) return;
 
     if (amountInputMode === "fiat") {
       const fiatValue = parseFloat(amount);
-      if (isNaN(fiatValue) || !amount) {
-        setCryptoAmount("");
-        return;
-      }
-      const calculatedCryptoAmount = fiatValue / cryptoPrice;
-      setCryptoAmount(calculatedCryptoAmount.toFixed(8));
+      if (isNaN(fiatValue) || !amount) { setCryptoAmount(""); return; }
+      setCryptoAmount((fiatValue / cryptoPrice).toFixed(8));
     } else {
       const cryptoValue = parseFloat(amount);
-      if (isNaN(cryptoValue) || !amount) {
-        setFiatAmount("");
-        return;
-      }
-      const calculatedFiatAmount = cryptoValue * cryptoPrice;
-      setFiatAmount(calculatedFiatAmount.toFixed(2));
+      if (isNaN(cryptoValue) || !amount) { setFiatAmount(""); return; }
+      setFiatAmount((cryptoValue * cryptoPrice).toFixed(2));
     }
   }, [amount, cryptoPrice, amountInputMode]);
 
   const getNetworkSpecificSymbol = (crypto: string, network: string): string => {
-    // For USDT and USDC, append network suffix based on selection
     if (crypto === 'USDT' || crypto === 'USDC') {
       if (network.includes('ERC-20')) return `${crypto}-ERC20`;
       if (network.includes('BEP-20')) return `${crypto}-BEP20`;
       if (network.includes('TRC-20')) return `${crypto}-TRC20`;
       if (network.includes('SPL')) return `${crypto}-SOL`;
     }
-    // For native coins, return as-is
     return crypto;
   };
 
   const selectedWallet = wallets.find(w => w.symbol === selectedCrypto);
-  
-  // Get network-specific symbol for fee calculation
-  const networkSpecificSymbol = selectedCrypto && selectedNetwork 
+  const networkSpecificSymbol = selectedCrypto && selectedNetwork
     ? getNetworkSpecificSymbol(selectedCrypto, selectedNetwork)
     : selectedCrypto;
-  
-  // Use crypto amount for fee calculation
-  const cryptoAmountForFee = amountInputMode === "crypto" 
-    ? parseFloat(amount) || 0 
+  const cryptoAmountForFee = amountInputMode === "crypto"
+    ? parseFloat(amount) || 0
     : parseFloat(cryptoAmount) || 0;
-  
+
   const { data: feeData, isLoading: feeLoading, error: feeError } = useSendFee(
     networkSpecificSymbol || '',
     cryptoAmountForFee,
-    false // assuming external send, set to true for internal transfers
+    false
   );
-  
-  // Platform fee removed as per user request
+
   const networkFee = feeData?.networkFee || 0;
   const total = (cryptoAmountForFee || 0) + (networkFee || 0);
 
@@ -348,63 +329,50 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
     resetForm();
   };
 
-  return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] bg-background">
-        <DialogHeader className="flex flex-row items-center justify-between">
-          <DialogTitle>
-            {step === "select" ? "Select an asset" : `Send ${selectedCrypto}`}
-          </DialogTitle>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleClose}
-            className="h-8 w-8"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </DialogHeader>
+  const title = step === "select" ? "Select an asset" : `Send ${selectedCrypto}`;
 
-        {success ? (
-          <div className="flex flex-col items-center justify-center py-8">
-            <CheckCircle2 className="h-16 w-16 text-green-500 mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Transaction Initiated!</h3>
-            <p className="text-sm text-muted-foreground text-center">
-              Your crypto is being sent. Check your transactions for status.
-            </p>
-          </div>
-        ) : step === "select" ? (
-          <ScrollArea className="h-[400px]">
-            <div className="space-y-2 pr-4">
-              {wallets
-                .filter(wallet => wallet.symbol && !["success", "message", "timestamp", "status"].includes(wallet.symbol.toLowerCase()))
-                .map((wallet) => (
-                <Button
-                  key={wallet.symbol}
-                  variant="ghost"
-                  className="w-full h-auto py-4 px-4 justify-start hover:bg-primary/10"
-                  onClick={() => handleSelectCrypto(wallet.symbol)}
-                >
-                  <div className="flex items-center gap-3 w-full">
-                    <img 
-                      src={cryptoIconUrls[wallet.symbol]} 
-                      alt={wallet.symbol}
-                      className="w-10 h-10 rounded-full"
-                      onError={(e) => {
-                        e.currentTarget.src = `https://ui-avatars.com/api/?name=${wallet.symbol}&background=random`;
-                      }}
-                    />
-                    <div className="text-left flex-1">
-                      <div className="font-semibold">{wallet.symbol}</div>
-                      <div className="text-xs text-muted-foreground">{wallet.name}</div>
-                    </div>
+  const content = (
+    <>
+      {success ? (
+        <div className="flex flex-col items-center justify-center py-8">
+          <CheckCircle2 className="h-16 w-16 text-green-500 mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Transaction Initiated!</h3>
+          <p className="text-sm text-muted-foreground text-center">
+            Your crypto is being sent. Check your transactions for status.
+          </p>
+        </div>
+      ) : step === "select" ? (
+        <ScrollArea className="h-[400px]">
+          <div className="space-y-2 pr-4">
+            {wallets
+              .filter(wallet => wallet.symbol && !["success", "message", "timestamp", "status"].includes(wallet.symbol.toLowerCase()))
+              .map((wallet) => (
+              <Button
+                key={wallet.symbol}
+                variant="ghost"
+                className="w-full h-auto py-4 px-4 justify-start hover:bg-primary/10"
+                onClick={() => handleSelectCrypto(wallet.symbol)}
+              >
+                <div className="flex items-center gap-3 w-full">
+                  <img
+                    src={cryptoIconUrls[wallet.symbol]}
+                    alt={wallet.symbol}
+                    className="w-10 h-10 rounded-full"
+                    onError={(e) => {
+                      e.currentTarget.src = `https://ui-avatars.com/api/?name=${wallet.symbol}&background=random`;
+                    }}
+                  />
+                  <div className="text-left flex-1">
+                    <div className="font-semibold">{wallet.symbol}</div>
+                    <div className="text-xs text-muted-foreground">{wallet.name}</div>
                   </div>
-                </Button>
-              ))}
-            </div>
-          </ScrollArea>
-        ) : (
-          <ScrollArea className="max-h-[500px] pr-4">
+                </div>
+              </Button>
+            ))}
+          </div>
+        </ScrollArea>
+      ) : (
+        <ScrollArea className="max-h-[65vh] pr-4">
           <div className="space-y-4">
             {isWalletUnlocked ? (
               <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 mb-4">
@@ -426,6 +394,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
                 />
               </div>
             )}
+
             <div>
               <Label className="text-sm font-medium mb-2 block">Asset</Label>
               <Select value={selectedCrypto} onValueChange={(value) => {
@@ -435,8 +404,8 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
               }}>
                 <SelectTrigger className="h-12 bg-muted">
                   <div className="flex items-center gap-2">
-                    <img 
-                      src={cryptoIconUrls[selectedCrypto] || `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${selectedCrypto?.toLowerCase() || ''}.png`} 
+                    <img
+                      src={cryptoIconUrls[selectedCrypto] || `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${selectedCrypto?.toLowerCase() || ''}.png`}
                       alt={selectedCrypto}
                       className="w-6 h-6 rounded-full"
                       onError={(e) => {
@@ -450,8 +419,8 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
                   {wallets.map((wallet) => (
                     <SelectItem key={wallet.symbol} value={wallet.symbol}>
                       <div className="flex items-center gap-2">
-                        <img 
-                          src={cryptoIconUrls[wallet.symbol] || `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${wallet.symbol.toLowerCase()}.png`} 
+                        <img
+                          src={cryptoIconUrls[wallet.symbol] || `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${wallet.symbol.toLowerCase()}.png`}
                           alt={wallet.symbol}
                           className="w-6 h-6 rounded-full"
                           onError={(e) => {
@@ -476,7 +445,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
                   value={toAddress}
                   onChange={(e) => setToAddress(e.target.value)}
                   className={`h-12 pr-20 bg-muted ${
-                    !securityCheck.safe ? "border-red-500" : 
+                    !securityCheck.safe ? "border-red-500" :
                     securityCheck.warnings.length > 0 ? "border-yellow-500" : ""
                   }`}
                 />
@@ -590,8 +559,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
                   onClick={() => {
                     if (selectedWallet) {
                       if (amountInputMode === "fiat" && cryptoPrice) {
-                        const maxFiatAmount = selectedWallet.balance * cryptoPrice;
-                        setAmount(maxFiatAmount.toFixed(2));
+                        setAmount((selectedWallet.balance * cryptoPrice).toFixed(2));
                       } else {
                         setAmount(selectedWallet.balance.toFixed(8));
                       }
@@ -615,40 +583,108 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
               />
             </div>
 
-            {/* Fee Breakdown */}
-            {cryptoAmountForFee > 0 && selectedCrypto && selectedNetwork && (
-              <div className="bg-muted/50 rounded-lg p-3 space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Amount</span>
-                  <span className="font-medium">{cryptoAmountForFee.toFixed(8)} {selectedCrypto}</span>
+            {cryptoAmountForFee > 0 && selectedCrypto && selectedNetwork && (() => {
+              const fiatSymbol = selectedCurrency === "NGN" ? "₦" : "$";
+              const fmt = (n: number) =>
+                fiatSymbol + new Intl.NumberFormat("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }).format(n);
+              const fmtCrypto = (n: number) => {
+                const sym = selectedCrypto;
+                const dp =
+                  sym === "BTC" ? 8 :
+                  sym === "ETH" ? 6 :
+                  sym === "SOL" ? 5 :
+                  sym === "TRX" || sym === "BNB" ? 4 :
+                  sym === "USDT" || sym === "USDC" ? 2 : 6;
+                return n.toLocaleString("en-US", {
+                  minimumFractionDigits: dp,
+                  maximumFractionDigits: dp,
+                });
+              };
+              const hasFiat = cryptoPrice > 0;
+              return (
+                <div className="rounded-xl border border-border bg-card overflow-hidden text-sm">
+                  {/* Card header */}
+                  <div className="flex items-center justify-between px-4 py-2.5 bg-muted/40 border-b border-border">
+                    <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                      Transaction Summary
+                    </span>
+                    {!feeLoading && feeData && (
+                      <span className="flex items-center gap-1.5 text-[10px] font-medium text-emerald-500">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                        Live fees
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="divide-y divide-border">
+                    {/* You send */}
+                    <div className="flex items-center justify-between px-4 py-3">
+                      <span className="text-muted-foreground">You send</span>
+                      <div className="text-right">
+                        <div className="font-semibold tabular-nums">
+                          {fmtCrypto(cryptoAmountForFee)} {selectedCrypto}
+                        </div>
+                        {hasFiat && (
+                          <div className="text-xs text-muted-foreground tabular-nums mt-0.5">
+                            {fmt(cryptoAmountForFee * cryptoPrice)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Network fee */}
+                    {feeLoading ? (
+                      <div className="flex items-center justify-between px-4 py-3">
+                        <span className="text-muted-foreground">Network fee</span>
+                        <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Fetching live fee…
+                        </div>
+                      </div>
+                    ) : feeData ? (
+                      <div className="flex items-center justify-between px-4 py-3">
+                        <span className="text-muted-foreground">Network fee</span>
+                        <div className="text-right">
+                          <div className="tabular-nums">
+                            {fmtCrypto(feeData.networkFee)} {selectedCrypto}
+                          </div>
+                          {hasFiat && (
+                            <div className="text-xs text-muted-foreground tabular-nums mt-0.5">
+                              {fmt(feeData.networkFee * cryptoPrice)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : feeError ? (
+                      <div className="flex items-center gap-1.5 px-4 py-3 text-xs text-destructive">
+                        <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                        Could not fetch live fee — check your connection
+                      </div>
+                    ) : null}
+
+                    {/* Total */}
+                    {feeData && (
+                      <div className="flex items-center justify-between px-4 py-3.5 bg-muted/30">
+                        <span className="font-semibold">Total deducted</span>
+                        <div className="text-right">
+                          <div className="font-bold tabular-nums">
+                            {fmtCrypto(total)} {selectedCrypto}
+                          </div>
+                          {hasFiat && (
+                            <div className="text-xs text-muted-foreground font-medium tabular-nums mt-0.5">
+                              {fmt(total * cryptoPrice)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                {feeLoading ? (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Calculating fees...</span>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  </div>
-                ) : feeData ? (
-                  <>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Network Fee</span>
-                      <span>{feeData.networkFee.toFixed(8)} {selectedCrypto}</span>
-                    </div>
-                    <div className="flex justify-between pt-2 border-t border-border">
-                      <span className="font-semibold">Total</span>
-                      <span className="font-semibold">{total.toFixed(8)} {selectedCrypto}</span>
-                    </div>
-                  </>
-                ) : feeError ? (
-                  <div className="flex justify-between">
-                    <span className="text-destructive text-xs">Error calculating fee: {feeError.message}</span>
-                  </div>
-                ) : (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground text-xs">Enter an amount to see fees</span>
-                  </div>
-                )}
-              </div>
-            )}
+              );
+            })()}
 
             {error && (
               <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 p-3 rounded-lg">
@@ -657,7 +693,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
               </div>
             )}
 
-            <div className="flex gap-2 pt-4">
+            <div className="flex gap-2 pt-4 pb-2">
               <Button
                 variant="outline"
                 onClick={handleClose}
@@ -682,8 +718,42 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
               </Button>
             </div>
           </div>
-          </ScrollArea>
-        )}
+        </ScrollArea>
+      )}
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <Sheet open={open} onOpenChange={handleClose}>
+        <SheetContent
+          side="bottom"
+          className="rounded-t-2xl px-4 pt-2 pb-6 max-h-[92dvh] overflow-hidden flex flex-col"
+        >
+          {/* Drag handle */}
+          <div className="mx-auto w-10 h-1 rounded-full bg-muted-foreground/30 mb-3 flex-shrink-0" />
+          <SheetHeader className="flex flex-row items-center justify-between mb-4 flex-shrink-0">
+            <SheetTitle>{title}</SheetTitle>
+            <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8">
+              <X className="h-4 w-4" />
+            </Button>
+          </SheetHeader>
+          {content}
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[500px] bg-background">
+        <DialogHeader className="flex flex-row items-center justify-between">
+          <DialogTitle>{title}</DialogTitle>
+          <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8">
+            <X className="h-4 w-4" />
+          </Button>
+        </DialogHeader>
+        {content}
       </DialogContent>
     </Dialog>
   );
