@@ -367,23 +367,64 @@ export async function fetchAndCreateMarketMoversNotifications(userId: string): P
     const prefs = data?.notification_preferences as Record<string, boolean> | null;
     if (prefs && prefs.market_movers === false) return;
 
-    // Two slots per day: morning (8–11 AM) and night (8–11 PM).
-    // Each slot fires at most once per calendar day, tracked separately in localStorage.
+    // ── Determine which slots should have fired today ────────────────────────
+    // Catch-up model: on every app open we check which slots are due TODAY and
+    // send any that are missing. This guarantees 2 notifications/day even if
+    // the user didn't open the app during the exact 8–11 AM / 8–11 PM windows.
+    //
+    // Slots defined by the hour they become "due":
+    //   morning → any time after 08:00 local
+    //   night   → any time after 20:00 local
+    //
+    // Dedup is server-side: we query Supabase for existing price_alert rows
+    // whose metadata.slot matches, scoped to today (UTC date). This is
+    // race-free across devices — only the first INSERT wins per slot per day.
+
     const hour = new Date().getHours();
-    const isMorning = hour >= 8  && hour < 12;
-    const isNight   = hour >= 20 && hour < 24;
-    if (!isMorning && !isNight) return;   // outside both windows — skip
+    const dueSlots: Array<'morning' | 'night'> = [];
+    if (hour >= 8)  dueSlots.push('morning');
+    if (hour >= 20) dueSlots.push('night');
+    if (dueSlots.length === 0) return;  // before 8 AM — nothing due yet
 
-    const slotKey  = `pexly_mm_${isMorning ? 'morning' : 'night'}_${userId}`;
-    const today    = new Date().toDateString();                // e.g. "Mon Jun 07 2026"
-    if (localStorage.getItem(slotKey) === today) return;      // already fired for this slot today
+    // Fast local gate: skip Supabase round-trip if we already know both slots
+    // fired this session (localStorage as optimistic cache, NOT the truth gate).
+    const today = new Date().toDateString();
+    const slotsNeeded = dueSlots.filter(
+      slot => localStorage.getItem(`pexly_mm_${slot}_${userId}`) !== today
+    );
+    if (slotsNeeded.length === 0) return;
 
+    // Server-side check — find which of the needed slots already exist in DB
+    const todayUtcStart = new Date();
+    todayUtcStart.setUTCHours(0, 0, 0, 0);
+
+    const { data: existing } = await supabase
+      .from('notifications')
+      .select('metadata')
+      .eq('user_id', userId)
+      .eq('type', 'price_alert')
+      .gte('created_at', todayUtcStart.toISOString());
+
+    const sentSlots = new Set<string>(
+      (existing ?? [])
+        .map((r: any) => r.metadata?.slot as string | undefined)
+        .filter(Boolean) as string[]
+    );
+
+    const missingSlots = slotsNeeded.filter(s => !sentSlots.has(s));
+    if (missingSlots.length === 0) {
+      // All slots already in DB — update local cache and bail
+      slotsNeeded.forEach(s => localStorage.setItem(`pexly_mm_${s}_${userId}`, today));
+      return;
+    }
+
+    // Fetch market data once for all missing slots
     const [spotRaw, futuresRaw] = await Promise.all([
       fetchSpotTickers(),
       fetchFuturesTickers(),
     ]);
 
-    if (spotRaw.length === 0) return; // no data from either source
+    if (spotRaw.length === 0) return;
 
     // Build a set of symbols that have a perpetual contract — used for routing
     const futuresSymbols = new Set(
@@ -410,13 +451,12 @@ export async function fetchAndCreateMarketMoversNotifications(userId: string): P
     if (coins.length === 0) return;
 
     const byChange = [...coins].sort((a, b) => b.change - a.change);
-    // Top 3 gainers, top 3 losers, top 3 by volume (hot)
     const gainers = byChange.slice(0, 3);
     const losers  = byChange.slice(-3).reverse();
     const hot     = [...coins].sort((a, b) => b.volume - a.volume).slice(0, 3);
 
     type Entry = { title: string; message: string; metadata: Record<string, any> };
-    const candidates: Entry[] = [
+    const buildCandidates = (): Entry[] => [
       ...gainers.map(c => ({
         title:    `📈 Market Update: ${c.symbol} surges ${c.change.toFixed(1)}% today`,
         message:  `${mmCoinName(c.symbol)} is one of today's top performers, now trading at ${mmFmtPrice(c.price)} — a ${c.change.toFixed(1)}% gain in the last 24h. Tap to trade.`,
@@ -434,20 +474,23 @@ export async function fetchAndCreateMarketMoversNotifications(userId: string): P
       })),
     ];
 
-    // Pick exactly ONE at random — like a news flash, not a flood
-    const pick = candidates[Math.floor(Math.random() * candidates.length)];
-    if (!pick) return;
+    // Insert one notification per missing slot (different random pick per slot)
+    for (const slot of missingSlots) {
+      const candidates = buildCandidates();
+      const pick = candidates[Math.floor(Math.random() * candidates.length)];
+      if (!pick) continue;
 
-    await supabase.from('notifications').insert({
-      user_id:  userId,
-      title:    pick.title,
-      message:  pick.message,
-      type:     'price_alert',
-      read:     false,
-      metadata: pick.metadata,
-    });
+      await supabase.from('notifications').insert({
+        user_id:  userId,
+        title:    pick.title,
+        message:  pick.message,
+        type:     'price_alert',
+        read:     false,
+        metadata: { ...pick.metadata, slot },
+      });
 
-    localStorage.setItem(slotKey, today);
+      localStorage.setItem(`pexly_mm_${slot}_${userId}`, today);
+    }
   } catch {
     // Never block the auth flow
   }
