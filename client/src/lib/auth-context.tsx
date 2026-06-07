@@ -220,7 +220,26 @@ function getDeviceInfo() {
   };
 }
 
+// Module-level lock — prevents two concurrent trackDevice calls from both
+// seeing "no existing row" and both inserting (race condition).
+let _trackDeviceInflight: Promise<{ isNewDevice: boolean; ipAddress: string }> | null = null;
+
 async function trackDevice(userId: string): Promise<{ isNewDevice: boolean; ipAddress: string }> {
+  if (_trackDeviceInflight) {
+    // Another call is already running — wait for it, then signal "not new"
+    // so only the first caller can ever send a notification.
+    await _trackDeviceInflight.catch(() => {});
+    return { isNewDevice: false, ipAddress: '' };
+  }
+  _trackDeviceInflight = _doTrackDevice(userId);
+  try {
+    return await _trackDeviceInflight;
+  } finally {
+    _trackDeviceInflight = null;
+  }
+}
+
+async function _doTrackDevice(userId: string): Promise<{ isNewDevice: boolean; ipAddress: string }> {
   const STALE_THRESHOLD_DAYS = 30;
   try {
     const supabase = await getSupabase();
@@ -484,6 +503,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInInProgressRef = useRef(false);
   const deferredSignedInRef = useRef<{ user: User; session: Session } | null>(null);
   const totpPendingRef = useRef(false);
+  // Tracks the last access_token for which we ran trackDevice.
+  // Supabase re-emits SIGNED_IN on tab refocus — this guard ensures we only
+  // run the post-login side-effects once per unique session token.
+  const lastTrackedTokenRef = useRef<string | null>(null);
 
   // Keep refs in sync with state so callbacks always see current values
   useEffect(() => {
@@ -778,6 +801,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(null);
           setWalletImportState({ required: false, expectedAddress: null });
           checkedUsersRef.current.clear();
+          lastTrackedTokenRef.current = null; // reset so next sign-in always runs trackDevice
           return;
         }
 
@@ -801,6 +825,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(currentSession.user);
 
           if (event === 'SIGNED_IN') {
+            // Guard: Supabase re-emits SIGNED_IN on tab refocus / token refresh.
+            // Only run device tracking + wallet check once per unique access token.
+            if (lastTrackedTokenRef.current === currentSession.access_token) return;
+            lastTrackedTokenRef.current = currentSession.access_token;
+
             // Stamp activity at login so the 30-min inactivity clock starts now
             touchLastActivity(currentSession.user.id, true);
             // Defer async work to avoid blocking the callback.
@@ -929,7 +958,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (data.user && data.session) {
-      await trackDevice(data.user.id);
+      // NOTE: trackDevice is NOT called here.
+      // The deferred SIGNED_IN path (below) always runs after signIn() resolves
+      // and is the single authoritative place that calls trackDevice for a fresh
+      // sign-in.  Calling it here too causes a race: both calls find "no row",
+      // both insert, both send a new-device notification.
 
       // ── Fail-closed TOTP check ─────────────────────────────────────────
       // Use listFactors() directly — the same approach the profile dropdown
