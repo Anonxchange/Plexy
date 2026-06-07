@@ -278,7 +278,7 @@ class NonCustodialWalletManager {
   public async loadWalletsFromSupabase(supabase: any, userId: string): Promise<NonCustodialWallet[]> {
     const { data, error } = await supabase
       .from('user_wallets')
-      .select('id, user_id, chain_id, address, wallet_type, encrypted_private_key, encrypted_mnemonic, is_active, is_backed_up, asset_type, base_chain_wallet_id, created_at')
+      .select('id, user_id, chain_id, address, wallet_type, encrypted_private_key, encrypted_mnemonic, is_active, is_backed_up, created_at')
       .eq('user_id', userId);
 
     if (error) {
@@ -298,8 +298,6 @@ class NonCustodialWalletManager {
       isActive:             w.is_active    === 'true' || w.is_active    === true,
       isBackedUp:           w.is_backed_up === 'true' || w.is_backed_up === true,
       createdAt:            w.created_at,
-      assetType:            w.asset_type            ?? undefined,
-      baseChainWalletId:    w.base_chain_wallet_id  ?? undefined,
     }));
 
     await this.saveWalletsToStorage(wallets, userId);
@@ -320,8 +318,6 @@ class NonCustodialWalletManager {
       encrypted_mnemonic:     serialize(w.encryptedMnemonic),
       is_active:              w.isActive   ? 'true' : 'false',
       is_backed_up:           w.isBackedUp ? 'true' : 'false',
-      asset_type:             w.assetType             ?? null,
-      base_chain_wallet_id:   w.baseChainWalletId     ?? null,
     }));
 
     const { error } = await supabase
@@ -366,8 +362,6 @@ class NonCustodialWalletManager {
           encrypted_mnemonic:    serialize(wallet.encryptedMnemonic),
           is_active:             wallet.isActive   ? 'true' : 'false',
           is_backed_up:          wallet.isBackedUp ? 'true' : 'false',
-          asset_type:            wallet.assetType         ?? null,
-          base_chain_wallet_id:  wallet.baseChainWalletId ?? null,
         },
         { onConflict: 'id' }
       );
