@@ -5,6 +5,7 @@ import { sha256 } from "@noble/hashes/sha256";
 import { ripemd160 } from "@noble/hashes/ripemd160";
 import { base58 } from "@scure/base";
 import { getValue, setValue } from "./ids";
+import { devLog } from "./dev-logger";
 
 // Local Signer Imports
 import { getEVMAddress } from "./evmSigner";
@@ -287,7 +288,7 @@ class NonCustodialWalletManager {
         localStorage.removeItem(this.getStorageKey(userId));
         return wallets;
       } catch (e) {
-        console.error("Failed to migrate legacy wallets:", e);
+        devLog.error("Failed to migrate legacy wallets:", e);
       }
     }
     return [];
@@ -307,40 +308,54 @@ class NonCustodialWalletManager {
   }
 
   public async loadWalletsFromSupabase(supabase: any, userId: string): Promise<NonCustodialWallet[]> {
-    // user_wallets_safe exposes only non-sensitive fields scoped to auth.uid().
-    // encrypted_private_key / encrypted_mnemonic are never returned to the browser;
-    // key material lives in local IndexedDB only (or is written via edge function).
-    const { data, error } = await supabase
+    // Step 1: fetch non-sensitive metadata from the safe view (fast, no special privileges).
+    const { data: safeData, error: safeError } = await supabase
       .from('user_wallets_safe')
-      .select('id, chain_id, address, wallet_type, is_active, is_backed_up, created_at')
+      .select('id, chain_id, address, wallet_type, is_active, is_backed_up, created_at, base_chain_wallet_id')
       .eq('user_id', userId);
 
-    if (error) {
-      console.error("Error loading wallets from Supabase:", error);
+    if (safeError) {
+      devLog.error("Error loading wallets from Supabase:", safeError);
       return [];
     }
+    if (!safeData || safeData.length === 0) return [];
 
-    if (data && data.length > 0) {
-      const wallets: NonCustodialWallet[] = data.map((w: any) => ({
+    // Step 2: fetch encrypted key blobs via the SECURITY DEFINER RPC.
+    // The function enforces auth.uid() === p_user_id server-side before returning
+    // anything — so only the owner ever receives their own encrypted material.
+    // Decryption happens here in the browser with the user's password; the server
+    // never sees plaintext keys (non-custodial guarantee is preserved).
+    const { data: vaultData, error: vaultError } = await supabase
+      .rpc('get_wallet_vault', { p_user_id: userId });
+
+    if (vaultError) {
+      devLog.warn("Could not load vault from Supabase (key material unavailable):", vaultError);
+    }
+
+    // Index vault rows by wallet id for O(1) lookup
+    const vaultById = new Map<string, any>();
+    (vaultData ?? []).forEach((v: any) => vaultById.set(v.id, v));
+
+    const wallets: NonCustodialWallet[] = safeData.map((w: any) => {
+      const vault = vaultById.get(w.id);
+      return {
         id: w.id,
         chainId: w.chain_id,
         address: w.address,
         walletType: w.wallet_type,
-        encryptedPrivateKey: undefined,   // not available client-side; lives in local IndexedDB
-        encryptedMnemonic: undefined,     // not available client-side; lives in local IndexedDB
-        isActive: w.is_active === 'true',
-        isBackedUp: w.is_backed_up === 'true',
-        createdAt: w.created_at,
-        assetType: undefined,
+        encryptedPrivateKey: vault ? parseVaultField(vault.encrypted_private_key) : undefined,
+        encryptedMnemonic:   vault ? parseVaultField(vault.encrypted_mnemonic)    : undefined,
+        isActive:    w.is_active    === 'true',
+        isBackedUp:  w.is_backed_up === 'true',
+        createdAt:   w.created_at,
+        assetType:   undefined,
         baseChainWalletId: w.base_chain_wallet_id,
-        balance: undefined
-      }));
+        balance: undefined,
+      };
+    });
 
-      await this.saveWalletsToStorage(wallets, userId);
-      return wallets;
-    }
-
-    return [];
+    await this.saveWalletsToStorage(wallets, userId);
+    return wallets;
   }
 
   public async saveWalletToSupabase(supabase: any, wallet: NonCustodialWallet, userId: string): Promise<void> {
@@ -367,7 +382,7 @@ class NonCustodialWalletManager {
       });
 
     if (error) {
-      console.error("Error saving wallet to Supabase:", error);
+      devLog.error("Error saving wallet to Supabase:", error);
     }
   }
 
@@ -453,7 +468,7 @@ class NonCustodialWalletManager {
           anyMigrated = true;
           return updatedWallet;
         } catch (e) {
-          console.error(`Failed to migrate legacy vault for wallet ${wallet.id}:`, e);
+          devLog.error(`Failed to migrate legacy vault for wallet ${wallet.id}:`, e);
           return wallet;
         }
       })
