@@ -356,13 +356,16 @@ class NonCustodialWalletManager {
       base_chain_wallet_id:   w.baseChainWalletId     ?? null,
     }));
 
-    const { error } = await supabase.rpc('save_wallets_batch', {
-      p_user_id: userId,
-      p_wallets: payload,
-    });
+    const { error } = await supabase
+      .from('user_wallets')
+      .upsert(
+        payload.map(w => ({ ...w, user_id: userId })),
+        { onConflict: 'id' }
+      );
 
     if (error) {
-      devLog.error("Error batch-saving wallets via RPC:", error);
+      devLog.error("Error batch-saving wallets:", error);
+      throw error;
     }
 
     // Pin the ETH wallet address on the user profile so auth-context
@@ -379,34 +382,30 @@ class NonCustodialWalletManager {
   }
 
   public async saveWalletToSupabase(supabase: any, wallet: NonCustodialWallet, userId: string): Promise<void> {
-    // Writes go through the save_wallet SECURITY DEFINER RPC which:
-    //   • enforces auth.uid() === user_id before touching the table
-    //   • validates the encrypted vault payload is non-empty
-    //   • never overwrites created_at on updates
+    const serialize = (v: string | EncryptedVault | undefined) =>
+      v === undefined ? null : typeof v === 'string' ? v : JSON.stringify(v);
+
     const { error } = await supabase
-      .rpc('save_wallet', {
-        p_id:                    wallet.id,
-        p_user_id:               userId,
-        p_chain_id:              wallet.chainId,
-        p_address:               wallet.address,
-        p_wallet_type:           wallet.walletType,
-        p_encrypted_private_key: typeof wallet.encryptedPrivateKey === 'string'
-          ? wallet.encryptedPrivateKey
-          : JSON.stringify(wallet.encryptedPrivateKey),
-        p_encrypted_mnemonic:    wallet.encryptedMnemonic
-          ? (typeof wallet.encryptedMnemonic === 'string'
-              ? wallet.encryptedMnemonic
-              : JSON.stringify(wallet.encryptedMnemonic))
-          : null,
-        p_is_active:    wallet.isActive   ? 'true' : 'false',
-        p_is_backed_up: wallet.isBackedUp ? 'true' : 'false',
-        p_asset_type:           wallet.assetType         ?? null,
-        p_base_chain_wallet_id: wallet.baseChainWalletId ?? null,
-        // balance intentionally omitted — not trusted from client; computed from chain
-      });
+      .from('user_wallets')
+      .upsert(
+        {
+          id:                    wallet.id,
+          user_id:               userId,
+          chain_id:              wallet.chainId,
+          address:               wallet.address,
+          wallet_type:           wallet.walletType,
+          encrypted_private_key: serialize(wallet.encryptedPrivateKey),
+          encrypted_mnemonic:    serialize(wallet.encryptedMnemonic),
+          is_active:             wallet.isActive   ? 'true' : 'false',
+          is_backed_up:          wallet.isBackedUp ? 'true' : 'false',
+          asset_type:            wallet.assetType         ?? null,
+          base_chain_wallet_id:  wallet.baseChainWalletId ?? null,
+        },
+        { onConflict: 'id' }
+      );
 
     if (error) {
-      devLog.error("Error saving wallet via RPC:", error);
+      devLog.error("Error saving wallet:", error);
     }
 
     // Pin ETH address to user_profiles for cross-device wallet detection
