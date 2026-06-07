@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import { getSupabase } from "./supabase";
 import { getClientIP } from "./get-client-ip";
 import { devLog } from "./dev-logger";
-import { sendLoginNotificationIfEnabled } from "./notifications-api";
+import { sendLoginNotificationIfEnabled, fetchAndCreateMarketMoversNotifications } from "./notifications-api";
 import { deviceFingerprint } from "./security/device-fingerprint";
 
 interface PendingAuth {
@@ -843,6 +843,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               const { isNewDevice, ipAddress } = await trackDevice(userId);
               checkWalletOnAuthRef.current(userId);
               if (isNewDevice) sendLoginNotificationIfEnabled(userId, deviceInfo, ipAddress);
+              fetchAndCreateMarketMoversNotifications(userId);
             }, 1500);
           }
         }

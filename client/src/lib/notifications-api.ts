@@ -296,6 +296,116 @@ export async function sendLoginNotificationIfEnabled(
   }
 }
 
+// ─── Market Movers ───────────────────────────────────────────────────────────
+// Fires once per 24h per user (localStorage gate) when price_alerts pref is on.
+// Pulls the Binance public 24hr ticker, derives top-3 gainers / losers / hot
+// coins and inserts one price_alert notification per coin, staggered 300ms apart.
+
+const PERP_SYMBOLS = new Set([
+  'BTC','ETH','BNB','SOL','XRP','DOGE','ADA','AVAX','DOT','MATIC',
+  'LINK','LTC','UNI','ATOM','NEAR','APT','ARB','OP','INJ','TIA',
+  'SEI','SUI','PEPE','WIF','TON','NOT','BONK','FIL','IMX','BLUR',
+]);
+
+const COIN_NAMES: Record<string, string> = {
+  BTC:'Bitcoin', ETH:'Ethereum', BNB:'BNB', SOL:'Solana', XRP:'XRP',
+  DOGE:'Dogecoin', ADA:'Cardano', AVAX:'Avalanche', DOT:'Polkadot',
+  MATIC:'Polygon', LINK:'Chainlink', LTC:'Litecoin', UNI:'Uniswap',
+  ATOM:'Cosmos', NEAR:'NEAR Protocol', APT:'Aptos', ARB:'Arbitrum',
+  OP:'Optimism', PEPE:'Pepe', WIF:'dogwifhat', TON:'Toncoin',
+  SUI:'Sui', INJ:'Injective', TIA:'Celestia', NOT:'Notcoin',
+};
+
+function mmCoinName(sym: string) { return COIN_NAMES[sym.toUpperCase()] || sym; }
+
+function mmFmtPrice(p: number) {
+  if (p >= 1000) return `$${p.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+  if (p >= 1)    return `$${p.toFixed(2)}`;
+  if (p >= 0.01) return `$${p.toFixed(4)}`;
+  return `$${p.toFixed(6)}`;
+}
+
+function mmMarketType(sym: string): 'perp' | 'spot' {
+  return PERP_SYMBOLS.has(sym.toUpperCase()) ? 'perp' : 'spot';
+}
+
+export async function fetchAndCreateMarketMoversNotifications(userId: string): Promise<void> {
+  try {
+    const supabase = await getSupabase();
+
+    // Respect user pref
+    const { data } = await supabase
+      .from('user_profiles')
+      .select('notification_preferences')
+      .eq('id', userId)
+      .single();
+    const prefs = data?.notification_preferences as Record<string, boolean> | null;
+    if (prefs && prefs.market_movers === false) return;
+
+    // 24-hour cooldown per user
+    const lsKey = `pexly_mm_ts_${userId}`;
+    const lastRun = parseInt(localStorage.getItem(lsKey) || '0', 10);
+    if (Date.now() - lastRun < 24 * 60 * 60 * 1000) return;
+
+    // Fetch Binance public 24hr ticker (no auth needed)
+    const res = await fetch('https://api.binance.com/api/v3/ticker/24hr');
+    if (!res.ok) return;
+    const raw: any[] = await res.json();
+
+    // USDT pairs only, min $2M volume
+    const coins = raw
+      .filter(t => t.symbol.endsWith('USDT') && parseFloat(t.quoteVolume) > 2_000_000)
+      .map(t => ({
+        symbol: t.symbol.replace('USDT', ''),
+        pair:   t.symbol,
+        price:  parseFloat(t.lastPrice),
+        change: parseFloat(t.priceChangePercent),
+        volume: parseFloat(t.quoteVolume),
+      }));
+
+    const byChange = [...coins].sort((a, b) => b.change - a.change);
+    const gainers  = byChange.slice(0, 3);
+    const losers   = byChange.slice(-3).reverse();
+    const hot      = [...coins].sort((a, b) => b.volume - a.volume).slice(0, 3);
+
+    type Entry = { title: string; message: string; metadata: Record<string, any> };
+    const entries: Entry[] = [
+      ...gainers.map(c => ({
+        title:    `${c.symbol} up ${c.change.toFixed(1)}% today 🚀`,
+        message:  `${mmCoinName(c.symbol)} is surging, currently at ${mmFmtPrice(c.price)}. Tap to trade.`,
+        metadata: { symbol: c.symbol, pair: c.pair, marketType: mmMarketType(c.symbol), priceChange: c.change, price: c.price, category: 'gainer' },
+      })),
+      ...losers.map(c => ({
+        title:    `${c.symbol} down ${Math.abs(c.change).toFixed(1)}% today 📉`,
+        message:  `${mmCoinName(c.symbol)} has dropped to ${mmFmtPrice(c.price)} in 24h. Tap to view.`,
+        metadata: { symbol: c.symbol, pair: c.pair, marketType: mmMarketType(c.symbol), priceChange: c.change, price: c.price, category: 'loser' },
+      })),
+      ...hot.map(c => ({
+        title:    `${c.symbol} is trending 🔥`,
+        message:  `${mmCoinName(c.symbol)} is one of today's most traded coins — at ${mmFmtPrice(c.price)}. Tap to trade.`,
+        metadata: { symbol: c.symbol, pair: c.pair, marketType: mmMarketType(c.symbol), priceChange: c.change, price: c.price, category: 'hot' },
+      })),
+    ];
+
+    for (const entry of entries) {
+      await supabase.from('notifications').insert({
+        user_id: userId,
+        title:   entry.title,
+        message: entry.message,
+        type:    'price_alert',
+        read:    false,
+        metadata: entry.metadata,
+      });
+      await new Promise(r => setTimeout(r, 300));
+    }
+
+    localStorage.setItem(lsKey, String(Date.now()));
+  } catch {
+    // Never block the auth flow
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 export async function getAnnouncements(): Promise<Announcement[]> {
   try {
     const supabase = await getSupabase();
