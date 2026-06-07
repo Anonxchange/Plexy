@@ -92,7 +92,7 @@ export default function WalletPage() {
         try {
           const supabase = await getSupabase();
           const { data, error } = await supabase
-            .from('user_wallets_safe')
+            .from('user_wallets')
             .select('address, chain_id')
             .eq('user_id', user.id)
             .limit(1);
