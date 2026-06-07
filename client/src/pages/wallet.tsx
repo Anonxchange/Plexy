@@ -93,9 +93,8 @@ export default function WalletPage() {
           const supabase = await getSupabase();
           const { data, error } = await supabase
             .from('user_wallets_safe')
-            .select('address, chain_id, is_active')
+            .select('address, chain_id')
             .eq('user_id', user.id)
-            .eq('is_active', 'true')
             .limit(1);
           if (error) return { ok: false, address: null };
           // Prefer the ETH wallet's address as the canonical "expected" address
