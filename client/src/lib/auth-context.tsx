@@ -607,7 +607,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .select('id', { count: 'exact', head: true })
         .eq('user_id', userId);
 
-      if (!createCountError && createCount && createCount > 0) {
+      // If the count query itself errored (e.g. RLS blocks it), we cannot
+      // confirm the user has zero wallets — stay silent rather than risk
+      // showing "create wallet" over real funds.
+      if (createCountError) {
+        devLog.warn("Wallet count check failed, aborting dialog:", createCountError.message);
+        checkedUsersRef.current.delete(userId);
+        return;
+      }
+
+      if (createCount && createCount > 0) {
         setWalletImportState({ required: false, expectedAddress: null });
         return;
       }
