@@ -308,19 +308,31 @@ class NonCustodialWalletManager {
   }
 
   public async loadWalletsFromSupabase(supabase: any, userId: string): Promise<NonCustodialWallet[]> {
-    // Query user_wallets directly with the session JWT.
-    // RLS (SELECT USING auth.uid() = user_id) scopes the result to the calling
-    // user's own rows automatically — no view or separate vault RPC needed.
-    // The encrypted blobs are client-side ciphertext, so returning them to the
-    // same user's browser is safe; only they can decrypt with their password.
-    const { data, error } = await supabase
+    // Try the full table first (requires RLS: auth.uid() = user_id).
+    // If that is blocked by policy, fall back to the user_wallets_safe view
+    // which only exposes metadata (no encrypted fields) but is enough to
+    // confirm wallet existence and populate IDB with addresses.
+    let data: any[] | null = null;
+
+    const { data: fullData, error: fullError } = await supabase
       .from('user_wallets')
       .select('id, user_id, chain_id, address, wallet_type, encrypted_private_key, encrypted_mnemonic, is_active, is_backed_up, asset_type, base_chain_wallet_id, created_at')
       .eq('user_id', userId);
 
-    if (error) {
-      devLog.error("Error loading wallets from Supabase:", error);
-      throw error;
+    if (!fullError) {
+      data = fullData;
+    } else {
+      devLog.warn("user_wallets direct query blocked, trying user_wallets_safe:", fullError.message);
+      const { data: safeData, error: safeError } = await supabase
+        .from('user_wallets_safe')
+        .select('id, user_id, chain_id, address, wallet_type, is_active, is_backed_up, asset_type, base_chain_wallet_id, created_at')
+        .eq('user_id', userId);
+
+      if (safeError) {
+        devLog.error("Error loading wallets from user_wallets_safe:", safeError);
+        throw safeError;
+      }
+      data = safeData;
     }
 
     if (!data || data.length === 0) return [];
