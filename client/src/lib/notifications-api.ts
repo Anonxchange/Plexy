@@ -380,11 +380,13 @@ export async function fetchAndCreateMarketMoversNotifications(userId: string): P
     // whose metadata.slot matches, scoped to today (UTC date). This is
     // race-free across devices — only the first INSERT wins per slot per day.
 
+    // Morning slot is always due once per day — fires on the first app open
+    // regardless of time (even 1 AM), so every user is guaranteed to get it.
+    // Night slot becomes due after noon (12:00), giving natural separation
+    // between the two notifications without missing late-risers.
     const hour = new Date().getHours();
-    const dueSlots: Array<'morning' | 'night'> = [];
-    if (hour >= 8)  dueSlots.push('morning');
-    if (hour >= 20) dueSlots.push('night');
-    if (dueSlots.length === 0) return;  // before 8 AM — nothing due yet
+    const dueSlots: Array<'morning' | 'night'> = ['morning'];
+    if (hour >= 12) dueSlots.push('night');
 
     // Fast local gate: skip Supabase round-trip if we already know both slots
     // fired this session (localStorage as optimistic cache, NOT the truth gate).
