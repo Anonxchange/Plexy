@@ -375,6 +375,34 @@ class NonCustodialWalletManager {
     return wallets;
   }
 
+  public async saveWalletsToSupabase(supabase: any, wallets: NonCustodialWallet[], userId: string): Promise<void> {
+    if (!wallets.length) return;
+    const serialize = (v: string | EncryptedVault | undefined) =>
+      v === undefined ? null : typeof v === 'string' ? v : JSON.stringify(v);
+
+    const payload = wallets.map(w => ({
+      id:                     w.id,
+      chain_id:               w.chainId,
+      address:                w.address,
+      wallet_type:            w.walletType,
+      encrypted_private_key:  serialize(w.encryptedPrivateKey),
+      encrypted_mnemonic:     serialize(w.encryptedMnemonic),
+      is_active:              w.isActive   ? 'true' : 'false',
+      is_backed_up:           w.isBackedUp ? 'true' : 'false',
+      asset_type:             w.assetType             ?? null,
+      base_chain_wallet_id:   w.baseChainWalletId     ?? null,
+    }));
+
+    const { error } = await supabase.rpc('save_wallets_batch', {
+      p_user_id: userId,
+      p_wallets: payload,
+    });
+
+    if (error) {
+      devLog.error("Error batch-saving wallets via RPC:", error);
+    }
+  }
+
   public async saveWalletToSupabase(supabase: any, wallet: NonCustodialWallet, userId: string): Promise<void> {
     // Writes go through the save_wallet SECURITY DEFINER RPC which:
     //   • enforces auth.uid() === user_id before touching the table
