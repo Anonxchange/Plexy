@@ -5,6 +5,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -19,6 +25,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { QRCodeCanvas } from "qrcode.react";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ReceiveCryptoDialogProps {
   open: boolean;
@@ -30,6 +37,7 @@ interface ReceiveCryptoDialogProps {
 export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol }: ReceiveCryptoDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [selectedCrypto, setSelectedCrypto] = useState<string>("");
   const [selectedNetwork, setSelectedNetwork] = useState<string>("");
   const [walletAddress, setWalletAddress] = useState<string>("");
@@ -62,17 +70,12 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
     XRP: "Ripple",
   };
 
-  const handleClose = () => {
-    onOpenChange(false);
-  };
+  const handleClose = () => onOpenChange(false);
 
   const handleCopyAddress = () => {
     if (walletAddress) {
       navigator.clipboard.writeText(walletAddress);
-      toast({
-        title: "Copied",
-        description: "Wallet address copied to clipboard",
-      });
+      toast({ title: "Copied", description: "Wallet address copied to clipboard" });
     }
   };
 
@@ -93,36 +96,34 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
     }
 
     const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
-    
+
     const fetchAddress = async () => {
       const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
       const userWallets = await (nonCustodialWalletManager as any).getWalletsFromStorage(user.id);
-      
-      // Look for a wallet matching the specific symbol or base symbol
+
       const targetWallet = userWallets.find((w: any) => {
         const normalizedChainId = w.chainId.toUpperCase();
         const normalizedSymbolToUse = symbolToUse.toUpperCase();
         const normalizedSelectedCrypto = selectedCrypto.toUpperCase();
-        
-      // Strict matching for networks to avoid Tron/ETH address mixup
-      if (selectedNetwork.includes('TRC-20')) {
-        return normalizedChainId.includes('TRC20') || (normalizedChainId === 'TRX' && normalizedSelectedCrypto === 'TRX') || (normalizedChainId === 'TRON (TRC-20)');
-      }
-      if (selectedNetwork.includes('ERC-20') || ['POLYGON', 'OPTIMISM', 'ARBITRUM'].includes(selectedNetwork.toUpperCase())) {
-        return normalizedChainId.includes('ERC-20') || 
-               ['ETH', 'MATIC', 'OP', 'ARB'].includes(normalizedChainId) ||
-               normalizedChainId === 'ETHEREUM' || normalizedChainId === normalizedSelectedCrypto ||
-               (normalizedSelectedCrypto === 'USDT' && (normalizedChainId === 'USDT' || normalizedChainId === 'USDT-ERC20' || normalizedChainId === 'ETH')) ||
-               (normalizedSelectedCrypto === 'USDC' && (normalizedChainId === 'USDC' || normalizedChainId === 'USDC-ERC20' || normalizedChainId === 'ETH'));
-      }
-      if (selectedNetwork.includes('BEP-20')) {
-        return normalizedChainId.includes('BEP20') || 
-               normalizedChainId === 'BNB' || 
-               normalizedChainId === 'BSC' ||
-               normalizedChainId.includes('BINANCE') ||
-               (normalizedSelectedCrypto === 'USDT' && (normalizedChainId === 'USDT-BEP20' || normalizedChainId === 'BNB' || normalizedChainId === 'BSC' || normalizedChainId === 'BINANCE SMART CHAIN (BEP-20)')) ||
-               (normalizedSelectedCrypto === 'USDC' && (normalizedChainId === 'USDC-BEP20' || normalizedChainId === 'BNB' || normalizedChainId === 'BSC' || normalizedChainId === 'BINANCE SMART CHAIN (BEP-20)'));
-      }
+
+        if (selectedNetwork.includes('TRC-20')) {
+          return normalizedChainId.includes('TRC20') || (normalizedChainId === 'TRX' && normalizedSelectedCrypto === 'TRX') || (normalizedChainId === 'TRON (TRC-20)');
+        }
+        if (selectedNetwork.includes('ERC-20') || ['POLYGON', 'OPTIMISM', 'ARBITRUM'].includes(selectedNetwork.toUpperCase())) {
+          return normalizedChainId.includes('ERC-20') ||
+            ['ETH', 'MATIC', 'OP', 'ARB'].includes(normalizedChainId) ||
+            normalizedChainId === 'ETHEREUM' || normalizedChainId === normalizedSelectedCrypto ||
+            (normalizedSelectedCrypto === 'USDT' && (normalizedChainId === 'USDT' || normalizedChainId === 'USDT-ERC20' || normalizedChainId === 'ETH')) ||
+            (normalizedSelectedCrypto === 'USDC' && (normalizedChainId === 'USDC' || normalizedChainId === 'USDC-ERC20' || normalizedChainId === 'ETH'));
+        }
+        if (selectedNetwork.includes('BEP-20')) {
+          return normalizedChainId.includes('BEP20') ||
+            normalizedChainId === 'BNB' ||
+            normalizedChainId === 'BSC' ||
+            normalizedChainId.includes('BINANCE') ||
+            (normalizedSelectedCrypto === 'USDT' && (normalizedChainId === 'USDT-BEP20' || normalizedChainId === 'BNB' || normalizedChainId === 'BSC' || normalizedChainId === 'BINANCE SMART CHAIN (BEP-20)')) ||
+            (normalizedSelectedCrypto === 'USDC' && (normalizedChainId === 'USDC-BEP20' || normalizedChainId === 'BNB' || normalizedChainId === 'BSC' || normalizedChainId === 'BINANCE SMART CHAIN (BEP-20)'));
+        }
         if (selectedNetwork.includes('SPL') || selectedNetwork === 'Solana') {
           return normalizedChainId.includes('SOL') || (normalizedChainId === 'SOLANA' && normalizedSelectedCrypto === 'SOL') || (normalizedChainId === 'SOLANA');
         }
@@ -130,26 +131,22 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
           return normalizedChainId.includes('BITCOIN') || (normalizedChainId === 'BTC' && normalizedSelectedCrypto === 'BTC');
         }
         if (selectedNetwork.includes('BEP-20') || ['BNB', 'BSC'].includes(normalizedSelectedCrypto)) {
-          return normalizedChainId.includes('BEP20') || 
-                 normalizedChainId === 'BNB' || 
-                 normalizedChainId === 'BSC' ||
-                 normalizedChainId.includes('BINANCE');
+          return normalizedChainId.includes('BEP20') ||
+            normalizedChainId === 'BNB' ||
+            normalizedChainId === 'BSC' ||
+            normalizedChainId.includes('BINANCE');
         }
         if (selectedNetwork === 'Ripple' || selectedCrypto === 'XRP') {
           return normalizedChainId === 'XRP' || normalizedChainId.includes('RIPPLE');
         }
-        
-        return normalizedChainId === normalizedSymbolToUse || 
-               normalizedChainId === normalizedSelectedCrypto ||
-               normalizedChainId.startsWith(`${normalizedSelectedCrypto}-`) ||
-               normalizedChainId.includes(normalizedSelectedCrypto);
+
+        return normalizedChainId === normalizedSymbolToUse ||
+          normalizedChainId === normalizedSelectedCrypto ||
+          normalizedChainId.startsWith(`${normalizedSelectedCrypto}-`) ||
+          normalizedChainId.includes(normalizedSelectedCrypto);
       });
-      
-      if (targetWallet) {
-        setWalletAddress(targetWallet.address);
-      } else {
-        setWalletAddress("");
-      }
+
+      setWalletAddress(targetWallet ? targetWallet.address : "");
     };
 
     fetchAddress();
@@ -162,154 +159,166 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
   };
 
   useEffect(() => {
-    if (open) {
-      const symbol = initialSymbol || "BTC";
-      handleAssetChange(symbol);
-    }
+    if (open) handleAssetChange(initialSymbol || "BTC");
   }, [open, initialSymbol]);
+
+  const title = `Receive ${ASSET_NAMES[selectedCrypto] || selectedCrypto}`;
+
+  const content = (
+    <div className="space-y-5 pb-2">
+      {/* Asset */}
+      <div className="space-y-1.5">
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Asset</label>
+        <Select value={selectedCrypto} onValueChange={handleAssetChange}>
+          <SelectTrigger className="h-11 bg-muted/30 border-border/50 focus:ring-0 rounded-lg">
+            <SelectValue>
+              <div className="flex items-center gap-2">
+                <img
+                  src={cryptoIconUrls[selectedCrypto] || `https://ui-avatars.com/api/?name=${selectedCrypto}&background=random`}
+                  alt={selectedCrypto}
+                  className="w-5 h-5 rounded-full"
+                />
+                <span className="font-bold text-sm">{ASSET_NAMES[selectedCrypto] || selectedCrypto}</span>
+              </div>
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent className="rounded-lg max-h-[250px] bg-popover border-border" position="popper" sideOffset={4}>
+            <ScrollArea className="h-full w-full">
+              {Object.entries(ASSET_NAMES).map(([symbol, name]) => (
+                <SelectItem key={symbol} value={symbol} className="rounded-md cursor-pointer hover:bg-accent">
+                  <div className="flex items-center gap-2 py-1">
+                    <img
+                      src={cryptoIconUrls[symbol] ||
+                        (symbol === "ARB" ? "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/arbitrum.png" :
+                          symbol === "OP" ? "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/optimism.png" :
+                            `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${symbol.toLowerCase()}.png`)}
+                      alt={symbol}
+                      className="w-5 h-5 rounded-full"
+                      onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${symbol}&background=random`; }}
+                    />
+                    <span className="font-bold text-sm">{name}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </ScrollArea>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Network */}
+      <div className="space-y-1.5">
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Network</label>
+        <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
+          <SelectTrigger className="h-11 bg-muted/30 border-border/50 focus:ring-0 rounded-lg">
+            <SelectValue placeholder="Select a network" />
+          </SelectTrigger>
+          <SelectContent className="rounded-lg bg-popover border-border" position="popper" sideOffset={4}>
+            {(networkMap[selectedCrypto] || ["Mainnet"]).map((network) => (
+              <SelectItem key={network} value={network} className="rounded-md hover:bg-accent">
+                <span className="font-medium text-sm">{network}</span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* QR + Address */}
+      <div className="space-y-3">
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Deposit address</label>
+
+        <div className="flex flex-col items-center gap-4">
+          <div className="bg-white p-3 rounded-xl shadow-sm border border-border/10">
+            <QRCodeCanvas
+              value={walletAddress || "No address"}
+              size={148}
+              level="M"
+              includeMargin={false}
+              imageSettings={{
+                src: cryptoIconUrls[selectedCrypto],
+                height: 30,
+                width: 30,
+                excavate: true,
+              }}
+            />
+          </div>
+
+          <div className="w-full space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold">
+                {ASSET_NAMES[selectedCrypto] || selectedCrypto} #1 ({selectedNetwork?.split(' ')[0] || selectedCrypto})
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleCopyAddress}
+                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              >
+                <Copy className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+            <div
+              className="p-3 bg-muted/30 rounded-lg break-all text-sm font-mono leading-relaxed tracking-tight border border-border/50 shadow-inner cursor-pointer select-all"
+              onClick={handleCopyAddress}
+            >
+              {walletAddress || "Generating address…"}
+            </div>
+          </div>
+        </div>
+
+        <Button
+          variant="outline"
+          className="w-full h-10 rounded-lg text-muted-foreground/60 font-bold bg-muted/10 text-xs"
+          disabled
+        >
+          Deposit to your wallet
+        </Button>
+
+        <p className="text-[10px] text-destructive/80 text-center leading-tight px-4 font-medium">
+          Only send this exact asset to this address.
+          Sending any other asset will result in permanent loss.
+        </p>
+      </div>
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <Sheet open={open} onOpenChange={handleClose}>
+        <SheetContent
+          side="bottom"
+          className="rounded-t-2xl px-4 pt-2 pb-6 max-h-[92dvh] overflow-hidden flex flex-col"
+        >
+          <div className="mx-auto w-10 h-1 rounded-full bg-muted-foreground/30 mb-3 flex-shrink-0" />
+          <SheetHeader className="flex flex-row items-center justify-between mb-4 flex-shrink-0">
+            <SheetTitle>{title}</SheetTitle>
+            <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8">
+              <X className="h-4 w-4" />
+            </Button>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto pr-1">
+            {content}
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[420px] p-0 bg-background border border-border shadow-lg gap-0 overflow-hidden">
         <DialogHeader className="p-4 flex flex-row items-center justify-between border-b border-border/50">
-          <DialogTitle className="text-base font-bold text-foreground">
-            Receive {ASSET_NAMES[selectedCrypto] || selectedCrypto}
-          </DialogTitle>
+          <DialogTitle className="text-base font-bold">{title}</DialogTitle>
           <Button
             variant="ghost"
             size="icon"
             onClick={handleClose}
-            className="h-7 w-7 rounded-full text-foreground/50 hover:text-foreground"
+            className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </Button>
         </DialogHeader>
-
-        <div className="p-4 space-y-4 bg-background">
-          {/* Asset Selection */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-muted-foreground">Asset</label>
-            <Select value={selectedCrypto} onValueChange={handleAssetChange}>
-              <SelectTrigger className="h-11 bg-muted/30 border-border/50 focus:ring-0 rounded-lg text-foreground">
-                <SelectValue>
-                  <div className="flex items-center gap-2">
-                    <img 
-                      src={cryptoIconUrls[selectedCrypto] || `https://ui-avatars.com/api/?name=${selectedCrypto}&background=random`} 
-                      alt={selectedCrypto}
-                      className="w-5 h-5 rounded-full"
-                    />
-                    <span className="font-bold text-sm text-foreground">
-                      {ASSET_NAMES[selectedCrypto] || selectedCrypto}
-                    </span>
-                  </div>
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent 
-                className="rounded-lg max-h-[250px] overflow-y-auto bg-popover border-border"
-                position="popper"
-                sideOffset={4}
-              >
-                <ScrollArea className="h-full w-full">
-                  {Object.entries(ASSET_NAMES).map(([symbol, name]) => (
-                    <SelectItem key={symbol} value={symbol} className="rounded-md cursor-pointer text-foreground hover:bg-accent hover:text-accent-foreground">
-                      <div className="flex items-center gap-2 py-1">
-                        <img 
-                          src={cryptoIconUrls[symbol] || 
-                               (symbol === "ARB" ? "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/arbitrum.png" :
-                                symbol === "OP" ? "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/optimism.png" :
-                                `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${symbol.toLowerCase()}.png`)} 
-                          alt={symbol}
-                          className="w-5 h-5 rounded-full"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${symbol}&background=random`;
-                          }}
-                        />
-                        <span className="font-bold text-sm text-foreground">{name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </ScrollArea>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Network Display */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-muted-foreground">Network</label>
-            <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
-              <SelectTrigger className="h-11 bg-muted/30 border-border/50 focus:ring-0 rounded-lg text-foreground">
-                <SelectValue placeholder="Select a network" />
-              </SelectTrigger>
-              <SelectContent 
-                className="rounded-lg bg-popover border-border"
-                position="popper"
-                sideOffset={4}
-              >
-                <ScrollArea className="h-full w-full">
-                  {(networkMap[selectedCrypto] || ["Mainnet"]).map((network) => (
-                    <SelectItem key={network} value={network} className="rounded-md text-foreground hover:bg-accent hover:text-accent-foreground">
-                      <span className="font-medium text-sm text-foreground">{network}</span>
-                    </SelectItem>
-                  ))}
-                </ScrollArea>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Deposit Address Section */}
-          <div className="space-y-3">
-            <label className="text-xs font-semibold text-muted-foreground">Deposit address</label>
-            
-            <div className="flex flex-col items-center justify-center space-y-4">
-              <div className="bg-white p-3 rounded-xl shadow-sm border border-border/10">
-                <QRCodeCanvas
-                  value={walletAddress || "No address"}
-                  size={140}
-                  level="M"
-                  includeMargin={false}
-                  imageSettings={{
-                    src: cryptoIconUrls[selectedCrypto],
-                    height: 30,
-                    width: 30,
-                    excavate: true,
-                  }}
-                />
-              </div>
-
-              <div className="w-full space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-foreground">
-                    {ASSET_NAMES[selectedCrypto] || selectedCrypto} #1 ({selectedNetwork?.split(' ')[0] || selectedCrypto})
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleCopyAddress}
-                    className="h-7 w-7 text-foreground/50 hover:text-foreground"
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-                <div className="p-3 bg-muted/30 rounded-lg break-all text-sm font-mono text-foreground leading-relaxed tracking-tight border border-border/50 shadow-inner">
-                  {walletAddress || "Generating address..."}
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-1">
-              <Button 
-                variant="outline" 
-                className="w-full h-10 rounded-lg border-border/50 text-foreground/40 font-bold bg-muted/10 text-xs hover:bg-muted/20"
-                disabled
-              >
-                Deposit to your wallet
-              </Button>
-              <p className="text-[10px] text-destructive/80 text-center mt-2 leading-tight px-4 font-medium">
-                Only send this exact asset to this address.
-                Sending any other asset will result in permanent loss.
-              </p>
-            </div>
-          </div>
+        <div className="p-4 overflow-y-auto max-h-[80vh]">
+          {content}
         </div>
       </DialogContent>
     </Dialog>
