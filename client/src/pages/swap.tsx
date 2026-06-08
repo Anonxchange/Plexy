@@ -15,7 +15,7 @@ import { PexlyFooter } from "@/components/pexly-footer";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { useSchema, swapPageSchema } from "@/hooks/use-schema";
-import { cryptoIconUrls } from "@/lib/crypto-icons";
+import { CoinIcon } from "@/components/trading/CoinIcon";
 import { useSwapPrice, calculateSwapAmount } from "@/hooks/use-swap-price";
 import { useWalletBalances } from "@/hooks/use-wallet-balances";
 import { getCryptoPrices } from "@/lib/crypto-prices";
@@ -631,7 +631,7 @@ export function Swap() {
                           <Select value={fromCurrency} onValueChange={setFromCurrency}>
                             <SelectTrigger className="w-auto bg-card border border-border/50 px-3 py-2 rounded-full h-auto font-bold text-sm gap-2 shadow-sm hover:bg-accent/5 transition-colors">
                               <div className="flex items-center gap-2">
-                                <img src={getCurrency(fromCurrency)?.iconUrl} alt="" className="w-5 h-5 rounded-full" />
+                                <CoinIcon symbol={fromCurrency} className="w-5 h-5" />
                                 <SelectValue placeholder="Select" />
                               </div>
                             </SelectTrigger>
@@ -639,7 +639,7 @@ export function Swap() {
                               {currencies.map(c => (
                                 <SelectItem key={c.symbol} value={c.symbol}>
                                   <div className="flex items-center gap-2">
-                                    <img src={c.iconUrl} alt="" className="w-4 h-4 rounded-full" />
+                                    <CoinIcon symbol={c.symbol} className="w-4 h-4" />
                                     <span className="font-semibold">{c.symbol}</span>
                                     <span className="text-muted-foreground text-xs">{c.name}</span>
                                   </div>
@@ -692,7 +692,7 @@ export function Swap() {
                           <Select value={toCurrency} onValueChange={setToCurrency}>
                             <SelectTrigger className="w-auto bg-card border border-border/50 px-3 py-2 rounded-full h-auto font-bold text-sm gap-2 shadow-sm hover:bg-accent/5 transition-colors">
                               <div className="flex items-center gap-2">
-                                <img src={getCurrency(toCurrency)?.iconUrl} alt="" className="w-5 h-5 rounded-full" />
+                                <CoinIcon symbol={toCurrency} className="w-5 h-5" />
                                 <SelectValue placeholder="Select" />
                               </div>
                             </SelectTrigger>
@@ -700,7 +700,7 @@ export function Swap() {
                               {currencies.map(c => (
                                 <SelectItem key={c.symbol} value={c.symbol}>
                                   <div className="flex items-center gap-2">
-                                    <img src={c.iconUrl} alt="" className="w-4 h-4 rounded-full" />
+                                    <CoinIcon symbol={c.symbol} className="w-4 h-4" />
                                     <span className="font-semibold">{c.symbol}</span>
                                     <span className="text-muted-foreground text-xs">{c.name}</span>
                                   </div>
@@ -902,8 +902,8 @@ export function Swap() {
                 >
                   <div className="flex items-center gap-2 mb-4">
                     <div className="relative flex items-center">
-                      <img src={pair.fromIcon} alt={pair.from} className="w-8 h-8 rounded-full z-10 ring-2 ring-card" />
-                      <img src={pair.toIcon} alt={pair.to} className="w-8 h-8 rounded-full -ml-2 ring-2 ring-card" />
+                      <CoinIcon symbol={pair.from} className="w-8 h-8 z-10 ring-2 ring-card" />
+                      <CoinIcon symbol={pair.to} className="w-8 h-8 -ml-2 ring-2 ring-card" />
                     </div>
                     <div>
                       <div className="font-black text-sm">{pair.from}/{pair.to}</div>
@@ -1088,7 +1088,7 @@ export function Swap() {
                           {currencies.map((curr) => (
                             <SelectItem key={curr.symbol} value={curr.symbol}>
                               <div className="flex items-center gap-2">
-                                <img src={curr.iconUrl} alt={curr.symbol} className="w-5 h-5 rounded-full" />
+                                <CoinIcon symbol={curr.symbol} className="w-5 h-5" />
                                 <span className="font-bold">{curr.symbol}</span>
                               </div>
                             </SelectItem>
@@ -1154,7 +1154,7 @@ export function Swap() {
                           {currencies.map((curr) => (
                             <SelectItem key={curr.symbol} value={curr.symbol}>
                               <div className="flex items-center gap-2">
-                                <img src={curr.iconUrl} alt={curr.symbol} className="w-5 h-5 rounded-full" />
+                                <CoinIcon symbol={curr.symbol} className="w-5 h-5" />
                                 <span className="font-bold">{curr.symbol}</span>
                               </div>
                             </SelectItem>
@@ -1249,7 +1249,7 @@ export function Swap() {
             <Card className="bg-card border-none shadow-sm overflow-hidden h-[450px] relative rounded-xl">
               <div className="p-4 border-b border-border/40 flex items-center justify-between">
                 <h2 className="text-sm font-bold flex items-center gap-2 uppercase tracking-wide">
-                  <img src={currencies.find(c => c.symbol === fromCurrency)?.iconUrl} className="w-4 h-4 rounded-full" alt="" />
+                  <CoinIcon symbol={fromCurrency} className="w-4 h-4" />
                   {fromCurrency} / {toCurrency}
                 </h2>
               </div>

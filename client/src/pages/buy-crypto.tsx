@@ -23,7 +23,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { getCryptoIconUrl } from "@/lib/crypto-icons";
+import { CoinIcon } from "@/components/trading/CoinIcon";
 import { useAuth } from "@/lib/auth-context";
 import { Link, useLocation } from "wouter";
 import { PexlyFooter } from "@/components/pexly-footer";
@@ -508,7 +508,7 @@ const BuyCryptoPage = () => {
           onClick={() => setActiveCrypto(crypto)}
           className="flex items-center gap-2 bg-muted hover:bg-muted/80 border border-border rounded-full px-3 py-1.5 text-sm font-semibold transition-colors text-foreground"
         >
-          <img src={getCryptoIconUrl(crypto)} alt={crypto} className="w-5 h-5 rounded-full object-cover" />
+          <CoinIcon symbol={crypto.toUpperCase()} className="w-5 h-5" />
           {mode === "buy" ? "Buy" : "Sell"} {crypto}
           <ChevronDown className="w-3.5 h-3.5 opacity-50" />
         </button>
@@ -636,7 +636,7 @@ const BuyCryptoPage = () => {
                             : "bg-muted border-border text-muted-foreground hover:bg-muted/80 hover:text-foreground"
                         }`}
                       >
-                        <img src={getCryptoIconUrl(s)} alt={s} className="w-3.5 h-3.5 rounded-full" />
+                        <CoinIcon symbol={s.toUpperCase()} className="w-3.5 h-3.5" />
                         {n}
                       </button>
                     );
@@ -701,7 +701,7 @@ const BuyCryptoPage = () => {
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                             isSell ? "bg-red-500/15" : "bg-primary/15"
                           }`}>
-                            <img src={getCryptoIconUrl(tx.crypto_symbol)} alt={tx.crypto_symbol} className="w-4 h-4 rounded-full object-cover" />
+                            <CoinIcon symbol={(tx.crypto_symbol || "").toUpperCase()} className="w-4 h-4" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-foreground text-xs font-semibold">
@@ -787,7 +787,7 @@ const BuyCryptoPage = () => {
               onClick={() => { setCrypto(asset.symbol); window.scrollTo({ top: 0, behavior: "smooth" }); }}
             >
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                <img src={getCryptoIconUrl(asset.symbol)} alt={asset.name} className="w-10 h-10 lg:w-12 lg:h-12 rounded-full object-cover flex-shrink-0" />
+                <CoinIcon symbol={asset.symbol.toUpperCase()} className="w-10 h-10 lg:w-12 lg:h-12 flex-shrink-0" />
                 <div>
                   <p className="font-bold text-sm lg:text-base text-foreground">{asset.name}</p>
                   <p className="text-muted-foreground text-xs lg:text-sm font-medium">{asset.symbol}</p>
