@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { X, ClipboardList, Loader2 } from '@/lib/icons';
+import { X, ClipboardList, Loader2, AlertCircle, Eye, EyeOff } from '@/lib/icons';
 import { AccountModalProvider, useAccountModal } from "./AccountModalContext";
 import type { AccountModalProps } from "./AccountModalConfig";
 import {
@@ -206,9 +207,93 @@ function TxTable({ rows }: { rows: any[] }) {
   );
 }
 
+// ── Wallet signing gate (shown before deposit/withdraw when wallet not yet activated) ──
+function WalletSigningGate() {
+  const {
+    activeTab, walletLoading, userEvmWallet, walletPassword, setWalletPassword,
+    showPassword, setShowPassword, registerMutation, signingStep, onOpenChange,
+  } = useAccountModal();
+  const [localShow, setLocalShow] = useState(false);
+
+  const action = activeTab === "withdraw" ? "Withdraw" : "Deposit";
+
+  return (
+    <div className="flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-lg font-semibold text-foreground">Activate Wallet</h2>
+        <button onClick={() => onOpenChange(false)} className="text-muted-foreground hover:text-foreground">
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* Context */}
+      <div className="bg-primary/10 border border-primary/20 rounded-xl px-4 py-4 mb-5 flex items-start gap-3">
+        <AlertCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          To {action.toLowerCase()} funds, enter your wallet password once to sign and activate your
+          personal deposit address. No funds will be moved.
+        </p>
+      </div>
+
+      {/* Password input */}
+      {walletLoading ? (
+        <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Loading wallet…</span>
+        </div>
+      ) : !userEvmWallet ? (
+        <div className="flex items-start gap-2 py-3 text-sm text-destructive">
+          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+          <span>No EVM wallet found. Create one in your Wallet first.</span>
+        </div>
+      ) : (
+        <div className="relative mb-5">
+          <input
+            type={showPassword || localShow ? "text" : "password"}
+            placeholder="Wallet password"
+            value={walletPassword}
+            onChange={e => setWalletPassword(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === "Enter" && walletPassword && !registerMutation.isPending) {
+                registerMutation.mutate();
+              }
+            }}
+            className="w-full bg-background border border-border rounded-xl px-4 py-3.5 text-sm pr-12 focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+          <button
+            type="button"
+            onClick={() => { setLocalShow(v => !v); setShowPassword(v => !v); }}
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            {showPassword || localShow ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
+      )}
+
+      {/* Sign button */}
+      <button
+        onClick={() => registerMutation.mutate()}
+        disabled={!walletPassword || !userEvmWallet || walletLoading || registerMutation.isPending}
+        className="w-full py-3.5 rounded-xl text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
+      >
+        {registerMutation.isPending
+          ? <><Loader2 className="h-4 w-4 animate-spin" />{signingStep || "Signing…"}</>
+          : `Sign & Continue to ${action}`}
+      </button>
+    </div>
+  );
+}
+
 // ── Inner modal content ───────────────────────────────────
 function ModalContent() {
-  const { activeTab, handleTabChange, isAsterRegistered, unlinkMutation, onOpenChange, setTxHistoryOpen } = useAccountModal();
+  const { activeTab, handleTabChange, isAsterRegistered, user, unlinkMutation, onOpenChange, setTxHistoryOpen } = useAccountModal();
+
+  // Show focused signing gate when user is logged in but wallet not yet activated
+  if (user && !isAsterRegistered) {
+    return <WalletSigningGate />;
+  }
+
   return (
     <>
       {/* Header */}
