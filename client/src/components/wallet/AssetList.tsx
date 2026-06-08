@@ -28,7 +28,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 
-import { cryptoIconUrls } from "@/lib/crypto-icons";
+import { CoinIcon } from "@/components/trading/CoinIcon";
 import { RecentActivity } from "./RecentActivity";
 
 interface ActionMenuProps {
@@ -171,9 +171,8 @@ export function AssetList({
                       <TableRow key={asset.symbol}>
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <img
-                              src={cryptoIconUrls[asset.symbol]}
-                              alt={asset.symbol}
+                            <CoinIcon
+                              symbol={asset.symbol.toUpperCase()}
                               className="h-8 w-8"
                             />
                             <span className="font-semibold">{asset.name}</span>
