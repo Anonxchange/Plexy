@@ -3,6 +3,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { asterTrading } from "@/lib/asterdex-service";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const AccountModal = lazy(() =>
   import("./AccountModal").then((m) => ({ default: m.AccountModal }))
@@ -19,6 +20,7 @@ const AccountBar = ({ variant = "bar", pair }: AccountBarProps) => {
 
   const { user } = useAuth();
   const [, navigate] = useLocation();
+  const isMobile = useIsMobile();
 
   const baseAsset = pair ? pair.split("/")[0] : null;
   const quoteAsset = pair ? (pair.split("/")[1] || "USDT") : "USDT";
@@ -134,7 +136,7 @@ const AccountBar = ({ variant = "bar", pair }: AccountBarProps) => {
           onOpenChange={setModalOpen}
           defaultTab={defaultTab}
           defaultAccountType="Spot account"
-          variant="dialog"
+          variant={isMobile ? "sheet" : "dialog"}
         />
       </Suspense>
     </>
