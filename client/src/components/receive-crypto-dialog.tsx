@@ -24,7 +24,7 @@ import { Copy, X, Info } from '@/lib/icons';
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { QRCodeCanvas } from "qrcode.react";
-import { cryptoIconUrls } from "@/lib/crypto-icons";
+import { CoinIcon } from "@/components/trading/CoinIcon";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ReceiveCryptoDialogProps {
@@ -173,11 +173,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
           <SelectTrigger className="h-11 bg-muted/30 border-border/50 focus:ring-0 rounded-lg">
             <SelectValue>
               <div className="flex items-center gap-2">
-                <img
-                  src={cryptoIconUrls[selectedCrypto] || `https://ui-avatars.com/api/?name=${selectedCrypto}&background=random`}
-                  alt={selectedCrypto}
-                  className="w-5 h-5 rounded-full"
-                />
+                <CoinIcon symbol={selectedCrypto.toUpperCase()} className="w-5 h-5" />
                 <span className="font-bold text-sm">{ASSET_NAMES[selectedCrypto] || selectedCrypto}</span>
               </div>
             </SelectValue>
@@ -187,15 +183,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
               {Object.entries(ASSET_NAMES).map(([symbol, name]) => (
                 <SelectItem key={symbol} value={symbol} className="rounded-md cursor-pointer hover:bg-accent">
                   <div className="flex items-center gap-2 py-1">
-                    <img
-                      src={cryptoIconUrls[symbol] ||
-                        (symbol === "ARB" ? "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/arbitrum.png" :
-                          symbol === "OP" ? "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/optimism.png" :
-                            `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${symbol.toLowerCase()}.png`)}
-                      alt={symbol}
-                      className="w-5 h-5 rounded-full"
-                      onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${symbol}&background=random`; }}
-                    />
+                    <CoinIcon symbol={symbol.toUpperCase()} className="w-5 h-5" />
                     <span className="font-bold text-sm">{name}</span>
                   </div>
                 </SelectItem>

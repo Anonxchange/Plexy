@@ -29,7 +29,7 @@ import { signEVMTransaction } from "@/lib/evmSigner";
 import { signSolanaTransaction } from "@/lib/solanaSigner";
 import { signTronTransaction } from "@/lib/tronSigner";
 import { useAuth } from "@/lib/auth-context";
-import { cryptoIconUrls } from "@/lib/crypto-icons";
+import { CoinIcon } from "@/components/trading/CoinIcon";
 import { useSendFee } from "@/hooks/use-fees";
 import { getCryptoPrices, convertCurrency } from "@/lib/crypto-prices";
 import { useToast } from "@/hooks/use-toast";
@@ -354,14 +354,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
                 onClick={() => handleSelectCrypto(wallet.symbol)}
               >
                 <div className="flex items-center gap-3 w-full">
-                  <img
-                    src={cryptoIconUrls[wallet.symbol]}
-                    alt={wallet.symbol}
-                    className="w-10 h-10 rounded-full"
-                    onError={(e) => {
-                      e.currentTarget.src = `https://ui-avatars.com/api/?name=${wallet.symbol}&background=random`;
-                    }}
-                  />
+                  <CoinIcon symbol={wallet.symbol.toUpperCase()} className="w-10 h-10" />
                   <div className="text-left flex-1">
                     <div className="font-semibold">{wallet.symbol}</div>
                     <div className="text-xs text-muted-foreground">{wallet.name}</div>
@@ -405,14 +398,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
               }}>
                 <SelectTrigger className="h-12 bg-muted">
                   <div className="flex items-center gap-2">
-                    <img
-                      src={cryptoIconUrls[selectedCrypto] || `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${selectedCrypto?.toLowerCase() || ''}.png`}
-                      alt={selectedCrypto}
-                      className="w-6 h-6 rounded-full"
-                      onError={(e) => {
-                        e.currentTarget.src = `https://ui-avatars.com/api/?name=${selectedCrypto || 'Asset'}&background=random`;
-                      }}
-                    />
+                    <CoinIcon symbol={(selectedCrypto || "").toUpperCase()} className="w-6 h-6" />
                     <span>{selectedCrypto}</span>
                   </div>
                 </SelectTrigger>
@@ -420,14 +406,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
                   {wallets.map((wallet) => (
                     <SelectItem key={wallet.symbol} value={wallet.symbol}>
                       <div className="flex items-center gap-2">
-                        <img
-                          src={cryptoIconUrls[wallet.symbol] || `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${wallet.symbol.toLowerCase()}.png`}
-                          alt={wallet.symbol}
-                          className="w-6 h-6 rounded-full"
-                          onError={(e) => {
-                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${wallet.symbol}&background=random`;
-                          }}
-                        />
+                        <CoinIcon symbol={wallet.symbol.toUpperCase()} className="w-6 h-6" />
                         <span>{wallet.symbol}</span>
                       </div>
                     </SelectItem>
