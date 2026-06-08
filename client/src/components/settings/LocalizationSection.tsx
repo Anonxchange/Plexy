@@ -26,6 +26,8 @@ const LANGUAGES: { code: string; label: string }[] = [
   { code: "tr", label: "Turkish (Türkçe)" },
   { code: "id", label: "Indonesian (Bahasa Indonesia)" },
   { code: "vi", label: "Vietnamese (Tiếng Việt)" },
+  { code: "yo", label: "Yorùbá" },
+  { code: "ha", label: "Hausa" },
 ];
 
 const TIMEZONES = [
