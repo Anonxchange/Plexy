@@ -460,13 +460,16 @@ export default function NotificationsPage() {
         prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n))
       );
     }
-    // Market mover notifications → set the pair then go to spot or perp
+    // Market mover notifications → go to market detail page
     const cat = (notification.metadata as any)?.category as string | undefined;
     if (cat === 'gainer' || cat === 'loser' || cat === 'hot') {
-      const pair       = (notification.metadata as any)?.pair       as string | undefined;
-      const marketType = (notification.metadata as any)?.marketType as string | undefined;
-      if (pair) { try { sessionStorage.setItem("pexly_initial_pair", pair); } catch {} }
-      navigate(marketType === 'perp' ? '/perpetual' : '/spot');
+      const pair = (notification.metadata as any)?.pair as string | undefined;
+      if (pair) {
+        const symbol = pair.split("/")[0];
+        navigate(`/markets/${symbol}`);
+      } else {
+        navigate('/markets');
+      }
       return;
     }
     if (notification.metadata?.url) {
