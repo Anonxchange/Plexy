@@ -58,27 +58,29 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
 
   const apiSymbol = toSymbol(symbol);
 
-  const { data: fundingData } = useQuery({
-    queryKey: ["funding-rate", apiSymbol],
-    queryFn: () => asterMarket.futuresFundingRate(apiSymbol),
-    enabled: mode === "futures" && isMobile,
-    staleTime: 30_000,
-    refetchInterval: 60_000,
+  const { data: markPriceData } = useQuery({
+    queryKey: ["mark-price", apiSymbol],
+    queryFn: () => asterMarket.futuresMarkPrice(apiSymbol),
+    enabled: mode === "futures",
+    staleTime: 15_000,
+    refetchInterval: 30_000,
   });
 
-  const fundingEntry = Array.isArray(fundingData) ? fundingData[0] : fundingData;
-  const fundingRate = fundingEntry?.fundingRate
-    ? (parseFloat(fundingEntry.fundingRate) * 100).toFixed(4) + "%"
+  const fundingEntry = Array.isArray(markPriceData) ? markPriceData[0] : markPriceData;
+  const fundingRate = fundingEntry?.lastFundingRate
+    ? (parseFloat(fundingEntry.lastFundingRate) * 100).toFixed(4) + "%"
     : "—";
-  const fundingTime: number = fundingEntry?.fundingTime ?? 0;
+  const nextFundingTime: number = fundingEntry?.nextFundingTime
+    ? parseInt(fundingEntry.nextFundingTime)
+    : 0;
 
   useEffect(() => {
-    if (!fundingTime || mode !== "futures" || !isMobile) return;
-    const tick = () => setCountdown(fmtCountdown(fundingTime - Date.now()));
+    if (!nextFundingTime || mode !== "futures") return;
+    const tick = () => setCountdown(fmtCountdown(nextFundingTime - Date.now()));
     tick();
     countdownRef.current = setInterval(tick, 1000);
     return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
-  }, [fundingTime, mode, isMobile]);
+  }, [nextFundingTime, mode]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

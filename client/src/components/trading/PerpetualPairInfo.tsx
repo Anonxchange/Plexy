@@ -66,9 +66,6 @@ const PerpetualPairInfo = ({ pair, onPairChange, chartVisible, onToggleChart, vi
   const indexPrice = t?.indexPrice
     ? parseFloat(t.indexPrice).toLocaleString("en-US", { maximumSignificantDigits: 6 })
     : "—";
-  const fundingRate = t?.lastFundingRate
-    ? (parseFloat(t.lastFundingRate) * 100).toFixed(4) + "%"
-    : "—";
   const volume24h = t?.quoteVolume
     ? formatVol(parseFloat(t.quoteVolume))
     : "—";
@@ -82,15 +79,17 @@ const PerpetualPairInfo = ({ pair, onPairChange, chartVisible, onToggleChart, vi
     ? parseFloat(t.lowPrice).toLocaleString("en-US", { maximumSignificantDigits: 6 })
     : "—";
 
-  const { data: fundingData } = useQuery({
-    queryKey: ["perp-funding-countdown", apiSymbol],
-    queryFn: () => asterMarket.futuresFundingRate(apiSymbol),
-    staleTime: 30_000,
-    refetchInterval: 60_000,
-    enabled: isMobile,
+  const { data: markPriceData } = useQuery({
+    queryKey: ["mark-price", apiSymbol],
+    queryFn: () => asterMarket.futuresMarkPrice(apiSymbol),
+    staleTime: 15_000,
+    refetchInterval: 30_000,
   });
-  const fd = Array.isArray(fundingData) ? fundingData[0] : fundingData;
-  const nextFundingTime = fd?.nextFundingTime ? parseInt(fd.nextFundingTime) : null;
+  const mp = Array.isArray(markPriceData) ? markPriceData[0] : markPriceData;
+  const liveFundingRate = mp?.lastFundingRate
+    ? (parseFloat(mp.lastFundingRate) * 100).toFixed(4) + "%"
+    : "—";
+  const nextFundingTime = mp?.nextFundingTime ? parseInt(mp.nextFundingTime) : null;
   const [countdown, setCountdown] = useState("--:--:--");
   useEffect(() => {
     if (!nextFundingTime) return;
@@ -182,7 +181,7 @@ const PerpetualPairInfo = ({ pair, onPairChange, chartVisible, onToggleChart, vi
             </div>
             <div>
               <div className="text-[10px] text-muted-foreground leading-none border-b border-dashed border-border/60 pb-0.5 mb-0.5">Funding / Countdown</div>
-              <div className="text-[11px] font-mono-num text-foreground leading-none">{fundingRate} / {countdown}</div>
+              <div className="text-[11px] font-mono-num text-foreground leading-none">{liveFundingRate} / {countdown}</div>
             </div>
           </div>
         </div>
@@ -249,7 +248,7 @@ const PerpetualPairInfo = ({ pair, onPairChange, chartVisible, onToggleChart, vi
           </div>
           <div className="flex flex-col flex-shrink-0">
             <span className="text-[10px] text-muted-foreground leading-none">Funding Rate</span>
-            <span className="text-xs font-mono-num text-trading-green leading-none mt-1">{fundingRate}</span>
+            <span className="text-xs font-mono-num text-trading-green leading-none mt-1">{liveFundingRate}</span>
           </div>
           <div className="flex flex-col flex-shrink-0">
             <span className="text-[10px] text-muted-foreground leading-none">24h High</span>

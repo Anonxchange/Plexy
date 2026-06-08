@@ -93,7 +93,7 @@ function buildRows(
   addressMap: Record<string, string> = {},
 ): MarketRow[] {
   return tickers
-    .filter(t => !t.symbol.startsWith("TEST") && !t.symbol.includes("_UP_DOWN_"))
+    .filter(t => !t.symbol.includes("_"))
     .map(t => {
       const pct         = parseFloat(t.priceChangePercent);
       const displayPair = toDisplayPair(t.symbol);
