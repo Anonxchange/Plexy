@@ -267,10 +267,11 @@ export default function MarketsPage() {
     queryKey: ["eth-gas-gwei"],
     queryFn: async () => {
       const res = await fetch(
-        "https://api.etherscan.io/api?module=proxy&action=eth_gasPrice"
+        "https://api.etherscan.io/api?module=gastracker&action=gasoracle"
       );
-      const json = await res.json();
-      return (parseInt(json.result, 16) / 1e9).toFixed(3);
+      const json = await res.json() as { status: string; result?: { ProposeGasPrice?: string } };
+      if (json.status !== "1" || !json.result?.ProposeGasPrice) throw new Error("No result");
+      return parseFloat(json.result.ProposeGasPrice).toFixed(3);
     },
     staleTime: 30_000,
     refetchInterval: 60_000,
