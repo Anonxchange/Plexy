@@ -105,7 +105,7 @@ export const MarketsSection = ({ className = "" }: MarketsSectionProps) => {
   const rows = useMemo(() => {
     const raw = mode === "Spot" ? spotRaw : futuresRaw;
     if (!Array.isArray(raw) || raw.length === 0) return [];
-    const usdt = raw.filter(t => t.symbol.endsWith("USDT"));
+    const usdt = raw.filter(t => t.symbol.endsWith("USDT") && !t.symbol.includes("_"));
     return filterByTab(usdt, activeTab);
   }, [mode, activeTab, spotRaw, futuresRaw]);
 
