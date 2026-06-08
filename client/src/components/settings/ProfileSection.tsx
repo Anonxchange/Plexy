@@ -238,7 +238,7 @@ export function ProfileSection() {
               <Copy className="h-4 w-4" />
             </Button>
           </div>
-          <p className="text-sm text-muted-foreground">Your unique identifier for Pexly Pay</p>
+          <p className="text-sm text-muted-foreground">Your unique identifier for Pexly</p>
         </div>
       )}
 
@@ -253,9 +253,6 @@ export function ProfileSection() {
               </Badge>
             )}
           </div>
-          <Button variant="outline" size="sm" onClick={() => setShowEmailChangeDialog(true)}>
-            Change Email
-          </Button>
         </div>
       </div>
 
