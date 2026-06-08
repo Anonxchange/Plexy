@@ -3,7 +3,7 @@ import { ChevronDown, TrendingUp, TrendingDown, ArrowRight, Check } from '@/lib/
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { asterMarket, type Ticker24h } from "@/lib/asterdex-service";
-import { cryptoIconUrls } from "@/lib/crypto-icons";
+import { CoinIcon } from "@/components/trading/CoinIcon";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type Mode = "Spot" | "Perpetual";
@@ -216,18 +216,7 @@ export const MarketsSection = ({ className = "" }: MarketsSectionProps) => {
                     className="w-full flex items-center justify-between py-3.5 hover:bg-muted/30 transition-colors active:bg-muted/50 rounded-lg px-1"
                   >
                     <div className="flex items-center gap-3">
-                      <img
-                        src={
-                          cryptoIconUrls[iconKey] ||
-                          `https://ui-avatars.com/api/?name=${base}&background=random&size=36&bold=true`
-                        }
-                        alt={base}
-                        className="w-9 h-9 rounded-full bg-muted object-cover"
-                        onError={e => {
-                          (e.currentTarget as HTMLImageElement).src =
-                            `https://ui-avatars.com/api/?name=${base}&background=random&size=36&bold=true`;
-                        }}
-                      />
+                      <CoinIcon symbol={iconKey} className="w-9 h-9" />
                       <div className="text-left">
                         <span className="font-semibold text-foreground text-sm">{base}</span>
                         <span className="text-muted-foreground text-sm">/{quote}</span>
