@@ -7,8 +7,13 @@ function load(): Set<string> {
   catch { return new Set(); }
 }
 
-let shared = load();
+let shared: Set<string> | null = null;
 const listeners = new Set<(favs: Set<string>) => void>();
+
+function getShared(): Set<string> {
+  if (shared === null) shared = load();
+  return shared;
+}
 
 function broadcast(next: Set<string>) {
   shared = next;
@@ -16,7 +21,7 @@ function broadcast(next: Set<string>) {
 }
 
 export function useFavorites() {
-  const [favorites, setFavorites] = useState<Set<string>>(() => new Set(shared));
+  const [favorites, setFavorites] = useState<Set<string>>(() => new Set(getShared()));
 
   useEffect(() => {
     listeners.add(setFavorites);
@@ -24,7 +29,7 @@ export function useFavorites() {
   }, []);
 
   const toggle = useCallback((symbol: string) => {
-    const next = new Set(shared);
+    const next = new Set(getShared());
     if (next.has(symbol)) next.delete(symbol);
     else next.add(symbol);
     localStorage.setItem(KEY, JSON.stringify([...next]));
