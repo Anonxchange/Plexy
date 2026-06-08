@@ -16,6 +16,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { useSchema, swapPageSchema } from "@/hooks/use-schema";
 import { CoinIcon } from "@/components/trading/CoinIcon";
+import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useSwapPrice, calculateSwapAmount } from "@/hooks/use-swap-price";
 import { useWalletBalances } from "@/hooks/use-wallet-balances";
 import { getCryptoPrices } from "@/lib/crypto-prices";
