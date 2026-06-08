@@ -40,6 +40,34 @@ const INTERVALS = [
 
 const PRICE_TYPES = ["Last Price", "Mark Price", "Index Price"];
 
+/**
+ * Tokens confirmed on Binance spot/futures — use BINANCE: prefix.
+ * Everything else falls back to BYBIT: which has broader altcoin coverage.
+ */
+const BINANCE_SYMBOLS = new Set([
+  "BTC","ETH","SOL","BNB","XRP","DOGE","ADA","AVAX","DOT",
+  "MATIC","POL","LINK","UNI","AAVE","ATOM","NEAR","LTC","BCH",
+  "ETC","APT","SUI","ARB","OP","INJ","SEI","WLD","JUP","FET",
+  "RENDER","PENDLE","ONDO","ENA","SHIB","PEPE","FLOKI","BLUR",
+  "ARKM","FIL","GALA","SAND","CHZ","ENJ","SNX","SUSHI","CAKE",
+  "PYTH","TRX","TON","HBAR","XLM","ALGO","ZEC","DASH","FTM",
+  "MNT","VIRTUAL","USDE","PYUSD","WBTC","WETH","HYPE","TAO",
+  "BONK","WIF","BOME","NOT","BRETT","MEME","NEIRO","EIGEN",
+  "1000PEPE","1000FLOKI","1000SHIB","1000BONK","1000X",
+]);
+
+/**
+ * Resolve the best TradingView exchange:symbol for a given pair.
+ * Perpetuals use the .P suffix (Bybit convention); Binance uses same.
+ */
+function getTvSymbol(pair: string, mode: "spot" | "futures"): string {
+  const raw = pair.replace("/", "");           // "BTWUSDT"
+  const base = raw.replace(/USDT$/, "");       // "BTW" or "1000PEPE"
+  const exchange = BINANCE_SYMBOLS.has(base) ? "BINANCE" : "BYBIT";
+  if (mode === "futures") return `${exchange}:${raw}.P`;
+  return `${exchange}:${raw}`;
+}
+
 const STUDIES: { id: string; label: string }[] = [
   { id: "52WeekHighLow@tv-basicstudies",           label: "52 Week High/Low"                },
   { id: "Acceleration@tv-basicstudies",             label: "Accelerator Oscillator"          },
@@ -798,7 +826,7 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
     script.async = true;
     script.textContent = JSON.stringify({
       autosize: true,
-      symbol: `BINANCE:${pair.replace("/", "")}`,
+      symbol: getTvSymbol(pair, mode),
       interval,
       timezone: "Etc/UTC",
       theme: isDark ? "dark" : "light",
