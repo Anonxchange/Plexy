@@ -25,6 +25,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { QRCodeCanvas } from "qrcode.react";
 import { CoinIcon } from "@/components/trading/CoinIcon";
+import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ReceiveCryptoDialogProps {
