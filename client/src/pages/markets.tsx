@@ -337,8 +337,7 @@ export default function MarketsPage() {
   ): Row[] {
     if (!Array.isArray(tickers)) return [];
     return tickers
-      .filter(t => !t.symbol.startsWith("TEST"))
-      .filter(t => !t.symbol.includes("_UP_DOWN_") && !t.symbol.includes("_UP_") && !t.symbol.includes("_DOWN_") && !t.symbol.match(/^[A-Z]+_(BULL|BEAR|CALL|PUT|UP|DOWN)\d/i))
+      .filter(t => !t.symbol.includes("_"))
       .map(t => {
         const dp   = toDisplayPair(t.symbol);
         const base = getBase(dp);
