@@ -73,15 +73,15 @@ export function LocalizationSection() {
   };
 
   const handleSave = () => {
-    i18n.changeLanguage(activeLang);
-    localStorage.setItem("pexly-lang", activeLang);
     localStorage.setItem("pexly-timezone", timezone);
-    if (activeLang === "ar") {
-      document.documentElement.dir = "rtl";
-    } else {
-      document.documentElement.dir = "ltr";
-    }
     setSaved(true);
+    // If language changed, redirect the same way as the header/sidebar do
+    if (activeLang !== i18n.language) {
+      const segments = window.location.pathname.split("/").filter(Boolean);
+      const withoutLang = segments.slice(1).join("/");
+      window.location.href = `/${activeLang}${withoutLang ? `/${withoutLang}` : ""}`;
+      return;
+    }
     setTimeout(() => setSaved(false), 2500);
   };
 
