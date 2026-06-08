@@ -266,11 +266,9 @@ export default function MarketsPage() {
   const { data: ethGasGwei } = useQuery<string>({
     queryKey: ["eth-gas-gwei"],
     queryFn: async () => {
-      const res = await fetch("https://eth.llamarpc.com", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jsonrpc: "2.0", method: "eth_gasPrice", params: [], id: 1 }),
-      });
+      const res = await fetch(
+        "https://api.etherscan.io/api?module=proxy&action=eth_gasPrice"
+      );
       const json = await res.json();
       return (parseInt(json.result, 16) / 1e9).toFixed(3);
     },
