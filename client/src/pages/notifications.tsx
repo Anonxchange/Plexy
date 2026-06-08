@@ -465,8 +465,10 @@ export default function NotificationsPage() {
     if (cat === 'gainer' || cat === 'loser' || cat === 'hot') {
       const pair = (notification.metadata as any)?.pair as string | undefined;
       if (pair) {
-        const symbol = pair.split("/")[0];
-        navigate(`/markets/${symbol}`);
+        const slug = pair.replace("/", "-");
+        const marketType = (notification.metadata as any)?.marketType as string | undefined;
+        const type = marketType === "perp" ? "futures" : "spot";
+        navigate(`/markets/${slug}?type=${type}`);
       } else {
         navigate('/markets');
       }
