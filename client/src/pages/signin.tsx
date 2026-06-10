@@ -59,7 +59,7 @@ export function SignIn() {
   const [passkeySupported, setPasskeySupported] = useState(false);
   const conditionalAbortRef = useRef<AbortController | null>(null);
   const captchaTokenRef = useRef<string | null>(null);
-  const { signIn, signOut, user, session, pendingOTPVerification, completeOTPVerification, cancelOTPVerification } = useAuth();
+  const { signIn, signOut, user, session, pendingOTPVerification, completeOTPVerification, cancelOTPVerification, completeTOTPSignIn, cancelTOTPSignIn, pauseSessionForTOTP } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
