@@ -130,7 +130,9 @@ class WebAuthnService {
     const supabase = await getSupabase();
     // No captchaToken here — startAuthentication only generates a challenge,
     // not an authentication. Passing the token here burns it before verifyAuthentication.
-    const { data, error } = await (supabase.auth as any).passkey.startAuthentication();
+    const passkeyApi = (supabase.auth as any).passkey;
+    if (!passkeyApi) throw new Error('Supabase passkey API unavailable');
+    const { data, error } = await passkeyApi.startAuthentication();
     if (error) throw new Error(error.message ?? 'Failed to start conditional sign-in');
 
     const opts = data.options;
@@ -176,7 +178,9 @@ class WebAuthnService {
       type: assertion.type,
     };
 
-    const { data, error } = await (supabase.auth as any).passkey.verifyAuthentication({
+    const passkeyApi = (supabase.auth as any).passkey;
+    if (!passkeyApi) throw new Error('Supabase passkey API unavailable');
+    const { data, error } = await passkeyApi.verifyAuthentication({
       challengeId,
       credential,
       ...(captchaToken ? { options: { captchaToken } } : {}),
