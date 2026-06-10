@@ -6,6 +6,16 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 let _client: SupabaseClient | null = null;
 let _promise: Promise<SupabaseClient> | null = null;
 
+// Safe no-ops used during the brief window while @supabase/ssr is loading.
+// Prevents the proxy from throwing and crashing React before _client resolves.
+const _noop = () => Promise.resolve({ data: null, error: null });
+const _authFallback: any = {
+  getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+  getUser:    () => Promise.resolve({ data: { user: null }, error: null }),
+  signOut:    _noop,
+  onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+};
+
 /**
  * Async getter — always safe.
  * Triggers a one-time dynamic import of @supabase/ssr so the entire
@@ -36,11 +46,9 @@ export function createClient(): SupabaseClient {
   return new Proxy({} as SupabaseClient, {
     get(_, prop) {
       if (_client) return (_client as any)[prop];
-      if (prop === "then") return undefined; // not a Promise
-      throw new Error(
-        `Supabase client accessed before initialisation (prop: ${String(prop)}). ` +
-        "Ensure AuthProvider has mounted before rendering lazy pages."
-      );
+      if (prop === "then") return undefined;
+      if (prop === "auth") return _authFallback;
+      return _noop;
     },
   });
 }
@@ -53,9 +61,7 @@ export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
   get(_, prop) {
     if (_client) return (_client as any)[prop];
     if (prop === "then") return undefined;
-    throw new Error(
-      `supabase.${String(prop)} accessed before client initialised. ` +
-      "Use getSupabase() in async contexts."
-    );
+    if (prop === "auth") return _authFallback;
+    return _noop;
   },
 });
