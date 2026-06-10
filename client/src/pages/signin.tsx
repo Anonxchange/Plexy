@@ -18,6 +18,24 @@ import { deviceFingerprint } from "@/lib/security/device-fingerprint";
 import { webAuthnService } from "@/lib/webauthn";
 import { ForgotPasswordDialog } from "@/components/forgot-password-dialog";
 
+function friendlyAuthError(raw: string | undefined | null): string {
+  if (!raw) return "Something went wrong. Please try again.";
+  const msg = raw.toLowerCase();
+  if (msg.includes("captcha") || msg.includes("no captcha_token") || msg.includes("request disallowed"))
+    return "Please complete the security check and try again.";
+  if (msg.includes("invalid login credentials") || msg.includes("invalid email or password"))
+    return "Incorrect email or password. Please try again.";
+  if (msg.includes("email not confirmed"))
+    return "Please verify your email address before signing in.";
+  if (msg.includes("too many requests") || msg.includes("rate limit"))
+    return "Too many attempts. Please wait a moment and try again.";
+  if (msg.includes("user not found"))
+    return "No account found with that email.";
+  if (msg.includes("network") || msg.includes("failed to fetch"))
+    return "Network error. Please check your connection and try again.";
+  return "Sign-in failed. Please try again.";
+}
+
 export function SignIn() {
   useHead({ title: "Sign In | Pexly", meta: [{ name: "description", content: "Sign in to access your Pexly wallet, swaps, staking, gift cards, and account features." }] });
   const [inputValue, setInputValue] = useState("");
@@ -67,7 +85,7 @@ export function SignIn() {
         conditionalAbortRef.current = controller;
 
         // Fetch a Supabase-generated challenge (native passkey API)
-        const { nativeOptions, challengeId } = await webAuthnService.startConditionalSignIn();
+        const { nativeOptions, challengeId } = await webAuthnService.startConditionalSignIn(captchaToken);
 
         const assertion = await navigator.credentials.get({
           signal: controller.signal,
@@ -99,7 +117,7 @@ export function SignIn() {
     return () => {
       conditionalAbortRef.current?.abort();
     };
-  }, [toast]);
+  }, [toast, captchaToken]);
 
   // Typewriter effect for welcome message
   useEffect(() => {
@@ -197,8 +215,8 @@ export function SignIn() {
       setLoading(false);
       setChecking2FA(false);
       toast({
-        title: "Error",
-        description: authResult.error.message,
+        title: "Sign-in Failed",
+        description: friendlyAuthError(authResult.error.message),
         variant: "destructive",
       });
       return;
@@ -311,7 +329,9 @@ export function SignIn() {
     setLoading(true);
     try {
       // Supabase handles the full WebAuthn ceremony and sets the session directly
-      const { data, error } = await (supabase.auth as any).signInWithPasskey();
+      const { data, error } = await (supabase.auth as any).signInWithPasskey(
+        captchaToken ? { options: { captchaToken } } : undefined
+      );
       if (error) throw error;
       if (!data?.session) throw new Error("No session returned");
     } catch (error: any) {
@@ -321,7 +341,7 @@ export function SignIn() {
       }
       toast({
         title: "Passkey sign-in failed",
-        description: error instanceof Error ? error.message : "Could not sign in with passkey",
+        description: friendlyAuthError(error instanceof Error ? error.message : null),
         variant: "destructive",
       });
     } finally {
@@ -398,8 +418,8 @@ export function SignIn() {
       setLoading(false);
       setChecking2FA(false);
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Sign-in Failed",
+        description: friendlyAuthError(error.message),
         variant: "destructive",
       });
       return;
