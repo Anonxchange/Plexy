@@ -55,6 +55,21 @@ export interface AuthContextType {
    * second factor is verified. completeTOTPSignIn() re-commits the AAL2 session.
    */
   pauseSessionForTOTP: () => void;
+  /**
+   * Call just before starting the passkey WebAuthn ceremony (both the explicit
+   * button and the conditional/autofill path). Sets signInInProgressRef so the
+   * SIGNED_IN event emitted by Supabase is parked in deferredSignedInRef instead
+   * of immediately updating user state — preventing AuthRoute from redirecting
+   * to /dashboard before the AAL check completes.
+   */
+  beginPasskeyAuth: () => void;
+  /**
+   * Call when the passkey flow succeeds and no 2FA is required.
+   * Clears signInInProgressRef and applies the deferred SIGNED_IN session
+   * (including device tracking and wallet check side-effects).
+   * For the 2FA path use pauseSessionForTOTP() instead.
+   */
+  releasePasskeyAuth: () => void;
   loading: boolean;
   isLoading: boolean;
   pendingOTPVerification: PendingAuth | null;
@@ -989,33 +1004,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // both insert, both send a new-device notification.
 
       // ── Fail-closed TOTP check ─────────────────────────────────────────
-      // Use listFactors() directly — the same approach the profile dropdown
-      // uses — because getAuthenticatorAssuranceLevel() can silently skip
-      // the 2FA prompt when a cached AAL2 session is present in storage.
-      // listFactors() is authoritative: if the user has a verified TOTP
-      // factor we always challenge, regardless of the current session level.
+      // Official Supabase pattern (docs: supabase.com/docs/guides/auth/auth-mfa):
+      //   1. getAuthenticatorAssuranceLevel() — fast, tells us whether the
+      //      current session needs a second factor (currentLevel=aal1,
+      //      nextLevel=aal2).  This is the recommended gate check.
+      //   2. listFactors() — only called when aal2 is required, to obtain
+      //      the factorId needed for the challenge call.
       //
-      // SECURITY: any error from listFactors() or challenge() is treated as
-      // a hard failure (fail closed).  We sign the user out so no
-      // unauthenticated session state leaks to the rest of the app.
+      // SECURITY: any error is treated as a hard failure (fail closed).
+      // We sign the user out so no unauthenticated session state leaks.
       let mfaErr: Error | null = null;
       let totpFactorId: string | null = null;
       let totpChallengeId: string | null = null;
 
       try {
-        const { data: factorsData, error: listErr } = await supabase.auth.mfa.listFactors();
-        if (listErr) throw listErr;
+        const { data: aalData, error: aalErr } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (aalErr) throw aalErr;
 
-        const verifiedTotp = factorsData?.totp?.find((f: any) => f.status === 'verified');
-        if (verifiedTotp) {
-          const { data: challengeData, error: challengeErr } = await supabase.auth.mfa.challenge({
-            factorId: verifiedTotp.id,
-          });
-          if (challengeErr || !challengeData) {
-            throw challengeErr ?? new Error('Failed to start MFA challenge');
+        if (aalData.currentLevel === 'aal1' && aalData.nextLevel === 'aal2') {
+          const { data: factorsData, error: listErr } = await supabase.auth.mfa.listFactors();
+          if (listErr) throw listErr;
+
+          const totpFactor = factorsData?.totp?.find((f: any) => f.status === 'verified');
+          if (totpFactor) {
+            const { data: challengeData, error: challengeErr } = await supabase.auth.mfa.challenge({
+              factorId: totpFactor.id,
+            });
+            if (challengeErr || !challengeData) {
+              throw challengeErr ?? new Error('Failed to start MFA challenge');
+            }
+            totpFactorId = totpFactor.id;
+            totpChallengeId = challengeData.id;
           }
-          totpFactorId = verifiedTotp.id;
-          totpChallengeId = challengeData.id;
         }
       } catch (e: any) {
         mfaErr = e instanceof Error ? e : new Error(String(e));
@@ -1127,11 +1147,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // ── TOTP completion / cancellation ─────────────────────────────────────
 
+  // beginPasskeyAuth: called by signin.tsx just before starting the WebAuthn
+  //   ceremony (both button and conditional/autofill paths).  Parks the SIGNED_IN
+  //   event in deferredSignedInRef so user state is never set while the AAL check
+  //   is in flight — same interception pattern used by signIn() for passwords.
+  const beginPasskeyAuth = useCallback(() => {
+    signInInProgressRef.current = true;
+    deferredSignedInRef.current = null;
+  }, []);
+
+  // releasePasskeyAuth: called when the passkey flow succeeds with no 2FA.
+  //   Clears the interception gate and applies the deferred SIGNED_IN payload.
+  const releasePasskeyAuth = useCallback(() => {
+    signInInProgressRef.current = false;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const deferred = deferredSignedInRef.current as { user: any; session: any } | null;
+    deferredSignedInRef.current = null;
+    if (deferred) {
+      touchLastActivity(deferred.user.id, true);
+      setSession(deferred.session);
+      setUser(deferred.user);
+      setTimeout(async () => {
+        const deviceInfo = getDeviceInfo();
+        const { isNewDevice, ipAddress, country, isp } = await trackDevice(deferred.user.id);
+        checkWalletOnAuthRef.current(deferred.user.id);
+        if (isNewDevice) sendLoginNotificationIfEnabled(deferred.user.id, deviceInfo, ipAddress, country, isp);
+      }, 1500);
+    }
+  }, []);
+
   // pauseSessionForTOTP: called by signin.tsx immediately after passkey auth
-  //   succeeds and a verified TOTP factor is detected.  Clears user/session
-  //   state so that route guards treat the user as unauthenticated while the
-  //   TOTP challenge is live.  completeTOTPSignIn() re-commits the AAL2 session.
+  //   succeeds and a verified TOTP factor is detected.  Also clears
+  //   signInInProgressRef (set by beginPasskeyAuth) and discards the deferred
+  //   payload so the AAL1 session never reaches user state.
+  //   completeTOTPSignIn() re-commits the AAL2 session after mfa.verify().
   const pauseSessionForTOTP = useCallback(() => {
+    signInInProgressRef.current = false;
+    deferredSignedInRef.current = null;
     totpPendingRef.current = true;
     setUser(null);
     setSession(null);
@@ -1193,6 +1245,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     completeTOTPSignIn,
     cancelTOTPSignIn,
     pauseSessionForTOTP,
+    beginPasskeyAuth,
+    releasePasskeyAuth,
     loading,
     isLoading: loading,
     pendingOTPVerification,
