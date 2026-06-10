@@ -83,19 +83,21 @@ export function SignIn() {
   }, [captchaToken]);
 
   // Start conditional UI (autofill-assisted passkey) on mount.
-  // startConditionalSignIn only fetches a challenge — no captchaToken needed there.
-  // The token is passed at finishConditionalSignIn (the actual verify step) via ref,
-  // so it is never burned prematurely before an explicit passkey button click.
+  // Skip entirely when Turnstile captcha is configured — Supabase requires a valid
+  // captchaToken even for the challenge fetch, and no token exists yet on mount.
+  // The explicit passkey button (handlePasskeySignIn) has the token and works fine.
   useEffect(() => {
     webAuthnService.isPlatformAuthenticatorAvailable().then(async (supported) => {
       setPasskeySupported(supported);
       if (!supported) return;
 
+      // If captcha is configured, skip the background conditional flow entirely.
+      if (import.meta.env.VITE_TURNSTILE_SITE_KEY) return;
+
       try {
         const controller = new AbortController();
         conditionalAbortRef.current = controller;
 
-        // Challenge fetch — deliberately no captchaToken (would consume the one-time token)
         const { nativeOptions, challengeId } = await webAuthnService.startConditionalSignIn();
 
         const assertion = await navigator.credentials.get({
@@ -816,23 +818,32 @@ export function SignIn() {
                 {loading ? "Signing in..." : isPhoneNumber ? "Continue with SMS" : "Sign in"}
               </button>
 
-              {/* Passkey checking indicator */}
-              {!isPhoneNumber && passkeySupported && isValidEmail && checkingPasskey && (
-                <p className={`text-xs text-center mt-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                  Checking for passkey…
-                </p>
-              )}
-
-              {/* Passkey Sign In — only shown after backend confirms a passkey exists for this email */}
-              {!isPhoneNumber && passkeySupported && passkeyAvailable === true && (
+              {/* Passkey Sign In — visible whenever the device supports passkeys.
+                  Enabled only once we've confirmed a passkey exists for this email.
+                  Disabled (but always visible) when: no valid email typed, still
+                  looking up the email, or no passkey found for this account. */}
+              {!isPhoneNumber && passkeySupported && (
                 <button
                   type="button"
                   onClick={handlePasskeySignIn}
-                  disabled={loading || (!!import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken && !captchaError)}
-                  className={`w-full flex items-center justify-center gap-2 py-3 rounded-full text-sm font-medium transition-colors mt-3 disabled:opacity-50 ${
+                  disabled={
+                    loading ||
+                    passkeyAvailable !== true ||
+                    (!!import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken && !captchaError)
+                  }
+                  title={
+                    !isValidEmail
+                      ? 'Enter your email first'
+                      : passkeyAvailable === false
+                      ? 'No passkey registered for this account'
+                      : passkeyAvailable === null && isValidEmail
+                      ? 'Looking up passkey…'
+                      : undefined
+                  }
+                  className={`w-full flex items-center justify-center gap-2 py-3 rounded-full text-sm font-medium transition-colors mt-3 disabled:opacity-40 disabled:cursor-not-allowed ${
                     isDark
-                      ? 'border border-gray-700 text-gray-300 hover:bg-gray-800'
-                      : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
+                      ? 'border border-gray-700 text-gray-300 hover:enabled:bg-gray-800'
+                      : 'border border-gray-200 text-gray-700 hover:enabled:bg-gray-50'
                   }`}
                 >
                   <Fingerprint size={18} />
