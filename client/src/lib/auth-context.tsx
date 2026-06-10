@@ -48,6 +48,13 @@ export interface AuthContextType {
    * Lifts the gate and signs the AAL1 session out so no partial session lingers.
    */
   cancelTOTPSignIn: () => Promise<void>;
+  /**
+   * Call immediately after passkey auth succeeds and before showing the TOTP
+   * challenge form. Sets totpPendingRef and clears user/session from React
+   * state so that route guards treat the user as unauthenticated until the
+   * second factor is verified. completeTOTPSignIn() re-commits the AAL2 session.
+   */
+  pauseSessionForTOTP: () => void;
   loading: boolean;
   isLoading: boolean;
   pendingOTPVerification: PendingAuth | null;
@@ -1119,6 +1126,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [setPendingOTPWithTimestamp]);
 
   // ── TOTP completion / cancellation ─────────────────────────────────────
+
+  // pauseSessionForTOTP: called by signin.tsx immediately after passkey auth
+  //   succeeds and a verified TOTP factor is detected.  Clears user/session
+  //   state so that route guards treat the user as unauthenticated while the
+  //   TOTP challenge is live.  completeTOTPSignIn() re-commits the AAL2 session.
+  const pauseSessionForTOTP = useCallback(() => {
+    totpPendingRef.current = true;
+    setUser(null);
+    setSession(null);
+  }, []);
+
   // completeTOTPSignIn: called by signin.tsx after mfa.verify() succeeds.
   //   Clears totpPendingRef and commits the now-AAL2 session to auth state.
   const completeTOTPSignIn = useCallback(async () => {
@@ -1174,6 +1192,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     cancelOTPVerification,
     completeTOTPSignIn,
     cancelTOTPSignIn,
+    pauseSessionForTOTP,
     loading,
     isLoading: loading,
     pendingOTPVerification,
