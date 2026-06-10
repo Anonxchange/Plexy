@@ -123,13 +123,14 @@ class WebAuthnService {
    * Fetches a Supabase-generated challenge and returns native options
    * ready to pass to navigator.credentials.get({ mediation: 'conditional' }).
    */
-  async startConditionalSignIn(captchaToken?: string | null): Promise<{
+  async startConditionalSignIn(): Promise<{
     nativeOptions: PublicKeyCredentialRequestOptions;
     challengeId: string;
   }> {
     const supabase = await getSupabase();
-    const params = captchaToken ? { options: { captchaToken } } : undefined;
-    const { data, error } = await (supabase.auth as any).passkey.startAuthentication(params);
+    // No captchaToken here — startAuthentication only generates a challenge,
+    // not an authentication. Passing the token here burns it before verifyAuthentication.
+    const { data, error } = await (supabase.auth as any).passkey.startAuthentication();
     if (error) throw new Error(error.message ?? 'Failed to start conditional sign-in');
 
     const opts = data.options;
@@ -154,7 +155,8 @@ class WebAuthnService {
    */
   async finishConditionalSignIn(
     assertion: PublicKeyCredential,
-    challengeId: string
+    challengeId: string,
+    captchaToken?: string | null
   ): Promise<{ session: any; user: any }> {
     const supabase = await getSupabase();
     const authResponse = assertion.response as AuthenticatorAssertionResponse;
@@ -177,6 +179,7 @@ class WebAuthnService {
     const { data, error } = await (supabase.auth as any).passkey.verifyAuthentication({
       challengeId,
       credential,
+      ...(captchaToken ? { options: { captchaToken } } : {}),
     });
     if (error) throw new Error(error.message ?? 'Passkey authentication failed');
     return data;
