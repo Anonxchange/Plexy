@@ -105,10 +105,36 @@ export function SignIn() {
         if (!assertion || controller.signal.aborted) return;
 
         setLoading(true);
+        // Block the user-redirect guard while we check 2FA after passkey auth.
+        setChecking2FA(true);
         try {
           // Actual auth verification — pass fresh captchaToken via ref
           await webAuthnService.finishConditionalSignIn(assertion, challengeId, captchaTokenRef.current);
+
+          // Passkey establishes AAL1.  If the user has a verified TOTP factor
+          // they must still pass the second factor before reaching the dashboard.
+          const { data: factorsData, error: listErr } = await supabase.auth.mfa.listFactors();
+          if (listErr) throw new Error(listErr.message ?? 'Failed to check 2FA status');
+
+          const verifiedTotp = (factorsData?.totp ?? []).find((f: any) => f.status === 'verified');
+          if (verifiedTotp) {
+            const { data: challengeData, error: challengeErr } = await supabase.auth.mfa.challenge({
+              factorId: verifiedTotp.id,
+            });
+            if (challengeErr || !challengeData) {
+              throw challengeErr ?? new Error('Failed to start 2FA challenge');
+            }
+            setTotpFactorId(verifiedTotp.id);
+            setTotpChallengeId(challengeData.id);
+            setShow2FAInput(true);
+            setChecking2FA(false);
+            return;
+          }
+
+          // No 2FA required — release the guard and let the auth-state redirect fire
+          setChecking2FA(false);
         } catch (err) {
+          setChecking2FA(false);
           toast({
             title: "Passkey sign-in failed",
             description: friendlyAuthError(err instanceof Error ? err.message : null),
@@ -336,6 +362,8 @@ export function SignIn() {
   const handlePasskeySignIn = async () => {
     conditionalAbortRef.current?.abort();
     setLoading(true);
+    // Block the user-redirect guard while we check 2FA after passkey auth.
+    setChecking2FA(true);
     try {
       // Supabase handles the full WebAuthn ceremony and sets the session directly
       const passkeyAuth = (supabase.auth as any).signInWithPasskey;
@@ -346,9 +374,33 @@ export function SignIn() {
       );
       if (error) throw new Error(error.message ?? 'Passkey sign-in failed');
       if (!data?.session) throw new Error("No session returned");
+
+      // Passkey establishes AAL1.  If the user has a verified TOTP factor
+      // they must still pass the second factor before reaching the dashboard.
+      const { data: factorsData, error: listErr } = await supabase.auth.mfa.listFactors();
+      if (listErr) throw new Error(listErr.message ?? 'Failed to check 2FA status');
+
+      const verifiedTotp = (factorsData?.totp ?? []).find((f: any) => f.status === 'verified');
+      if (verifiedTotp) {
+        const { data: challengeData, error: challengeErr } = await supabase.auth.mfa.challenge({
+          factorId: verifiedTotp.id,
+        });
+        if (challengeErr || !challengeData) {
+          throw challengeErr ?? new Error('Failed to start 2FA challenge');
+        }
+        setTotpFactorId(verifiedTotp.id);
+        setTotpChallengeId(challengeData.id);
+        setShow2FAInput(true);
+        setChecking2FA(false);
+        setLoading(false);
+        return;
+      }
+
+      // No 2FA required — release the guard and let the auth-state redirect fire
+      setChecking2FA(false);
       toast({ title: "Signed in!", description: "Welcome back." });
-      // Auth state change fires automatically; useEffect will redirect to /dashboard
     } catch (error: any) {
+      setChecking2FA(false);
       if (error?.name === 'NotAllowedError') {
         toast({ title: "Cancelled", description: "Passkey sign-in was cancelled" });
         return;
