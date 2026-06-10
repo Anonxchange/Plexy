@@ -85,6 +85,27 @@ class WebAuthnService {
     return `${browser} on ${os}`;
   }
 
+  // ── Passkey — email lookup ────────────────────────────────────────────────
+
+  /**
+   * Returns true if the given email address has at least one passkey registered.
+   * Calls the `check_email_has_passkey` Supabase RPC (SECURITY DEFINER) so the
+   * anon role can query auth.mfa_factors and webauthn_credentials without
+   * needing the service-role key.
+   */
+  async checkEmailHasPasskey(email: string): Promise<boolean> {
+    try {
+      const supabase = await getSupabase();
+      const { data, error } = await supabase.rpc('check_email_has_passkey', {
+        p_email: email.trim().toLowerCase(),
+      });
+      if (error) return false;
+      return data === true;
+    } catch {
+      return false;
+    }
+  }
+
   // ── Passkey — Supabase built-in ───────────────────────────────────────────
 
   /**
