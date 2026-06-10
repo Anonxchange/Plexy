@@ -1,5 +1,6 @@
 import { Switch, Route, useLocation, Redirect, Router as WouterRouter } from "wouter";
 import { lazy, Suspense, useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 import i18n from "@/lib/i18n";
 import { detectLanguageFromIP, isValidLang } from "@/lib/detect-language";
 import { queryClient } from "./lib/queryClient";
@@ -125,10 +126,49 @@ function LazyRoute({
 }
 
 /**
- * Requires an authenticated session.
+ * Checks the user's presence AND their Authenticator Assurance Level.
+ *
+ * Returns:
+ *   'pending'   — still resolving (show skeleton)
+ *   'authed'    — fully authenticated (AAL2, or no 2FA enrolled)
+ *   'needs-mfa' — AAL1 session exists but a verified TOTP factor is enrolled;
+ *                 the user must complete the second factor before proceeding
+ *   'unauthed'  — no session at all
+ *
+ * Per Supabase docs (supabase.com/docs/guides/auth/auth-mfa), the recommended
+ * gate check is getAuthenticatorAssuranceLevel() — "very fast (microseconds),
+ * rarely uses the network" — not listFactors() + status check.
+ */
+function useAuthGuard() {
+  const { user, loading } = useAuth();
+  const [state, setState] = useState<'pending' | 'authed' | 'needs-mfa' | 'unauthed'>('pending');
+
+  useEffect(() => {
+    if (loading) { setState('pending'); return; }
+    if (!user)   { setState('unauthed'); return; }
+
+    let cancelled = false;
+    supabase.auth.mfa.getAuthenticatorAssuranceLevel().then(({ data }) => {
+      if (cancelled) return;
+      if (data?.currentLevel === 'aal1' && data?.nextLevel === 'aal2') {
+        setState('needs-mfa');
+      } else {
+        setState('authed');
+      }
+    }).catch(() => {
+      if (!cancelled) setState('authed');
+    });
+    return () => { cancelled = true; };
+  }, [user, loading]);
+
+  return state;
+}
+
+/**
+ * Requires an authenticated session with sufficient AAL.
  * - While auth is resolving → shows skeleton.
- * - Unauthenticated → redirects to /signin preserving the return URL.
- * - Authenticated → renders the page.
+ * - Unauthenticated or needs-mfa → redirects to /signin (preserving return URL).
+ * - Authenticated (AAL2 or no 2FA enrolled) → renders the page.
  */
 function ProtectedRoute({
   component: Component,
@@ -137,12 +177,12 @@ function ProtectedRoute({
   component: LazyComponent;
   skeleton?: React.ReactNode;
 }) {
-  const { user, loading } = useAuth();
+  const guard = useAuthGuard();
   const [location] = useLocation();
 
-  if (loading) return <>{skeleton}</>;
+  if (guard === 'pending') return <>{skeleton}</>;
 
-  if (!user) {
+  if (guard !== 'authed') {
     const returnTo = encodeURIComponent(location);
     return <Redirect to={`/signin?redirect=${returnTo}`} />;
   }
@@ -157,8 +197,8 @@ function ProtectedRoute({
 /**
  * Redirects already-authenticated users away from auth pages (signin / signup).
  * - While loading → shows skeleton so there's no flash of the auth form.
- * - Authenticated → redirects to /dashboard (or the ?redirect param).
- * - Unauthenticated → renders the auth page.
+ * - Authenticated (AAL2) → redirects to /dashboard (or the ?redirect param).
+ * - Unauthenticated or needs-mfa → renders the auth page (user must complete TOTP).
  */
 function AuthRoute({
   component: LazyComponent,
@@ -167,12 +207,12 @@ function AuthRoute({
   component: LazyComponent;
   skeleton?: React.ReactNode;
 }) {
-  const { user, loading } = useAuth();
+  const guard = useAuthGuard();
   const [location] = useLocation();
 
-  if (loading) return <>{skeleton}</>;
+  if (guard === 'pending') return <>{skeleton}</>;
 
-  if (user) {
+  if (guard === 'authed') {
     const params = new URLSearchParams(location.split("?")[1] ?? "");
     const raw = params.get("redirect") ?? "/dashboard";
     const redirect = raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
@@ -260,7 +300,7 @@ function AppRoutes() {
       <Route path="/analysis">{() => <ProtectedRoute component={Analysis} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/checkout">{() => <ProtectedRoute component={Checkout} />}</Route>
       <Route path="/checkout/pay/crypto">{() => <ProtectedRoute component={CheckoutPayCrypto} />}</Route>
- <Route path="/orders">{() => { window.location.replace("/account-settings?section=shop-history"); return null; }}</Route>
+      <Route path="/orders">{() => { window.location.replace("/account-settings?section=shop-history"); return null; }}</Route>
       {/* ── Admin pages (require session; pages enforce is_admin internally) ── */}
       <Route path="/admin">{() => <ProtectedRoute component={adminPage} skeleton={<PageSkeleton />} />}</Route>
       <Route path="/admin/verifications">{() => <ProtectedRoute component={adminVerificationsPage} skeleton={<PageSkeleton />} />}</Route>
