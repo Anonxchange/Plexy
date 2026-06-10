@@ -338,11 +338,16 @@ export function SignIn() {
     setLoading(true);
     try {
       // Supabase handles the full WebAuthn ceremony and sets the session directly
-      const { data, error } = await (supabase.auth as any).signInWithPasskey(
+      const passkeyAuth = (supabase.auth as any).signInWithPasskey;
+      if (typeof passkeyAuth !== 'function') throw new Error('Passkey sign-in not supported by this Supabase build');
+      const { data, error } = await passkeyAuth.call(
+        supabase.auth,
         captchaToken ? { options: { captchaToken } } : undefined
       );
-      if (error) throw error;
+      if (error) throw new Error(error.message ?? 'Passkey sign-in failed');
       if (!data?.session) throw new Error("No session returned");
+      toast({ title: "Signed in!", description: "Welcome back." });
+      // Auth state change fires automatically; useEffect will redirect to /dashboard
     } catch (error: any) {
       if (error?.name === 'NotAllowedError') {
         toast({ title: "Cancelled", description: "Passkey sign-in was cancelled" });
