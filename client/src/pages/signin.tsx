@@ -209,7 +209,7 @@ export function SignIn() {
     // Phone number → OTP only (no password)
     if (isPhoneNumber) {
       const fullPhoneNumber = `${countryCode}${inputValue}`;
-      
+
       // Check if phone number exists in database
       const { data: existingUser, error: checkError } = await supabase
         .from('user_profiles')
@@ -332,7 +332,7 @@ export function SignIn() {
 
   const handleDeviceVerified = async () => {
     setLoading(true);
-    
+
     const { data: sessionData } = await supabase.auth.getSession();
     const userId = sessionData?.session?.user?.id;
 
@@ -343,7 +343,7 @@ export function SignIn() {
         console.error('Error registering trusted device:', error);
       }
     }
-    
+
     setShowDeviceVerification(false);
     setLoading(false);
 
