@@ -15,7 +15,9 @@ export async function getSupabase(): Promise<SupabaseClient> {
   if (_client) return _client;
   if (!_promise) {
     _promise = import("@supabase/ssr").then(({ createBrowserClient }) => {
-      _client = createBrowserClient(supabaseUrl, supabaseKey);
+      _client = createBrowserClient(supabaseUrl, supabaseKey, {
+        auth: { experimental: { passkey: true } as any },
+      });
       return _client;
     });
   }
