@@ -10,10 +10,11 @@ export interface WebAuthnCredential {
   created_at: string;
 }
 
-export interface PasskeySignInResult {
-  tokenHash: string;
-  email: string;
-  userId: string;
+export interface PasskeyListItem {
+  id: string;
+  friendly_name?: string;
+  created_at: string;
+  last_used_at?: string;
 }
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -44,11 +45,11 @@ function base64urlEncode(buf: ArrayBuffer | Uint8Array): string {
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
-function base64urlDecode(s: string): Uint8Array {
+function base64urlDecode(s: string): ArrayBuffer {
   const padded = s.replace(/-/g, '+').replace(/_/g, '/');
   const pad = (4 - (padded.length % 4)) % 4;
   const b64 = padded + '='.repeat(pad);
-  return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  return Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer;
 }
 
 class WebAuthnService {
@@ -84,35 +85,142 @@ class WebAuthnService {
     return `${browser} on ${os}`;
   }
 
-  // ── Registration (server-side challenge + verification) ─────────────────────
+  // ── Passkey — Supabase built-in ───────────────────────────────────────────
 
-  async register(userId: string, deviceName: string): Promise<void> {
-    await this._registerWithEdgeFunctions(deviceName, 'hardware_key');
+  /**
+   * Register a passkey for the currently signed-in user.
+   * Uses Supabase's native WebAuthn ceremony — no Edge Functions needed.
+   */
+  async registerPasskey(_userId: string, _email: string): Promise<PasskeyListItem> {
+    if (!await this.isPlatformAuthenticatorAvailable()) {
+      throw new Error('Passkeys are not supported on this device');
+    }
+    const supabase = await getSupabase();
+    const { data, error } = await (supabase.auth as any).registerPasskey();
+    if (error) throw new Error(error.message ?? 'Passkey registration failed');
+    return data as PasskeyListItem;
   }
 
-  async registerPasskey(userId: string, email: string): Promise<void> {
-    await this._registerWithEdgeFunctions(this.getDeviceName(), 'passkey');
-  }
-
-  private async _registerWithEdgeFunctions(
-    deviceName: string,
-    credentialType: 'passkey' | 'hardware_key'
-  ): Promise<void> {
+  /**
+   * Sign in with a passkey (discoverable credentials).
+   * Uses Supabase's native ceremony — returns the session directly.
+   * No tokenHash exchange step required.
+   */
+  async signInWithPasskey(signal?: AbortSignal): Promise<{ session: any; user: any }> {
     if (!await this.isSupported()) {
       throw new Error('WebAuthn is not supported on this browser');
     }
-    if (credentialType === 'passkey' && !await this.isPlatformAuthenticatorAvailable()) {
-      throw new Error('Passkeys are not supported on this device');
+    const supabase = await getSupabase();
+    const { data, error } = await (supabase.auth as any).signInWithPasskey(
+      signal ? { options: { signal } } : undefined
+    );
+    if (error) throw new Error(error.message ?? 'Passkey sign-in failed');
+    return data;
+  }
+
+  /**
+   * Start the conditional (autofill-assisted) passkey flow.
+   * Fetches a Supabase-generated challenge and returns native options
+   * ready to pass to navigator.credentials.get({ mediation: 'conditional' }).
+   */
+  async startConditionalSignIn(): Promise<{
+    nativeOptions: PublicKeyCredentialRequestOptions;
+    challengeId: string;
+  }> {
+    const supabase = await getSupabase();
+    const { data, error } = await (supabase.auth as any).passkey.startAuthentication();
+    if (error) throw new Error(error.message ?? 'Failed to start conditional sign-in');
+
+    const opts = data.options;
+    const nativeOptions: PublicKeyCredentialRequestOptions = {
+      challenge: base64urlDecode(opts.challenge),
+      allowCredentials: (opts.allowCredentials ?? []).map((c: any) => ({
+        type: c.type ?? 'public-key',
+        id: base64urlDecode(c.id),
+        transports: c.transports,
+      })),
+      userVerification: opts.userVerification ?? 'required',
+      timeout: opts.timeout ?? 300000,
+    };
+
+    return { nativeOptions, challengeId: data.challenge_id };
+  }
+
+  /**
+   * Complete the conditional sign-in after the user selects a passkey.
+   * Serializes the assertion and calls Supabase's verify endpoint.
+   * Returns { session, user } directly — no tokenHash step.
+   */
+  async finishConditionalSignIn(
+    assertion: PublicKeyCredential,
+    challengeId: string
+  ): Promise<{ session: any; user: any }> {
+    const supabase = await getSupabase();
+    const authResponse = assertion.response as AuthenticatorAssertionResponse;
+
+    const credential = {
+      id: assertion.id,
+      rawId: base64urlEncode(assertion.rawId),
+      response: {
+        clientDataJSON: base64urlEncode(authResponse.clientDataJSON),
+        authenticatorData: base64urlEncode(authResponse.authenticatorData),
+        signature: base64urlEncode(authResponse.signature),
+        userHandle: authResponse.userHandle
+          ? base64urlEncode(authResponse.userHandle)
+          : undefined,
+      },
+      clientExtensionResults: (assertion.getClientExtensionResults?.() as any) ?? {},
+      type: assertion.type,
+    };
+
+    const { data, error } = await (supabase.auth as any).passkey.verifyAuthentication({
+      challengeId,
+      credential,
+    });
+    if (error) throw new Error(error.message ?? 'Passkey authentication failed');
+    return data;
+  }
+
+  /**
+   * List all passkeys for the signed-in user (Supabase native).
+   */
+  async listPasskeys(): Promise<PasskeyListItem[]> {
+    const supabase = await getSupabase();
+    const { data, error } = await (supabase.auth as any).passkey.list();
+    if (error) throw new Error(error.message ?? 'Failed to list passkeys');
+    return (data as PasskeyListItem[]) ?? [];
+  }
+
+  /**
+   * Delete a passkey by its Supabase-assigned UUID (Supabase native).
+   */
+  async removePasskey(passkeyId: string): Promise<void> {
+    const supabase = await getSupabase();
+    const { error } = await (supabase.auth as any).passkey.delete({ passkeyId });
+    if (error) throw new Error(error.message ?? 'Failed to remove passkey');
+  }
+
+  // ── Hardware security key — manual WebAuthn ceremony ─────────────────────
+  // Hardware keys (cross-platform, e.g. YubiKey) are NOT handled by Supabase's
+  // native passkey API, which targets platform authenticators only.
+  // These methods still use the custom Edge Functions + webauthn_credentials table.
+
+  async register(userId: string, deviceName: string): Promise<void> {
+    await this._registerHardwareKey(deviceName);
+  }
+
+  private async _registerHardwareKey(deviceName: string): Promise<void> {
+    if (!await this.isSupported()) {
+      throw new Error('WebAuthn is not supported on this browser');
     }
 
     const supabase = await getSupabase();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) throw new Error('Not authenticated');
 
-    // 1. Fetch registration options from server (server generates the challenge)
     const startRes = await callEdgeFunction(
       'webauthn-register-start',
-      { credentialType },
+      { credentialType: 'hardware_key' },
       session.access_token
     );
     if (!startRes.ok) {
@@ -123,17 +231,16 @@ class WebAuthnService {
     const { challengeId, challenge, rp, user, pubKeyCredParams, authenticatorSelection,
       excludeCredentials, timeout, attestation } = options;
 
-    // 2. Call the WebAuthn API with the server-provided challenge
     const credential = await navigator.credentials.create({
       publicKey: {
         challenge: base64urlDecode(challenge),
         rp,
-        user: {
-          ...user,
-          id: base64urlDecode(user.id),
-        },
+        user: { ...user, id: base64urlDecode(user.id) },
         pubKeyCredParams,
-        authenticatorSelection,
+        authenticatorSelection: {
+          ...authenticatorSelection,
+          authenticatorAttachment: 'cross-platform',
+        },
         excludeCredentials: (excludeCredentials ?? []).map((c: any) => ({
           ...c,
           id: base64urlDecode(c.id),
@@ -143,17 +250,16 @@ class WebAuthnService {
       },
     }) as PublicKeyCredential | null;
 
-    if (!credential) throw new Error('Passkey creation was cancelled');
+    if (!credential) throw new Error('Security key registration was cancelled');
 
     const attestationResponse = credential.response as AuthenticatorAttestationResponse;
 
-    // 3. Send attestation to server for verification and storage
     const finishRes = await callEdgeFunction(
       'webauthn-register-finish',
       {
         challengeId,
         deviceName,
-        credentialType,
+        credentialType: 'hardware_key',
         response: {
           id: credential.id,
           rawId: base64urlEncode(credential.rawId),
@@ -171,120 +277,6 @@ class WebAuthnService {
     }
   }
 
-  // ── Authentication (full server-side ceremony with signature verification) ──
-
-  /**
-   * Passkey sign-in (discoverable credentials).
-   * Returns a tokenHash that the caller should exchange via:
-   *   supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'email' })
-   */
-  async signInWithPasskey(signal?: AbortSignal): Promise<PasskeySignInResult> {
-    if (!await this.isSupported()) {
-      throw new Error('WebAuthn is not supported on this browser');
-    }
-
-    // 1. Get server-side challenge
-    const startRes = await callEdgeFunction('webauthn-authenticate-start', {});
-    if (!startRes.ok) {
-      const err = await startRes.json().catch(() => ({ error: 'Failed to start authentication' }));
-      throw new Error(err.error ?? 'Failed to start authentication');
-    }
-    const { challengeId, challenge, allowCredentials, userVerification, timeout } =
-      await startRes.json();
-
-    // 2. Prompt the authenticator
-    const assertion = await navigator.credentials.get({
-      signal,
-      publicKey: {
-        challenge: base64urlDecode(challenge),
-        allowCredentials: (allowCredentials ?? []).map((c: any) => ({
-          ...c,
-          id: base64urlDecode(c.id),
-        })),
-        userVerification,
-        timeout,
-      },
-    }) as PublicKeyCredential | null;
-
-    if (!assertion) throw new Error('Authentication was cancelled');
-
-    const assertionResponse = assertion.response as AuthenticatorAssertionResponse;
-
-    // 3. Send assertion to server — server verifies signature, counter, origin, challenge
-    const finishRes = await callEdgeFunction('webauthn-authenticate-finish', {
-      challengeId,
-      response: {
-        id: assertion.id,
-        rawId: base64urlEncode(assertion.rawId),
-        clientDataJSON: base64urlEncode(assertionResponse.clientDataJSON),
-        authenticatorData: base64urlEncode(assertionResponse.authenticatorData),
-        signature: base64urlEncode(assertionResponse.signature),
-        userHandle: assertionResponse.userHandle
-          ? base64urlEncode(assertionResponse.userHandle)
-          : null,
-        type: assertion.type,
-      },
-    });
-
-    if (!finishRes.ok) {
-      const err = await finishRes.json().catch(() => ({ error: 'Authentication failed' }));
-      throw new Error(err.error ?? 'Authentication failed');
-    }
-
-    const result = await finishRes.json();
-    return {
-      tokenHash: result.tokenHash,
-      email: result.email,
-      userId: result.userId,
-    };
-  }
-
-  /**
-   * Conditional (autofill-assisted) passkey flow.
-   * Returns a server-generated challenge to use with mediation: 'conditional'.
-   * After the assertion is returned, call finishConditionalSignIn().
-   */
-  async startConditionalSignIn(): Promise<{ challenge: Uint8Array; challengeId: string }> {
-    const startRes = await callEdgeFunction('webauthn-authenticate-start', {});
-    if (!startRes.ok) throw new Error('Failed to start conditional sign-in');
-    const { challengeId, challenge } = await startRes.json();
-    return { challenge: base64urlDecode(challenge), challengeId };
-  }
-
-  async finishConditionalSignIn(
-    assertion: PublicKeyCredential,
-    challengeId: string
-  ): Promise<PasskeySignInResult> {
-    const assertionResponse = assertion.response as AuthenticatorAssertionResponse;
-
-    const finishRes = await callEdgeFunction('webauthn-authenticate-finish', {
-      challengeId,
-      response: {
-        id: assertion.id,
-        rawId: base64urlEncode(assertion.rawId),
-        clientDataJSON: base64urlEncode(assertionResponse.clientDataJSON),
-        authenticatorData: base64urlEncode(assertionResponse.authenticatorData),
-        signature: base64urlEncode(assertionResponse.signature),
-        userHandle: assertionResponse.userHandle
-          ? base64urlEncode(assertionResponse.userHandle)
-          : null,
-        type: assertion.type,
-      },
-    });
-
-    if (!finishRes.ok) {
-      const err = await finishRes.json().catch(() => ({ error: 'Authentication failed' }));
-      throw new Error(err.error ?? 'Authentication failed');
-    }
-
-    const result = await finishRes.json();
-    return { tokenHash: result.tokenHash, email: result.email, userId: result.userId };
-  }
-
-  /**
-   * 2FA / step-up authentication for an already signed-in user.
-   * Returns true if the passkey assertion is valid.
-   */
   async authenticate(userId: string): Promise<boolean> {
     if (!await this.isSupported()) {
       throw new Error('WebAuthn is not supported on this browser');
@@ -293,7 +285,6 @@ class WebAuthnService {
     const supabase = await getSupabase();
     const { data: { session } } = await supabase.auth.getSession();
 
-    // 1. Get server-side challenge for this specific user
     const startRes = await callEdgeFunction('webauthn-authenticate-start', { userId });
     if (!startRes.ok) throw new Error('Failed to start authentication');
     const { challengeId, challenge, allowCredentials, userVerification, timeout } =
@@ -303,7 +294,6 @@ class WebAuthnService {
       throw new Error('No security keys registered');
     }
 
-    // 2. Prompt the authenticator
     const assertion = await navigator.credentials.get({
       publicKey: {
         challenge: base64urlDecode(challenge),
@@ -320,7 +310,6 @@ class WebAuthnService {
 
     const assertionResponse = assertion.response as AuthenticatorAssertionResponse;
 
-    // 3. Server verifies signature — for 2FA the session token is included
     const finishRes = await callEdgeFunction(
       'webauthn-authenticate-finish',
       {
@@ -348,7 +337,7 @@ class WebAuthnService {
     return true;
   }
 
-  // ── Credential management ─────────────────────────────────────────────────
+  // ── Hardware key management (custom table) ───────────────────────────────
 
   async listCredentials(userId: string): Promise<WebAuthnCredential[]> {
     const supabase = await getSupabase();
@@ -371,17 +360,6 @@ class WebAuthnService {
     return data || [];
   }
 
-  async listPasskeys(userId: string): Promise<WebAuthnCredential[]> {
-    const supabase = await getSupabase();
-    const { data } = await supabase
-      .from('webauthn_credentials')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('credential_type', 'passkey')
-      .order('created_at', { ascending: false });
-    return data || [];
-  }
-
   async removeCredential(credentialId: string): Promise<void> {
     const supabase = await getSupabase();
     await supabase
@@ -390,11 +368,10 @@ class WebAuthnService {
       .eq('id', credentialId);
   }
 
-  // ── Wallet PRF (Pseudo-Random Function) methods ───────────────────────────
-  // These use the WebAuthn PRF extension to derive a 32-byte encryption key
-  // from a passkey assertion. The key is used to encrypt/decrypt the wallet vault.
-  // PRF is a client-side crypto operation — no server verification needed here
-  // because the output (derived key) is used purely for local decryption.
+  // ── Wallet PRF — manual WebAuthn with PRF extension ──────────────────────
+  // The WebAuthn PRF extension derives a deterministic 32-byte encryption key
+  // from a passkey assertion. Supabase's native passkey API does not expose
+  // extension results, so wallet PRF must remain a manual ceremony.
 
   async isWalletPRFSupported(): Promise<boolean> {
     return this.isPlatformAuthenticatorAvailable();
