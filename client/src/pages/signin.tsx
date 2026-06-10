@@ -223,10 +223,12 @@ export function SignIn() {
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputValue.trim());
 
   // When the user types a properly-formatted email, ask the backend whether a
-  // passkey is registered for it. Debounced 500 ms so we don't fire on every
+  // passkey is registered for it. Debounced 400 ms so we don't fire on every
   // keystroke. Resets to null whenever the email changes to an invalid format.
+  // NOTE: intentionally NOT gated on passkeySupported — the RPC check is
+  // independent of whether the current device has biometric hardware.
   useEffect(() => {
-    if (!passkeySupported || !isValidEmail) {
+    if (!isValidEmail) {
       setPasskeyAvailable(null);
       setCheckingPasskey(false);
       return;
@@ -242,7 +244,7 @@ export function SignIn() {
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [inputValue, isValidEmail, passkeySupported]);
+  }, [inputValue, isValidEmail]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -818,27 +820,17 @@ export function SignIn() {
                 {loading ? "Signing in..." : isPhoneNumber ? "Continue with SMS" : "Sign in"}
               </button>
 
-              {/* Passkey Sign In — visible whenever the device supports passkeys.
-                  Enabled only once we've confirmed a passkey exists for this email.
-                  Disabled (but always visible) when: no valid email typed, still
-                  looking up the email, or no passkey found for this account. */}
-              {!isPhoneNumber && passkeySupported && (
+              {/* Passkey Sign In — visible once we've confirmed a passkey is
+                  registered for this email address (RPC check, device-agnostic).
+                  Disabled when: no valid email typed, still looking up, or no
+                  passkey found for this account. */}
+              {!isPhoneNumber && passkeyAvailable === true && (
                 <button
                   type="button"
                   onClick={handlePasskeySignIn}
                   disabled={
                     loading ||
-                    passkeyAvailable !== true ||
                     (!!import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken && !captchaError)
-                  }
-                  title={
-                    !isValidEmail
-                      ? 'Enter your email first'
-                      : passkeyAvailable === false
-                      ? 'No passkey registered for this account'
-                      : passkeyAvailable === null && isValidEmail
-                      ? 'Looking up passkey…'
-                      : undefined
                   }
                   className={`w-full flex items-center justify-center gap-2 py-3 rounded-full text-sm font-medium transition-colors mt-3 disabled:opacity-40 disabled:cursor-not-allowed ${
                     isDark
