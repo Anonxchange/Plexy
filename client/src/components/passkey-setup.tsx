@@ -9,7 +9,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { webAuthnService, type WebAuthnCredential } from "@/lib/webauthn";
+import { webAuthnService, type PasskeyListItem } from "@/lib/webauthn";
+import { getSupabase } from "@/lib/supabase";
 import { Fingerprint, Trash2, Plus, Smartphone, Loader2, CheckCircle2, Info } from '@/lib/icons';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +30,7 @@ interface PasskeySetupProps {
 }
 
 export function PasskeySetup({ userId, userEmail }: PasskeySetupProps) {
-  const [passkeys, setPasskeys] = useState<WebAuthnCredential[]>([]);
+  const [passkeys, setPasskeys] = useState<PasskeyListItem[]>([]);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [supported, setSupported] = useState(false);
@@ -47,7 +48,7 @@ export function PasskeySetup({ userId, userEmail }: PasskeySetupProps) {
     try {
       const isSupported = await webAuthnService.isPlatformAuthenticatorAvailable();
       setSupported(isSupported);
-    } catch (error) {
+    } catch {
       setSupported(false);
     } finally {
       setChecking(false);
@@ -56,8 +57,10 @@ export function PasskeySetup({ userId, userEmail }: PasskeySetupProps) {
 
   const loadPasskeys = async () => {
     try {
-      const creds = await webAuthnService.listPasskeys(userId);
-      setPasskeys(creds);
+      const supabase = await getSupabase();
+      const { data, error } = await (supabase.auth as any).passkey.list();
+      if (error) throw new Error(error.message);
+      setPasskeys((data as PasskeyListItem[]) ?? []);
     } catch (error) {
       console.error('Error loading passkeys:', error);
       toast({
@@ -71,11 +74,13 @@ export function PasskeySetup({ userId, userEmail }: PasskeySetupProps) {
   const handleRegister = async () => {
     setLoading(true);
     try {
-      await webAuthnService.registerPasskey(userId, userEmail);
-      
+      const supabase = await getSupabase();
+      const { error } = await (supabase.auth as any).registerPasskey();
+      if (error) throw new Error(error.message ?? 'Passkey registration failed');
+
       toast({
         title: "Passkey Added",
-        description: "Your passkey has been registered successfully. You can now use it to sign in.",
+        description: "Your passkey has been registered. You can now use it to sign in.",
       });
 
       setShowAddDialog(false);
@@ -92,11 +97,13 @@ export function PasskeySetup({ userId, userEmail }: PasskeySetupProps) {
     }
   };
 
-  const handleRemove = async (credentialId: string) => {
-    setDeletingId(credentialId);
+  const handleRemove = async (passkeyId: string) => {
+    setDeletingId(passkeyId);
     try {
-      await webAuthnService.removeCredential(credentialId);
-      
+      const supabase = await getSupabase();
+      const { error } = await (supabase.auth as any).passkey.delete({ passkeyId });
+      if (error) throw new Error(error.message ?? 'Failed to remove passkey');
+
       toast({
         title: "Passkey Removed",
         description: "The passkey has been removed from your account",
@@ -107,7 +114,7 @@ export function PasskeySetup({ userId, userEmail }: PasskeySetupProps) {
       console.error('Error removing passkey:', error);
       toast({
         title: "Removal Failed",
-        description: "Failed to remove passkey",
+        description: error instanceof Error ? error.message : "Failed to remove passkey",
         variant: "destructive",
       });
     } finally {
@@ -186,7 +193,9 @@ export function PasskeySetup({ userId, userEmail }: PasskeySetupProps) {
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <p className="font-medium">{passkey.device_name}</p>
+                        <p className="font-medium">
+                          {passkey.friendly_name || "Passkey"}
+                        </p>
                         <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20 text-xs">
                           <CheckCircle2 className="h-3 w-3 mr-1" />
                           Active
@@ -194,6 +203,9 @@ export function PasskeySetup({ userId, userEmail }: PasskeySetupProps) {
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Added {formatDistanceToNow(new Date(passkey.created_at), { addSuffix: true })}
+                        {passkey.last_used_at && (
+                          <> · Last used {formatDistanceToNow(new Date(passkey.last_used_at), { addSuffix: true })}</>
+                        )}
                       </p>
                     </div>
                   </div>
