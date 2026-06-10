@@ -216,6 +216,8 @@ export function SignIn() {
     setIsPhoneNumber(isPhone && value.length > 0);
   }, [inputValue]);
 
+  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputValue.trim());
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -379,12 +381,15 @@ export function SignIn() {
     // Park the SIGNED_IN event so user state isn't set before the AAL check.
     beginPasskeyAuth();
     try {
-      // Supabase handles the full WebAuthn ceremony and sets the session directly
+      // Supabase handles the full WebAuthn ceremony and sets the session directly.
+      // Pass the typed email as a hint so the browser pre-selects the matching
+      // credential instead of showing every passkey stored for this domain.
       const passkeyAuth = (supabase.auth as any).signInWithPasskey;
       if (typeof passkeyAuth !== 'function') throw new Error('Passkey sign-in not supported by this Supabase build');
+      const email = inputValue.trim();
       const { data, error } = await passkeyAuth.call(
         supabase.auth,
-        captchaToken ? { options: { captchaToken } } : undefined
+        { ...(email ? { email } : {}), ...(captchaToken ? { options: { captchaToken } } : {}) }
       );
       if (error) throw new Error(error.message ?? 'Passkey sign-in failed');
       if (!data?.session) throw new Error("No session returned");
@@ -787,8 +792,8 @@ export function SignIn() {
                 {loading ? "Signing in..." : isPhoneNumber ? "Continue with SMS" : "Sign in"}
               </button>
 
-              {/* Passkey Sign In — only for users who have passkeys on a supporting device */}
-              {!isPhoneNumber && passkeySupported && inputValue.includes('@') && (
+              {/* Passkey Sign In — only shown when a valid email is entered on a supporting device */}
+              {!isPhoneNumber && passkeySupported && isValidEmail && (
                 <button
                   type="button"
                   onClick={handlePasskeySignIn}
