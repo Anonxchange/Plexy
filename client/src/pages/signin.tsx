@@ -820,17 +820,26 @@ export function SignIn() {
                 {loading ? "Signing in..." : isPhoneNumber ? "Continue with SMS" : "Sign in"}
               </button>
 
-              {/* Passkey Sign In — visible once we've confirmed a passkey is
-                  registered for this email address (RPC check, device-agnostic).
-                  Disabled when: no valid email typed, still looking up, or no
-                  passkey found for this account. */}
-              {!isPhoneNumber && passkeyAvailable === true && (
+              {/* Passkey Sign In — always visible when device supports passkeys.
+                  Enabled only once the RPC confirms a passkey exists for the
+                  typed email. Disabled (greyed) while looking up or not found. */}
+              {!isPhoneNumber && passkeySupported && (
                 <button
                   type="button"
                   onClick={handlePasskeySignIn}
                   disabled={
                     loading ||
+                    passkeyAvailable !== true ||
                     (!!import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken && !captchaError)
+                  }
+                  title={
+                    !isValidEmail
+                      ? 'Enter your email first'
+                      : checkingPasskey
+                      ? 'Looking up passkey…'
+                      : passkeyAvailable === false
+                      ? 'No passkey registered for this account'
+                      : undefined
                   }
                   className={`w-full flex items-center justify-center gap-2 py-3 rounded-full text-sm font-medium transition-colors mt-3 disabled:opacity-40 disabled:cursor-not-allowed ${
                     isDark
@@ -839,7 +848,7 @@ export function SignIn() {
                   }`}
                 >
                   <Fingerprint size={18} />
-                  Sign in with Passkey
+                  {checkingPasskey && isValidEmail ? 'Checking…' : 'Sign in with Passkey'}
                 </button>
               )}
 
