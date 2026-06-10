@@ -58,6 +58,7 @@ export function SignIn() {
   const [displayedText, setDisplayedText] = useState("");
   const [passkeySupported, setPasskeySupported] = useState(false);
   const conditionalAbortRef = useRef<AbortController | null>(null);
+  const captchaTokenRef = useRef<string | null>(null);
   const { signIn, signOut, user, session, pendingOTPVerification, completeOTPVerification, cancelOTPVerification } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -74,7 +75,15 @@ export function SignIn() {
   }, []);
 
   // Check passkey support and start conditional UI (autofill-assisted passkey)
-  // Uses a server-generated challenge so the assertion is cryptographically verified server-side
+  // Keep captchaTokenRef in sync so the useEffect closure always reads the latest token
+  useEffect(() => {
+    captchaTokenRef.current = captchaToken;
+  }, [captchaToken]);
+
+  // Start conditional UI (autofill-assisted passkey) on mount.
+  // startConditionalSignIn only fetches a challenge — no captchaToken needed there.
+  // The token is passed at finishConditionalSignIn (the actual verify step) via ref,
+  // so it is never burned prematurely before an explicit passkey button click.
   useEffect(() => {
     webAuthnService.isPlatformAuthenticatorAvailable().then(async (supported) => {
       setPasskeySupported(supported);
@@ -84,8 +93,8 @@ export function SignIn() {
         const controller = new AbortController();
         conditionalAbortRef.current = controller;
 
-        // Fetch a Supabase-generated challenge (native passkey API)
-        const { nativeOptions, challengeId } = await webAuthnService.startConditionalSignIn(captchaToken);
+        // Challenge fetch — deliberately no captchaToken (would consume the one-time token)
+        const { nativeOptions, challengeId } = await webAuthnService.startConditionalSignIn();
 
         const assertion = await navigator.credentials.get({
           signal: controller.signal,
@@ -97,12 +106,12 @@ export function SignIn() {
 
         setLoading(true);
         try {
-          // Supabase verifies the assertion and sets the session automatically
-          await webAuthnService.finishConditionalSignIn(assertion, challengeId);
+          // Actual auth verification — pass fresh captchaToken via ref
+          await webAuthnService.finishConditionalSignIn(assertion, challengeId, captchaTokenRef.current);
         } catch (err) {
           toast({
             title: "Passkey sign-in failed",
-            description: err instanceof Error ? err.message : "Could not complete sign-in",
+            description: friendlyAuthError(err instanceof Error ? err.message : null),
             variant: "destructive",
           });
         } finally {
@@ -117,7 +126,7 @@ export function SignIn() {
     return () => {
       conditionalAbortRef.current?.abort();
     };
-  }, [toast, captchaToken]);
+  }, [toast]);
 
   // Typewriter effect for welcome message
   useEffect(() => {
