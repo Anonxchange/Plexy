@@ -66,31 +66,21 @@ export function SignIn() {
         const controller = new AbortController();
         conditionalAbortRef.current = controller;
 
-        // Fetch a server-side challenge — this is required by the WebAuthn standard
-        const { challenge, challengeId } = await webAuthnService.startConditionalSignIn();
+        // Fetch a Supabase-generated challenge (native passkey API)
+        const { nativeOptions, challengeId } = await webAuthnService.startConditionalSignIn();
 
         const assertion = await navigator.credentials.get({
           signal: controller.signal,
           mediation: 'conditional' as CredentialMediationRequirement,
-          publicKey: {
-            challenge,
-            allowCredentials: [],
-            userVerification: 'required',
-            timeout: 300000,
-          },
+          publicKey: nativeOptions,
         } as any) as PublicKeyCredential | null;
 
         if (!assertion || controller.signal.aborted) return;
 
         setLoading(true);
         try {
-          // Server verifies signature, counter, origin — then issues a session token
-          const result = await webAuthnService.finishConditionalSignIn(assertion, challengeId);
-          const { error } = await supabase.auth.verifyOtp({
-            token_hash: result.tokenHash,
-            type: 'email',
-          });
-          if (error) throw error;
+          // Supabase verifies the assertion and sets the session automatically
+          await webAuthnService.finishConditionalSignIn(assertion, challengeId);
         } catch (err) {
           toast({
             title: "Passkey sign-in failed",
@@ -320,16 +310,10 @@ export function SignIn() {
     conditionalAbortRef.current?.abort();
     setLoading(true);
     try {
-      // Full WebAuthn ceremony: server generates challenge → user touches authenticator
-      // → server verifies ECDSA signature, counter, and origin → issues a session token
-      const result = await webAuthnService.signInWithPasskey();
-
-      // Exchange the server-verified token_hash for a live Supabase session
-      const { error } = await supabase.auth.verifyOtp({
-        token_hash: result.tokenHash,
-        type: 'email',
-      });
+      // Supabase handles the full WebAuthn ceremony and sets the session directly
+      const { data, error } = await (supabase.auth as any).signInWithPasskey();
       if (error) throw error;
+      if (!data?.session) throw new Error("No session returned");
     } catch (error: any) {
       if (error?.name === 'NotAllowedError') {
         toast({ title: "Cancelled", description: "Passkey sign-in was cancelled" });
