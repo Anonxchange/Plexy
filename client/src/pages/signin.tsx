@@ -57,6 +57,8 @@ export function SignIn() {
   const [captchaKey, setCaptchaKey] = useState(0);
   const [displayedText, setDisplayedText] = useState("");
   const [passkeySupported, setPasskeySupported] = useState(false);
+  const [passkeyAvailable, setPasskeyAvailable] = useState<boolean | null>(null);
+  const [checkingPasskey, setCheckingPasskey] = useState(false);
   const conditionalAbortRef = useRef<AbortController | null>(null);
   const captchaTokenRef = useRef<string | null>(null);
   const { signIn, signOut, user, session, pendingOTPVerification, completeOTPVerification, cancelOTPVerification, completeTOTPSignIn, cancelTOTPSignIn, pauseSessionForTOTP, beginPasskeyAuth, releasePasskeyAuth } = useAuth();
@@ -217,6 +219,28 @@ export function SignIn() {
   }, [inputValue]);
 
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputValue.trim());
+
+  // When the user types a properly-formatted email, ask the backend whether a
+  // passkey is registered for it. Debounced 500 ms so we don't fire on every
+  // keystroke. Resets to null whenever the email changes to an invalid format.
+  useEffect(() => {
+    if (!passkeySupported || !isValidEmail) {
+      setPasskeyAvailable(null);
+      setCheckingPasskey(false);
+      return;
+    }
+
+    setCheckingPasskey(true);
+    setPasskeyAvailable(null);
+
+    const timer = setTimeout(async () => {
+      const has = await webAuthnService.checkEmailHasPasskey(inputValue.trim());
+      setPasskeyAvailable(has);
+      setCheckingPasskey(false);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [inputValue, isValidEmail, passkeySupported]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -792,8 +816,15 @@ export function SignIn() {
                 {loading ? "Signing in..." : isPhoneNumber ? "Continue with SMS" : "Sign in"}
               </button>
 
-              {/* Passkey Sign In — only shown when a valid email is entered on a supporting device */}
-              {!isPhoneNumber && passkeySupported && isValidEmail && (
+              {/* Passkey checking indicator */}
+              {!isPhoneNumber && passkeySupported && isValidEmail && checkingPasskey && (
+                <p className={`text-xs text-center mt-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  Checking for passkey…
+                </p>
+              )}
+
+              {/* Passkey Sign In — only shown after backend confirms a passkey exists for this email */}
+              {!isPhoneNumber && passkeySupported && passkeyAvailable === true && (
                 <button
                   type="button"
                   onClick={handlePasskeySignIn}
