@@ -57,8 +57,6 @@ export function SignIn() {
   const [captchaKey, setCaptchaKey] = useState(0);
   const [displayedText, setDisplayedText] = useState("");
   const [passkeySupported, setPasskeySupported] = useState(false);
-  const [passkeyAvailable, setPasskeyAvailable] = useState<boolean | null>(null);
-  const [checkingPasskey, setCheckingPasskey] = useState(false);
   const conditionalAbortRef = useRef<AbortController | null>(null);
   const captchaTokenRef = useRef<string | null>(null);
   const { signIn, signOut, user, session, pendingOTPVerification, completeOTPVerification, cancelOTPVerification, completeTOTPSignIn, cancelTOTPSignIn, pauseSessionForTOTP, beginPasskeyAuth, releasePasskeyAuth } = useAuth();
@@ -222,29 +220,6 @@ export function SignIn() {
 
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputValue.trim());
 
-  // When the user types a properly-formatted email, ask the backend whether a
-  // passkey is registered for it. Debounced 400 ms so we don't fire on every
-  // keystroke. Resets to null whenever the email changes to an invalid format.
-  // NOTE: intentionally NOT gated on passkeySupported — the RPC check is
-  // independent of whether the current device has biometric hardware.
-  useEffect(() => {
-    if (!isValidEmail) {
-      setPasskeyAvailable(null);
-      setCheckingPasskey(false);
-      return;
-    }
-
-    setCheckingPasskey(true);
-    setPasskeyAvailable(null);
-
-    const timer = setTimeout(async () => {
-      const has = await webAuthnService.checkEmailHasPasskey(inputValue.trim());
-      setPasskeyAvailable(has);
-      setCheckingPasskey(false);
-    }, 400);
-
-    return () => clearTimeout(timer);
-  }, [inputValue, isValidEmail]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -820,26 +795,15 @@ export function SignIn() {
                 {loading ? "Signing in..." : isPhoneNumber ? "Continue with SMS" : "Sign in"}
               </button>
 
-              {/* Passkey Sign In — always visible when device supports passkeys.
-                  Enabled only once the RPC confirms a passkey exists for the
-                  typed email. Disabled (greyed) while looking up or not found. */}
+              {/* Passkey Sign In — visible whenever device supports passkeys.
+                  The browser's native WebAuthn prompt handles "no passkey found". */}
               {!isPhoneNumber && passkeySupported && (
                 <button
                   type="button"
                   onClick={handlePasskeySignIn}
                   disabled={
                     loading ||
-                    passkeyAvailable !== true ||
                     (!!import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken && !captchaError)
-                  }
-                  title={
-                    !isValidEmail
-                      ? 'Enter your email first'
-                      : checkingPasskey
-                      ? 'Looking up passkey…'
-                      : passkeyAvailable === false
-                      ? 'No passkey registered for this account'
-                      : undefined
                   }
                   className={`w-full flex items-center justify-center gap-2 py-3 rounded-full text-sm font-medium transition-colors mt-3 disabled:opacity-40 disabled:cursor-not-allowed ${
                     isDark
@@ -848,7 +812,7 @@ export function SignIn() {
                   }`}
                 >
                   <Fingerprint size={18} />
-                  {checkingPasskey && isValidEmail ? 'Checking…' : 'Sign in with Passkey'}
+                  Sign in with Passkey
                 </button>
               )}
 
