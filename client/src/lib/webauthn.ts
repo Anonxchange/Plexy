@@ -123,12 +123,13 @@ class WebAuthnService {
    * Fetches a Supabase-generated challenge and returns native options
    * ready to pass to navigator.credentials.get({ mediation: 'conditional' }).
    */
-  async startConditionalSignIn(): Promise<{
+  async startConditionalSignIn(captchaToken?: string | null): Promise<{
     nativeOptions: PublicKeyCredentialRequestOptions;
     challengeId: string;
   }> {
     const supabase = await getSupabase();
-    const { data, error } = await (supabase.auth as any).passkey.startAuthentication();
+    const params = captchaToken ? { options: { captchaToken } } : undefined;
+    const { data, error } = await (supabase.auth as any).passkey.startAuthentication(params);
     if (error) throw new Error(error.message ?? 'Failed to start conditional sign-in');
 
     const opts = data.options;
