@@ -59,7 +59,7 @@ export function SignIn() {
   const [passkeySupported, setPasskeySupported] = useState(false);
   const conditionalAbortRef = useRef<AbortController | null>(null);
   const captchaTokenRef = useRef<string | null>(null);
-  const { signIn, signOut, user, session, pendingOTPVerification, completeOTPVerification, cancelOTPVerification, completeTOTPSignIn, cancelTOTPSignIn, pauseSessionForTOTP } = useAuth();
+  const { signIn, signOut, user, session, pendingOTPVerification, completeOTPVerification, cancelOTPVerification, completeTOTPSignIn, cancelTOTPSignIn, pauseSessionForTOTP, beginPasskeyAuth, releasePasskeyAuth } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
@@ -105,35 +105,48 @@ export function SignIn() {
         if (!assertion || controller.signal.aborted) return;
 
         setLoading(true);
-        // Block the user-redirect guard while we check 2FA after passkey auth.
         setChecking2FA(true);
+        // Park the SIGNED_IN event so user state isn't set before the AAL check.
+        beginPasskeyAuth();
         try {
           // Actual auth verification — pass fresh captchaToken via ref
           await webAuthnService.finishConditionalSignIn(assertion, challengeId, captchaTokenRef.current);
 
-          // Passkey establishes AAL1.  If the user has a verified TOTP factor
-          // they must still pass the second factor before reaching the dashboard.
-          const { data: factorsData, error: listErr } = await supabase.auth.mfa.listFactors();
-          if (listErr) throw new Error(listErr.message ?? 'Failed to check 2FA status');
+          // Passkey establishes AAL1.  Check AAL level using the official
+          // Supabase pattern before deciding whether to require a second factor.
+          const { data: aalData, error: aalErr } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+          if (aalErr) throw new Error(aalErr.message ?? 'Failed to check 2FA status');
 
-          const verifiedTotp = (factorsData?.totp ?? []).find((f: any) => f.status === 'verified');
-          if (verifiedTotp) {
-            const { data: challengeData, error: challengeErr } = await supabase.auth.mfa.challenge({
-              factorId: verifiedTotp.id,
-            });
-            if (challengeErr || !challengeData) {
-              throw challengeErr ?? new Error('Failed to start 2FA challenge');
+          if (aalData.currentLevel === 'aal1' && aalData.nextLevel === 'aal2') {
+            // User has a verified TOTP factor — get the factorId for the challenge.
+            const { data: factorsData, error: listErr } = await supabase.auth.mfa.listFactors();
+            if (listErr) throw new Error(listErr.message ?? 'Failed to list MFA factors');
+
+            const totpFactor = (factorsData?.totp ?? []).find((f: any) => f.status === 'verified');
+            if (totpFactor) {
+              const { data: challengeData, error: challengeErr } = await supabase.auth.mfa.challenge({
+                factorId: totpFactor.id,
+              });
+              if (challengeErr || !challengeData) {
+                throw challengeErr ?? new Error('Failed to start 2FA challenge');
+              }
+              // pauseSessionForTOTP also clears signInInProgressRef and discards
+              // the deferred payload — the AAL1 session must never reach user state.
+              pauseSessionForTOTP();
+              setTotpFactorId(totpFactor.id);
+              setTotpChallengeId(challengeData.id);
+              setShow2FAInput(true);
+              setChecking2FA(false);
+              return;
             }
-            setTotpFactorId(verifiedTotp.id);
-            setTotpChallengeId(challengeData.id);
-            setShow2FAInput(true);
-            setChecking2FA(false);
-            return;
           }
 
-          // No 2FA required — release the guard and let the auth-state redirect fire
+          // No 2FA required — apply the deferred SIGNED_IN session.
+          releasePasskeyAuth();
           setChecking2FA(false);
         } catch (err) {
+          // Clear the interception gate so future events aren't blocked.
+          releasePasskeyAuth();
           setChecking2FA(false);
           toast({
             title: "Passkey sign-in failed",
@@ -209,7 +222,7 @@ export function SignIn() {
     // Phone number → OTP only (no password)
     if (isPhoneNumber) {
       const fullPhoneNumber = `${countryCode}${inputValue}`;
-
+      
       // Check if phone number exists in database
       const { data: existingUser, error: checkError } = await supabase
         .from('user_profiles')
@@ -332,7 +345,7 @@ export function SignIn() {
 
   const handleDeviceVerified = async () => {
     setLoading(true);
-
+    
     const { data: sessionData } = await supabase.auth.getSession();
     const userId = sessionData?.session?.user?.id;
 
@@ -343,7 +356,7 @@ export function SignIn() {
         console.error('Error registering trusted device:', error);
       }
     }
-
+    
     setShowDeviceVerification(false);
     setLoading(false);
 
@@ -362,8 +375,9 @@ export function SignIn() {
   const handlePasskeySignIn = async () => {
     conditionalAbortRef.current?.abort();
     setLoading(true);
-    // Block the user-redirect guard while we check 2FA after passkey auth.
     setChecking2FA(true);
+    // Park the SIGNED_IN event so user state isn't set before the AAL check.
+    beginPasskeyAuth();
     try {
       // Supabase handles the full WebAuthn ceremony and sets the session directly
       const passkeyAuth = (supabase.auth as any).signInWithPasskey;
@@ -375,31 +389,41 @@ export function SignIn() {
       if (error) throw new Error(error.message ?? 'Passkey sign-in failed');
       if (!data?.session) throw new Error("No session returned");
 
-      // Passkey establishes AAL1.  If the user has a verified TOTP factor
-      // they must still pass the second factor before reaching the dashboard.
-      const { data: factorsData, error: listErr } = await supabase.auth.mfa.listFactors();
-      if (listErr) throw new Error(listErr.message ?? 'Failed to check 2FA status');
+      // Check AAL level per official Supabase docs.
+      const { data: aalData, error: aalErr } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aalErr) throw new Error(aalErr.message ?? 'Failed to check 2FA status');
 
-      const verifiedTotp = (factorsData?.totp ?? []).find((f: any) => f.status === 'verified');
-      if (verifiedTotp) {
-        const { data: challengeData, error: challengeErr } = await supabase.auth.mfa.challenge({
-          factorId: verifiedTotp.id,
-        });
-        if (challengeErr || !challengeData) {
-          throw challengeErr ?? new Error('Failed to start 2FA challenge');
+      if (aalData.currentLevel === 'aal1' && aalData.nextLevel === 'aal2') {
+        const { data: factorsData, error: listErr } = await supabase.auth.mfa.listFactors();
+        if (listErr) throw new Error(listErr.message ?? 'Failed to list MFA factors');
+
+        const totpFactor = (factorsData?.totp ?? []).find((f: any) => f.status === 'verified');
+        if (totpFactor) {
+          const { data: challengeData, error: challengeErr } = await supabase.auth.mfa.challenge({
+            factorId: totpFactor.id,
+          });
+          if (challengeErr || !challengeData) {
+            throw challengeErr ?? new Error('Failed to start 2FA challenge');
+          }
+          // pauseSessionForTOTP clears signInInProgressRef + deferred payload and
+          // sets totpPendingRef so nothing can commit the AAL1 session to state.
+          pauseSessionForTOTP();
+          setTotpFactorId(totpFactor.id);
+          setTotpChallengeId(challengeData.id);
+          setShow2FAInput(true);
+          setChecking2FA(false);
+          setLoading(false);
+          return;
         }
-        setTotpFactorId(verifiedTotp.id);
-        setTotpChallengeId(challengeData.id);
-        setShow2FAInput(true);
-        setChecking2FA(false);
-        setLoading(false);
-        return;
       }
 
-      // No 2FA required — release the guard and let the auth-state redirect fire
+      // No 2FA required — apply the deferred SIGNED_IN session.
+      releasePasskeyAuth();
       setChecking2FA(false);
       toast({ title: "Signed in!", description: "Welcome back." });
     } catch (error: any) {
+      // Clear the interception gate so future events aren't blocked.
+      releasePasskeyAuth();
       setChecking2FA(false);
       if (error?.name === 'NotAllowedError') {
         toast({ title: "Cancelled", description: "Passkey sign-in was cancelled" });
@@ -442,10 +466,13 @@ export function SignIn() {
         return;
       }
 
-      // Session is now AAL2 — Supabase enforces this server-side.
+      // Session is now AAL2.
+      // completeTOTPSignIn() clears totpPendingRef and commits the AAL2 session
+      // to auth-context, so route guards see the user as authenticated again.
+      await completeTOTPSignIn();
+
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData?.session?.user?.id;
-
       if (userId) {
         try {
           await deviceFingerprint.registerDeviceAsTrusted(userId);
@@ -834,7 +861,10 @@ export function SignIn() {
 
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
+                // cancelTOTPSignIn signs out the partial AAL1 Supabase session
+                // so no half-authenticated state lingers after the user backs out.
+                await cancelTOTPSignIn();
                 setShow2FAInput(false);
                 setTwoFactorCode("");
                 setTotpFactorId(null);
