@@ -4,7 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Crown, Users, Coins, Layers, ChevronRight } from '@/lib/icons';
 import { Link } from "wouter";
 import { PexlyFooter } from "@/components/pexly-footer";
-import { SiAmazonwebservices, SiGooglecloud, SiIntercom, SiHackerone, SiCircleci } from "react-icons/si";
+import { FaAws } from "react-icons/fa";
+import { SiGooglecloud, SiIntercom, SiHackerone, SiCircleci } from "react-icons/si";
 
 export default function Affiliate() {
   useHead({ title: "Affiliate Program | Earn with Pexly", meta: [{ name: "description", content: "Join the Pexly affiliate program and earn commissions by referring new users." }] });
@@ -129,7 +130,7 @@ export default function Affiliate() {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
             <div className="flex items-center justify-center h-16 grayscale hover:grayscale-0 transition-all cursor-pointer group">
               <div className="flex items-center gap-2">
-                <SiAmazonwebservices className="w-10 h-10 text-[#FF9900] group-hover:text-[#FF9900]" />
+                <FaAws className="w-10 h-10 text-[#FF9900] group-hover:text-[#FF9900]" />
                 <span className="text-xl font-bold text-muted-foreground group-hover:text-[#FF9900]">AWS</span>
               </div>
             </div>
