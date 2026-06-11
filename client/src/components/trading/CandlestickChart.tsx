@@ -41,8 +41,7 @@ const INTERVALS = [
 const PRICE_TYPES = ["Last Price", "Mark Price", "Index Price"];
 
 /**
- * Tokens confirmed on Binance spot/futures — use BINANCE: prefix.
- * Everything else falls back to BYBIT: which has broader altcoin coverage.
+ * Tier 1 — confirmed on Binance spot/futures.
  */
 const BINANCE_SYMBOLS = new Set([
   "BTC","ETH","SOL","BNB","XRP","DOGE","ADA","AVAX","DOT",
@@ -57,15 +56,41 @@ const BINANCE_SYMBOLS = new Set([
 ]);
 
 /**
+ * Tier 2 — coins best covered by OKX on TradingView:
+ * OKX-native / ecosystem tokens plus altcoins with strong OKX liquidity
+ * that may not have reliable data on MEXC's TradingView feed.
+ */
+const OKX_SYMBOLS = new Set([
+  // OKX ecosystem
+  "OKB","OKT",
+  // Older smart-contract chains primarily listed on OKX
+  "NEO","GAS","ONT","QTUM","WAN",
+  // Mid-cap alts with strong OKX presence
+  "CFX","ROSE","MINA","CELO","KAVA","BAND","CELR","CTSI",
+  "DYDX","CRV","1INCH","YFI","COMP","MKR","BAL","REN",
+  "ANKR","AUDIO","REEF","ALPHA","BICO","AGLD","DODO","PERP",
+  "RLC","STMX","ACH","GHST","POND","TRB","MDT","LOOM",
+  "MASK","PEOPLE","ACE","ORDI","SATS","RATS","PIZZA",
+]);
+
+/**
  * Resolve the best TradingView exchange:symbol for a given pair.
- * Perpetuals use the .P suffix (Bybit convention); Binance uses same.
+ * Priority (spot):    BINANCE → OKX → MEXC (broadest altcoin fallback)
+ * Priority (futures): BINANCE → BYBIT (widest perps coverage)
  */
 function getTvSymbol(pair: string, mode: "spot" | "futures"): string {
-  const raw = pair.replace("/", "");           // "BTWUSDT"
-  const base = raw.replace(/USDT$/, "");       // "BTW" or "1000PEPE"
-  const exchange = BINANCE_SYMBOLS.has(base) ? "BINANCE" : "BYBIT";
-  if (mode === "futures") return `${exchange}:${raw}.P`;
-  return `${exchange}:${raw}`;
+  const raw  = pair.replace("/", "");     // e.g. "ALLOUSDT"
+  const base = raw.replace(/USDT$|USDC$|BTC$|ETH$|BNB$/, ""); // e.g. "ALLO"
+  if (BINANCE_SYMBOLS.has(base)) {
+    if (mode === "futures") return `BINANCE:${raw}.P`;
+    return `BINANCE:${raw}`;
+  }
+  // Futures altcoins: Bybit has the widest perp coverage on TradingView
+  if (mode === "futures") return `BYBIT:${raw}.P`;
+  // Spot tier-2: OKX for known OKX-strong coins
+  if (OKX_SYMBOLS.has(base)) return `OKX:${raw}`;
+  // Spot fallback: MEXC has the broadest overall altcoin coverage on TradingView
+  return `MEXC:${raw}`;
 }
 
 const STUDIES: { id: string; label: string }[] = [
