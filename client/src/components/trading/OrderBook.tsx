@@ -55,6 +55,7 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const tickRef = useRef<HTMLDivElement>(null);
+  const fetchGenRef = useRef(0); // generation counter — discards stale responses
 
   const apiSymbol = toSymbol(symbol);
 
@@ -93,11 +94,13 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
   }, []);
 
   const fetchOrderBook = async () => {
+    const gen = ++fetchGenRef.current;
     try {
       const validLimit = count <= 5 ? 10 : 20;
       const data = mode === "futures"
         ? await asterMarket.futuresOrderBook(toSymbol(symbol), String(validLimit))
         : await asterMarket.spotOrderBook(toSymbol(symbol), String(validLimit));
+      if (gen !== fetchGenRef.current) return; // superseded by a newer request
       if (!data?.bids || !data?.asks) return;
 
       const rawAsks: [string, string][] = data.asks;
@@ -144,8 +147,13 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
   };
 
   useEffect(() => {
+    // Clear stale data immediately so previous coin's prices aren't shown
+    setAsks([]);
+    setBids([]);
+    setMidPrice("");
+    setMidRaw(0);
     fetchOrderBook();
-    intervalRef.current = setInterval(fetchOrderBook, 2000);
+    intervalRef.current = setInterval(fetchOrderBook, 500);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [symbol, mode]);
 

@@ -227,18 +227,38 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot", var
     return map;
   }, [futuresExchangeInfo]);
 
+  // Filter tickers to only symbols present in exchangeInfo — these are confirmed
+  // listed pairs with real order books. Symbols that only appear in tickers
+  // (pre-launch, suspended, index-only) are excluded. Falls back to showing all
+  // tickers if exchangeInfo hasn't loaded yet (set size === 0).
+  const spotExchangeSet: Set<string> = useMemo(() => {
+    const symbols: any[] = spotExchangeInfo?.symbols ?? [];
+    return new Set(symbols.map((s: any) => s.symbol));
+  }, [spotExchangeInfo]);
+
+  const futuresExchangeSet: Set<string> = useMemo(() => {
+    const symbols: any[] = futuresExchangeInfo?.symbols ?? [];
+    return new Set(symbols.map((s: any) => s.symbol));
+  }, [futuresExchangeInfo]);
+
   const spotRows: MarketRow[] = useMemo(() =>
     Array.isArray(spotTickers)
-      ? buildRows(spotTickers, "Spot", spotMemeSubTypeMap, spotNewSet, spotAddressMap)
+      ? buildRows(
+          spotTickers.filter((t: Ticker24h) => spotExchangeSet.size === 0 || spotExchangeSet.has(t.symbol)),
+          "Spot", spotMemeSubTypeMap, spotNewSet, spotAddressMap,
+        )
       : [],
-    [spotTickers, spotMemeSubTypeMap, spotNewSet, spotAddressMap],
+    [spotTickers, spotExchangeSet, spotMemeSubTypeMap, spotNewSet, spotAddressMap],
   );
 
   const futuresRows: MarketRow[] = useMemo(() =>
     Array.isArray(futuresTickers)
-      ? buildRows(futuresTickers, "Futures", futuresSubTypeMap, futuresNewSet, futuresAddressMap)
+      ? buildRows(
+          futuresTickers.filter((t: Ticker24h) => futuresExchangeSet.size === 0 || futuresExchangeSet.has(t.symbol)),
+          "Futures", futuresSubTypeMap, futuresNewSet, futuresAddressMap,
+        )
       : [],
-    [futuresTickers, futuresSubTypeMap, futuresNewSet, futuresAddressMap],
+    [futuresTickers, futuresExchangeSet, futuresSubTypeMap, futuresNewSet, futuresAddressMap],
   );
 
   const isLoading = (activeCategory === "Spot" && spotLoading) ||

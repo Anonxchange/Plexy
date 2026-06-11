@@ -66,12 +66,16 @@ const DesktopOrderBook = ({ symbol, mode = "spot" }: DesktopOrderBookProps) => {
   const [recentTrades, setRecentTrades] = useState<RecentTrade[]>([]);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevMidRef = useRef<number>(0);
+  const fetchGenRef = useRef(0);   // order book generation counter
+  const tradeGenRef = useRef(0);   // trades generation counter
 
   const fetchOrderBook = async () => {
+    const gen = ++fetchGenRef.current;
     try {
       const data = mode === "futures"
         ? await asterMarket.futuresOrderBook(toSymbol(symbol), "20")
         : await asterMarket.spotOrderBook(toSymbol(symbol), "20");
+      if (gen !== fetchGenRef.current) return; // superseded by a newer request
       if (!data?.bids || !data?.asks) return;
 
       const rawAsks: [string, string][] = data.asks;
@@ -125,10 +129,12 @@ const DesktopOrderBook = ({ symbol, mode = "spot" }: DesktopOrderBookProps) => {
   };
 
   const fetchTrades = async () => {
+    const gen = ++tradeGenRef.current;
     try {
       const data = mode === "futures"
         ? await asterMarket.futuresTrades(toSymbol(symbol), "20")
         : await asterMarket.spotTrades(toSymbol(symbol), "20");
+      if (gen !== tradeGenRef.current) return; // superseded by a newer request
       if (!Array.isArray(data)) return;
       const trades: RecentTrade[] = data.map((t: any) => ({
         price: parseFloat(t.price).toFixed(5),
@@ -143,15 +149,23 @@ const DesktopOrderBook = ({ symbol, mode = "spot" }: DesktopOrderBookProps) => {
   };
 
   useEffect(() => {
+    // Clear stale data immediately so previous coin's prices are never shown
+    setAsks([]);
+    setBids([]);
+    setMidPrice("");
+    setMidChange(null);
+    setSpread("");
+    prevMidRef.current = 0;
     fetchOrderBook();
-    intervalRef.current = setInterval(fetchOrderBook, 2000);
+    intervalRef.current = setInterval(fetchOrderBook, 500);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [symbol, mode]);
 
   useEffect(() => {
     if (activeTab === "trades") {
+      setRecentTrades([]);
       fetchTrades();
-      const t = setInterval(fetchTrades, 3000);
+      const t = setInterval(fetchTrades, 1500);
       return () => clearInterval(t);
     }
   }, [activeTab, symbol, mode]);
