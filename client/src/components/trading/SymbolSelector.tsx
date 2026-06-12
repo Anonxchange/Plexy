@@ -8,6 +8,19 @@ import { useFavorites } from "@/hooks/use-favorites";
 
 const NEW_LISTING_DAYS = 60;
 
+// Well-known meme coins that may only have spot listings (no futures on AsterDEX).
+// This supplements the futures-derived meme tags so spot-only meme coins still
+// appear in the Meme filter.
+const KNOWN_MEME_BASES = new Set([
+  "DOGE","SHIB","PEPE","BONK","WIF","FLOKI","MEME","TURBO","MOG","POPCAT",
+  "TRUMP","MELANIA","FARTCOIN","PNUT","NEIRO","MOODENG","PENGU","BOME","SPX",
+  "CHILLGUY","DOGS","BANANAS31","PIPPIN","GIGGLE","BANK","CHEEMS","JELLYJELLY",
+  "BROCCOLI","TOSHI","KOMA","BAN","SATS","BULLA","SIREN","USELESS","HANA",
+  "PENGUIN","BABYDOGE","KISHU","SAMO","ORCA","MYRO","PONKE","SLERF","BODEN",
+  "MOTHER","BRETT","MICHI","NUB","MONKY","LADYS","WOJAK","PSYOP","AIDOGE",
+  "SNEK","COQ","HPOS10I","TOAD","GOGE","SHIB2","LUFFY","ELON","FLOKI2",
+]); 
+
 const FUTURES_FILTER_LABELS: Record<string, string> = {
   "All markets": "All markets",
   Top:           "Top",
@@ -140,14 +153,14 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot", var
     refetchInterval: 30_000,
   });
 
-  const { data: spotExchangeInfo } = useQuery({
+  const { data: spotExchangeInfo, isLoading: spotExchangeInfoLoading } = useQuery({
     queryKey: ["spot-exchange-info"],
     queryFn:  () => asterMarket.spotExchangeInfo(),
     enabled:  open,
     staleTime: 300_000,
   });
 
-  const { data: futuresExchangeInfo } = useQuery({
+  const { data: futuresExchangeInfo, isLoading: futuresExchangeInfoLoading } = useQuery({
     queryKey: ["futures-exchange-info"],
     queryFn:  () => asterMarket.futuresExchangeInfo(),
     enabled:  open,
@@ -176,10 +189,15 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot", var
 
   const spotMemeSubTypeMap: Record<string, string[]> = useMemo(() => {
     const map: Record<string, string[]> = {};
+    // From futures underlyingSubType (futures-listed meme coins)
     futuresMemeSet.forEach(base => {
       map[base] = ["Meme"];
-      // Futures prefix "1000SHIB" → spot base "SHIB", "1000PEPE" → "PEPE" etc.
+      // Strip numeric prefix: "1000SHIB" → "SHIB", "1000PEPE" → "PEPE" etc.
       if (/^\d+/.test(base)) map[base.replace(/^\d+/, "")] = ["Meme"];
+    });
+    // Supplement with well-known meme coins that may be spot-only
+    KNOWN_MEME_BASES.forEach(base => {
+      map[base] = ["Meme"];
     });
     return map;
   }, [futuresMemeSet]);
@@ -229,8 +247,8 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot", var
 
   // Filter tickers to only symbols present in exchangeInfo — these are confirmed
   // listed pairs with real order books. Symbols that only appear in tickers
-  // (pre-launch, suspended, index-only) are excluded. Falls back to showing all
-  // tickers if exchangeInfo hasn't loaded yet (set size === 0).
+  // (pre-launch, suspended, index-only) are excluded. We wait for exchangeInfo
+  // to load before showing any rows so unvalidated coins never slip through.
   const spotExchangeSet: Set<string> = useMemo(() => {
     const symbols: any[] = spotExchangeInfo?.symbols ?? [];
     return new Set(symbols.map((s: any) => s.symbol));
@@ -242,9 +260,9 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot", var
   }, [futuresExchangeInfo]);
 
   const spotRows: MarketRow[] = useMemo(() =>
-    Array.isArray(spotTickers)
+    Array.isArray(spotTickers) && spotExchangeSet.size > 0
       ? buildRows(
-          spotTickers.filter((t: Ticker24h) => spotExchangeSet.size === 0 || spotExchangeSet.has(t.symbol)),
+          spotTickers.filter((t: Ticker24h) => spotExchangeSet.has(t.symbol)),
           "Spot", spotMemeSubTypeMap, spotNewSet, spotAddressMap,
         )
       : [],
@@ -252,17 +270,17 @@ const SymbolSelector = ({ open, onClose, onSelect, defaultCategory = "Spot", var
   );
 
   const futuresRows: MarketRow[] = useMemo(() =>
-    Array.isArray(futuresTickers)
+    Array.isArray(futuresTickers) && futuresExchangeSet.size > 0
       ? buildRows(
-          futuresTickers.filter((t: Ticker24h) => futuresExchangeSet.size === 0 || futuresExchangeSet.has(t.symbol)),
+          futuresTickers.filter((t: Ticker24h) => futuresExchangeSet.has(t.symbol)),
           "Futures", futuresSubTypeMap, futuresNewSet, futuresAddressMap,
         )
       : [],
     [futuresTickers, futuresExchangeSet, futuresSubTypeMap, futuresNewSet, futuresAddressMap],
   );
 
-  const isLoading = (activeCategory === "Spot" && spotLoading) ||
-                    (activeCategory === "Futures" && futuresLoading);
+  const isLoading = (activeCategory === "Spot" && (spotLoading || spotExchangeInfoLoading)) ||
+                    (activeCategory === "Futures" && (futuresLoading || futuresExchangeInfoLoading));
 
   useEffect(() => {
     if (open) {
