@@ -180,16 +180,8 @@ const faqs = [
     answer: "Most gift cards are delivered instantly via email after your cryptocurrency payment is confirmed. Delivery typically takes 5-15 minutes depending on network congestion."
   },
   {
-    question: "Who determines the price when buying or selling a gift card?",
-    answer: "Prices are determined by individual sellers in our P2P marketplace. You can browse multiple offers and choose the best rate that suits your needs."
-  },
-  {
-    question: "Is it safe to sell a gift card on Pexly?",
-    answer: "Yes! We use an escrow system that holds the cryptocurrency until both parties confirm the transaction is complete. This protects both buyers and sellers."
-  },
-  {
-    question: "Is ID verification required to sell a gift card?",
-    answer: "For small transactions, ID verification is not required. However, higher transaction limits require identity verification to ensure platform security and compliance."
+    question: "What happens if I don't receive my gift card email?",
+    answer: "First, check your spam or junk folder — our emails occasionally get filtered. If it's not there, wait a few more minutes as delivery can sometimes be delayed. If you still haven't received it, contact our support team with your order details and we'll resolve it promptly."
   }
 ];
 
@@ -274,6 +266,19 @@ function FaqItem({ question, answer, index }: { question: string; answer: string
   );
 }
 
+const CURRENCY_TO_COUNTRY: Record<string, string> = {
+  USD: "US", GBP: "GB", JPY: "JP", AUD: "AU", CAD: "CA", CHF: "CH",
+  CNY: "CN", HKD: "HK", NZD: "NZ", SEK: "SE", KRW: "KR", SGD: "SG",
+  NOK: "NO", MXN: "MX", INR: "IN", RUB: "RU", ZAR: "ZA", TRY: "TR",
+  BRL: "BR", TWD: "TW", DKK: "DK", PLN: "PL", THB: "TH", IDR: "ID",
+  HUF: "HU", CZK: "CZ", ILS: "IL", CLP: "CL", PHP: "PH", AED: "AE",
+  COP: "CO", SAR: "SA", MYR: "MY", RON: "RO", NGN: "NG", ARS: "AR",
+  EGP: "EG", VND: "VN", PKR: "PK", BDT: "BD", UAH: "UA", KES: "KE",
+  PEN: "PE", GHS: "GH", MAD: "MA", QAR: "QA", KWD: "KW", BHD: "BH",
+  OMR: "OM", JOD: "JO", LKR: "LK", UGX: "UG", TZS: "TZ", ZMW: "ZM",
+  RWF: "RW",
+};
+
 export function GiftCards() {
   useHead({ title: "Gift Cards | Pexly", meta: [{ name: "description", content: "Buy digital gift cards from hundreds of brands worldwide and pay with cryptocurrency." }] });
   const [, setLocation] = useLocation();
@@ -293,16 +298,37 @@ export function GiftCards() {
   const [page, setPage] = useState(1);
   const pageSize = 30;
 
+  // Committed filter values — only applied when Search is pressed
+  const [activeCountryCode, setActiveCountryCode] = useState<string | undefined>("US");
+  const [activeAmount, setActiveAmount] = useState<number | undefined>(undefined);
+  const [activeCurrency, setActiveCurrency] = useState("USD");
+
   const { data, isLoading, error } = useGiftCardProducts({
     productName: searchQuery,
     page: page,
     size: pageSize,
     categoryId: selectedCategoryId,
+    countryCode: activeCountryCode,
   });
 
   const handleSearch = () => {
     setSearchQuery(inputValue);
+    setActiveCountryCode(CURRENCY_TO_COUNTRY[currency] ?? undefined);
+    setActiveCurrency(currency);
+    setActiveAmount(amount && !isNaN(Number(amount)) && Number(amount) > 0 ? Number(amount) : undefined);
     setPage(1);
+  };
+
+  const clearCurrencyFilter = () => {
+    setCurrency("USD");
+    setActiveCountryCode("US");
+    setActiveCurrency("USD");
+    setPage(1);
+  };
+
+  const clearAmountFilter = () => {
+    setAmount("");
+    setActiveAmount(undefined);
   };
 
   const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -314,14 +340,15 @@ export function GiftCards() {
   };
   const getCurrencySymbol = (code: string) => CURRENCY_SYMBOLS[code] ?? `${code} `;
 
-  const giftCards = data?.content?.map((card: any) => {
+  const allGiftCards = data?.content?.map((card: any) => {
     const currencyCode: string = card.recipientCurrencyCode || "USD";
     const sym = getCurrencySymbol(currencyCode);
+    const fixedDenominations: number[] = card.fixedRecipientDenominations || [];
     const minVal = card.denominationType === "FIXED"
-      ? (card.fixedRecipientDenominations ? Math.min(...card.fixedRecipientDenominations) : 0)
+      ? (fixedDenominations.length > 0 ? Math.min(...fixedDenominations) : 0)
       : (card.minRecipientDenomination || 0);
     const maxVal = card.denominationType === "FIXED"
-      ? (card.fixedRecipientDenominations ? Math.max(...card.fixedRecipientDenominations) : 0)
+      ? (fixedDenominations.length > 0 ? Math.max(...fixedDenominations) : 0)
       : (card.maxRecipientDenomination || 0);
     return {
       id: card.productId,
@@ -335,8 +362,22 @@ export function GiftCards() {
       description: card.redeemInstruction?.concise || "",
       minValue: minVal,
       maxValue: maxVal,
+      fixedDenominations,
+      denominationType: card.denominationType,
     };
   }) || [];
+
+  // Client-side amount filter: keep cards that support the requested denomination
+  const giftCards = activeAmount
+    ? allGiftCards.filter((card) => {
+        if (card.denominationType === "FIXED") {
+          return card.fixedDenominations.some((d) => Math.abs(d - activeAmount) < 0.01);
+        }
+        return activeAmount >= card.minValue && activeAmount <= card.maxValue;
+      })
+    : allGiftCards;
+
+  const activeCurrencyObj = currencies.find((c) => c.code === activeCurrency);
 
   const selectedCurrency = currencies.find((c) => c.code === currency);
 
@@ -371,24 +412,47 @@ export function GiftCards() {
         </aside>
 
         <div className="lg:col-span-3">
-          <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/5 to-background rounded-3xl p-6 border border-border/50 mb-6">
-            <div className="absolute inset-0 overflow-hidden rounded-3xl">
-              <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/30 dark:bg-white/10 rounded-full blur-3xl" />
-              <div className="absolute -bottom-32 -left-32 w-80 h-80 bg-primary/20 dark:bg-primary/10 rounded-full blur-3xl" />
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-white/20 dark:bg-white/5 rounded-full blur-3xl" />
+          {/* ── HERO ── */}
+          <section className="relative overflow-hidden rounded-3xl mb-6 bg-[#0b1120]">
+            {/* Fanned gift cards — taller, less clipping */}
+            <div className="relative h-56 flex items-end justify-center">
+              {([
+                { bg: "#E50914", label: "Netflix",   rotate: -14, tx: -115 },
+                { bg: "#FF385C", label: "Airbnb",    rotate:  -4, tx:  -30 },
+                { bg: "#1A1F71", label: "VISA",      rotate:   6, tx:   52 },
+                { bg: "#00704A", label: "Starbucks", rotate:  16, tx:  138 },
+              ] as const).map((card, i) => (
+                <div
+                  key={card.label}
+                  className="absolute bottom-4 w-36 h-[96px] rounded-2xl shadow-2xl flex flex-col justify-end p-3"
+                  style={{
+                    background: card.bg,
+                    transform: `rotate(${card.rotate}deg) translateX(${card.tx}px)`,
+                    zIndex: i + 1,
+                  }}
+                >
+                  <span className="text-white font-extrabold text-sm tracking-tight">{card.label}</span>
+                </div>
+              ))}
             </div>
 
-            <div className="relative">
-              <div className="flex items-start justify-between gap-3 mb-2">
-                <h1 className="text-2xl sm:text-3xl font-bold text-foreground animate-fade-in">
-                  Buy gift cards with up to{" "}
-                  <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent font-extrabold">20% discount</span>
-                </h1>
+            {/* Text + Search */}
+            <div className="px-5 pt-5 pb-6">
+              {/* Heading row with cart on the right */}
+              <div className="flex items-start justify-between gap-3 mb-1">
+                <div>
+                  <h1 className="text-3xl font-extrabold text-white leading-tight">
+                    Buy Gift Cards.
+                  </h1>
+                  <p className="text-sm text-zinc-400 mt-1 mb-5">
+                    Instant delivery · Up to 20% off · Pay with crypto
+                  </p>
+                </div>
                 <button
                   onClick={() => setCartOpen(true)}
-                  className="relative flex-shrink-0 mt-1 p-2.5 bg-white/50 dark:bg-white/10 hover:bg-white/70 dark:hover:bg-white/20 backdrop-blur-sm border border-white/60 dark:border-white/20 rounded-xl transition-colors shadow-sm"
+                  className="relative flex-shrink-0 p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-colors"
                 >
-                  <ShoppingCart className="h-5 w-5 text-foreground" />
+                  <ShoppingCart className="h-5 w-5 text-white" />
                   {cartCount > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
                       {cartCount}
@@ -397,108 +461,87 @@ export function GiftCards() {
                 </button>
               </div>
 
-              <div className="mt-4 backdrop-blur-xl bg-white/50 dark:bg-white/10 rounded-2xl p-3 border border-white/60 dark:border-white/20 shadow-lg flex items-center gap-3 animate-fade-in">
-                <div className="w-10 h-10 rounded-full bg-primary/30 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
-                  <img src={cryptoIconUrls.USDT} alt="USDT" className="h-6 w-6 rounded-full" />
-                </div>
-                <p className="text-sm font-medium text-foreground">
-                  Pay with crypto for instant transactions
-                </p>
+              {/* Search name */}
+              <div className="relative mb-2.5">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500 pointer-events-none" />
+                <Input
+                  placeholder="Search brands… (Amazon, Apple, Netflix)"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
+                  className="pl-9 h-12 bg-white/5 border border-white/10 text-white placeholder:text-zinc-500 rounded-xl focus:border-primary"
+                />
               </div>
 
-              <div className="mt-4 backdrop-blur-xl bg-white/50 dark:bg-white/10 rounded-2xl p-4 border border-white/60 dark:border-white/20 shadow-xl animate-slide-up">
-                <label className="text-sm font-medium text-foreground mb-2 block">Search</label>
-                <div className="relative mb-4">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search for gift cards"
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleSearch();
-                      }
-                    }}
-                    className="pl-10 bg-white/70 dark:bg-white/10 border border-gray-300 dark:border-white/30 h-10 text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">
-                      Define card value <span className="text-muted-foreground ml-1">(optional)</span>
-                    </label>
-                    <Input
-                      placeholder="Enter amount"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      className="bg-white/70 dark:bg-white/10 border border-gray-300 dark:border-white/30 h-10 text-foreground placeholder:text-muted-foreground focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">Currency</label>
-                    <Popover open={openCurrency} onOpenChange={setOpenCurrency}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          role="combobox"
-                          aria-expanded={openCurrency}
-                          className="w-full justify-between h-10 font-normal bg-white/70 dark:bg-white/10 border border-gray-300 dark:border-white/30 text-foreground hover:bg-white/90 dark:hover:bg-white/20"
-                        >
-                          {selectedCurrency ? (
-                            <span>{selectedCurrency.flag} {selectedCurrency.code}</span>
-                          ) : (
-                            "Select currency..."
-                          )}
-                          <ChevronsUpDown className="h-4 w-4 ml-2 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[280px] p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Search currency..." />
-                          <CommandList>
-                            <CommandEmpty>No currency found.</CommandEmpty>
-                            <CommandGroup>
-                              {currencies.map((c) => (
-                                <CommandItem
-                                  key={c.code}
-                                  value={c.code}
-                                  onSelect={() => {
-                                    setCurrency(c.code);
-                                    setOpenCurrency(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      currency === c.code ? "opacity-100" : "opacity-0"
-                                    )}
-                                  />
-                                  <span className="mr-2">{c.flag}</span>
-                                  <span>{c.code}</span>
-                                  <span className="ml-auto text-muted-foreground text-xs">{c.name}</span>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <Button variant="ghost" className="h-10 font-medium bg-white/70 dark:bg-white/10 border border-gray-300 dark:border-white/30 text-foreground hover:bg-white/90 dark:hover:bg-white/20">
-                    Advanced
-                  </Button>
-                  <Button 
-                    className="h-10 font-medium bg-primary text-primary-foreground hover:bg-primary/90"
-                    onClick={handleSearch}
-                  >
-                    Search
-                  </Button>
-                </div>
+              {/* Amount + Currency + Search button */}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Amount"
+                  type="number"
+                  min="0"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
+                  className="w-24 flex-shrink-0 h-11 bg-white/5 border border-white/10 text-white placeholder:text-zinc-500 rounded-xl focus:border-primary"
+                />
+                <Popover open={openCurrency} onOpenChange={setOpenCurrency}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      role="combobox"
+                      className="flex-1 min-w-0 justify-between h-11 font-normal bg-white/5 border border-white/10 text-white hover:bg-white/10 rounded-xl"
+                    >
+                      <span className="truncate">
+                        {selectedCurrency ? `${selectedCurrency.flag} ${selectedCurrency.code}` : "Currency"}
+                      </span>
+                      <ChevronsUpDown className="h-3.5 w-3.5 opacity-40 ml-1 flex-shrink-0" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[280px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search currency..." />
+                      <CommandList>
+                        <CommandEmpty>No currency found.</CommandEmpty>
+                        <CommandGroup>
+                          {currencies.map((c) => (
+                            <CommandItem key={c.code} value={c.code} onSelect={() => { setCurrency(c.code); setOpenCurrency(false); }}>
+                              <Check className={cn("mr-2 h-4 w-4", currency === c.code ? "opacity-100" : "opacity-0")} />
+                              <span className="mr-2">{c.flag}</span>
+                              <span>{c.code}</span>
+                              <span className="ml-auto text-muted-foreground text-xs">{c.name}</span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <Button
+                  className="h-11 px-4 font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl flex-shrink-0"
+                  onClick={handleSearch}
+                >
+                  Search
+                </Button>
               </div>
+
+              {/* Active filter chips */}
+              {(activeCurrency !== "USD" || activeAmount) && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <span className="text-xs text-zinc-500 self-center">Filters:</span>
+                  {activeCurrency !== "USD" && activeCurrencyObj && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 text-zinc-300 text-xs font-medium">
+                      {activeCurrencyObj.flag} {activeCurrencyObj.code}
+                      <button onClick={clearCurrencyFilter} className="ml-0.5 hover:opacity-70">×</button>
+                    </span>
+                  )}
+                  {activeAmount && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 text-zinc-300 text-xs font-medium">
+                      {getCurrencySymbol(activeCurrency)}{activeAmount}
+                      <button onClick={clearAmountFilter} className="ml-0.5 hover:opacity-70">×</button>
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </section>
 
@@ -539,8 +582,28 @@ export function GiftCards() {
                 giftCards && giftCards.length > 0 ? giftCards.map((card, index) => (
                   <GiftCardComponent key={card.id} card={card} setLocation={setLocation} index={index} />
                 )) : (
-                  <div className="text-center py-8 w-full col-span-full">
-                    <p className="text-muted-foreground">No gift cards available yet</p>
+                  <div className="text-center py-12 w-full col-span-full">
+                    <p className="text-muted-foreground font-medium">
+                      {activeAmount
+                        ? `No gift cards found for ${getCurrencySymbol(activeCurrency)}${activeAmount} in ${activeCurrencyObj?.name || activeCurrency}`
+                        : searchQuery
+                        ? `No results for "${searchQuery}"`
+                        : "No gift cards available"}
+                    </p>
+                    {(activeAmount || searchQuery) && (
+                      <button
+                        onClick={() => {
+                          setInputValue("");
+                          setSearchQuery("");
+                          setAmount("");
+                          setActiveAmount(undefined);
+                          setPage(1);
+                        }}
+                        className="mt-2 text-sm text-primary hover:underline"
+                      >
+                        Clear filters
+                      </button>
+                    )}
                   </div>
                 )
               )}
