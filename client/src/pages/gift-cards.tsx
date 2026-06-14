@@ -79,92 +79,6 @@ const allCategories = [
   { icon: Globe, label: "Travel" },
 ];
 
-const defaultGiftCards = [
-  {
-    id: 1,
-    name: "iTunes Gift Card",
-    brand: "Apple",
-    priceRange: "$5 - $200",
-    cryptoRange: "4.97 USDT - 198.85 USDT",
-    discount: "-0.58%",
-    image: "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=300&fit=crop",
-    gradient: "from-gray-100 to-white",
-    description: "Get access to millions of songs, movies, TV shows, and more with an iTunes Gift Card. Use it to download from the Apple App Store, iTunes Store, or buy Apple Music.",
-    minValue: 5,
-    maxValue: 200,
-    available: 999,
-  },
-  {
-    id: 2,
-    name: "PlayStation Store",
-    brand: "Sony",
-    priceRange: "$10 - $100",
-    cryptoRange: "9.95 USDT - 99.50 USDT",
-    discount: "-0.50%",
-    image: "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=400&h=300&fit=crop",
-    gradient: "from-blue-600 to-blue-800",
-    description: "Add funds to your PlayStation Network wallet. Buy games, in-game currency, subscriptions, and more from the PlayStation Store.",
-    minValue: 10,
-    maxValue: 100,
-    available: 850,
-  },
-  {
-    id: 3,
-    name: "Amazon Gift Card",
-    brand: "Amazon",
-    priceRange: "$25 - $500",
-    cryptoRange: "24.75 USDT - 495.00 USDT",
-    discount: "-1.00%",
-    image: "https://images.unsplash.com/photo-1523474253046-8cd2748b5fd2?w=400&h=300&fit=crop",
-    gradient: "from-orange-400 to-yellow-500",
-    description: "Shop millions of products at Amazon with an Amazon Gift Card. Use it for everything from electronics to clothing, delivered to your door.",
-    minValue: 25,
-    maxValue: 500,
-    available: 750,
-  },
-  {
-    id: 4,
-    name: "Netflix Gift Card",
-    brand: "Netflix",
-    priceRange: "$15 - $100",
-    cryptoRange: "14.85 USDT - 99.00 USDT",
-    discount: "-1.00%",
-    image: "https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=400&h=300&fit=crop",
-    gradient: "from-red-600 to-red-800",
-    description: "Enjoy unlimited streaming of TV shows, movies, and more. A Netflix Gift Card is the perfect gift for entertainment lovers.",
-    minValue: 15,
-    maxValue: 100,
-    available: 999,
-  },
-  {
-    id: 5,
-    name: "Spotify Premium",
-    brand: "Spotify",
-    priceRange: "$10 - $60",
-    cryptoRange: "9.90 USDT - 59.40 USDT",
-    discount: "-1.00%",
-    image: "https://images.unsplash.com/photo-1614680376593-902f74cf0d41?w=400&h=300&fit=crop",
-    gradient: "from-green-500 to-green-700",
-    description: "Enjoy millions of songs ad-free with Spotify Premium. Create playlists, download offline, and enjoy high-quality audio.",
-    minValue: 10,
-    maxValue: 60,
-    available: 500,
-  },
-  {
-    id: 6,
-    name: "Steam Wallet",
-    brand: "Valve",
-    priceRange: "$20 - $100",
-    cryptoRange: "19.60 USDT - 98.00 USDT",
-    discount: "-2.00%",
-    image: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=400&h=300&fit=crop",
-    gradient: "from-slate-700 to-slate-900",
-    description: "Add funds to your Steam account. Purchase games, in-game items, and digital content from the world's largest PC gaming platform.",
-    minValue: 20,
-    maxValue: 100,
-    available: 1200,
-  },
-];
 
 const faqs = [
   {
@@ -299,7 +213,7 @@ export function GiftCards() {
   const pageSize = 30;
 
   // Committed filter values — only applied when Search is pressed
-  const [activeCountryCode, setActiveCountryCode] = useState<string | undefined>("US");
+  const [activeCountryCode, setActiveCountryCode] = useState<string | undefined>(undefined);
   const [activeAmount, setActiveAmount] = useState<number | undefined>(undefined);
   const [activeCurrency, setActiveCurrency] = useState("USD");
 
@@ -321,7 +235,7 @@ export function GiftCards() {
 
   const clearCurrencyFilter = () => {
     setCurrency("USD");
-    setActiveCountryCode("US");
+    setActiveCountryCode(undefined);
     setActiveCurrency("USD");
     setPage(1);
   };
