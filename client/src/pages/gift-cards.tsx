@@ -1,18 +1,9 @@
 import { useHead } from "@unhead/react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { Search, ChevronDown, LayoutGrid, Coffee, MoreHorizontal, Gamepad2, ShoppingBag, Music, Check, ChevronsUpDown, UtensilsCrossed, Zap, Home, Globe, Smartphone, Coins, Gift, Heart, Dumbbell, Lightbulb, Lock, Package, ShoppingCart, Plus } from '@/lib/icons';
+import { Search, LayoutGrid, Coffee, Gamepad2, ShoppingBag, Music, Check, ChevronsUpDown, UtensilsCrossed, Zap, Home, Globe, Smartphone, Coins, Gift, Heart, Dumbbell, Lightbulb, Lock, Package, ShoppingCart, Plus } from '@/lib/icons';
 import { Input } from "@/components/ui/input";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { PexlyFooter } from "@/components/pexly-footer";
@@ -68,15 +59,6 @@ function GiftCardSkeleton() {
 }
 
 
-const allCategories = [
-  { icon: LayoutGrid, label: "All categories" },
-  { icon: UtensilsCrossed, label: "Food" },
-  { icon: Gamepad2, label: "Games" },
-  { icon: Zap, label: "Health" },
-  { icon: Home, label: "Restaurants" },
-  { icon: ShoppingBag, label: "Shopping" },
-  { icon: Globe, label: "Travel" },
-];
 
 
 const faqs = [
@@ -189,8 +171,6 @@ export function GiftCards() {
   const { data: reloadlyCategories } = useGiftCardCategories();
   const { data: reloadlyCountries } = useGiftCardCountries();
   const [openCountry, setOpenCountry] = useState(false);
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState("All categories");
   const [selectedSidebarCategory, setSelectedSidebarCategory] = useState("All Categories");
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState("");
@@ -550,36 +530,6 @@ export function GiftCards() {
       </div>
 
       <GiftCardCartSheet open={cartOpen} onOpenChange={setCartOpen} />
-
-      <Sheet open={showCategoryModal} onOpenChange={setShowCategoryModal}>
-        <SheetContent side="bottom" className="rounded-t-2xl">
-          <SheetHeader className="mb-6">
-            <SheetTitle className="text-2xl">Gift card categories</SheetTitle>
-          </SheetHeader>
-          <div className="space-y-2 mb-6">
-            {allCategories.map((category, index) => (
-              <button
-                key={index}
-                onClick={() => setSelectedCategory(category.label)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
-                  selectedCategory === category.label
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-card border border-border text-foreground hover:bg-secondary"
-                }`}
-              >
-                <category.icon className="h-5 w-5" />
-                <span>{category.label}</span>
-              </button>
-            ))}
-          </div>
-          <Button
-            className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
-            onClick={() => setShowCategoryModal(false)}
-          >
-            Confirm
-          </Button>
-        </SheetContent>
-      </Sheet>
 
       <PexlyFooter />
     </div>
