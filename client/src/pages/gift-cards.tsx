@@ -188,7 +188,6 @@ export function GiftCards() {
   const cartCount = cartItems.reduce((acc, i) => acc + i.quantity, 0);
   const { data: reloadlyCategories } = useGiftCardCategories();
   const { data: reloadlyCountries } = useGiftCardCountries();
-  const [country, setCountry] = useState("");
   const [openCountry, setOpenCountry] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("All categories");
@@ -200,7 +199,7 @@ export function GiftCards() {
   const [page, setPage] = useState(1);
   const pageSize = 30;
 
-  // Committed filter values — only applied when Search is pressed
+  // Country filter applies immediately on selection; amount/search apply on Search press
   const [activeCountryCode, setActiveCountryCode] = useState<string | undefined>(undefined);
   const [activeAmount, setActiveAmount] = useState<number | undefined>(undefined);
 
@@ -214,13 +213,17 @@ export function GiftCards() {
 
   const handleSearch = () => {
     setSearchQuery(inputValue);
-    setActiveCountryCode(country || undefined);
     setActiveAmount(amount && !isNaN(Number(amount)) && Number(amount) > 0 ? Number(amount) : undefined);
     setPage(1);
   };
 
+  const handleSelectCountry = (isoName: string) => {
+    setActiveCountryCode(isoName || undefined);
+    setPage(1);
+    setOpenCountry(false);
+  };
+
   const clearCountryFilter = () => {
-    setCountry("");
     setActiveCountryCode(undefined);
     setPage(1);
   };
@@ -230,7 +233,6 @@ export function GiftCards() {
     setActiveAmount(undefined);
   };
 
-  const selectedCountryObj = (reloadlyCountries ?? []).find((c) => c.isoName === country);
   const activeCountryObj = (reloadlyCountries ?? []).find((c) => c.isoName === activeCountryCode);
 
   const allGiftCards = data?.content?.map((card: any) => {
@@ -380,7 +382,7 @@ export function GiftCards() {
                       className="flex-1 min-w-0 justify-between h-11 font-normal bg-white/5 border border-white/10 text-white hover:bg-white/10 rounded-xl"
                     >
                       <span className="truncate">
-                        {selectedCountryObj ? `${selectedCountryObj.flag} ${selectedCountryObj.name}` : "All Countries"}
+                        {activeCountryObj ? `${activeCountryObj.flag} ${activeCountryObj.name}` : "All Countries"}
                       </span>
                       <ChevronsUpDown className="h-3.5 w-3.5 opacity-40 ml-1 flex-shrink-0" />
                     </Button>
@@ -391,14 +393,14 @@ export function GiftCards() {
                       <CommandList>
                         <CommandEmpty>No country found.</CommandEmpty>
                         <CommandGroup>
-                          <CommandItem value="all" onSelect={() => { setCountry(""); setOpenCountry(false); }}>
-                            <Check className={cn("mr-2 h-4 w-4", !country ? "opacity-100" : "opacity-0")} />
+                          <CommandItem value="all" onSelect={() => handleSelectCountry("")}>
+                            <Check className={cn("mr-2 h-4 w-4", !activeCountryCode ? "opacity-100" : "opacity-0")} />
                             <span className="mr-2">🌍</span>
                             <span>All Countries</span>
                           </CommandItem>
                           {(reloadlyCountries ?? []).map((c) => (
-                            <CommandItem key={c.isoName} value={`${c.name} ${c.isoName}`} onSelect={() => { setCountry(c.isoName); setOpenCountry(false); }}>
-                              <Check className={cn("mr-2 h-4 w-4", country === c.isoName ? "opacity-100" : "opacity-0")} />
+                            <CommandItem key={c.isoName} value={`${c.name} ${c.isoName}`} onSelect={() => handleSelectCountry(c.isoName)}>
+                              <Check className={cn("mr-2 h-4 w-4", activeCountryCode === c.isoName ? "opacity-100" : "opacity-0")} />
                               <span className="mr-2">{c.flag}</span>
                               <span>{c.name}</span>
                               <span className="ml-auto text-zinc-500 text-xs">{c.isoName}</span>
