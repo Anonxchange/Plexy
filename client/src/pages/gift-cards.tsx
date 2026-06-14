@@ -12,7 +12,6 @@ import { Search, ChevronDown, LayoutGrid, Coffee, MoreHorizontal, Gamepad2, Shop
 import { Input } from "@/components/ui/input";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { currencies } from "@/lib/currencies";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -99,7 +98,7 @@ const faqs = [
   }
 ];
 
-import { useGiftCardProducts, useGiftCardCategories } from "@/hooks/use-reloadly";
+import { useGiftCardProducts, useGiftCardCategories, useGiftCardCountries } from "@/hooks/use-reloadly";
 import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
 import { GiftCardCartSheet } from "@/components/gift-card-cart-sheet";
 
@@ -180,18 +179,6 @@ function FaqItem({ question, answer, index }: { question: string; answer: string
   );
 }
 
-const CURRENCY_TO_COUNTRY: Record<string, string> = {
-  USD: "US", GBP: "GB", JPY: "JP", AUD: "AU", CAD: "CA", CHF: "CH",
-  CNY: "CN", HKD: "HK", NZD: "NZ", SEK: "SE", KRW: "KR", SGD: "SG",
-  NOK: "NO", MXN: "MX", INR: "IN", RUB: "RU", ZAR: "ZA", TRY: "TR",
-  BRL: "BR", TWD: "TW", DKK: "DK", PLN: "PL", THB: "TH", IDR: "ID",
-  HUF: "HU", CZK: "CZ", ILS: "IL", CLP: "CL", PHP: "PH", AED: "AE",
-  COP: "CO", SAR: "SA", MYR: "MY", RON: "RO", NGN: "NG", ARS: "AR",
-  EGP: "EG", VND: "VN", PKR: "PK", BDT: "BD", UAH: "UA", KES: "KE",
-  PEN: "PE", GHS: "GH", MAD: "MA", QAR: "QA", KWD: "KW", BHD: "BH",
-  OMR: "OM", JOD: "JO", LKR: "LK", UGX: "UG", TZS: "TZ", ZMW: "ZM",
-  RWF: "RW",
-};
 
 export function GiftCards() {
   useHead({ title: "Gift Cards | Pexly", meta: [{ name: "description", content: "Buy digital gift cards from hundreds of brands worldwide and pay with cryptocurrency." }] });
@@ -200,8 +187,9 @@ export function GiftCards() {
   const { items: cartItems } = useGiftCardCart();
   const cartCount = cartItems.reduce((acc, i) => acc + i.quantity, 0);
   const { data: reloadlyCategories } = useGiftCardCategories();
-  const [currency, setCurrency] = useState("USD");
-  const [openCurrency, setOpenCurrency] = useState(false);
+  const { data: reloadlyCountries } = useGiftCardCountries();
+  const [country, setCountry] = useState("");
+  const [openCountry, setOpenCountry] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("All categories");
   const [selectedSidebarCategory, setSelectedSidebarCategory] = useState("All Categories");
@@ -215,7 +203,6 @@ export function GiftCards() {
   // Committed filter values — only applied when Search is pressed
   const [activeCountryCode, setActiveCountryCode] = useState<string | undefined>(undefined);
   const [activeAmount, setActiveAmount] = useState<number | undefined>(undefined);
-  const [activeCurrency, setActiveCurrency] = useState("USD");
 
   const { data, isLoading, error } = useGiftCardProducts({
     productName: searchQuery,
@@ -227,16 +214,14 @@ export function GiftCards() {
 
   const handleSearch = () => {
     setSearchQuery(inputValue);
-    setActiveCountryCode(CURRENCY_TO_COUNTRY[currency] ?? undefined);
-    setActiveCurrency(currency);
+    setActiveCountryCode(country || undefined);
     setActiveAmount(amount && !isNaN(Number(amount)) && Number(amount) > 0 ? Number(amount) : undefined);
     setPage(1);
   };
 
-  const clearCurrencyFilter = () => {
-    setCurrency("USD");
+  const clearCountryFilter = () => {
+    setCountry("");
     setActiveCountryCode(undefined);
-    setActiveCurrency("USD");
     setPage(1);
   };
 
@@ -245,18 +230,11 @@ export function GiftCards() {
     setActiveAmount(undefined);
   };
 
-  const CURRENCY_SYMBOLS: Record<string, string> = {
-    USD: '$', EUR: '€', GBP: '£', JPY: '¥', CAD: 'CA$', AUD: 'A$',
-    CHF: 'CHF ', CNY: '¥', INR: '₹', BRL: 'R$', MXN: 'MX$', KRW: '₩',
-    SGD: 'S$', HKD: 'HK$', NOK: 'kr ', SEK: 'kr ', DKK: 'kr ',
-    PLN: 'zł ', CZK: 'Kč ', HUF: 'Ft ', TRY: '₺', ZAR: 'R ',
-    NGN: '₦', AED: 'AED ', SAR: '﷼', QAR: 'QR ', SEA: 'SEA ',
-  };
-  const getCurrencySymbol = (code: string) => CURRENCY_SYMBOLS[code] ?? `${code} `;
+  const selectedCountryObj = (reloadlyCountries ?? []).find((c) => c.isoName === country);
+  const activeCountryObj = (reloadlyCountries ?? []).find((c) => c.isoName === activeCountryCode);
 
   const allGiftCards = data?.content?.map((card: any) => {
     const currencyCode: string = card.recipientCurrencyCode || "USD";
-    const sym = getCurrencySymbol(currencyCode);
     const fixedDenominations: number[] = card.fixedRecipientDenominations || [];
     const minVal = card.denominationType === "FIXED"
       ? (fixedDenominations.length > 0 ? Math.min(...fixedDenominations) : 0)
@@ -268,8 +246,8 @@ export function GiftCards() {
       id: card.productId,
       name: card.productName,
       brand: card.brand?.brandName || "",
-      priceRange: `${sym}${minVal} - ${sym}${maxVal}`,
-      cryptoRange: currencyCode !== "USD" ? `${currencyCode} · ${card.country?.name || ""}`.trim().replace(/·\s*$/, "") : "",
+      priceRange: `${currencyCode} ${minVal} – ${maxVal}`,
+      cryptoRange: card.country?.name || "",
       discount: `${card.discountPercentage || 0}%`,
       image: sanitizeImageUrl(card.logoUrls?.[0]) || "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=300&fit=crop",
       gradient: "from-gray-100 to-white",
@@ -290,10 +268,6 @@ export function GiftCards() {
         return activeAmount >= card.minValue && activeAmount <= card.maxValue;
       })
     : allGiftCards;
-
-  const activeCurrencyObj = currencies.find((c) => c.code === activeCurrency);
-
-  const selectedCurrency = currencies.find((c) => c.code === currency);
 
   return (
     <div className="min-h-screen bg-background">
@@ -398,7 +372,7 @@ export function GiftCards() {
                   onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
                   className="w-24 flex-shrink-0 h-11 bg-white/5 border border-white/10 text-white placeholder:text-zinc-500 rounded-xl focus:border-primary"
                 />
-                <Popover open={openCurrency} onOpenChange={setOpenCurrency}>
+                <Popover open={openCountry} onOpenChange={setOpenCountry}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="ghost"
@@ -406,23 +380,28 @@ export function GiftCards() {
                       className="flex-1 min-w-0 justify-between h-11 font-normal bg-white/5 border border-white/10 text-white hover:bg-white/10 rounded-xl"
                     >
                       <span className="truncate">
-                        {selectedCurrency ? `${selectedCurrency.flag} ${selectedCurrency.code}` : "Currency"}
+                        {selectedCountryObj ? `${selectedCountryObj.flag} ${selectedCountryObj.name}` : "All Countries"}
                       </span>
                       <ChevronsUpDown className="h-3.5 w-3.5 opacity-40 ml-1 flex-shrink-0" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[280px] p-0" align="start">
+                  <PopoverContent className="w-[300px] p-0" align="start">
                     <Command>
-                      <CommandInput placeholder="Search currency..." />
+                      <CommandInput placeholder="Search country..." />
                       <CommandList>
-                        <CommandEmpty>No currency found.</CommandEmpty>
+                        <CommandEmpty>No country found.</CommandEmpty>
                         <CommandGroup>
-                          {currencies.map((c) => (
-                            <CommandItem key={c.code} value={c.code} onSelect={() => { setCurrency(c.code); setOpenCurrency(false); }}>
-                              <Check className={cn("mr-2 h-4 w-4", currency === c.code ? "opacity-100" : "opacity-0")} />
+                          <CommandItem value="all" onSelect={() => { setCountry(""); setOpenCountry(false); }}>
+                            <Check className={cn("mr-2 h-4 w-4", !country ? "opacity-100" : "opacity-0")} />
+                            <span className="mr-2">🌍</span>
+                            <span>All Countries</span>
+                          </CommandItem>
+                          {(reloadlyCountries ?? []).map((c) => (
+                            <CommandItem key={c.isoName} value={`${c.name} ${c.isoName}`} onSelect={() => { setCountry(c.isoName); setOpenCountry(false); }}>
+                              <Check className={cn("mr-2 h-4 w-4", country === c.isoName ? "opacity-100" : "opacity-0")} />
                               <span className="mr-2">{c.flag}</span>
-                              <span>{c.code}</span>
-                              <span className="ml-auto text-muted-foreground text-xs">{c.name}</span>
+                              <span>{c.name}</span>
+                              <span className="ml-auto text-zinc-500 text-xs">{c.isoName}</span>
                             </CommandItem>
                           ))}
                         </CommandGroup>
@@ -439,18 +418,18 @@ export function GiftCards() {
               </div>
 
               {/* Active filter chips */}
-              {(activeCurrency !== "USD" || activeAmount) && (
+              {(activeCountryCode || activeAmount) && (
                 <div className="flex flex-wrap gap-2 mt-3">
                   <span className="text-xs text-zinc-500 self-center">Filters:</span>
-                  {activeCurrency !== "USD" && activeCurrencyObj && (
+                  {activeCountryCode && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 text-zinc-300 text-xs font-medium">
-                      {activeCurrencyObj.flag} {activeCurrencyObj.code}
-                      <button onClick={clearCurrencyFilter} className="ml-0.5 hover:opacity-70">×</button>
+                      {activeCountryObj ? `${activeCountryObj.flag} ${activeCountryObj.name}` : activeCountryCode}
+                      <button onClick={clearCountryFilter} className="ml-0.5 hover:opacity-70">×</button>
                     </span>
                   )}
                   {activeAmount && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 text-zinc-300 text-xs font-medium">
-                      {getCurrencySymbol(activeCurrency)}{activeAmount}
+                      {activeAmount}
                       <button onClick={clearAmountFilter} className="ml-0.5 hover:opacity-70">×</button>
                     </span>
                   )}
@@ -499,7 +478,7 @@ export function GiftCards() {
                   <div className="text-center py-12 w-full col-span-full">
                     <p className="text-muted-foreground font-medium">
                       {activeAmount
-                        ? `No gift cards found for ${getCurrencySymbol(activeCurrency)}${activeAmount} in ${activeCurrencyObj?.name || activeCurrency}`
+                        ? `No gift cards found for amount ${activeAmount}${activeCountryObj ? ` in ${activeCountryObj.flag} ${activeCountryObj.name}` : ""}`
                         : searchQuery
                         ? `No results for "${searchQuery}"`
                         : "No gift cards available"}
