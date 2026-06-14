@@ -31,26 +31,30 @@ interface GiftCardProps {
 function GiftCardComponent({ card, setLocation, index }: GiftCardProps) {
   return (
     <div
-      className="bg-card rounded-2xl border border-border hover:shadow-md transition-all duration-200 cursor-pointer animate-slide-up p-3"
+      className="bg-card rounded-2xl border border-border hover:shadow-md transition-all duration-200 cursor-pointer animate-slide-up overflow-hidden"
       onClick={() => setLocation(`/gift-cards/${card.id}`)}
       style={{ animationDelay: `${index * 0.03}s` }}
     >
-      <div className="rounded-xl overflow-hidden bg-white border border-border/30 aspect-[3/2] flex items-center justify-center mb-2">
+      {/* Full-bleed image — no padding, fills the entire card width */}
+      <div className="w-full aspect-[3/2] bg-white overflow-hidden">
         <img
           src={card.image}
           alt={card.name}
           loading="lazy"
           decoding="async"
-          className="w-full h-full object-contain p-2"
+          className="w-full h-full object-contain"
         />
       </div>
-      <h3 className="font-semibold text-foreground text-xs sm:text-sm leading-tight line-clamp-2 mb-0.5">{card.name}</h3>
-      <p className="text-[11px] text-muted-foreground font-medium mb-1">{card.priceRange}</p>
-      {card.discount && card.discount !== "0%" && (
-        <span className="inline-block text-[10px] font-bold text-red-500 bg-red-50 dark:bg-red-500/10 px-1.5 py-0.5 rounded">
-          {card.discount} off
-        </span>
-      )}
+      {/* Compact info strip */}
+      <div className="px-2 py-1.5">
+        <h3 className="font-semibold text-foreground text-xs leading-tight line-clamp-2">{card.name}</h3>
+        <p className="text-[10px] text-muted-foreground font-medium mt-0.5">{card.priceRange}</p>
+        {card.discount && card.discount !== "0%" && (
+          <span className="inline-block text-[9px] font-bold text-red-500 bg-red-50 dark:bg-red-500/10 px-1 py-0.5 rounded mt-0.5">
+            {card.discount} off
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -58,10 +62,12 @@ function GiftCardComponent({ card, setLocation, index }: GiftCardProps) {
 
 function GiftCardSkeleton() {
   return (
-    <div className="bg-card rounded-2xl border border-border p-3">
-      <Skeleton className="w-full aspect-[3/2] rounded-xl mb-2" />
-      <Skeleton className="h-4 w-3/4 mb-2" />
-      <Skeleton className="h-3 w-1/2" />
+    <div className="bg-card rounded-2xl border border-border overflow-hidden">
+      <Skeleton className="w-full aspect-[3/2]" />
+      <div className="px-2 py-1.5">
+        <Skeleton className="h-3 w-3/4 mb-1" />
+        <Skeleton className="h-2.5 w-1/2" />
+      </div>
     </div>
   );
 }
