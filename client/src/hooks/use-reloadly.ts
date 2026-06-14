@@ -195,20 +195,45 @@ export function useGiftCardCategories() {
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token ?? import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+        "Content-Type": "application/json",
+      };
 
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reloadly-categories`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-            "Content-Type": "application/json",
-          },
+      // 1. Try the dedicated categories edge function first
+      try {
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reloadly-categories`,
+          { headers }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) return data;
         }
-      );
+      } catch { /* fall through */ }
 
-      if (!res.ok) throw new Error("Failed to fetch categories");
-      return res.json();
+      // 2. Derive categories from a large product fetch
+      const url = new URL(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reloadly-products`
+      );
+      url.searchParams.set("page", "1");
+      url.searchParams.set("size", "200");
+
+      const res = await fetch(url.toString(), { headers });
+      if (!res.ok) throw new Error("Failed to fetch products for categories");
+      const data: ProductsResponse = await res.json();
+
+      const seen = new Map<number, string>();
+      for (const p of data.content ?? []) {
+        const id = p.category?.id;
+        const name = p.category?.name;
+        if (id && name && !seen.has(id)) seen.set(id, name);
+      }
+
+      return Array.from(seen.entries())
+        .map(([id, name]) => ({ id, name }))
+        .sort((a, b) => a.name.localeCompare(b.name));
     },
   });
 }
