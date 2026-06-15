@@ -82,7 +82,6 @@
   },
   "dependencies": {
     "@ethereumjs/rlp": "^10.1.1",
-    "@fontsource-variable/inter": "^5.1.1",
     "@fontsource-variable/jetbrains-mono": "^5.1.0",
     "@fontsource-variable/plus-jakarta-sans": "^5.1.0",
     "@hugeicons/core-free-icons": "^4.2.0",
