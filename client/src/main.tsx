@@ -1,5 +1,4 @@
 import "@fontsource-variable/plus-jakarta-sans";
-import "@fontsource-variable/inter";
 import "@fontsource-variable/jetbrains-mono";
 import "@/lib/i18n";
 import { startAutoTranslate } from "@/lib/auto-translate";
