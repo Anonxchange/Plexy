@@ -858,12 +858,14 @@ export function ProductDetail() {
                 ))}
               </div>
 
-              {/* Show count pill if more images exist */}
-              {product.images.length > 5 && (
-                <p className="text-center text-xs text-muted-foreground mt-3">
-                  Showing 5 of {product.images.length} product images
-                </p>
-              )}
+              {/* Decorative end mark */}
+              <div className="flex items-center justify-center gap-2 mt-5">
+                <div className="w-8 h-px bg-border/60" />
+                <div className="w-1 h-1 rounded-full bg-primary/50" />
+                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                <div className="w-1 h-1 rounded-full bg-primary/50" />
+                <div className="w-8 h-px bg-border/60" />
+              </div>
             </div>
           );
         })()}
