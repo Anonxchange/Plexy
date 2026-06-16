@@ -818,6 +818,56 @@ export function ProductDetail() {
           </div>
         </div>}
 
+        {/* Full-width product image showcase */}
+        {!isLoading && product && product.images.length > 1 && (() => {
+          const showcaseImages = product.images.slice(0, 5);
+          return (
+            <div className="mt-14">
+              <div className="flex items-center gap-4 mb-0">
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+                <div className="flex items-center gap-2 px-4">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  <span className="text-xs font-semibold tracking-[0.18em] uppercase text-muted-foreground">
+                    Product Details
+                  </span>
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                </div>
+                <div className="h-px flex-1 bg-gradient-to-l from-transparent via-border to-transparent" />
+              </div>
+
+              {/* Edge-to-edge image stack — no gaps, no borders */}
+              <div className="-mx-4 sm:-mx-6 md:-mx-8 lg:-mx-0 overflow-hidden rounded-none lg:rounded-2xl mt-5">
+                {showcaseImages.map((url, idx) => (
+                  <div
+                    key={idx}
+                    className="relative w-full overflow-hidden"
+                    style={{ lineHeight: 0 }}
+                  >
+                    <img
+                      src={url}
+                      alt={`${product.title} – detail ${idx + 1}`}
+                      className="w-full h-auto block select-none"
+                      loading={idx === 0 ? "eager" : "lazy"}
+                      draggable={false}
+                    />
+                    {/* Hairline separator between images */}
+                    {idx < showcaseImages.length - 1 && (
+                      <div className="absolute bottom-0 left-0 right-0 h-px bg-border/30" />
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Show count pill if more images exist */}
+              {product.images.length > 5 && (
+                <p className="text-center text-xs text-muted-foreground mt-3">
+                  Showing 5 of {product.images.length} product images
+                </p>
+              )}
+            </div>
+          );
+        })()}
+
         {/* Related Products */}
         {relatedProducts.length > 0 && (
           <div className="mt-16 space-y-6">
