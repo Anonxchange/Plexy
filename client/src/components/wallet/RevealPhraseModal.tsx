@@ -78,7 +78,7 @@ function MobileSheet({ open, onOpenChange, userId }: RevealPhraseModalProps) {
   const state = useRevealState(onOpenChange);
   return (
     <Drawer open={open} onOpenChange={state.handleClose}>
-      <DrawerContent className="bg-card border-t border-border rounded-t-[28px] pb-safe focus:outline-none">
+      <DrawerContent className="bg-card border-t border-border rounded-t-[28px] pb-safe focus:outline-none max-h-[92dvh] overflow-hidden flex flex-col">
         <ModalInner {...state} userId={userId} isMobile />
       </DrawerContent>
     </Drawer>
@@ -193,7 +193,7 @@ function ModalInner({
   isMobile,
 }: ModalInnerProps) {
   return (
-    <div className="relative flex flex-col items-center pt-10 pb-8 px-6 overflow-y-auto max-h-[85dvh]">
+    <div className="relative flex flex-col items-center pt-8 pb-8 px-6 overflow-y-auto flex-1 min-h-0">
       {/* Floating illustration — only on desktop (not mobile where sheet clips it) */}
       {!isMobile && (
         <div className="absolute -top-[68px] left-1/2 -translate-x-1/2 w-32 h-32 pointer-events-none z-50">
@@ -205,9 +205,9 @@ function ModalInner({
         </div>
       )}
 
-      {/* On mobile: illustration sits inline above content */}
-      {isMobile && (
-        <div className="w-28 h-28 mb-2 pointer-events-none">
+      {/* On mobile: illustration only on warning + phrase steps, not password (keyboard pushes it off screen) */}
+      {isMobile && step !== "password" && (
+        <div className="w-24 h-24 mb-2 pointer-events-none">
           <img
             src={securityIllustration}
             alt="Security"
