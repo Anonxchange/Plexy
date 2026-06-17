@@ -108,6 +108,11 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
     setStep("generating");
     setIsGenerating(true);
 
+    // Yield to the React render cycle so the "Generating…" UI paints before
+    // scrypt saturates the CPU. Without this, the button stays in its pressed
+    // state for the full 1–3 s KDF duration before the loading screen appears.
+    await new Promise<void>(r => setTimeout(r, 32));
+
     try {
       const supabase = createClient();
       const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
