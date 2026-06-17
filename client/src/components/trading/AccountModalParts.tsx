@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { ChevronDown, Loader2, AlertCircle, Eye, EyeOff } from '@/lib/icons';
 import { useAccountModal } from "./AccountModalContext";
 import { ChainIcon, CoinIcon } from "./AccountModalIcons";
@@ -256,8 +257,22 @@ export function SendFromWalletBlock() {
     isAsterRegistered, network, userSolWallet, userEvmWallet,
     sendTxHash, sendTxUrl, depositBusy, depositAddress, sendError,
     sendPassword, setSendPassword, showSendPwd, setShowSendPwd,
-    handleSendFromWallet, sendLoading, amount, coin,
+    handleSendFromWallet, sendLoading, amount, coin, sendCooldownUntil,
   } = useAccountModal();
+
+  const [cooldownSecs, setCooldownSecs] = useState(0);
+
+  useEffect(() => {
+    const tick = () => {
+      const remaining = Math.ceil((sendCooldownUntil - Date.now()) / 1000);
+      setCooldownSecs(remaining > 0 ? remaining : 0);
+    };
+    tick();
+    const id = setInterval(tick, 500);
+    return () => clearInterval(id);
+  }, [sendCooldownUntil]);
+
+  const isCoolingDown = cooldownSecs > 0;
 
   if (!isAsterRegistered) return null;
   const wallet = network === "SOL" ? userSolWallet : userEvmWallet;
@@ -323,12 +338,25 @@ export function SendFromWalletBlock() {
       </div>
       <button
         onClick={handleSendFromWallet}
-        disabled={!sendPassword || !amount || Number(amount) <= 0 || sendLoading}
-        className="w-full py-3 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
+        disabled={!sendPassword || !amount || Number(amount) <= 0 || sendLoading || isCoolingDown}
+        className="w-full py-3 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2 relative overflow-hidden"
       >
-        {sendLoading
-          ? <><Loader2 className="h-4 w-4 animate-spin" />Sending…</>
-          : `Send ${amount || "0"} ${coin}`}
+        {/* Cooldown progress bar draining left → right */}
+        {isCoolingDown && !sendLoading && (
+          <span
+            className="absolute inset-0 bg-white/10 origin-left transition-none"
+            style={{ transform: `scaleX(${cooldownSecs / 30})`, transformOrigin: "left" }}
+          />
+        )}
+        <span className="relative flex items-center gap-2">
+          {sendLoading ? (
+            <><Loader2 className="h-4 w-4 animate-spin" />Sending…</>
+          ) : isCoolingDown ? (
+            `Resend in ${cooldownSecs}s`
+          ) : (
+            `Send ${amount || "0"} ${coin}`
+          )}
+        </span>
       </button>
       <p className="text-xs text-muted-foreground text-center">
         Sending from{" "}
