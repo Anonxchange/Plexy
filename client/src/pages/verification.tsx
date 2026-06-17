@@ -149,7 +149,7 @@ export default function VerificationPage() {
         .order("submitted_at", { ascending: false });
 
       if (error) {
-        console.error("Error fetching user verifications:", error);
+        devLog.error("Error fetching user verifications:", error);
         throw error;
       }
 
@@ -232,7 +232,7 @@ export default function VerificationPage() {
         if (error instanceof Error && error.message.includes("cannot be verified")) {
           throw error;
         }
-        console.error("AML screening error:", error);
+        devLog.error("AML screening error:", error);
         // Log but don't block if screening service fails
       }
 
@@ -262,9 +262,9 @@ export default function VerificationPage() {
 
   const submitVerification = useMutation({
     mutationFn: async (level: number) => {
-      console.log("=== VERIFICATION SUBMISSION STARTED ===");
-      console.log("Auth user:", user);
-      console.log("Requested level:", level);
+      devLog.info("=== VERIFICATION SUBMISSION STARTED ===");
+      devLog.info("Auth user:", user);
+      devLog.info("Requested level:", level);
 
       if (!user?.id) {
         throw new Error("Not authenticated");
@@ -324,7 +324,7 @@ export default function VerificationPage() {
           if (error instanceof Error && error.message.includes("cannot be completed")) {
             throw error;
           }
-          console.error("AML screening error:", error);
+          devLog.error("AML screening error:", error);
         }
       }
 
@@ -335,7 +335,7 @@ export default function VerificationPage() {
 
       // Upload document to R2
       if (documentFile) {
-        console.log("Uploading front document...");
+        devLog.info("Uploading front document...");
         const uploadResult = await uploadToR2(
           documentFile,
           "verification-documents",
@@ -347,12 +347,12 @@ export default function VerificationPage() {
         }
 
         documentUrl = uploadResult.url;
-        console.log("Front document uploaded:", documentUrl);
+        devLog.info("Front document uploaded:", documentUrl);
       }
 
       // Upload document back if available
       if (documentBackFile) {
-        console.log("Uploading back document...");
+        devLog.info("Uploading back document...");
         const uploadResult = await uploadToR2(
           documentBackFile,
           "verification-documents",
@@ -364,7 +364,7 @@ export default function VerificationPage() {
         }
 
         documentBackUrl = uploadResult.url;
-        console.log("Back document uploaded:", documentBackUrl);
+        devLog.info("Back document uploaded:", documentBackUrl);
       }
 
       // Upload address proof if level 3
@@ -373,7 +373,7 @@ export default function VerificationPage() {
           throw new Error("Address proof document is required for Level 3 verification");
         }
 
-        console.log("Uploading address proof to R2...");
+        devLog.info("Uploading address proof to R2...");
         const uploadResult = await uploadToR2(
           addressFile,
           "verification-documents",
@@ -381,17 +381,17 @@ export default function VerificationPage() {
         );
 
         if (!uploadResult.success || !uploadResult.url) {
-          console.error("Address proof upload failed:", uploadResult.error);
+          devLog.error("Address proof upload failed:", uploadResult.error);
           throw new Error(uploadResult.error || "Failed to upload address proof");
         }
 
         addressProofUrl = uploadResult.url;
-        console.log("Address proof uploaded successfully:", addressProofUrl);
+        devLog.info("Address proof uploaded successfully:", addressProofUrl);
       }
 
       // Upload liveness image if available
       if (livenessResult?.imageDataUrl) {
-        console.log("Uploading liveness image...");
+        devLog.info("Uploading liveness image...");
         const uploadResult = await uploadBase64ToR2(
           livenessResult.imageDataUrl,
           "liveness-captures",
@@ -404,7 +404,7 @@ export default function VerificationPage() {
         }
 
         livenessImageUrl = uploadResult.url;
-        console.log("Liveness image uploaded:", livenessImageUrl);
+        devLog.info("Liveness image uploaded:", livenessImageUrl);
       }
 
       // Submit verification to database
@@ -433,7 +433,7 @@ export default function VerificationPage() {
         }
       }
 
-      console.log("Submitting verification data to Supabase:", verificationData);
+      devLog.info("Submitting verification data to Supabase:", verificationData);
 
       const { data: insertedData, error } = await supabase
         .from("verifications")
@@ -441,8 +441,8 @@ export default function VerificationPage() {
         .select();
 
       if (error) {
-        console.error("❌ Error submitting verification:", error);
-        console.error("Error details:", {
+        devLog.error("❌ Error submitting verification:", error);
+        devLog.error("Error details:", {
           code: error.code,
           message: error.message,
           details: error.details,
@@ -451,13 +451,13 @@ export default function VerificationPage() {
         throw new Error(`Database error: ${error.message || 'Failed to save verification'}`);
       }
 
-      console.log("✅ Verification submitted successfully:", insertedData);
-      console.log("=== VERIFICATION SUBMISSION COMPLETED ===");
+      devLog.info("✅ Verification submitted successfully:", insertedData);
+      devLog.info("=== VERIFICATION SUBMISSION COMPLETED ===");
 
       return { success: true };
     },
     onSuccess: () => {
-      console.log("Verification submitted successfully");
+      devLog.info("Verification submitted successfully");
       queryClient.invalidateQueries({ queryKey: ["verifications"] });
       queryClient.invalidateQueries({ queryKey: ["currentUser"] });
       setDocumentFile(null);
@@ -469,7 +469,7 @@ export default function VerificationPage() {
       alert("Verification submitted successfully! We'll review it within 1-2 business days.");
     },
     onError: (error) => {
-      console.error("Verification submission error:", error);
+      devLog.error("Verification submission error:", error);
       alert(`Failed to submit verification: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   });
