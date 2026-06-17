@@ -18,33 +18,33 @@ import { wipeBytes, wipeHDKey } from "./secureMemory";
 
 export const CHAIN_CONFIGS: Record<string, { rpcUrl: string; rpcFallbacks?: string[]; chainId: number; symbol: string }> = {
   ETH: {
-    rpcUrl: "https://eth.llamarpc.com",
-    rpcFallbacks: ["https://cloudflare-eth.com", "https://rpc.ankr.com/eth"],
+    rpcUrl: "https://ethereum.publicnode.com",
+    rpcFallbacks: ["https://eth.drpc.org", "https://1rpc.io/eth", "https://gateway.tenderly.co/public/mainnet"],
     chainId: 1, symbol: "ETH",
   },
   BSC: {
-    rpcUrl: "https://binance.llamarpc.com",
-    rpcFallbacks: ["https://bsc-dataseed.binance.org", "https://bsc-dataseed1.defibit.io"],
+    rpcUrl: "https://bsc-dataseed.binance.org",
+    rpcFallbacks: ["https://bsc-dataseed1.defibit.io", "https://bsc-dataseed2.defibit.io", "https://bsc.drpc.org", "https://bsc.publicnode.com"],
     chainId: 56, symbol: "BNB",
   },
   BNB: {
-    rpcUrl: "https://binance.llamarpc.com",
-    rpcFallbacks: ["https://bsc-dataseed.binance.org", "https://bsc-dataseed1.defibit.io"],
+    rpcUrl: "https://bsc-dataseed.binance.org",
+    rpcFallbacks: ["https://bsc-dataseed1.defibit.io", "https://bsc-dataseed2.defibit.io", "https://bsc.drpc.org", "https://bsc.publicnode.com"],
     chainId: 56, symbol: "BNB",
   },
   ARB: {
-    rpcUrl: "https://arbitrum.llamarpc.com",
-    rpcFallbacks: ["https://arb1.arbitrum.io/rpc", "https://rpc.ankr.com/arbitrum"],
+    rpcUrl: "https://arb1.arbitrum.io/rpc",
+    rpcFallbacks: ["https://arbitrum.drpc.org", "https://arbitrum-one.publicnode.com"],
     chainId: 42161, symbol: "ETH",
   },
   POL: {
-    rpcUrl: "https://polygon.llamarpc.com",
-    rpcFallbacks: ["https://polygon-rpc.com", "https://rpc.ankr.com/polygon"],
+    rpcUrl: "https://polygon.publicnode.com",
+    rpcFallbacks: ["https://polygon.drpc.org", "https://1rpc.io/matic", "https://gateway.tenderly.co/public/polygon"],
     chainId: 137, symbol: "POL",
   },
   MATIC: {
-    rpcUrl: "https://polygon.llamarpc.com",
-    rpcFallbacks: ["https://polygon-rpc.com", "https://rpc.ankr.com/polygon"],
+    rpcUrl: "https://polygon.publicnode.com",
+    rpcFallbacks: ["https://polygon.drpc.org", "https://1rpc.io/matic", "https://gateway.tenderly.co/public/polygon"],
     chainId: 137, symbol: "POL",
   },
 };
