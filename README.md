@@ -1,6 +1,6 @@
 # Pexly
 
-**Pexly** is a peer‑to‑peer (P2P) digital marketplace that connects users to trade value using
+**Pexly**digital marketplace that connects users to trade value using
 cryptocurrency and digital gift cards in a non‑custodial way.
 
 Pexly does not operate as a wallet, bank, or financial institution.
