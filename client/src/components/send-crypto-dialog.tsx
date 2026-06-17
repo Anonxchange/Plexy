@@ -26,8 +26,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertCircle, Loader2, CheckCircle2, X, ShieldCheck, ShieldAlert } from '@/lib/icons';
 import { signBitcoinTransaction } from "@/lib/bitcoinSigner";
 import { signEVMTransaction } from "@/lib/evmSigner";
-import { signSolanaTransaction } from "@/lib/solanaSigner";
-import { signTronTransaction } from "@/lib/tronSigner";
+import { signSolanaTransaction, getLatestBlockhash, broadcastSolanaTransaction } from "@/lib/solanaSigner";
+import { signTronTransaction, broadcastTronTransaction } from "@/lib/tronSigner";
 import { useAuth } from "@/lib/auth-context";
 import { CoinIcon } from "@/components/trading/CoinIcon";
 import { useSendFee } from "@/hooks/use-fees";
@@ -244,21 +244,17 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
     } else if (selectedNetwork.includes("Ethereum") || selectedNetwork.includes("Binance")) {
       await signEVMTransaction(mnemonic, txData as any);
     } else if (selectedNetwork.includes("Solana")) {
-      const response = await fetch('https://api.mainnet-beta.solana.com', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getLatestBlockhash' }),
-      });
-      const { result } = await response.json();
-      if (!result?.value?.blockhash) throw new Error("Failed to fetch recent blockhash for Solana");
-      await signSolanaTransaction(mnemonic, { to: toAddress, amount: cryptoAmountNum.toString(), currency: "SOL", recentBlockhash: result.value.blockhash });
+      const blockhash = await getLatestBlockhash();
+      const { signedTx } = await signSolanaTransaction(mnemonic, { to: toAddress, amount: cryptoAmountNum.toString(), currency: "SOL", recentBlockhash: blockhash });
+      await broadcastSolanaTransaction(signedTx);
     } else if (selectedNetwork.includes("Tron")) {
-      await signTronTransaction(mnemonic, { to: toAddress, amount: cryptoAmountNum.toString(), currency: symbolToUse as any });
+      const { signedTx } = await signTronTransaction(mnemonic, { to: toAddress, amount: cryptoAmountNum.toString(), currency: symbolToUse as any });
+      await broadcastTronTransaction(signedTx);
     } else {
       throw new Error(`Signing not supported for ${selectedNetwork}`);
     }
 
-    toast({ title: "Transaction Signed!", description: "Your transaction has been signed locally. In this demo, it is logged to the console." });
+    toast({ title: "Transaction Sent!", description: "Your transaction has been signed and broadcast to the network." });
     setSuccess(true);
     if (successTimerRef.current) clearTimeout(successTimerRef.current);
     successTimerRef.current = setTimeout(() => { setSuccess(false); onOpenChange(false); resetForm(); onSuccess?.(); }, 2000);
