@@ -456,6 +456,11 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
     if (!user || !depositAddress || !amount) return;
     const wallet = network === "SOL" ? userSolWallet : userEvmWallet;
     if (!wallet) return;
+    // Disable the button immediately — before any async work —
+    // so fast/repeated taps cannot queue multiple broadcasts.
+    if (sendLoading) return;
+    setSendLoading(true);
+    setSendError(null);
     try {
       const vaultKey = wallet.encryptedMnemonic ?? wallet.encryptedPrivateKey;
       if (!vaultKey) throw new Error("Wallet data not found. Please recreate your wallet.");
