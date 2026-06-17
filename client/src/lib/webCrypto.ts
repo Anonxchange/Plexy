@@ -3,6 +3,21 @@ import { deriveEncryptionKey, DEFAULT_KDF_PARAMS, KdfParams } from "./keyDerivat
 const IV_LENGTH = 12;
 const SALT_LENGTH = 16;
 
+/**
+ * Safe base64 encoder — processes in 32 KB chunks to stay well under the
+ * ~65 K argument limit of spread-into-String.fromCharCode. The naïve one-liner
+ * `btoa(String.fromCharCode(...u8))` crashes with "Maximum call stack size
+ * exceeded" for buffers larger than ~65 K bytes.
+ */
+function b64encode(u8: Uint8Array): string {
+  const CHUNK = 0x8000;
+  let out = "";
+  for (let i = 0; i < u8.length; i += CHUNK) {
+    out += String.fromCharCode(...u8.subarray(i, i + CHUNK));
+  }
+  return btoa(out);
+}
+
 export interface EncryptedVault {
   version: number;
   ciphertext: string;
@@ -107,9 +122,9 @@ export async function encryptVaultWithKey(
 
   return {
     version: 1,
-    ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
-    iv: btoa(String.fromCharCode(...iv)),
-    salt: btoa(String.fromCharCode(...vaultKey.salt)),
+    ciphertext: b64encode(new Uint8Array(ciphertext)),
+    iv: b64encode(iv),
+    salt: b64encode(vaultKey.salt),
     kdf: "scrypt",
     kdfParams: vaultKey.kdfParams,
     ...(vaultKey.origin ? { origin: vaultKey.origin } : {}),
@@ -148,9 +163,9 @@ export async function encryptVault(mnemonic: string, password: string): Promise<
 
   return {
     version: 1,
-    ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
-    iv: btoa(String.fromCharCode(...iv)),
-    salt: btoa(String.fromCharCode(...salt)),
+    ciphertext: b64encode(new Uint8Array(ciphertext)),
+    iv: b64encode(iv),
+    salt: b64encode(salt),
     kdf: "scrypt",
     kdfParams: DEFAULT_KDF_PARAMS,
     ...(origin ? { origin } : {})
@@ -200,8 +215,7 @@ export async function decryptVault(vault: EncryptedVault, password: string): Pro
     );
 
     return new TextDecoder().decode(decrypted);
-  } catch (err) {
-    console.error("Decryption failed:", err);
+  } catch {
     throw new Error("Invalid wallet password or corrupted data");
   }
 }
@@ -222,8 +236,8 @@ export async function encryptVaultWithRawKey(data: string, rawKey: ArrayBuffer):
   );
   return {
     version: 2,
-    ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
-    iv: btoa(String.fromCharCode(...iv)),
+    ciphertext: b64encode(new Uint8Array(ciphertext)),
+    iv: b64encode(iv),
   };
 }
 

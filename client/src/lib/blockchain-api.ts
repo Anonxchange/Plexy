@@ -2,6 +2,10 @@
 // BTC: powered by mempool.space (https://mempool.space/docs/api/rest)
 // ETH: powered by Etherscan (https://docs.etherscan.io/)
 
+import { devLog } from '@/lib/dev-logger';
+
+const ETHERSCAN_API_KEY: string = import.meta.env.VITE_ETHERSCAN_API_KEY || '';
+
 export type Blockchain = 'BTC' | 'ETH';
 
 const MEMPOOL_BASE = 'https://mempool.space/api';
@@ -99,7 +103,7 @@ async function getBTC_LatestBlocks(limit: number = 5): Promise<Block[]> {
       prev_block: b.previousblockhash,
     }));
   } catch (error) {
-    console.error('Error fetching BTC blocks:', error);
+    devLog.error('Error fetching BTC blocks:', error);
     return [];
   }
 }
@@ -130,7 +134,7 @@ async function getBTC_Block(blockHashOrHeight: string): Promise<Block | null> {
       prev_block: b.previousblockhash,
     };
   } catch (error) {
-    console.error('Error fetching BTC block:', error);
+    devLog.error('Error fetching BTC block:', error);
     return null;
   }
 }
@@ -169,7 +173,7 @@ async function getBTC_Transaction(txHash: string): Promise<Transaction | null> {
       size: vsize,
     };
   } catch (error) {
-    console.error('Error fetching BTC transaction:', error);
+    devLog.error('Error fetching BTC transaction:', error);
     return null;
   }
 }
@@ -239,7 +243,7 @@ async function getBTC_Address(address: string): Promise<Address | null> {
       txs,
     };
   } catch (error) {
-    console.error('Error fetching BTC address:', error);
+    devLog.error('Error fetching BTC address:', error);
     return null;
   }
 }
@@ -260,7 +264,7 @@ async function getETH_LatestBlocks(limit: number = 5): Promise<Block[]> {
     const url = buildEthUrl({
       module: 'proxy',
       action: 'eth_blockNumber',
-      apikey: 'YourApiKeyToken',
+      apikey: ETHERSCAN_API_KEY,
     });
     const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -274,7 +278,7 @@ async function getETH_LatestBlocks(limit: number = 5): Promise<Block[]> {
       size: 0,
     }];
   } catch (error) {
-    console.error('Error fetching ETH blocks:', error);
+    devLog.error('Error fetching ETH blocks:', error);
     return [];
   }
 }
@@ -286,7 +290,7 @@ async function getETH_Block(blockHash: string): Promise<Block | null> {
       action: 'eth_getBlockByHash',
       blockHash,
       boolean: 'true',
-      apikey: 'YourApiKeyToken',
+      apikey: ETHERSCAN_API_KEY,
     });
     const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -301,7 +305,7 @@ async function getETH_Block(blockHash: string): Promise<Block | null> {
       miner: data.result.miner,
     };
   } catch (error) {
-    console.error('Error fetching ETH block:', error);
+    devLog.error('Error fetching ETH block:', error);
     return null;
   }
 }
@@ -312,7 +316,7 @@ async function getETH_Transaction(txHash: string): Promise<Transaction | null> {
       module: 'proxy',
       action: 'eth_getTransactionByHash',
       txhash: txHash,
-      apikey: 'YourApiKeyToken',
+      apikey: ETHERSCAN_API_KEY,
     });
     const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -331,7 +335,7 @@ async function getETH_Transaction(txHash: string): Promise<Transaction | null> {
       gasPrice: data.result.gasPrice,
     };
   } catch (error) {
-    console.error('Error fetching ETH transaction:', error);
+    devLog.error('Error fetching ETH transaction:', error);
     return null;
   }
 }
@@ -343,7 +347,7 @@ async function getETH_Address(address: string): Promise<Address | null> {
       action: 'balance',
       address,
       tag: 'latest',
-      apikey: 'YourApiKeyToken',
+      apikey: ETHERSCAN_API_KEY,
     });
     const balanceRes = await fetch(balanceUrl, { headers: { 'Accept': 'application/json' } });
     if (!balanceRes.ok) throw new Error(`HTTP ${balanceRes.status}`);
@@ -356,7 +360,7 @@ async function getETH_Address(address: string): Promise<Address | null> {
       startblock: '0',
       endblock: '99999999',
       sort: 'desc',
-      apikey: 'YourApiKeyToken',
+      apikey: ETHERSCAN_API_KEY,
     });
     const txRes = await fetch(txUrl, { headers: { 'Accept': 'application/json' } });
     const txData = txRes.ok ? await txRes.json() : { result: [] };
@@ -380,7 +384,7 @@ async function getETH_Address(address: string): Promise<Address | null> {
       txs,
     };
   } catch (error) {
-    console.error('Error fetching ETH address:', error);
+    devLog.error('Error fetching ETH address:', error);
     return null;
   }
 }
@@ -422,7 +426,7 @@ export async function getStats() {
     const blocks = blocksRes.ok ? await blocksRes.json() : [];
     return { mempool, latestBlock: blocks[0] ?? null };
   } catch (error) {
-    console.error('Error fetching stats:', error);
+    devLog.error('Error fetching stats:', error);
     return null;
   }
 }
@@ -444,7 +448,7 @@ export async function getAddressBalance(address: string): Promise<number | null>
         action: 'balance',
         address,
         tag: 'latest',
-        apikey: 'YourApiKeyToken',
+        apikey: ETHERSCAN_API_KEY,
       });
       const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -452,7 +456,7 @@ export async function getAddressBalance(address: string): Promise<number | null>
       return parseInt(data.result) / 1e18;
     }
   } catch (error) {
-    console.error('Error fetching balance:', error);
+    devLog.error('Error fetching balance:', error);
     return null;
   }
 }
@@ -466,7 +470,7 @@ export async function getBTCPrice(): Promise<number> {
     const data = await res.json();
     return typeof data.USD === 'number' ? data.USD : 0;
   } catch (error) {
-    console.error('Error fetching BTC price:', error);
+    devLog.error('Error fetching BTC price:', error);
     return 0;
   }
 }
@@ -490,7 +494,7 @@ export async function getUnconfirmedTransactions(): Promise<any[]> {
       value: tx.value,
     }));
   } catch (error) {
-    console.error('Error fetching unconfirmed transactions:', error);
+    devLog.error('Error fetching unconfirmed transactions:', error);
     return [];
   }
 }
@@ -648,7 +652,7 @@ export async function getLiveCoinPrices(symbols: string[]): Promise<LiveCoinData
       };
     });
   } catch (error) {
-    console.error('Error fetching live coin prices:', error);
+    devLog.error('Error fetching live coin prices:', error);
     return [];
   }
 }
@@ -668,7 +672,7 @@ export async function getCoinPriceHistory(symbol: string): Promise<{ value: numb
     const prices: [number, number][] = data.prices || [];
     return prices.slice(-24).map(([, price]) => ({ value: price }));
   } catch (error) {
-    console.error(`Error fetching price history for ${symbol}:`, error);
+    devLog.error(`Error fetching price history for ${symbol}:`, error);
     return [];
   }
 }
@@ -696,7 +700,7 @@ export async function getMiningPoolDistribution(): Promise<PoolEntry[]> {
       color: POOL_COLORS[i % POOL_COLORS.length],
     }));
   } catch (error) {
-    console.error('Error fetching mining pool distribution:', error);
+    devLog.error('Error fetching mining pool distribution:', error);
     return [];
   }
 }
@@ -740,7 +744,7 @@ export async function getLiveNetworkStats(): Promise<{ stats: LiveNetworkStat[];
 
     return { stats, fastestFee, pendingCount };
   } catch (error) {
-    console.error('Error fetching live network stats:', error);
+    devLog.error('Error fetching live network stats:', error);
     return { stats: [], fastestFee: 0, pendingCount: 0 };
   }
 }

@@ -400,9 +400,30 @@ async function deriveBTCAddress(mnemonic: string): Promise<string> {
 
 async function deriveSOLAddress(mnemonic: string): Promise<string> {
   const seed = await mnemonicToSeed(mnemonic);
-  const priv = seed.slice(0, 32);
-  const pub = await nobleEd.getPublicKeyAsync(priv);
+  // SLIP-0010 hardened derivation: m/44'/501'/0'/0 — matches Phantom, Solflare, solanaSigner.ts
+  let I = hmac(sha512, new TextEncoder().encode("ed25519 seed"), seed);
+  let IL = I.slice(0, 32);
+  let IR = I.slice(32);
   wipeBytes(seed);
+  const path = [44, 501, 0, 0];
+  for (const index of path) {
+    const data = new Uint8Array(37);
+    data[0] = 0;
+    data.set(IL, 1);
+    const h = (index + 0x80000000) >>> 0;
+    data[33] = (h >>> 24) & 0xff;
+    data[34] = (h >>> 16) & 0xff;
+    data[35] = (h >>>  8) & 0xff;
+    data[36] =  h         & 0xff;
+    I = hmac(sha512, IR, data);
+    const nextIL = I.slice(0, 32);
+    IR.fill(0);
+    IR = I.slice(32);
+    IL.fill(0);
+    IL = nextIL;
+  }
+  const pub = await nobleEd.getPublicKeyAsync(IL);
+  wipeBytes(IL);
   return base58.encode(pub);
 }
 
