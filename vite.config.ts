@@ -3,48 +3,50 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  vite.config.vercel.ts  —  Vercel production config
+//  vite.config.vercel.ts  —  Vercel production build config
 //
-//  Usage in vercel.json:
-//    "buildCommand": "vite build --config vite.config.vercel.ts"
+//  COPY THIS FILE to your GitHub repo root, then add vercel.json:
+//    {
+//      "buildCommand": "vite build --config vite.config.vercel.ts",
+//      "outputDirectory": "dist",
+//      "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+//    }
 //
-//  Key differences vs vite.config.ts (Replit dev):
-//   • No PORT / BASE_PATH env-var requirements
-//   • No Replit-specific plugins (cartographer, devBanner, runtimeErrorOverlay)
-//   • base: "/"             — Vercel serves from the domain root
-//   • outDir: "dist/public" — matched by vercel.json outputDirectory
-//   • Full manualChunks     — vendor bundle splitting for CDN cache efficiency
-//   • worker.format: "es"   — required for signing.worker.ts (ES module worker)
+//  Repo layout this config assumes:
+//    /                        ← project root (where this file lives)
+//    ├── client/
+//    │   ├── index.html       ← Vite entry point
+//    │   └── src/
+//    │       └── main.tsx
+//    ├── node_modules/
+//    ├── package.json
+//    └── vite.config.vercel.ts
 //
 //  ⚠️  SECURITY — read before editing:
-//   1. This file runs as an ES module (package.json "type":"module").
-//      Use import.meta.dirname — NOT __dirname.
-//      Use await import()      — NOT require().
-//   2. Every env var prefixed VITE_ is bundled as PLAIN TEXT in the output JS.
-//      Never prefix secrets (API keys, HMAC secrets, DB passwords) with VITE_.
-//      → VITE_IMAGE_PROXY_SECRET must be renamed + moved to a server-side
-//        edge function before going to production. See comment below.
-//   3. server.allowedHosts and server.cors must be explicit lists, never true.
-//      Setting either to `true` enables DNS-rebinding / CORS attacks (CVE-2025-24010).
+//   1. ESM context (package.json "type":"module"): use import.meta.dirname,
+//      NOT __dirname. Use await import(), NOT require().
+//   2. Every env var prefixed VITE_ ends up as PLAIN TEXT in the JS bundle.
+//      Never prefix secrets with VITE_ (API keys, HMAC secrets, DB passwords).
+//      → VITE_IMAGE_PROXY_SECRET must be moved to a server-side Edge Function
+//        before going to production.
+//   3. server/preview blocks are intentionally absent — Vercel never starts
+//      them. Only the build section matters here.
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ⚠️  ACTION REQUIRED before production deploy:
 //
-//  VITE_IMAGE_PROXY_SECRET is currently exposed to every user's browser
-//  (any VITE_ var ends up in the JS bundle in plain text).
-//  An HMAC secret that is public provides zero security guarantee.
-//
-//  Fix:
-//   1. Rename to IMAGE_PROXY_SECRET (no VITE_ prefix) in your Vercel env vars.
-//   2. Move the HMAC signing/verification into a Vercel Edge Function or
-//      API route — it must never run in client-side code.
-//   3. Remove the VITE_IMAGE_PROXY_SECRET reference from image-proxy.ts.
+//  VITE_IMAGE_PROXY_SECRET is bundled in plain text into every visitor's
+//  browser — making the HMAC signature it protects worthless.
+//  Fix: rename to IMAGE_PROXY_SECRET (drop VITE_ prefix) and move the
+//  signing logic into a Vercel Edge Function or API route.
 
 export default defineConfig({
-  // ── ESM note: use import.meta.dirname, NOT __dirname ────────────────────
-  root:      path.resolve(import.meta.dirname),
-  base:      "/",
+  // index.html lives in client/ — this is the Vite "root" (entry point dir)
+  root:      path.resolve(import.meta.dirname, "client"),
+  // .env files live one level up (project root)
+  envDir:    path.resolve(import.meta.dirname),
   envPrefix: "VITE_",
+  base:      "/",
 
   plugins: [react()],
 
@@ -64,9 +66,10 @@ export default defineConfig({
 
   resolve: {
     alias: {
-      "@":       path.resolve(import.meta.dirname, "src"),
-      "@shared": path.resolve(import.meta.dirname, "src", "shared"),
-      "@assets": path.resolve(import.meta.dirname, "..", "..", "attached_assets"),
+      // @ → client/src (matches tsconfig paths)
+      "@":       path.resolve(import.meta.dirname, "client", "src"),
+      "@shared": path.resolve(import.meta.dirname, "shared"),
+      "@assets": path.resolve(import.meta.dirname, "attached_assets"),
 
       // @noble/hashes v2 exports use .js suffix in its exports map but source
       // imports without .js (e.g. "@noble/hashes/sha3"). These aliases let Vite
@@ -95,7 +98,8 @@ export default defineConfig({
   },
 
   build: {
-    outDir:                path.resolve(import.meta.dirname, "dist/public"),
+    // Output to dist/ at the project root (one level above client/)
+    outDir:                path.resolve(import.meta.dirname, "dist"),
     emptyOutDir:           true,
     assetsInlineLimit:     0,
     sourcemap:             false,   // never true in production — exposes source code
@@ -105,8 +109,7 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
     reportCompressedSize:  false,
 
-    // Skip preload injection for heavy lazy chunks — main thread loads
-    // faster when these are deferred.
+    // Skip preload injection for heavy lazy chunks — keeps main thread fast.
     modulePreload: {
       resolveDependencies: (filename, deps) => {
         const lazyPrefixes = [
@@ -174,14 +177,6 @@ export default defineConfig({
     },
   },
 
-  // ── server / preview blocks intentionally omitted ───────────────────────
-  //
-  //  Vercel runs ONLY `vite build` — it never starts the dev server or the
-  //  preview server. Defining server/preview here would be dead config and
-  //  could mislead future maintainers into thinking port 5000 / 4173 means
-  //  something in production.
-  //
-  //  If you need to test the production build locally before deploying:
-  //    PORT=4173 vite preview --config vite.config.vercel.ts
-  //  and add server/preview overrides in a local-only vite.config.local.ts.
+  // server / preview blocks intentionally absent.
+  // Vercel runs only `vite build` — it never starts a dev or preview server.
 });
