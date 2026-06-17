@@ -140,3 +140,34 @@ export async function signTRC20Transaction(
 ): Promise<SignedTronTransaction> {
   throw new Error('TRC20 signing not implemented yet');
 }
+
+// ===== BROADCAST =====
+const TRON_FULL_NODES = [
+  'https://api.trongrid.io',
+  'https://api.shasta.trongrid.io',
+];
+
+/**
+ * Broadcasts a signed Tron transaction to the network.
+ * The signedTx must be the JSON-stringified transaction object produced by signTronTransaction().
+ */
+export async function broadcastTronTransaction(signedTx: string): Promise<string> {
+  const tx = typeof signedTx === 'string' ? JSON.parse(signedTx) : signedTx;
+  let lastErr: unknown;
+  for (const node of TRON_FULL_NODES) {
+    try {
+      const res = await fetch(`${node}/wallet/broadcasttransaction`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tx),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json: any = await res.json();
+      if (json.result === true) return json.txid ?? tx.txID ?? 'broadcast_ok';
+      throw new Error(json.message ?? 'Broadcast rejected');
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw new Error(`Tron broadcast failed: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`);
+}
