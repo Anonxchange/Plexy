@@ -2,8 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
-import { usePayPal } from "@/hooks/usePaypal";
-import { placeReloadlyOrder } from "@/hooks/use-utility-billers";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,19 +21,12 @@ import {
   Gift,
   TicketPercent,
   CheckCircle2,
-  Bitcoin,
   ChevronRight,
   HeartHandshake,
 } from '@/lib/icons';
-import { cryptoIconUrls } from "@/lib/crypto-icons";
-import { devLog } from "@/lib/dev-logger";
 import { getExchangeRates } from "@/lib/crypto-prices";
-import {
-  CRYPTO_CHECKOUT_STORAGE_KEY,
-  type CryptoCheckoutContext,
-} from "@/pages/checkout-pay-crypto";
+import NowPaymentsCheckout from "@/components/nowpayments-checkout";
 
-type PaymentMethod = "card" | "paypal" | "crypto" | "oxxo";
 type DeliveryTarget = "self" | "gift";
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
@@ -60,17 +51,31 @@ function SectionTitle({ step, title, sub }: { step: number; title: string; sub?:
   );
 }
 
+type PendingOrder = {
+  type: "topup" | "utility" | "giftcard";
+  title: string;
+  description: string;
+  amount: number;
+  currency: string;
+  image?: string;
+  metadata: Record<string, any>;
+};
+
 export function Checkout() {
   const { user, loading } = useAuth();
   const [, setLocation] = useLocation();
   const { items, updateQuantity, removeItem, clearCart } = useGiftCardCart();
-  const { checkout: paypalCheckout, loading: paypalLoading } = usePayPal();
-  const [fulfilling, setFulfilling] = useState(false);
-
-  const [activePayment, setActivePayment] = useState<PaymentMethod>("card");
   const [deliveryTarget, setDeliveryTarget] = useState<DeliveryTarget>("self");
   const [showOrderSummary, setShowOrderSummary] = useState(false);
   const [rates, setRates] = useState<Record<string, number>>({ USD: 1 });
+  const [pendingOrder, setPendingOrder] = useState<PendingOrder | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("pexly_pending_order");
+      if (raw) setPendingOrder(JSON.parse(raw));
+    } catch {}
+  }, []);
 
   const [recipientEmail, setRecipientEmail] = useState("");
   const [recipientName, setRecipientName] = useState("");
@@ -115,7 +120,7 @@ export function Checkout() {
     );
   }
 
-  if (!items || items.length === 0) {
+  if ((!items || items.length === 0) && !pendingOrder) {
     return (
       <BrandShell>
         <div className="max-w-md mx-auto text-center py-20 px-4">
@@ -130,6 +135,126 @@ export function Checkout() {
             Browse gift cards
           </Button>
         </div>
+      </BrandShell>
+    );
+  }
+
+  if (pendingOrder && (!items || items.length === 0)) {
+    const processingFee = 0.5;
+    const pendingTotal = pendingOrder.amount + processingFee;
+    return (
+      <BrandShell>
+        <main className="max-w-6xl mx-auto px-4 py-8">
+          <div className="mb-8">
+            <p className="text-xs font-semibold text-primary tracking-widest uppercase">Secure checkout</p>
+            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mt-1">Complete your purchase</h1>
+            <p className="text-sm text-muted-foreground mt-1.5 flex items-center gap-1.5">
+              <Zap className="h-3.5 w-3.5 text-primary" />
+              Your order is processed the moment payment confirms.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-12">
+            <div className="space-y-8">
+              {/* Contact */}
+              <section>
+                <SectionTitle step={1} title="Contact" sub="We send your receipt and updates here." />
+                <div className="space-y-3 rounded-2xl border border-border/60 bg-card p-5">
+                  <div>
+                    <FieldLabel>Email</FieldLabel>
+                    <Input type="email" defaultValue={buyerEmail} className="h-11" readOnly />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Signed in as <strong className="text-foreground">{buyerEmail}</strong>
+                  </p>
+                </div>
+              </section>
+
+              {/* Payment */}
+              <section>
+                <SectionTitle step={2} title="Payment" sub="All transactions are encrypted end-to-end." />
+                <div className="rounded-2xl border border-border/60 bg-card p-5">
+                  <NowPaymentsCheckout
+                    amount={pendingTotal}
+                    currency={pendingOrder.currency}
+                    description={pendingOrder.description}
+                    metadata={pendingOrder.metadata}
+                    onPaymentSuccess={() => {
+                      sessionStorage.removeItem("pexly_pending_order");
+                      try {
+                        const saved = JSON.parse(localStorage.getItem("pexly_digital_orders") || "[]");
+                        saved.unshift({
+                          id: `${pendingOrder.type}_${Date.now()}`,
+                          type: pendingOrder.type,
+                          title: pendingOrder.title,
+                          amount: pendingTotal,
+                          currency: pendingOrder.currency.toUpperCase(),
+                          placedAt: new Date().toISOString(),
+                          status: "fulfilled",
+                          ...pendingOrder.metadata,
+                        });
+                        localStorage.setItem("pexly_digital_orders", JSON.stringify(saved.slice(0, 100)));
+                      } catch {}
+                      toast({ title: "Payment confirmed!", description: "Your order has been placed successfully." });
+                      setLocation("/account-settings?section=shop-history");
+                    }}
+                  />
+                </div>
+              </section>
+
+              <p className="text-center text-xs text-muted-foreground pb-8">
+                By placing your order you agree to our{" "}
+                <a href="/terms" className="underline hover:text-foreground">Terms of service</a>{" "}
+                and{" "}
+                <a href="/privacy" className="underline hover:text-foreground">Privacy policy</a>
+              </p>
+            </div>
+
+            {/* Order summary sidebar */}
+            <aside className="hidden lg:block">
+              <div className="sticky top-20 rounded-2xl border border-border/60 bg-card p-6 space-y-5">
+                <h3 className="font-semibold">Order summary</h3>
+                <Separator />
+                <div className="flex gap-3 items-start">
+                  <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {pendingOrder.image
+                      ? <img src={pendingOrder.image} alt={pendingOrder.title} className="w-full h-full object-contain p-1.5" />
+                      : <Zap className="h-5 w-5 text-primary" />
+                    }
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold">{pendingOrder.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {pendingOrder.metadata?.recipientPhone
+                        || pendingOrder.metadata?.accountNumber
+                        || (pendingOrder.metadata?.quantity > 1 ? `Qty: ${pendingOrder.metadata.quantity}` : "")
+                        || ""}
+                    </p>
+                  </div>
+                  <p className="text-sm font-bold flex-shrink-0">
+                    {pendingOrder.currency.toUpperCase()} {pendingOrder.amount.toFixed(2)}
+                  </p>
+                </div>
+                <Separator />
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span>{pendingOrder.currency.toUpperCase()} {pendingOrder.amount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Processing fee</span>
+                    <span>${processingFee.toFixed(2)}</span>
+                  </div>
+                </div>
+                <Separator />
+                <div className="flex items-baseline justify-between">
+                  <span className="text-base font-semibold">Total</span>
+                  <span className="text-2xl font-extrabold">{pendingOrder.currency.toUpperCase()} {pendingTotal.toFixed(2)}</span>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </main>
       </BrandShell>
     );
   }
@@ -158,112 +283,6 @@ export function Checkout() {
   const deliveryEmail = deliveryTarget === "gift" ? recipientEmail : buyerEmail;
   const recipientValid = deliveryTarget === "self" || /^\S+@\S+\.\S+$/.test(recipientEmail);
 
-  const orderId = `gc_${Date.now()}`;
-
-  const handlePaypalCheckout = async () => {
-    const result = await paypalCheckout({ productType: "total", amount: total, currency: "USD" });
-    if (!result) return;
-    setFulfilling(true);
-    try {
-      await Promise.all(
-        items.map((item) =>
-          placeReloadlyOrder({
-            productId: Number(item.productId),
-            quantity: item.quantity,
-            unitPrice: item.price,
-            recipientEmail: deliveryEmail || undefined,
-          })
-        )
-      );
-      clearCart();
-      // Save order record to localStorage so it appears in My Orders
-      try {
-        const saved = JSON.parse(localStorage.getItem("pexly_digital_orders") || "[]");
-        saved.unshift({
-          id: `gc_${result.orderID ?? Date.now()}`,
-          type: "giftcard",
-          title: items.length === 1 ? items[0].title : `${items.length} gift card${items.length > 1 ? "s" : ""}`,
-          amount: total,
-          currency: "USD",
-          recipientEmail: deliveryEmail || undefined,
-          paypalOrderId: result.orderID ?? "",
-          placedAt: new Date().toISOString(),
-          status: "fulfilled",
-        });
-        localStorage.setItem("pexly_digital_orders", JSON.stringify(saved.slice(0, 100)));
-      } catch {}
-      toast({ title: "Order placed!", description: "Your gift cards will be emailed to you shortly." });
-      setLocation("/account-settings?section=shop-history");
-    } catch (e: any) {
-      toast({
-        title: "Delivery error",
-        description: e.message ?? "Payment captured but gift card delivery failed. Please contact support.",
-        variant: "destructive",
-      });
-    } finally {
-      setFulfilling(false);
-    }
-  };
-
-  const goCryptoPayment = () => {
-    if (!recipientValid) return;
-    const ctx: CryptoCheckoutContext = {
-      amount: Number(total.toFixed(2)),
-      currency: "usd",
-      description: `Gift card purchase — ${items.length} item(s)`,
-      itemCount: items.length,
-      recipientEmail: deliveryEmail || undefined,
-      orderId,
-    };
-    try {
-      sessionStorage.setItem(CRYPTO_CHECKOUT_STORAGE_KEY, JSON.stringify(ctx));
-    } catch {
-      /* ignore storage failures */
-    }
-    setLocation("/checkout/pay/crypto");
-  };
-
-  const paymentTabs: {
-    id: PaymentMethod;
-    label: string;
-    sub: string;
-    logo: React.ReactNode;
-  }[] = [
-    {
-      id: "card",
-      label: "Card",
-      sub: "Visa, Mastercard",
-      logo: (
-        <div className="flex items-center gap-1">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" className="h-3" alt="Visa" />
-          <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" className="h-4" alt="MC" />
-        </div>
-      ),
-    },
-    {
-      id: "paypal",
-      label: "PayPal",
-      sub: "Wallet & balance",
-      logo: <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" className="h-4" alt="PayPal" />,
-    },
-    {
-      id: "crypto",
-      label: "Crypto",
-      sub: "BTC, ETH, USDT…",
-      logo: (
-        <div className="flex gap-0.5">
-          <img src={cryptoIconUrls.BTC} className="h-4 w-4 rounded-full" alt="BTC" />
-          <img src={cryptoIconUrls.ETH} className="h-4 w-4 rounded-full" alt="ETH" />
-        </div>
-      ),
-    },
-    {
-      id: "oxxo",
-      label: "OXXO",
-      sub: "Cash voucher",
-      logo: <img src="https://upload.wikimedia.org/wikipedia/commons/6/66/Oxxo_Logo.svg" className="h-4" alt="OXXO" />,
-    },
-  ];
 
   return (
     <BrandShell>
@@ -329,45 +348,6 @@ export function Checkout() {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-12">
           {/* ── LEFT: Form ── */}
           <div className="space-y-8">
-            {/* Express checkout */}
-            <section>
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-                Express checkout
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Button
-                  className="h-12 bg-[#0070BA] hover:bg-[#005ea6] text-white font-bold rounded-xl"
-                  disabled={paypalLoading || fulfilling}
-                  onClick={handlePaypalCheckout}
-                >
-                  {paypalLoading || fulfilling ? (
-                    <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" className="h-5 mr-2" alt="" />
-                      PayPal Express
-                    </>
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-12 font-bold rounded-xl border-orange-400/40 hover:bg-orange-500/5"
-                  onClick={goCryptoPayment}
-                  disabled={!recipientValid}
-                >
-                  <Bitcoin className="h-5 w-5 mr-2 text-orange-500" />
-                  Pay with Crypto
-                </Button>
-              </div>
-              <div className="flex items-center gap-3 my-6">
-                <div className="h-px flex-1 bg-border/60" />
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  or pay step-by-step
-                </span>
-                <div className="h-px flex-1 bg-border/60" />
-              </div>
-            </section>
-
             {/* Contact */}
             <section>
               <SectionTitle step={1} title="Contact" sub="We send your receipt and account updates here." />
@@ -487,139 +467,21 @@ export function Checkout() {
 
             {/* Payment */}
             <section>
-              <SectionTitle step={3} title="Payment" sub="All transactions are encrypted." />
-
-              <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">
-                {/* Method tiles */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border/60">
-                  {paymentTabs.map((tab) => {
-                    const active = activePayment === tab.id;
-                    return (
-                      <button
-                        key={tab.id}
-                        onClick={() => setActivePayment(tab.id)}
-                        className={`flex flex-col items-center gap-1.5 py-4 text-xs font-semibold transition-colors relative ${
-                          active
-                            ? "bg-card text-foreground"
-                            : "bg-card/60 text-muted-foreground hover:text-foreground hover:bg-card"
-                        }`}
-                      >
-                        {tab.logo}
-                        <span>{tab.label}</span>
-                        <span className="text-[10px] text-muted-foreground font-medium">{tab.sub}</span>
-                        {active && (
-                          <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground rounded-t-full" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="p-5">
-                  {activePayment === "card" && (
-                    <div className="space-y-3">
-                      <div>
-                        <FieldLabel>Card number</FieldLabel>
-                        <Input placeholder="1234 5678 9012 3456" className="h-11" />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <FieldLabel>Expiry date</FieldLabel>
-                          <Input placeholder="MM / YY" className="h-11" />
-                        </div>
-                        <div>
-                          <FieldLabel>CVV</FieldLabel>
-                          <Input placeholder="•••" className="h-11" />
-                        </div>
-                      </div>
-                      <div>
-                        <FieldLabel>Name on card</FieldLabel>
-                        <Input placeholder="Full name" className="h-11" />
-                      </div>
-                      <label className="flex items-center gap-2.5 pt-1 cursor-pointer">
-                        <input type="checkbox" className="rounded" />
-                        <span className="text-sm">Save card for future payments</span>
-                      </label>
-                    </div>
-                  )}
-
-                  {activePayment === "paypal" && (
-                    <div className="text-center py-4 space-y-3">
-                      <p className="text-sm text-muted-foreground">
-                        You'll be redirected to PayPal to complete your purchase securely.
-                      </p>
-                      <Button
-                        className="w-full h-12 bg-[#0070BA] text-white hover:bg-[#005ea6] font-bold rounded-xl"
-                        disabled={paypalLoading || fulfilling}
-                        onClick={handlePaypalCheckout}
-                      >
-                        {paypalLoading || fulfilling ? (
-                          <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <>
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" className="h-5 mr-2" alt="" />
-                            Continue with PayPal
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
-
-                  {activePayment === "crypto" && (
-                    <div className="text-center py-4 space-y-3">
-                      <div className="flex items-center justify-center gap-2 mb-1">
-                        {(["BTC", "ETH", "USDT", "LTC", "TRX", "SOL"] as const).map((c) => (
-                          <img
-                            key={c}
-                            src={(cryptoIconUrls as Record<string, string>)[c]}
-                            alt={c}
-                            className="h-6 w-6 rounded-full"
-                          />
-                        ))}
-                        <span className="text-xs text-muted-foreground">+ more</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Pay with Bitcoin, Ethereum, USDT, and 6+ more assets on a dedicated secure page.
-                      </p>
-                      <Button
-                        className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl"
-                        onClick={goCryptoPayment}
-                        disabled={!recipientValid}
-                        data-testid="button-continue-crypto"
-                      >
-                        <Bitcoin className="h-5 w-5 mr-2" />
-                        Continue with Crypto
-                        <ChevronRight className="h-4 w-4 ml-1" />
-                      </Button>
-                      {!recipientValid && (
-                        <p className="text-xs text-destructive">
-                          Enter a valid recipient email above first.
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {activePayment === "oxxo" && (
-                    <div className="text-center py-4 space-y-3">
-                      <p className="text-sm text-muted-foreground">
-                        Generate an OXXO voucher to pay in cash at any OXXO store.
-                      </p>
-                      <Button className="w-full h-12 bg-[#E20613] text-white hover:bg-[#c90511] font-bold rounded-xl">
-                        Generate OXXO Voucher
-                      </Button>
-                    </div>
-                  )}
-                </div>
+              <SectionTitle step={3} title="Payment" sub="All transactions are encrypted end-to-end." />
+              <div className="rounded-2xl border border-border/60 bg-card p-5">
+                <NowPaymentsCheckout
+                  amount={total}
+                  currency="usd"
+                  description={`Gift card purchase — ${items.length} item(s)`}
+                  metadata={{ recipientEmail: deliveryEmail || undefined }}
+                  onPaymentSuccess={() => {
+                    clearCart();
+                    toast({ title: "Order placed!", description: "Your gift cards will be emailed to you shortly." });
+                    setLocation("/account-settings?section=shop-history");
+                  }}
+                />
               </div>
             </section>
-
-            {/* Pay now CTA (card only — others have own button) */}
-            {activePayment === "card" && (
-              <Button className="w-full h-14 text-base font-bold rounded-xl bg-[#B4F22E] text-black hover:opacity-90 shadow-lg shadow-[#B4F22E]/20 gap-2">
-                <Lock className="h-5 w-5" />
-                Pay now · ${total.toFixed(2)}
-              </Button>
-            )}
 
             <p className="text-center text-xs text-muted-foreground pb-8">
               By placing your order you agree to our{" "}
