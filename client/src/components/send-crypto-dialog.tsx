@@ -24,8 +24,8 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertCircle, Loader2, CheckCircle2, X, ShieldCheck, ShieldAlert } from '@/lib/icons';
-import { signBitcoinTransaction } from "@/lib/bitcoinSigner";
-import { signEVMTransaction } from "@/lib/evmSigner";
+import { signEVMTransactionFromVault, signBitcoinTransactionFromVault, callSigningWorker } from "@/hooks/use-signing-worker";
+import { broadcastEVMTransaction } from "@/lib/evmSigner";
 import { signSolanaTransaction, getLatestBlockhash, broadcastSolanaTransaction } from "@/lib/solanaSigner";
 import { signTronTransaction, broadcastTronTransaction } from "@/lib/tronSigner";
 import { useAuth } from "@/lib/auth-context";
@@ -209,47 +209,63 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
     return null;
   };
 
-  const executeSend = async (mnemonic: string) => {
+  const executeSend = async (vault: unknown, password: string, fromAddress: string) => {
     if (!user) return;
     const cryptoAmountNum = amountInputMode === "crypto" ? parseFloat(amount) : parseFloat(cryptoAmount);
     const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
-    const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
-    const userWallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
-    const symbolMap: Record<string, string> = {
-      'BTC': 'Bitcoin (SegWit)', 'ETH': 'Ethereum', 'SOL': 'Solana',
-      'BNB': 'Binance Smart Chain (BEP-20)', 'TRX': 'Tron (TRC-20)',
-      'USDT': 'USDT', 'USDC': 'USDC',
-    };
-    const chainIdToFind = symbolMap[selectedCrypto] || selectedCrypto;
-    const targetWallet = userWallets.find(w =>
-      w.chainId === chainIdToFind || w.chainId === selectedNetwork || w.assetType === selectedCrypto
-    );
-    if (!targetWallet) throw new Error("Local wallet not found for the selected asset");
-    if (!mnemonic) throw new Error("Mnemonic phrase not found for signing");
-
-    const txData = { to: toAddress, amount: cryptoAmountNum.toString(), currency: symbolToUse as any };
 
     if (selectedNetwork.includes("Bitcoin")) {
-      const feeResponse = await fetch('https://blockstream.info/api/fee-estimates');
+      const [feeResponse, utxoResponse] = await Promise.all([
+        fetch('https://blockstream.info/api/fee-estimates'),
+        fetch(`https://blockstream.info/api/address/${fromAddress}/utxo`),
+      ]);
       const fees = await feeResponse.json();
-      const fastFee = fees['1'] || 10;
+      const utxos = await utxoResponse.json();
       const btcTxData = {
         to: toAddress,
         amount: Math.floor(cryptoAmountNum * 1e8),
-        utxos: await (await fetch(`https://blockstream.info/api/address/${targetWallet.address}/utxo`)).json(),
-        feeRate: fastFee,
-        fromAddress: targetWallet.address,
+        utxos,
+        feeRate: fees['1'] || 10,
+        fromAddress,
       };
-      await signBitcoinTransaction(mnemonic, btcTxData as any);
+      // Vault-based: mnemonic decrypted + used + wiped entirely inside worker
+      const result = await signBitcoinTransactionFromVault(vault, password, btcTxData) as any;
+      const broadcastRes = await fetch('https://blockstream.info/api/tx', {
+        method: 'POST',
+        body: result.signedTx,
+      });
+      if (!broadcastRes.ok) throw new Error('Bitcoin broadcast failed. Please check your balance and try again.');
+
     } else if (selectedNetwork.includes("Ethereum") || selectedNetwork.includes("Binance")) {
-      await signEVMTransaction(mnemonic, txData as any);
+      const chainKey = selectedNetwork.includes("Binance") ? "BSC" : "ETH";
+      const txData = { to: toAddress, amount: cryptoAmountNum.toString(), currency: symbolToUse as any };
+      // Vault-based: mnemonic decrypted + used + wiped entirely inside worker
+      const result = await signEVMTransactionFromVault(vault, password, txData) as any;
+      await broadcastEVMTransaction(result.signedTx, chainKey);
+
     } else if (selectedNetwork.includes("Solana")) {
+      // TODO: refactor once worker supports full SOL tx building from vault
+      // Mnemonic briefly surfaces to main thread for Solana tx construction only
+      const mnemonic = await callSigningWorker<string>("decryptVault", { vault, password });
       const blockhash = await getLatestBlockhash();
-      const { signedTx } = await signSolanaTransaction(mnemonic, { to: toAddress, amount: cryptoAmountNum.toString(), currency: "SOL", recentBlockhash: blockhash });
+      const { signedTx } = await signSolanaTransaction(mnemonic, {
+        to: toAddress,
+        amount: cryptoAmountNum.toString(),
+        currency: "SOL",
+        recentBlockhash: blockhash,
+      });
       await broadcastSolanaTransaction(signedTx);
+
     } else if (selectedNetwork.includes("Tron")) {
-      const { signedTx } = await signTronTransaction(mnemonic, { to: toAddress, amount: cryptoAmountNum.toString(), currency: symbolToUse as any });
+      // TODO: add signTronTransactionFromVault to worker
+      const mnemonic = await callSigningWorker<string>("decryptVault", { vault, password });
+      const { signedTx } = await signTronTransaction(mnemonic, {
+        to: toAddress,
+        amount: cryptoAmountNum.toString(),
+        currency: symbolToUse as any,
+      });
       await broadcastTronTransaction(signedTx);
+
     } else {
       throw new Error(`Signing not supported for ${selectedNetwork}`);
     }
@@ -282,10 +298,10 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
         w.chainId === chainIdToFind || w.chainId === selectedNetwork || w.assetType === selectedCrypto
       );
       if (!targetWallet) throw new Error("Local wallet not found for the selected asset");
-      const mnemonic = await nonCustodialWalletManager.getWalletMnemonic(targetWallet.id, passwordToUse, user.id);
-      if (!mnemonic) throw new Error("Mnemonic phrase not found for signing");
+      const vault = targetWallet.encryptedMnemonic ?? targetWallet.encryptedPrivateKey;
+      if (!vault) throw new Error("Wallet vault not found. Please recreate your wallet.");
       if (!getSessionPassword() && userPassword) setSessionPassword(userPassword);
-      await executeSend(mnemonic);
+      await executeSend(vault, passwordToUse, targetWallet.address);
     } catch (err: any) {
       setError(err.message || "Failed to send crypto");
     } finally {
