@@ -11,6 +11,9 @@
  * 8+ → 24h). A stolen vault blob therefore cannot be brute-forced offline
  * via the app UI even if the attacker also has the user's session cookie.
  *
+ * When the DB is unreachable an in-memory fallback counter enforces a
+ * local lockout so DB outages cannot be abused to bypass rate limiting.
+ *
  * Helper `runWithUnlockGate(userId, fn)` does both calls for you.
  */
 
@@ -31,6 +34,25 @@ interface LockoutStatus {
   failure_count: number;
 }
 
+interface LocalCounter {
+  count: number;
+  lockedUntil: number;
+}
+
+// In-memory fallback — used only when the DB is unreachable.
+// Mirrors the server escalation schedule so DB outages don't create a bypass window.
+const localCounters = new Map<string, LocalCounter>();
+
+const LOCAL_LOCKOUT_SCHEDULE: Record<number, number> = {
+  4: 30,
+  5: 60,
+  6: 300,
+  7: 1_800,
+};
+function localLockoutSeconds(count: number): number {
+  return LOCAL_LOCKOUT_SCHEDULE[count] ?? (count >= 8 ? 86_400 : 0);
+}
+
 function formatDuration(seconds: number): string {
   if (seconds < 60) return `${seconds}s`;
   if (seconds < 3600) return `${Math.ceil(seconds / 60)}m`;
@@ -42,10 +64,18 @@ export async function checkUnlockAllowed(userId: string): Promise<void> {
   const { data, error } = await supabase.rpc("check_wallet_unlock_lockout", {
     p_user_id: userId,
   });
-  // Fail-open on RPC/network errors so legitimate users aren't blocked from
-  // their own funds by a transient outage. The server-side counter still
-  // protects against actual brute-force because each attempt re-checks.
-  if (error) return;
+
+  if (error) {
+    // DB unreachable — enforce local in-memory counter so a deliberate outage
+    // cannot be used to bypass the brute-force gate.
+    const local = localCounters.get(userId);
+    if (local && Date.now() < local.lockedUntil) {
+      const remaining = Math.ceil((local.lockedUntil - Date.now()) / 1000);
+      throw new WalletLockedError(remaining, local.count);
+    }
+    return;
+  }
+
   const status = data as LockoutStatus | null;
   if (status?.locked) {
     throw new WalletLockedError(status.retry_after_seconds, status.failure_count);
@@ -54,10 +84,26 @@ export async function checkUnlockAllowed(userId: string): Promise<void> {
 
 export async function reportUnlockAttempt(userId: string, success: boolean): Promise<void> {
   const supabase = await getSupabase();
-  await supabase.rpc("record_wallet_unlock_attempt", {
+  const { error } = await supabase.rpc("record_wallet_unlock_attempt", {
     p_user_id: userId,
     p_success: success,
   });
+
+  if (error) {
+    // DB unreachable — mirror the outcome in the local counter.
+    if (success) {
+      localCounters.delete(userId);
+    } else {
+      const local = localCounters.get(userId) ?? { count: 0, lockedUntil: 0 };
+      local.count += 1;
+      const lockSecs = localLockoutSeconds(local.count);
+      if (lockSecs > 0) local.lockedUntil = Date.now() + lockSecs * 1_000;
+      localCounters.set(userId, local);
+    }
+  } else if (success) {
+    // Successful server report — also clear local counter.
+    localCounters.delete(userId);
+  }
 }
 
 /**

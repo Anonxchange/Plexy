@@ -4,6 +4,10 @@ import { devLog } from '../dev-logger';
 
 const supabase = createClient();
 
+// In-memory fallback counters — used only when the DB is unreachable.
+// Key: `${identifier}:${endpoint}`, value: { count, windowStart }
+const localCounters = new Map<string, { count: number; windowStart: number }>();
+
 export class RateLimiter {
   async checkLimit(
     identifier: string,
@@ -20,15 +24,39 @@ export class RateLimiter {
       });
 
       if (error) {
-        devLog.error('Rate limit check failed:', error);
-        return true; // Allow on error to prevent blocking legitimate users
+        devLog.error('Rate limit check failed — using local fallback:', error);
+        return this._checkLocalLimit(identifier, endpoint, maxRequests, windowMinutes);
       }
 
       return data as boolean;
     } catch (error) {
-      devLog.error('Rate limit error:', error);
+      devLog.error('Rate limit error — using local fallback:', error);
+      return this._checkLocalLimit(identifier, endpoint, maxRequests, windowMinutes);
+    }
+  }
+
+  private _checkLocalLimit(
+    identifier: string,
+    endpoint: string,
+    maxRequests: number,
+    windowMinutes: number
+  ): boolean {
+    const key = `${identifier}:${endpoint}`;
+    const windowMs = windowMinutes * 60_000;
+    const now = Date.now();
+    const entry = localCounters.get(key);
+
+    if (!entry || now - entry.windowStart > windowMs) {
+      localCounters.set(key, { count: 1, windowStart: now });
       return true;
     }
+
+    entry.count += 1;
+    if (entry.count > maxRequests) {
+      devLog.warn(`Local rate limit exceeded for ${identifier} on ${endpoint}`);
+      return false;
+    }
+    return true;
   }
 
   async checkAPILimit(apiKey: string, endpoint: string): Promise<boolean> {

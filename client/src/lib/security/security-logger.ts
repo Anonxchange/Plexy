@@ -90,8 +90,16 @@ class SecurityLogger {
     try {
       const key = 'pexly_security_events_queue';
       const existing = JSON.parse(localStorage.getItem(key) || '[]');
-      existing.push({ ...event, timestamp: Date.now() });
-      if (existing.length > 100) existing.shift();
+      // Strip details/metadata to prevent sensitive data leaking into localStorage.
+      // Only event_type, severity, user_id, and timestamp are retained for replay.
+      const sanitized = {
+        event_type: event.event_type,
+        severity: event.severity,
+        user_id: event.user_id,
+        timestamp: Date.now(),
+      };
+      existing.push(sanitized);
+      if (existing.length > 50) existing.shift();
       localStorage.setItem(key, JSON.stringify(existing));
     } catch {
       devLog.error('Failed to store event locally');
