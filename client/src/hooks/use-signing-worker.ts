@@ -193,6 +193,10 @@ export const encryptVaultBatch = (items: Array<{ data: string }>, password: stri
 export const decryptVault = (vault: unknown, password: string) =>
   callSigningWorker<string>("decryptVault", { vault, password });
 
+/** Decrypt a passkey vault (WebAuthn PRF) — no scrypt, pure AES-GCM in worker */
+export const decryptVaultWithRawKey = (vault: import("./signing.worker").PasskeyVault, rawKey: ArrayBuffer) =>
+  callSigningWorker<string>("decryptVaultWithRawKey", { vault, rawKey });
+
 /** Validate a vault password without returning the plaintext */
 export const validateVaultPassword = (vault: unknown, password: string) =>
   callSigningWorker<boolean>("validateVaultPassword", { vault, password });

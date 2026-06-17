@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { webAuthnService } from "@/lib/webauthn";
-import { decryptVaultWithRawKey, PasskeyVault } from "@/lib/webCrypto";
+import { decryptVaultWithRawKey } from "./use-signing-worker";
+import type { PasskeyVault } from "./use-signing-worker";
 
 export function useWalletPasskey() {
   const { user } = useAuth();
