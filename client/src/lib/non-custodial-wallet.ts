@@ -15,10 +15,10 @@ import { getTronAddress } from "./tronSigner";
 import {
   encryptVault,
   encryptVaultWithKey,
-  decryptVault,
   EncryptedVault,
   DerivedVaultKey,
 } from "./webCrypto";
+import { callSigningWorker } from "@/hooks/use-signing-worker";
 import { runWithUnlockGate } from "./security/wallet-unlock-gate";
 
 // Constants for Encoding
@@ -405,11 +405,11 @@ class NonCustodialWalletManager {
         // Try to parse it into an EncryptedVault object before giving up.
         const parsed = parseVaultField(vault);
         if (parsed && typeof parsed === "object" && "ciphertext" in parsed) {
-          return decryptVault(parsed as EncryptedVault, password);
+          return callSigningWorker<string>("decryptVault", { vault: parsed, password });
         }
         throw new Error("Legacy vault string found. Please migrate your wallet.");
       }
-      return decryptVault(vault, password);
+      return callSigningWorker<string>("decryptVault", { vault, password });
     };
     // When a userId is supplied, route the attempt through the server-side
     // brute-force gate (4+ failures → escalating lockout up to 24h).
@@ -437,7 +437,7 @@ class NonCustodialWalletManager {
    * Safe to call multiple times — wallets already in the modern format are skipped.
    */
   async migrateLegacyVaults(userId: string, password: string, supabase?: any): Promise<void> {
-    const { isLegacyVault, migrateLegacyVault } = await import("./webCrypto");
+    const { isLegacyVault } = await import("./webCrypto");
     const wallets = await this.getWalletsFromStorage(userId);
     let anyMigrated = false;
 
@@ -450,13 +450,13 @@ class NonCustodialWalletManager {
         try {
           const updatedWallet = { ...wallet };
           if (needsPrivKey) {
-            updatedWallet.encryptedPrivateKey = await migrateLegacyVault(
-              wallet.encryptedPrivateKey, password, userId
+            updatedWallet.encryptedPrivateKey = await callSigningWorker<EncryptedVault>(
+              "migrateLegacyVault", { legacyData: wallet.encryptedPrivateKey, password, userId, origin: window.location.origin }
             );
           }
           if (needsMnemonic && wallet.encryptedMnemonic) {
-            updatedWallet.encryptedMnemonic = await migrateLegacyVault(
-              wallet.encryptedMnemonic, password, userId
+            updatedWallet.encryptedMnemonic = await callSigningWorker<EncryptedVault>(
+              "migrateLegacyVault", { legacyData: wallet.encryptedMnemonic, password, userId, origin: window.location.origin }
             );
           }
           anyMigrated = true;
