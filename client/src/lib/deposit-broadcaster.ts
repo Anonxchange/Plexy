@@ -1,4 +1,5 @@
-import { signEVMTransaction, broadcastEVMTransaction, EVMTransactionRequest, TOKEN_CONTRACTS } from './evmSigner';
+import { signEVMTransactionFromVault, callSigningWorker } from '@/hooks/use-signing-worker';
+import { broadcastEVMTransaction, EVMTransactionRequest, TOKEN_CONTRACTS } from './evmSigner';
 import {
   signSolanaTransaction,
   broadcastSolanaTransaction,
@@ -32,7 +33,10 @@ export interface DepositBroadcastParams {
   coin: string;
   network: string;
   amount: string;
-  mnemonic: string;
+  /** Encrypted wallet vault blob — mnemonic is decrypted inside the worker, never on the main thread (EVM path). */
+  vault: unknown;
+  /** Wallet password used to decrypt the vault. */
+  password: string;
   depositAddress: string;
   walletAddress: string;
   // On-chain metadata from the AsterDEX asset list.
@@ -52,7 +56,8 @@ export async function broadcastDeposit({
   coin,
   network,
   amount,
-  mnemonic,
+  vault,
+  password,
   depositAddress,
   walletAddress,
   contractAddress,
@@ -64,14 +69,14 @@ export async function broadcastDeposit({
   }
 
   if (network === 'SOL') {
-    return broadcastSolDeposit({ coin, amount, mnemonic, depositAddress, walletAddress, contractAddress, decimals });
+    return broadcastSolDeposit({ coin, amount, vault, password, depositAddress, walletAddress, contractAddress, decimals });
   }
 
-  return broadcastEvmDeposit({ coin, network, amount, mnemonic, depositAddress, contractAddress, decimals, isNative });
+  return broadcastEvmDeposit({ coin, network, amount, vault, password, depositAddress, contractAddress, decimals, isNative });
 }
 
 async function broadcastEvmDeposit({
-  coin, network, amount, mnemonic, depositAddress, contractAddress, decimals, isNative,
+  coin, network, amount, vault, password, depositAddress, contractAddress, decimals, isNative,
 }: Omit<DepositBroadcastParams, 'walletAddress'>): Promise<DepositBroadcastResult> {
   const chainKey = network.toUpperCase();
 
@@ -79,20 +84,21 @@ async function broadcastEvmDeposit({
   // any coin the exchange supports (USD1, ASBNB, LISUSD, etc.) works without
   // being listed in the static TOKEN_CONTRACTS table.
   if (contractAddress && decimals !== undefined && !isNative) {
-    // Temporarily register the API-supplied contract so signEVMTransaction can
+    // Temporarily register the API-supplied contract so the EVM signer can
     // build the correct ERC-20 calldata without requiring a hardcoded entry.
     const tempKey = `${coin}_${chainKey}` as EVMTransactionRequest['currency'];
     TOKEN_CONTRACTS[tempKey] = { address: contractAddress, decimals };
-    const { signedTx, txHash } = await signEVMTransaction(mnemonic, {
+    // Vault-based: mnemonic decrypted + used + wiped entirely inside worker
+    const result = await signEVMTransactionFromVault(vault, password, {
       to: depositAddress,
       amount,
       currency: tempKey,
-    });
+    }) as any;
     delete TOKEN_CONTRACTS[tempKey];
-    await broadcastEVMTransaction(signedTx, chainKey);
+    await broadcastEVMTransaction(result.signedTx, chainKey);
     return {
-      txHash,
-      explorerUrl: `${EXPLORER_BASE[chainKey] ?? EXPLORER_BASE.ETH}/${txHash}`,
+      txHash: result.txHash,
+      explorerUrl: `${EXPLORER_BASE[chainKey] ?? EXPLORER_BASE.ETH}/${result.txHash}`,
     };
   }
 
@@ -105,15 +111,15 @@ async function broadcastEvmDeposit({
     if (!nativeCurrency) {
       throw new Error(`Native deposits on ${network} are not yet supported. Copy the address and send manually.`);
     }
-    const { signedTx, txHash } = await signEVMTransaction(mnemonic, {
+    const result = await signEVMTransactionFromVault(vault, password, {
       to: depositAddress,
       amount,
       currency: nativeCurrency,
-    });
-    await broadcastEVMTransaction(signedTx, chainKey);
+    }) as any;
+    await broadcastEVMTransaction(result.signedTx, chainKey);
     return {
-      txHash,
-      explorerUrl: `${EXPLORER_BASE[chainKey] ?? EXPLORER_BASE.ETH}/${txHash}`,
+      txHash: result.txHash,
+      explorerUrl: `${EXPLORER_BASE[chainKey] ?? EXPLORER_BASE.ETH}/${result.txHash}`,
     };
   }
 
@@ -121,9 +127,9 @@ async function broadcastEvmDeposit({
   const staticKey = `${coin.toUpperCase()}_${chainKey}`;
   const currency = STATIC_CURRENCY_MAP[staticKey];
   if (currency) {
-    const { signedTx, txHash } = await signEVMTransaction(mnemonic, { to: depositAddress, amount, currency });
-    await broadcastEVMTransaction(signedTx, chainKey);
-    return { txHash, explorerUrl: `${EXPLORER_BASE[chainKey] ?? EXPLORER_BASE.ETH}/${txHash}` };
+    const result = await signEVMTransactionFromVault(vault, password, { to: depositAddress, amount, currency }) as any;
+    await broadcastEVMTransaction(result.signedTx, chainKey);
+    return { txHash: result.txHash, explorerUrl: `${EXPLORER_BASE[chainKey] ?? EXPLORER_BASE.ETH}/${result.txHash}` };
   }
 
   throw new Error(
@@ -132,9 +138,14 @@ async function broadcastEvmDeposit({
 }
 
 async function broadcastSolDeposit({
-  coin, amount, mnemonic, depositAddress, walletAddress, contractAddress,
+  coin, amount, vault, password, depositAddress, walletAddress, contractAddress,
 }: Omit<DepositBroadcastParams, 'network'>): Promise<DepositBroadcastResult> {
   const blockhash = await getLatestBlockhash();
+
+  // TODO: refactor once the signing worker supports full SOL tx building from vault.
+  // For now: vault is decrypted inside the worker; mnemonic briefly surfaces to
+  // the main thread only for Solana transaction serialisation.
+  const mnemonic = await callSigningWorker<string>('decryptVault', { vault, password });
 
   if (coin.toUpperCase() === 'SOL') {
     const { signedTx } = await signSolanaTransaction(mnemonic, {

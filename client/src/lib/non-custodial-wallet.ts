@@ -380,7 +380,7 @@ class NonCustodialWalletManager {
     }
   }
 
-  private async saveWalletsToStorage(wallets: NonCustodialWallet[], userId: string): Promise<void> {
+  public async saveWalletsToStorage(wallets: NonCustodialWallet[], userId: string): Promise<void> {
     await setValue('wallets', this.getStorageKey(userId), wallets);
   }
 

@@ -29,13 +29,16 @@ export async function deriveEncryptionKey(
 ): Promise<Uint8Array> {
   const encoder = new TextEncoder();
   const passwordBuffer = encoder.encode(password.normalize('NFKC'));
-  
-  return await scrypt.scrypt(
-    passwordBuffer, 
-    salt, 
-    params.N, 
-    params.r, 
-    params.p, 
-    params.dkLen
-  );
+  try {
+    return await scrypt.scrypt(
+      passwordBuffer, 
+      salt, 
+      params.N, 
+      params.r, 
+      params.p, 
+      params.dkLen
+    );
+  } finally {
+    passwordBuffer.fill(0);
+  }
 }
