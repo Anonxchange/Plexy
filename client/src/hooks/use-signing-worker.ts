@@ -57,7 +57,7 @@ let callSeq = 0;
 function getWorker(): Worker {
   if (sharedWorker) return sharedWorker;
   sharedWorker = new Worker(
-    new URL("./signing.worker.ts", import.meta.url),
+  new URL("../lib/signing.worker.ts", import.meta.url),
     { type: "module" }
   );
   sharedWorker.onmessage = ({ data }: MessageEvent<WorkerResponse>) => {
