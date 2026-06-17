@@ -1,12 +1,10 @@
 import { useState, useMemo } from "react";
-import { ChevronDown, ArrowRight, Search, Zap, Bot, Check, Receipt, Filter, Lock } from '@/lib/icons';
+import { useLocation } from "wouter";
+import { ChevronDown, ArrowRight, Search, Zap, Bot, Check, Receipt, Filter } from '@/lib/icons';
 import { PexlyFooter } from "@/components/pexly-footer";
-import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import {
   useUtilityCountries,
@@ -18,8 +16,6 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { sanitizeImageUrl } from "@/lib/sanitize";
 import { devLog } from "@/lib/dev-logger";
-import NowPaymentsCheckout from "@/components/nowpayments-checkout";
-import { usePayPal } from "@/hooks/usePaypal";
 
 const FALLBACK_COUNTRIES = [
   { isoName: "NG", name: "Nigeria" },
@@ -74,6 +70,7 @@ const ProviderCard = ({
 };
 
 const UtilityBill = () => {
+  const [, setLocation] = useLocation();
   const [accountNumber, setAccountNumber] = useState("");
   const [selectedCountry, setSelectedCountry] = useState<string>("");
   const [selectedService, setSelectedService] = useState<string>("ALL");
@@ -88,8 +85,6 @@ const UtilityBill = () => {
     selectedCountry || undefined,
     selectedService && selectedService !== "ALL" ? selectedService : undefined
   );
-  const { checkout: paypalCheckout, loading: paypalLoading } = usePayPal();
-
   const countries = useMemo(() => {
     if (countriesData && Array.isArray(countriesData) && countriesData.length > 0) {
       return countriesData.map((c: any) => ({ isoName: c.isoName, name: c.name }));
@@ -459,125 +454,36 @@ const UtilityBill = () => {
                 )}
               </div>
 
-              {/* Payment tabs */}
-              <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm">
-                <div className="px-6 pt-6 pb-2">
-                  <h3 className="font-bold text-foreground">Pay With</h3>
-                </div>
-                <Tabs defaultValue="crypto" className="w-full">
-                  <TabsList className="w-full h-auto p-0 bg-transparent border-b border-border rounded-none grid grid-cols-4">
-                    <TabsTrigger value="crypto" className="flex flex-col gap-1.5 py-3 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
-                      <div className="flex gap-1">
-                        <img src={cryptoIconUrls.BTC} className="h-4 w-4 rounded-full" alt="BTC" />
-                        <img src={cryptoIconUrls.ETH} className="h-4 w-4 rounded-full" alt="ETH" />
-                        <img src={cryptoIconUrls.USDT} className="h-4 w-4 rounded-full" alt="USDT" />
-                      </div>
-                      <span className="text-[11px] font-bold">Crypto</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="paypal" className="flex flex-col gap-1.5 py-3 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
-                      <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" className="h-4" alt="Paypal" />
-                      <span className="text-[11px] font-bold">PayPal</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="card" className="flex flex-col gap-1.5 py-3 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
-                      <div className="flex gap-1">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" className="h-3" alt="Visa" />
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" className="h-4" alt="Mastercard" />
-                      </div>
-                      <span className="text-[11px] font-bold">Card</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="oxxo" className="flex flex-col gap-1.5 py-3 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
-                      <img src="https://upload.wikimedia.org/wikipedia/commons/6/66/Oxxo_Logo.svg" className="h-4" alt="OXXO" />
-                      <span className="text-[11px] font-bold">OXXO</span>
-                    </TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="crypto" className="p-6 focus-visible:outline-none focus-visible:ring-0">
-                    <NowPaymentsCheckout
-                      amount={Number(amount) || 0}
-                      currency={selectedProvider.localTransactionCurrencyCode?.toLowerCase() || "usd"}
-                      description={`Utility bill — ${selectedProvider.name}`}
-                      metadata={{
+              {/* Proceed to Checkout */}
+              <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
+                <Button
+                  className="w-full h-13 text-base font-bold rounded-2xl gap-2"
+                  disabled={!amount || !accountNumber}
+                  onClick={() => {
+                    if (!amount || !accountNumber) {
+                      toast.error("Please enter account number and amount");
+                      return;
+                    }
+                    sessionStorage.setItem("pexly_pending_order", JSON.stringify({
+                      type: "utility",
+                      title: `${selectedProvider.name} Bill Payment`,
+                      description: `Utility bill — ${selectedProvider.name}`,
+                      amount: Number(amount),
+                      currency: selectedProvider.localTransactionCurrencyCode?.toLowerCase() || "usd",
+                      metadata: {
                         service: "utility-bill",
                         billerId: selectedProvider.id,
                         accountNumber,
                         countryCode: selectedProvider.countryCode,
-                      }}
-                      onPaymentSuccess={async () => {
-                        devLog.info("Utility bill payment successful");
-                        await handlePayment();
-                      }}
-                      onPaymentClose={() => devLog.info("Utility bill payment cancelled")}
-                    />
-                  </TabsContent>
-
-                  <TabsContent value="paypal" className="p-6 text-center space-y-4 focus-visible:outline-none focus-visible:ring-0">
-                    <p className="text-sm text-muted-foreground">You will be redirected to PayPal to complete your payment securely.</p>
-                    <Button
-                      className="w-full h-12 bg-[#0070BA] text-white hover:bg-[#005ea6] font-bold rounded-2xl gap-2"
-                      disabled={paypalLoading || isSubmitting}
-                      onClick={async () => {
-                        const result = await paypalCheckout({
-                          productType: "total",
-                          amount: Number(amount) || 0,
-                          currency: "USD",
-                        });
-                        if (result) await handlePayment();
-                      }}
-                    >
-                      {paypalLoading || isSubmitting ? (
-                        <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Processing...</>
-                      ) : (
-                        <><img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" className="h-4" alt="" />Continue to PayPal</>
-                      )}
-                    </Button>
-                  </TabsContent>
-
-                  <TabsContent value="card" className="p-6 space-y-4 focus-visible:outline-none focus-visible:ring-0">
-                    <div className="space-y-3">
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-semibold text-foreground">Card Number</label>
-                        <Input placeholder="1234 5678 9012 3456" className="h-12 bg-background border-border rounded-2xl" />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <label className="text-sm font-semibold text-foreground">Expiry</label>
-                          <Input placeholder="MM / YY" className="h-12 bg-background border-border rounded-2xl" />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-sm font-semibold text-foreground">CVV</label>
-                          <Input placeholder="•••" className="h-12 bg-background border-border rounded-2xl" />
-                        </div>
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-semibold text-foreground">Postal Code</label>
-                        <Input placeholder="Postal Code" className="h-12 bg-background border-border rounded-2xl" />
-                      </div>
-                      <div className="flex items-center gap-2 pt-1">
-                        <Checkbox id="save-card-utility" />
-                        <label htmlFor="save-card-utility" className="text-sm text-foreground">Save this payment method</label>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-center gap-2 text-muted-foreground py-1">
-                      <Lock className="h-3.5 w-3.5" />
-                      <span className="text-xs">256-bit encrypted payment</span>
-                    </div>
-                    <Button
-                      className="w-full h-12 bg-[#FFC107] text-black hover:bg-[#FFB300] font-bold rounded-2xl gap-2"
-                      onClick={handlePayment}
-                      disabled={isSubmitting}
-                    >
-                      <Lock className="h-4 w-4" />
-                      {isSubmitting ? "Processing..." : "Place Secure Order"}
-                    </Button>
-                  </TabsContent>
-
-                  <TabsContent value="oxxo" className="p-6 text-center space-y-4 focus-visible:outline-none focus-visible:ring-0">
-                    <p className="text-sm text-muted-foreground">Generate an OXXO voucher to pay in cash at any store.</p>
-                    <Button className="w-full h-12 bg-[#E20613] text-white hover:bg-[#c90511] font-bold rounded-2xl">
-                      Generate OXXO Voucher
-                    </Button>
-                  </TabsContent>
-                </Tabs>
+                        providerName: selectedProvider.name,
+                      },
+                    }));
+                    devLog.info("Redirecting to checkout for utility bill");
+                    setLocation("/checkout");
+                  }}
+                >
+                  Proceed to Checkout →
+                </Button>
               </div>
 
             </div>

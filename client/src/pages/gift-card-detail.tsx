@@ -125,13 +125,22 @@ export function GiftCardDetail() {
 
   const handleBuyCard = () => {
     if (!card) return;
-    addToCart({
-      productId: String(card.productId),
-      title: card.productName,
-      price: unitFinalPrice,
-      currency: card.recipientCurrencyCode,
+    sessionStorage.setItem("pexly_pending_order", JSON.stringify({
+      type: "giftcard",
+      title: `${card.productName} Gift Card`,
+      description: `${qty}x ${card.productName} Gift Card`,
+      amount: totalFinalPrice,
+      currency: (card.recipientCurrencyCode || "usd").toLowerCase(),
       image: sanitizeImageUrl(card.logoUrls?.[0]),
-    });
+      metadata: {
+        service: "gift-card",
+        productId: String(card.productId),
+        productName: card.productName,
+        quantity: qty,
+        unitPrice: unitFinalPrice,
+        cardValue: value,
+      },
+    }));
     setLocation("/checkout");
   };
 
