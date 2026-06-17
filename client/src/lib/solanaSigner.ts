@@ -187,16 +187,30 @@ export async function signSolanaTransaction(
 }
 
 const SOLANA_RPC = 'https://api.mainnet-beta.solana.com';
+const SOLANA_TIMEOUT_MS = 10_000;
 
 async function solRpc(method: string, params: any[]) {
-  const res = await fetch(SOLANA_RPC, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
-  });
-  const json = await res.json();
-  if (json.error) throw new Error(`Solana RPC error: ${json.error.message}`);
-  return json.result;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), SOLANA_TIMEOUT_MS);
+  try {
+    const res = await fetch(SOLANA_RPC, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`Solana node HTTP ${res.status}`);
+    const json = await res.json();
+    if (json.error) throw new Error(`Solana RPC error: ${json.error.message}`);
+    return json.result;
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('Network error — Solana node timed out. Check your connection and try again.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export async function getLatestBlockhash(): Promise<string> {

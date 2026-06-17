@@ -7,6 +7,11 @@ import { wipeBytes, wipeHDKey, withWipe } from './secureMemory';
 const SEGWIT_PATH = "m/84'/0'/0'/0/0";
 const NETWORK = btc.NETWORK;
 
+const BTC_APIS = [
+  'https://blockstream.info/api',
+  'https://mempool.space/api',
+];
+
 export interface BitcoinUTXO {
   txid: string;
   vout: number;
@@ -49,9 +54,22 @@ export async function getBitcoinAddress(mnemonic: string): Promise<string> {
   return p2wpkh.address;
 }
 
+async function btcFetch(path: string, init?: RequestInit): Promise<Response> {
+  let lastErr: unknown;
+  for (const base of BTC_APIS) {
+    try {
+      const res = await fetch(`${base}${path}`, init);
+      if (res.ok) return res;
+      lastErr = new Error(`HTTP ${res.status}`);
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw new Error(`Bitcoin node unreachable. Check your connection and try again. (${lastErr instanceof Error ? lastErr.message : lastErr})`);
+}
+
 export async function fetchUTXOs(address: string): Promise<BitcoinUTXO[]> {
-  const response = await fetch(`https://blockstream.info/api/address/${address}/utxo`);
-  if (!response.ok) throw new Error('Failed to fetch UTXOs');
+  const response = await btcFetch(`/address/${address}/utxo`);
   const utxos = await response.json();
   return utxos.map((utxo: any) => ({
     txid: utxo.txid,
@@ -112,17 +130,12 @@ export async function signBitcoinTransaction(
 }
 
 export async function broadcastBitcoinTransaction(signedTxHex: string): Promise<string> {
-  const response = await fetch('https://blockstream.info/api/tx', {
-    method: 'POST',
-    body: signedTxHex,
-  });
-  if (!response.ok) throw new Error('Failed to broadcast');
+  const response = await btcFetch('/tx', { method: 'POST', body: signedTxHex });
   return response.text();
 }
 
 export async function getBitcoinBalance(address: string): Promise<number> {
-  const response = await fetch(`https://blockstream.info/api/address/${address}`);
-  if (!response.ok) throw new Error('Failed to fetch balance');
+  const response = await btcFetch(`/address/${address}`);
   const data = await response.json();
   return data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum;
 }
