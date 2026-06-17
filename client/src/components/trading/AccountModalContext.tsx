@@ -46,7 +46,10 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
   const [sendTxHash, setSendTxHash]           = useState<string | null>(null);
   const [sendTxUrl, setSendTxUrl]             = useState<string | null>(null);
   const [sendError, setSendError]             = useState<string | null>(null);
-  const prevNetworkRef = useRef<string>(network);
+  const [sendCooldownUntil, setSendCooldownUntil] = useState<number>(0);
+  const prevNetworkRef   = useRef<string>(network);
+  const lastSendRef      = useRef<number>(0);
+  const SEND_COOLDOWN_MS = 30_000;
 
   const { user } = useAuth();
   const [, navigate] = useLocation();
@@ -459,6 +462,17 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
     // Disable the button immediately — before any async work —
     // so fast/repeated taps cannot queue multiple broadcasts.
     if (sendLoading) return;
+    // Rate limit: enforce a 30-second cooldown between send attempts
+    // to prevent accidental duplicate broadcasts.
+    const now = Date.now();
+    const elapsed = now - lastSendRef.current;
+    if (elapsed < SEND_COOLDOWN_MS) {
+      const remaining = Math.ceil((SEND_COOLDOWN_MS - elapsed) / 1000);
+      setSendError(`Please wait ${remaining}s before sending again.`);
+      return;
+    }
+    lastSendRef.current = now;
+    setSendCooldownUntil(now + SEND_COOLDOWN_MS);
     setSendLoading(true);
     setSendError(null);
     try {
@@ -496,7 +510,7 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
     spotBalanceFor, futuresAvailFor, headerBalance, spotLoading, futuresLoading,
     // Send state
     sendPassword, setSendPassword, showSendPwd, setShowSendPwd,
-    sendLoading, sendTxHash, sendTxUrl, sendError, handleSendFromWallet,
+    sendLoading, sendTxHash, sendTxUrl, sendError, handleSendFromWallet, sendCooldownUntil,
     // TX history
     txHistoryOpen, setTxHistoryOpen, txHistoryTab, setTxHistoryTab,
     depositHistory, depositHistoryLoading, withdrawHistory, withdrawHistoryLoading,
