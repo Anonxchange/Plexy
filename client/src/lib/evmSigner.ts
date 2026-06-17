@@ -16,13 +16,37 @@ import { wipeBytes, wipeHDKey } from "./secureMemory";
 /*                                   CONFIG                                   */
 /* -------------------------------------------------------------------------- */
 
-export const CHAIN_CONFIGS: Record<string, { rpcUrl: string; chainId: number; symbol: string }> = {
-  ETH: { rpcUrl: "https://eth.llamarpc.com",       chainId: 1,     symbol: "ETH"   },
-  BSC: { rpcUrl: "https://binance.llamarpc.com",    chainId: 56,    symbol: "BNB"   },
-  BNB: { rpcUrl: "https://binance.llamarpc.com",    chainId: 56,    symbol: "BNB"   },
-  ARB: { rpcUrl: "https://arbitrum.llamarpc.com",   chainId: 42161, symbol: "ETH"   },
-  POL: { rpcUrl: "https://polygon.llamarpc.com",    chainId: 137,   symbol: "POL"   },
-  MATIC: { rpcUrl: "https://polygon.llamarpc.com",  chainId: 137,   symbol: "POL"   },
+export const CHAIN_CONFIGS: Record<string, { rpcUrl: string; rpcFallbacks?: string[]; chainId: number; symbol: string }> = {
+  ETH: {
+    rpcUrl: "https://eth.llamarpc.com",
+    rpcFallbacks: ["https://cloudflare-eth.com", "https://rpc.ankr.com/eth"],
+    chainId: 1, symbol: "ETH",
+  },
+  BSC: {
+    rpcUrl: "https://binance.llamarpc.com",
+    rpcFallbacks: ["https://bsc-dataseed.binance.org", "https://bsc-dataseed1.defibit.io"],
+    chainId: 56, symbol: "BNB",
+  },
+  BNB: {
+    rpcUrl: "https://binance.llamarpc.com",
+    rpcFallbacks: ["https://bsc-dataseed.binance.org", "https://bsc-dataseed1.defibit.io"],
+    chainId: 56, symbol: "BNB",
+  },
+  ARB: {
+    rpcUrl: "https://arbitrum.llamarpc.com",
+    rpcFallbacks: ["https://arb1.arbitrum.io/rpc", "https://rpc.ankr.com/arbitrum"],
+    chainId: 42161, symbol: "ETH",
+  },
+  POL: {
+    rpcUrl: "https://polygon.llamarpc.com",
+    rpcFallbacks: ["https://polygon-rpc.com", "https://rpc.ankr.com/polygon"],
+    chainId: 137, symbol: "POL",
+  },
+  MATIC: {
+    rpcUrl: "https://polygon.llamarpc.com",
+    rpcFallbacks: ["https://polygon-rpc.com", "https://rpc.ankr.com/polygon"],
+    chainId: 137, symbol: "POL",
+  },
 };
 
 export const TOKEN_CONTRACTS: Record<string, { address: string; decimals: number }> = {
@@ -72,14 +96,41 @@ function toHex(bytes: Uint8Array): string {
   return "0x" + bytesToHex(bytes);
 }
 
-async function rpcCall(rpcUrl: string, method: string, params: any[]) {
-  const res = await fetch(rpcUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params })
-  });
-  const json = await res.json();
-  return json.result;
+const RPC_TIMEOUT_MS = 10_000;
+
+async function rpcCallOnce(url: string, method: string, params: any[]): Promise<any> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), RPC_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`RPC HTTP ${res.status}`);
+    const json = await res.json();
+    if (json.error) throw new Error(json.error.message ?? "RPC error");
+    return json.result;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Tries the primary RPC, then each fallback in order.
+// Surfaces a clear, user-facing message instead of the raw browser "Load failed".
+async function rpcCall(rpcUrl: string, method: string, params: any[], fallbacks: string[] = []): Promise<any> {
+  const urls = [rpcUrl, ...fallbacks];
+  let lastErr: unknown;
+  for (const url of urls) {
+    try {
+      return await rpcCallOnce(url, method, params);
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  const msg = lastErr instanceof Error ? lastErr.message : String(lastErr);
+  throw new Error(`Network error — could not reach the blockchain node. Check your connection and try again. (${msg})`);
 }
 
 async function derivePrivateKey(mnemonic: string) {
@@ -160,11 +211,11 @@ export async function getEVMBalance(
   const tokenEntry = TOKEN_CONTRACTS[currency];
   if (tokenEntry) {
     const data = "0x70a08231" + address.replace("0x", "").padStart(64, "0");
-    const result = await rpcCall(config.rpcUrl, "eth_call", [{ to: tokenEntry.address, data }, "latest"]);
+    const result = await rpcCall(config.rpcUrl, "eth_call", [{ to: tokenEntry.address, data }, "latest"], config.rpcFallbacks);
     return (BigInt(result) / BigInt(10 ** tokenEntry.decimals)).toString();
   }
 
-  const balance = await rpcCall(config.rpcUrl, "eth_getBalance", [address, "latest"]);
+  const balance = await rpcCall(config.rpcUrl, "eth_getBalance", [address, "latest"], config.rpcFallbacks);
   return (BigInt(balance) / BigInt(1e18)).toString();
 }
 
@@ -183,9 +234,9 @@ export async function signEVMTransaction(
   const config = CHAIN_CONFIGS[baseChain] || CHAIN_CONFIGS["ETH"];
 
   const nonce = request.nonce ??
-    parseInt(await rpcCall(config.rpcUrl, "eth_getTransactionCount", [from, "pending"]), 16);
+    parseInt(await rpcCall(config.rpcUrl, "eth_getTransactionCount", [from, "pending"], config.rpcFallbacks), 16);
 
-  const gasPrice = BigInt(request.gasPrice ?? await rpcCall(config.rpcUrl, "eth_gasPrice", []));
+  const gasPrice = BigInt(request.gasPrice ?? await rpcCall(config.rpcUrl, "eth_gasPrice", [], config.rpcFallbacks));
 
   let gasLimit = request.gasLimit ? BigInt(request.gasLimit) : BigInt(21000);
 
@@ -269,8 +320,8 @@ export async function signEVMContractCall(
     const config = CHAIN_CONFIGS[request.chain.toUpperCase()] || CHAIN_CONFIGS.ETH;
 
     const nonce = request.nonce ??
-      parseInt(await rpcCall(config.rpcUrl, "eth_getTransactionCount", [from, "pending"]), 16);
-    const gasPrice = BigInt(request.gasPrice ?? await rpcCall(config.rpcUrl, "eth_gasPrice", []));
+      parseInt(await rpcCall(config.rpcUrl, "eth_getTransactionCount", [from, "pending"], config.rpcFallbacks), 16);
+    const gasPrice = BigInt(request.gasPrice ?? await rpcCall(config.rpcUrl, "eth_gasPrice", [], config.rpcFallbacks));
     const valueWei = BigInt(request.valueWei ?? "0");
 
     let gasLimit: bigint;
@@ -279,7 +330,7 @@ export async function signEVMContractCall(
     } else {
       const est = await rpcCall(config.rpcUrl, "eth_estimateGas", [
         { from, to: request.to, value: "0x" + valueWei.toString(16), data: request.data },
-      ]);
+      ], config.rpcFallbacks);
       // 25% safety buffer; floor 60_000.
       gasLimit = (BigInt(est) * 125n) / 100n;
       if (gasLimit < 60_000n) gasLimit = 60_000n;
@@ -313,7 +364,7 @@ export async function broadcastEVMTransaction(
   chain: string
 ): Promise<string> {
   const config = CHAIN_CONFIGS[chain] || CHAIN_CONFIGS["ETH"];
-  return await rpcCall(config.rpcUrl, "eth_sendRawTransaction", [signedTx]);
+  return await rpcCall(config.rpcUrl, "eth_sendRawTransaction", [signedTx], config.rpcFallbacks);
 }
 
 /* -------------------------------------------------------------------------- */
