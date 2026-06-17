@@ -435,26 +435,6 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
 
   // ── Send-from-wallet handlers ─────────────────────────
 
-  const handleSendFromWalletWithMnemonic = async (mnemonic: string) => {
-    const wallet = network === "SOL" ? userSolWallet : userEvmWallet;
-    if (!wallet || !depositAddress || !amount) return;
-    setSendLoading(true); setSendError(null); setSendTxHash(null); setSendTxUrl(null);
-    try {
-      const result = await broadcastDeposit({
-        coin, network, amount, mnemonic, depositAddress, walletAddress: wallet.address,
-        contractAddress: selectedCoinInfo?.contractAddress,
-        decimals: selectedCoinInfo?.decimals,
-        isNative: selectedCoinInfo?.isNative,
-      });
-      setSendTxHash(result.txHash); setSendTxUrl(result.explorerUrl); setSendPassword("");
-      toast({ title: "Deposit sent!", description: "Transaction broadcast successfully." });
-    } catch (err: any) {
-      setSendError(err.message ?? "Transaction failed. Please try again.");
-    } finally {
-      setSendLoading(false);
-    }
-  };
-
   const handleSendFromWallet = async () => {
     if (!user || !depositAddress || !amount) return;
     const wallet = network === "SOL" ? userSolWallet : userEvmWallet;
@@ -475,15 +455,30 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
     setSendCooldownUntil(now + SEND_COOLDOWN_MS);
     setSendLoading(true);
     setSendError(null);
+    setSendTxHash(null);
+    setSendTxUrl(null);
     try {
       const vaultKey = wallet.encryptedMnemonic ?? wallet.encryptedPrivateKey;
       if (!vaultKey) throw new Error("Wallet data not found. Please recreate your wallet.");
-      const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
-      const mnemonic = await nonCustodialWalletManager.decryptPrivateKey(vaultKey, sendPassword, user.id);
-      await handleSendFromWalletWithMnemonic(mnemonic);
+      // Pass vault + password directly — no main-thread mnemonic decryption
+      const result = await broadcastDeposit({
+        coin, network, amount,
+        vault: vaultKey,
+        password: sendPassword,
+        depositAddress,
+        walletAddress: wallet.address,
+        contractAddress: selectedCoinInfo?.contractAddress,
+        decimals: selectedCoinInfo?.decimals,
+        isNative: selectedCoinInfo?.isNative,
+      });
+      setSendTxHash(result.txHash);
+      setSendTxUrl(result.explorerUrl);
+      setSendPassword("");
+      toast({ title: "Deposit sent!", description: "Transaction broadcast successfully." });
     } catch (err: any) {
-      setSendLoading(false);
       setSendError(err.message ?? "Transaction failed. Please try again.");
+    } finally {
+      setSendLoading(false);
     }
   };
 
