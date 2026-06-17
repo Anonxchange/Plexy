@@ -1,5 +1,16 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { devLog } from "@/lib/dev-logger";
+
+function safeOpenUrl(url: string | undefined | null) {
+  if (!url) return;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return;
+    window.open(url, "_blank", "noopener,noreferrer");
+  } catch { /* invalid URL — do nothing */ }
+}
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,7 +110,7 @@ export default function AdminVerificationsPage() {
 
   // Log any query errors
   if (queryError) {
-    console.error("Query error:", queryError);
+    devLog.error("Query error:", queryError);
   }
 
   const approveVerification = useMutation({
@@ -132,13 +143,13 @@ export default function AdminVerificationsPage() {
       return { success: true };
     },
     onSuccess: () => {
-      console.log("✅ Approve mutation successful - invalidating queries");
+      devLog.info("Approve mutation successful - invalidating queries");
       queryClient.invalidateQueries({ queryKey: ["admin-verifications"] });
       setSelectedVerification(null);
       alert("Verification approved successfully!");
     },
     onError: (error) => {
-      console.error("❌ Approve mutation error:", error);
+      devLog.error("Approve mutation error:", error);
       alert("Failed to approve verification: " + error.message);
     }
   });
@@ -311,7 +322,6 @@ export default function AdminVerificationsPage() {
                     <Button
                       size="sm"
                       onClick={() => {
-                        console.log("Review button clicked for verification:", verification.id);
                         setSelectedVerification(verification);
                       }}
                       variant="outline"
@@ -322,9 +332,6 @@ export default function AdminVerificationsPage() {
                     <Button
                       size="sm"
                       onClick={() => {
-                        console.log("🚀 Quick approve button clicked!");
-                        console.log("Verification ID:", verification.id);
-                        console.log("Verification data:", verification);
                         approveVerification.mutate(verification.id);
                       }}
                       disabled={approveVerification.isPending}
@@ -336,7 +343,6 @@ export default function AdminVerificationsPage() {
                       size="sm"
                       variant="destructive"
                       onClick={() => {
-                        console.log("Reject button clicked, opening dialog for:", verification.id);
                         setSelectedVerification(verification);
                       }}
                     >
@@ -382,7 +388,6 @@ export default function AdminVerificationsPage() {
                     variant="destructive"
                     onClick={() => {
                       if (confirm(`Are you sure you want to remove this verification for @${verification.user_profiles.username}?`)) {
-                        console.log("Removing verification:", verification.id);
                         setRejectionReason("Removed by admin");
                         rejectVerification.mutate(verification.id);
                       }
@@ -463,7 +468,7 @@ export default function AdminVerificationsPage() {
                         src={selectedVerification.document_url} 
                         alt="Identity document front" 
                         className="w-full rounded-lg border hover:border-primary transition-colors cursor-pointer"
-                        onClick={() => window.open(selectedVerification.document_url, '_blank')}
+                        onClick={() => safeOpenUrl(selectedVerification.document_url)}
                         onError={(e) => {
                           const img = e.target as HTMLImageElement;
                           img.style.display = 'none';
@@ -483,7 +488,7 @@ export default function AdminVerificationsPage() {
                         src={selectedVerification.document_back_url} 
                         alt="Identity document back" 
                         className="w-full rounded-lg border hover:border-primary transition-colors cursor-pointer"
-                        onClick={() => window.open(selectedVerification.document_back_url, '_blank')}
+                        onClick={() => safeOpenUrl(selectedVerification.document_back_url)}
                         onError={(e) => {
                           const img = e.target as HTMLImageElement;
                           img.style.display = 'none';
@@ -503,7 +508,7 @@ export default function AdminVerificationsPage() {
                         src={selectedVerification.liveness_image_url} 
                         alt="Liveness capture" 
                         className="w-full rounded-lg border hover:border-primary transition-colors cursor-pointer"
-                        onClick={() => window.open(selectedVerification.liveness_image_url, '_blank')}
+                        onClick={() => safeOpenUrl(selectedVerification.liveness_image_url)}
                         onError={(e) => {
                           const img = e.target as HTMLImageElement;
                           img.style.display = 'none';
@@ -523,7 +528,7 @@ export default function AdminVerificationsPage() {
                         src={selectedVerification.address_proof} 
                         alt="Address proof" 
                         className="w-full rounded-lg border hover:border-primary transition-colors cursor-pointer"
-                        onClick={() => window.open(selectedVerification.address_proof, '_blank')}
+                        onClick={() => safeOpenUrl(selectedVerification.address_proof)}
                         onError={(e) => {
                           const img = e.target as HTMLImageElement;
                           img.style.display = 'none';
@@ -592,7 +597,6 @@ export default function AdminVerificationsPage() {
             <div className="flex gap-2 pt-4 border-t">
               <Button
                 onClick={() => {
-                  console.log("Approve button clicked for:", selectedVerification.id);
                   approveVerification.mutate(selectedVerification.id);
                 }}
                 disabled={approveVerification.isPending}
@@ -608,7 +612,6 @@ export default function AdminVerificationsPage() {
                     alert("Please provide a rejection reason");
                     return;
                   }
-                  console.log("Reject button clicked for:", selectedVerification.id);
                   rejectVerification.mutate(selectedVerification.id);
                 }}
                 disabled={rejectVerification.isPending}

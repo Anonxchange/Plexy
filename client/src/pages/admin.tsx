@@ -3,101 +3,55 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Shield, Users, FileCheck, Settings, BarChart3, Gift, Lock } from '@/lib/icons';
+import { Shield, Users, FileCheck, Settings, BarChart3, Gift } from '@/lib/icons';
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
-
-const ADMIN_PASSWORD = "Pexlyzes";
-const SESSION_KEY = "pexly_admin_session";
 
 export default function AdminPage() {
   const supabase = createClient();
   const { user } = useAuth();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [checking, setChecking] = useState(true);
   const [, setLocation] = useLocation();
-  const [checkingSession, setCheckingSession] = useState(true);
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState(false);
 
   useEffect(() => {
-    const checkAdminAccess = async () => {
-      if (sessionStorage.getItem(SESSION_KEY) === "true") {
-        setIsAuthenticated(true);
-        setCheckingSession(false);
-        return;
-      }
-      if (user?.id) {
-        try {
-          const { data: profile } = await supabase
-            .from('user_profiles')
-            .select('is_admin')
-            .eq('id', user.id)
-            .single();
-          if (profile?.is_admin) {
-            setIsAuthenticated(true);
-          }
-        } catch {}
-      }
-      setCheckingSession(false);
-    };
-
-    checkAdminAccess();
+    if (!user?.id) {
+      setChecking(false);
+      return;
+    }
+    supabase
+      .from("user_profiles")
+      .select("is_admin")
+      .eq("id", user.id)
+      .single()
+      .then(({ data }) => {
+        setIsAdmin(!!data?.is_admin);
+        setChecking(false);
+      })
+      .catch(() => setChecking(false));
   }, [user]);
 
-  const handlePasswordLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password === ADMIN_PASSWORD) {
-      sessionStorage.setItem(SESSION_KEY, "true");
-      setIsAuthenticated(true);
-      setError(false);
-    } else {
-      setError(true);
-      setPassword("");
-    }
-  };
-
-  if (checkingSession) {
+  if (checking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">Checking access...</p>
-          </CardContent>
-        </Card>
+        <p className="text-muted-foreground">Checking access…</p>
       </div>
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="w-full max-w-sm">
-          <CardHeader className="text-center">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
-              <Lock className="h-6 w-6 text-primary" />
+        <Card className="w-full max-w-sm text-center">
+          <CardHeader>
+            <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-2">
+              <Shield className="h-6 w-6 text-destructive" />
             </div>
-            <CardTitle>Admin Access</CardTitle>
-            <CardDescription>Enter your admin password to continue</CardDescription>
+            <CardTitle>Access Denied</CardTitle>
+            <CardDescription>
+              Your account does not have admin privileges.
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handlePasswordLogin} className="space-y-3">
-              <Input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={e => { setPassword(e.target.value); setError(false); }}
-                autoFocus
-                className={error ? "border-destructive focus-visible:ring-destructive" : ""}
-              />
-              {error && (
-                <p className="text-xs text-destructive">Incorrect password. Try again.</p>
-              )}
-              <Button type="submit" className="w-full bg-primary text-black hover:bg-primary/90 font-semibold">
-                Sign In
-              </Button>
-            </form>
-          </CardContent>
         </Card>
       </div>
     );
@@ -188,7 +142,16 @@ export default function AdminPage() {
               <CardContent>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">
-                    Status: <span className={section.badge === "Active" ? "text-green-600 font-semibold" : "text-yellow-600 font-semibold"}>{section.badge}</span>
+                    Status:{" "}
+                    <span
+                      className={
+                        section.badge === "Active"
+                          ? "text-green-600 font-semibold"
+                          : "text-yellow-600 font-semibold"
+                      }
+                    >
+                      {section.badge}
+                    </span>
                   </span>
                   {section.badge === "Active" && (
                     <Button variant="outline" size="sm">

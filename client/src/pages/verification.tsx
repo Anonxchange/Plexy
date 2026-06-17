@@ -497,13 +497,21 @@ export default function VerificationPage() {
       }
 
       if (data?.session_url) {
-        // Redirect user to the KYC provider
+        // Validate the URL before redirecting — only follow https:// links
+        try {
+          const parsed = new URL(data.session_url);
+          if (parsed.protocol !== "https:") {
+            throw new Error("KYC provider returned an insecure redirect URL");
+          }
+        } catch {
+          throw new Error("Invalid or insecure session URL from KYC provider");
+        }
         window.location.href = data.session_url;
       } else {
         throw new Error('No session URL returned from KYC provider');
       }
     } catch (error: any) {
-      console.error('KYC session creation error:', error);
+      devLog.error('KYC session creation error:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to start verification. Please try again.",
