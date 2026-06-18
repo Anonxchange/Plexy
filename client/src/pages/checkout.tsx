@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PexlyIcon } from "@/components/pexly-icon";
 import {
   Lock,
@@ -23,9 +24,11 @@ import {
   CheckCircle2,
   ChevronRight,
   HeartHandshake,
+  Smartphone,
 } from '@/lib/icons';
 import { getExchangeRates } from "@/lib/crypto-prices";
 import NowPaymentsCheckout from "@/components/nowpayments-checkout";
+import { usePayPal } from "@/hooks/usePaypal";
 
 type DeliveryTarget = "self" | "gift";
 
@@ -68,14 +71,14 @@ export function Checkout() {
   const [deliveryTarget, setDeliveryTarget] = useState<DeliveryTarget>("self");
   const [showOrderSummary, setShowOrderSummary] = useState(false);
   const [rates, setRates] = useState<Record<string, number>>({ USD: 1 });
-  const [pendingOrder, setPendingOrder] = useState<PendingOrder | null>(null);
-
-  useEffect(() => {
+  const [pendingOrder] = useState<PendingOrder | null>(() => {
     try {
       const raw = sessionStorage.getItem("pexly_pending_order");
-      if (raw) setPendingOrder(JSON.parse(raw));
-    } catch {}
-  }, []);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  });
+  const [pendingDeliveryEmail, setPendingDeliveryEmail] = useState("");
+  const { checkout: paypalCheckout, loading: paypalLoading } = usePayPal();
 
   const [recipientEmail, setRecipientEmail] = useState("");
   const [recipientName, setRecipientName] = useState("");
@@ -139,9 +142,38 @@ export function Checkout() {
     );
   }
 
-  if (pendingOrder && (!items || items.length === 0)) {
+  if (pendingOrder) {
     const processingFee = 0.5;
     const pendingTotal = pendingOrder.amount + processingFee;
+    const deliveryEmail = pendingDeliveryEmail || buyerEmail;
+
+    const handleOrderSuccess = () => {
+      sessionStorage.removeItem("pexly_pending_order");
+      try {
+        const saved = JSON.parse(localStorage.getItem("pexly_digital_orders") || "[]");
+        saved.unshift({
+          id: `${pendingOrder.type}_${Date.now()}`,
+          type: pendingOrder.type,
+          title: pendingOrder.title,
+          amount: pendingTotal,
+          currency: pendingOrder.currency.toUpperCase(),
+          placedAt: new Date().toISOString(),
+          status: "fulfilled",
+          ...pendingOrder.metadata,
+        });
+        localStorage.setItem("pexly_digital_orders", JSON.stringify(saved.slice(0, 100)));
+      } catch {}
+      toast({ title: "Payment confirmed!", description: "Your order has been placed successfully." });
+      setLocation("/account-settings?section=shop-history");
+    };
+
+    const getPayPalPayload = () => {
+      if (pendingOrder.type === "topup") {
+        return { productType: "airtime" as const, operatorId: Number(pendingOrder.metadata.operatorId), amount: pendingOrder.amount };
+      }
+      return { productType: "total" as const, amount: pendingOrder.amount, currency: pendingOrder.currency.toUpperCase() };
+    };
+
     return (
       <BrandShell>
         <main className="max-w-6xl mx-auto px-4 py-8">
@@ -156,49 +188,146 @@ export function Checkout() {
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-12">
             <div className="space-y-8">
-              {/* Contact */}
-              <section>
-                <SectionTitle step={1} title="Contact" sub="We send your receipt and updates here." />
-                <div className="space-y-3 rounded-2xl border border-border/60 bg-card p-5">
-                  <div>
-                    <FieldLabel>Email</FieldLabel>
-                    <Input type="email" defaultValue={buyerEmail} className="h-11" readOnly />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Signed in as <strong className="text-foreground">{buyerEmail}</strong>
-                  </p>
-                </div>
-              </section>
 
-              {/* Payment */}
+              {/* Step 1 — order-type-specific details */}
+              {pendingOrder.type === "giftcard" && (
+                <section>
+                  <SectionTitle step={1} title="Delivery" sub="Where should we send the gift card code?" />
+                  <div className="space-y-3 rounded-2xl border border-border/60 bg-card p-5">
+                    <div>
+                      <FieldLabel>Email address</FieldLabel>
+                      <Input
+                        type="email"
+                        value={deliveryEmail}
+                        onChange={(e) => setPendingDeliveryEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        className="h-11"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Signed in as <strong className="text-foreground">{buyerEmail}</strong> — change above to send as a gift.
+                    </p>
+                  </div>
+                </section>
+              )}
+
+              {pendingOrder.type === "topup" && (
+                <section>
+                  <SectionTitle step={1} title="Confirm top-up details" sub="We will refill this number immediately after payment." />
+                  <div className="rounded-2xl border border-border/60 bg-card p-5">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Smartphone className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-base font-bold">{pendingOrder.metadata?.recipientPhone}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{pendingOrder.metadata?.operatorName}</p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {pendingOrder.type === "utility" && (
+                <section>
+                  <SectionTitle step={1} title="Confirm account details" sub="We will pay this bill immediately after payment." />
+                  <div className="rounded-2xl border border-border/60 bg-card p-5">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Zap className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-base font-bold">{pendingOrder.metadata?.accountNumber}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{pendingOrder.metadata?.providerName}</p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* Step 2 — Payment tabs */}
               <section>
                 <SectionTitle step={2} title="Payment" sub="All transactions are encrypted end-to-end." />
-                <div className="rounded-2xl border border-border/60 bg-card p-5">
-                  <NowPaymentsCheckout
-                    amount={pendingTotal}
-                    currency={pendingOrder.currency}
-                    description={pendingOrder.description}
-                    metadata={pendingOrder.metadata}
-                    onPaymentSuccess={() => {
-                      sessionStorage.removeItem("pexly_pending_order");
-                      try {
-                        const saved = JSON.parse(localStorage.getItem("pexly_digital_orders") || "[]");
-                        saved.unshift({
-                          id: `${pendingOrder.type}_${Date.now()}`,
-                          type: pendingOrder.type,
-                          title: pendingOrder.title,
-                          amount: pendingTotal,
-                          currency: pendingOrder.currency.toUpperCase(),
-                          placedAt: new Date().toISOString(),
-                          status: "fulfilled",
-                          ...pendingOrder.metadata,
-                        });
-                        localStorage.setItem("pexly_digital_orders", JSON.stringify(saved.slice(0, 100)));
-                      } catch {}
-                      toast({ title: "Payment confirmed!", description: "Your order has been placed successfully." });
-                      setLocation("/account-settings?section=shop-history");
-                    }}
-                  />
+                <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">
+                  <Tabs defaultValue="crypto" className="w-full">
+                    <TabsList className="w-full h-auto p-0 bg-transparent border-b border-border rounded-none grid grid-cols-3">
+                      <TabsTrigger value="crypto" className="flex flex-col gap-1.5 py-3 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
+                        <div className="flex gap-1">
+                          <span className="text-base">₿</span>
+                        </div>
+                        <span className="text-[11px] font-bold">Crypto</span>
+                      </TabsTrigger>
+                      <TabsTrigger value="paypal" className="flex flex-col gap-1.5 py-3 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" className="h-4" alt="PayPal" />
+                        <span className="text-[11px] font-bold">PayPal</span>
+                      </TabsTrigger>
+                      <TabsTrigger value="card" className="flex flex-col gap-1.5 py-3 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
+                        <div className="flex gap-1">
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" className="h-3" alt="Visa" />
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" className="h-4" alt="Mastercard" />
+                        </div>
+                        <span className="text-[11px] font-bold">Card</span>
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="crypto" className="p-6 focus-visible:outline-none focus-visible:ring-0">
+                      <NowPaymentsCheckout
+                        amount={pendingTotal}
+                        currency={pendingOrder.currency}
+                        description={pendingOrder.description}
+                        metadata={pendingOrder.metadata}
+                        onPaymentSuccess={handleOrderSuccess}
+                      />
+                    </TabsContent>
+
+                    <TabsContent value="paypal" className="p-6 text-center space-y-4 focus-visible:outline-none focus-visible:ring-0">
+                      <p className="text-sm text-muted-foreground">You will be redirected to PayPal to complete your payment securely.</p>
+                      <Button
+                        className="w-full h-12 bg-[#0070BA] text-white hover:bg-[#005ea6] font-bold rounded-2xl gap-2"
+                        disabled={paypalLoading}
+                        onClick={async () => {
+                          const result = await paypalCheckout(getPayPalPayload());
+                          if (result) handleOrderSuccess();
+                        }}
+                      >
+                        {paypalLoading
+                          ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Processing...</>
+                          : <><img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" className="h-4" alt="" /> Continue to PayPal</>
+                        }
+                      </Button>
+                    </TabsContent>
+
+                    <TabsContent value="card" className="p-6 space-y-4 focus-visible:outline-none focus-visible:ring-0">
+                      <div className="space-y-3">
+                        <div className="space-y-1.5">
+                          <FieldLabel>Card number</FieldLabel>
+                          <Input placeholder="1234 5678 9012 3456" className="h-12 bg-background border-border rounded-2xl" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <FieldLabel>Expiry</FieldLabel>
+                            <Input placeholder="MM / YY" className="h-12 bg-background border-border rounded-2xl" />
+                          </div>
+                          <div className="space-y-1.5">
+                            <FieldLabel>CVV</FieldLabel>
+                            <Input placeholder="•••" className="h-12 bg-background border-border rounded-2xl" />
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <FieldLabel>Name on card</FieldLabel>
+                          <Input placeholder="Full name" className="h-12 bg-background border-border rounded-2xl" />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-center gap-2 text-muted-foreground py-1">
+                        <Lock className="h-3.5 w-3.5" />
+                        <span className="text-xs">256-bit encrypted payment</span>
+                      </div>
+                      <Button className="w-full h-12 font-bold rounded-2xl gap-2">
+                        <Lock className="h-4 w-4" />
+                        Pay {pendingOrder.currency.toUpperCase()} {pendingTotal.toFixed(2)}
+                      </Button>
+                    </TabsContent>
+                  </Tabs>
                 </div>
               </section>
 
@@ -250,6 +379,22 @@ export function Checkout() {
                 <div className="flex items-baseline justify-between">
                   <span className="text-base font-semibold">Total</span>
                   <span className="text-2xl font-extrabold">{pendingOrder.currency.toUpperCase()} {pendingTotal.toFixed(2)}</span>
+                </div>
+
+                {/* Trust badges */}
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  {[
+                    { icon: Zap, label: "Instant delivery", sub: "On payment confirm" },
+                    { icon: ShieldCheck, label: "Secure payment", sub: "256-bit SSL" },
+                  ].map(({ icon: Icon, label, sub }) => (
+                    <div key={label} className="rounded-xl border border-border/60 bg-card/50 p-3 flex items-center gap-2.5">
+                      <Icon className="h-4 w-4 text-primary flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold leading-tight">{label}</p>
+                        <p className="text-xs text-muted-foreground leading-tight">{sub}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </aside>
