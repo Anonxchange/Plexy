@@ -575,14 +575,14 @@ function PolymarketFundModal({ open, mode, onOpenChange, walletInfo, userEvmAddr
       const wallets = await nonCustodialWalletManager.getWalletsFromStorage(user.id);
       const evmWallet = wallets.find(w => w.address.startsWith("0x"));
       if (!evmWallet) { toast.error("No EVM wallet found"); return; }
-      const mnemonic = await nonCustodialWalletManager.getWalletMnemonic(evmWallet.id, password, user.id);
-      if (!mnemonic) { toast.error("Incorrect password"); return; }
+      const vault = evmWallet.encryptedMnemonic ?? evmWallet.encryptedPrivateKey;
+      if (!vault) { toast.error("Wallet data missing — please recreate your wallet"); return; }
       let result: { txHash: string; explorerUrl: string };
       if (tab === "deposit") {
-        result = await approveM.mutateAsync({ mnemonic, amount });
+        result = await approveM.mutateAsync({ vault, password, amount });
         toast.success(`Approved $${amount} USDC.e for Polymarket trading`);
       } else {
-        result = await revokeM.mutateAsync({ mnemonic });
+        result = await revokeM.mutateAsync({ vault, password });
         toast.success("Approval revoked — your USDC.e stays in your wallet");
       }
       setTxResult(result);

@@ -615,17 +615,18 @@ function StakeDialog({
       );
       if (!evm) throw new Error("No EVM wallet found on this account");
 
-      const mnemonic = await nonCustodialWalletManager.getWalletMnemonic(evm.id, pwd, user.id);
-      if (!mnemonic) throw new Error("Could not unlock wallet — check your password");
-      if (!isWalletUnlocked) setSessionPassword(pwd);
+      const vault = evm.encryptedMnemonic ?? evm.encryptedPrivateKey;
+      if (!vault) throw new Error("Wallet data not found — please recreate your wallet");
 
       const stepResults: StakeStepResult[] = [];
-      await executeStake(mnemonic, product, amount, evm.address, {
+      await executeStake(vault, pwd, product, amount, evm.address, {
         onStep: (s) => {
           stepResults.push(s);
           setResults([...stepResults]);
         },
       });
+      // Password verified by the worker during first contract call
+      if (!isWalletUnlocked) setSessionPassword(pwd);
       setStep("done");
       toast({ title: "Stake submitted", description: `Your ${product.inputSymbol} stake is on its way.` });
     } catch (e: any) {
