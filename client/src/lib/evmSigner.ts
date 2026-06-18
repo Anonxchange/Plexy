@@ -162,8 +162,16 @@ export async function deriveEVMPrivateKey(mnemonic: string): Promise<Uint8Array>
  * Use this instead of signEVMMessage when you already have the key in memory.
  */
 export async function signEVMMessageWithKey(privKey: Uint8Array, message: string): Promise<string> {
-  const prefix = `\x19Ethereum Signed Message:\n${message.length}`;
-  const msgHash = keccak_256(new TextEncoder().encode(prefix + message));
+  // FIX: must use byte-length (not JS character count) for the EIP-191 prefix.
+  // For multi-byte Unicode (emoji, CJK, etc.) message.length !== encoded byte count,
+  // producing a hash no standard wallet verifier can reproduce.
+  const msgBytes = new TextEncoder().encode(message);
+  const prefix = `\x19Ethereum Signed Message:\n${msgBytes.byteLength}`;
+  const prefixBytes = new TextEncoder().encode(prefix);
+  const combined = new Uint8Array(prefixBytes.length + msgBytes.length);
+  combined.set(prefixBytes);
+  combined.set(msgBytes, prefixBytes.length);
+  const msgHash = keccak_256(combined);
   const sigBytes = await secp.signAsync(msgHash, privKey, { lowS: true, format: 'recovered', prehash: false } as any);
   const recovery = sigBytes[0];
   const r = bytesToHex(sigBytes.slice(1, 33));
@@ -174,9 +182,13 @@ export async function signEVMMessageWithKey(privKey: Uint8Array, message: string
 
 async function deriveAddress(mnemonic: string) {
   const priv = await derivePrivateKey(mnemonic);
-  const pub = secp.getPublicKey(priv, false);
-  const hash = keccak_256(pub.slice(1));
-  return "0x" + bytesToHex(hash.slice(-20));
+  try {
+    const pub = secp.getPublicKey(priv, false);
+    const hash = keccak_256(pub.slice(1));
+    return "0x" + bytesToHex(hash.slice(-20));
+  } finally {
+    wipeBytes(priv);
+  }
 }
 
 /**

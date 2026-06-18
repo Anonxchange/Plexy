@@ -98,6 +98,7 @@ export async function deriveVaultKey(password: string): Promise<DerivedVaultKey>
     false,
     ["encrypt"]
   );
+  keyBuffer.fill(0);
   return { cryptoKey, salt, kdfParams: DEFAULT_KDF_PARAMS, origin };
 }
 
@@ -151,6 +152,7 @@ export async function encryptVault(mnemonic: string, password: string): Promise<
     false,
     ["encrypt"]
   );
+  keyBuffer.fill(0);
 
   const gcmParams: AesGcmParams = { name: "AES-GCM", iv };
   if (origin) gcmParams.additionalData = encoder.encode(origin);
@@ -204,6 +206,7 @@ export async function decryptVault(vault: EncryptedVault, password: string): Pro
       false,
       ["decrypt"]
     );
+    keyBuffer.fill(0);
 
     const gcmParams: AesGcmParams = { name: "AES-GCM", iv };
     if (vault.origin) gcmParams.additionalData = encoder.encode(vault.origin);
@@ -302,6 +305,7 @@ export async function migrateLegacyVault(legacyData: any, password: string, user
       const ciphertext = combined.slice(12);
 
       const cryptoKey = await crypto.subtle.importKey("raw", keyBuffer, { name: "AES-GCM" }, false, ["decrypt"]);
+      keyBuffer.fill(0);
       const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, cryptoKey, ciphertext);
       mnemonic = new TextDecoder().decode(decrypted);
     } catch (e) {

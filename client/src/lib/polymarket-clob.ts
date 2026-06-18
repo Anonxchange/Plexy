@@ -1,4 +1,5 @@
-import { signEVMContractCall, broadcastEVMTransaction, CHAIN_CONFIGS } from './evmSigner';
+import { broadcastEVMTransaction, CHAIN_CONFIGS } from './evmSigner';
+import { signEVMContractCallFromVault } from '@/hooks/use-signing-worker';
 import { keccak_256 } from '@noble/hashes/sha3';
 import { bytesToHex } from '@noble/hashes/utils';
 
@@ -108,7 +109,8 @@ export async function getPolymarketWalletInfo(address: string): Promise<Polymark
 //     pUSD to pull — the UI shows the pUSD balance separately.
 //   - Amount is encoded as a uint256 with 6 decimals (same as USDC/pUSD).
 export async function approveUsdcToPolymarket(
-  mnemonic: string,
+  vault:    unknown,
+  password: string,
   amount:   string,
 ): Promise<{ txHash: string; explorerUrl: string }> {
   const amountWei = BigInt(Math.round(parseFloat(amount) * 10 ** USDC_DECIMALS));
@@ -120,11 +122,11 @@ export async function approveUsdcToPolymarket(
     pad(POLY_CTF_EXCHANGE) +
     amountWei.toString(16).padStart(64, '0');
 
-  const { signedTx, txHash } = await signEVMContractCall(mnemonic, {
+  const { signedTx, txHash } = await signEVMContractCallFromVault(vault, password, {
     chain: 'POL',
-    to:    POLY_PUSD_ADDRESS,     // token we're approving FROM (pUSD)
+    to:    POLY_PUSD_ADDRESS,
     data,
-  });
+  }) as { signedTx: string; txHash: string };
   await broadcastEVMTransaction(signedTx, 'POL');
   return { txHash, explorerUrl: `https://polygonscan.com/tx/${txHash}` };
 }
@@ -132,7 +134,8 @@ export async function approveUsdcToPolymarket(
 // ─── Revoke pUSD allowance from CTF Exchange ─────────────────────────────────
 // Sets allowance to 0 — safe to call at any time.
 export async function revokeUsdcFromPolymarket(
-  mnemonic: string,
+  vault:    unknown,
+  password: string,
 ): Promise<{ txHash: string; explorerUrl: string }> {
   // pUSD.approve(CTF_EXCHANGE, 0)
   const data =
@@ -141,11 +144,11 @@ export async function revokeUsdcFromPolymarket(
     pad(POLY_CTF_EXCHANGE) +
     '0'.padStart(64, '0');
 
-  const { signedTx, txHash } = await signEVMContractCall(mnemonic, {
+  const { signedTx, txHash } = await signEVMContractCallFromVault(vault, password, {
     chain: 'POL',
-    to:    POLY_PUSD_ADDRESS,     // same token as above
+    to:    POLY_PUSD_ADDRESS,
     data,
-  });
+  }) as { signedTx: string; txHash: string };
   await broadcastEVMTransaction(signedTx, 'POL');
   return { txHash, explorerUrl: `https://polygonscan.com/tx/${txHash}` };
 }

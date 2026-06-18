@@ -8,8 +8,8 @@
  *   - Aave V3     : USDT -> aUSDT        (Ethereum, Polygon, Arbitrum)
  *
  * All encoders return 0x-prefixed hex calldata that can be passed straight to
- * `signEVMContractCall(mnemonic, { chain, to, data, valueWei })` from
- * `lib/evmSigner.ts`.
+ * `signEVMContractCallFromVault(vault, password, { chain, to, data, valueWei })`
+ * from `hooks/use-signing-worker.ts` — mnemonic never leaves the worker.
  *
  * NOTE on USDT (Tether) on Ethereum mainnet: the token is non-standard — its
  * `approve` does not return a boolean and reverts when the existing allowance
@@ -19,11 +19,8 @@
 
 import { keccak_256 } from "@noble/hashes/sha3";
 import { bytesToHex } from "@noble/hashes/utils";
-import {
-  CHAIN_CONFIGS,
-  signEVMContractCall,
-  broadcastEVMTransaction,
-} from "./evmSigner";
+import { CHAIN_CONFIGS, broadcastEVMTransaction } from "./evmSigner";
+import { signEVMContractCallFromVault } from "@/hooks/use-signing-worker";
 
 /* -------------------------------------------------------------------------- */
 /*                              ABI ENCODING HELPERS                          */
@@ -164,7 +161,7 @@ export interface StakingProduct {
   provider: "Lido" | "Stader" | "Lista DAO" | "Aave V3";
   /** Native chain symbol shown in UI ("Ethereum", "Polygon", "BSC", "Arbitrum"). */
   chainName: string;
-  /** Chain key used by `signEVMContractCall` (matches `CHAIN_CONFIGS`). */
+  /** Chain key used by `signEVMContractCallFromVault` (matches `CHAIN_CONFIGS`). */
   chainKey: "ETH" | "POL" | "BSC" | "ARB";
   /** Token user is depositing. */
   inputSymbol: string;
@@ -341,7 +338,8 @@ export interface StakeFlowOptions {
  * quirk. Returns the list of broadcasted transactions in order.
  */
 export async function executeStake(
-  mnemonic: string,
+  vault: unknown,
+  password: string,
   product: StakingProduct,
   amountHuman: string,
   fromAddress: string,
@@ -369,12 +367,12 @@ export async function executeStake(
       throw new Error(`Unsupported liquid-staking provider: ${product.provider}`);
     }
 
-    const { signedTx, txHash } = await signEVMContractCall(mnemonic, {
+    const { signedTx, txHash } = await signEVMContractCallFromVault(vault, password, {
       chain: product.chainKey,
       to: product.contractAddress,
       data,
       valueWei: amount.toString(),
-    });
+    }) as { signedTx: string; txHash: string };
     await broadcastEVMTransaction(signedTx, product.chainKey);
     const step: StakeStepResult = {
       label: `Stake ${amountHuman} ${product.inputSymbol}`,
@@ -406,12 +404,12 @@ export async function executeStake(
 
     if (current < amount) {
       if (current > 0n && isUsdtMainnet) {
-        const reset = await signEVMContractCall(mnemonic, {
+        const reset = await signEVMContractCallFromVault(vault, password, {
           chain: product.chainKey,
           to: product.inputTokenAddress,
           data: encodeErc20Approve(product.contractAddress, 0n),
           valueWei: "0",
-        });
+        }) as { signedTx: string; txHash: string };
         await broadcastEVMTransaction(reset.signedTx, product.chainKey);
         const step: StakeStepResult = {
           label: `Reset USDT allowance`,
@@ -422,12 +420,12 @@ export async function executeStake(
         opts.onStep?.(step);
       }
 
-      const approve = await signEVMContractCall(mnemonic, {
+      const approve = await signEVMContractCallFromVault(vault, password, {
         chain: product.chainKey,
         to: product.inputTokenAddress,
         data: encodeErc20Approve(product.contractAddress, amount),
         valueWei: "0",
-      });
+      }) as { signedTx: string; txHash: string };
       await broadcastEVMTransaction(approve.signedTx, product.chainKey);
       const step: StakeStepResult = {
         label: `Approve ${amountHuman} ${product.inputSymbol}`,
@@ -439,12 +437,12 @@ export async function executeStake(
     }
 
     // 2. Supply.
-    const supply = await signEVMContractCall(mnemonic, {
+    const supply = await signEVMContractCallFromVault(vault, password, {
       chain: product.chainKey,
       to: product.contractAddress,
       data: encodeAaveSupply(product.inputTokenAddress, amount, fromAddress, 0),
       valueWei: "0",
-    });
+    }) as { signedTx: string; txHash: string };
     await broadcastEVMTransaction(supply.signedTx, product.chainKey);
     const step: StakeStepResult = {
       label: `Supply ${amountHuman} ${product.inputSymbol} to Aave`,

@@ -650,7 +650,7 @@ export async function asterCreateApiKeyV3WithKey(
  * CALLER must wipe `mainPrivKey` after all operations complete.
  */
 export async function asterRegisterAndApproveAgent(
-  mainPrivKey: Uint8Array,
+  signer: (hash: Uint8Array) => Promise<string>,
   userAddress: string,
   signerAddress: string,
   agentName: string,
@@ -672,13 +672,8 @@ export async function asterRegisterAndApproveAgent(
     `ipWhitelist=`,
   ].join('&');
 
-  const hash     = _asterEip712Hash(msg);
-  const sigBytes = await secp.signAsync(hash, mainPrivKey, { lowS: true, format: 'recovered', prehash: false } as any);
-  const recovery = sigBytes[0];
-  const signature = '0x'
-    + bytesToHex(sigBytes.slice(1, 33))
-    + bytesToHex(sigBytes.slice(33, 65))
-    + (recovery + 27).toString(16).padStart(2, '0');
+  const hash      = _asterEip712Hash(msg);
+  const signature = await signer(hash);
 
   const body = new URLSearchParams({
     user:              userAddress,
