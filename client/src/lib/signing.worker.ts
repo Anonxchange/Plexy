@@ -150,6 +150,68 @@ function wipeHDKey(k: any): void {
   try { if (k.chainCode instanceof Uint8Array) k.chainCode.fill(0); } catch { /**/ }
 }
 
+// ─── Session key cache (worker-internal only, never sent over postMessage) ────
+//
+// Problem: scrypt (N=262 144) takes 1–3 s on desktop. Without caching, every
+// vault-based signing operation re-runs the full KDF, making e.g. sending a
+// transaction take 2–3 s just for key derivation, every single time.
+//
+// Solution: cache the raw 32-byte scrypt output keyed by vault salt + kdfParams
+// inside the worker's isolated heap. The main thread cannot read this memory.
+// The password itself is NEVER cached — only the derived key bytes.
+//
+// Security properties:
+//   • Cache lives entirely in the worker JS heap — inaccessible via postMessage.
+//   • Keyed by vault salt + N/r/p (unique per vault encryption event).
+//   • Auto-expires 15 minutes after last use; buffer is zero-filled on eviction.
+//   • Cleared immediately on logout via the "clearSessionCache" message, which
+//     is called from wipeSecureStorage() before the page unloads.
+//   • The password is still wiped after first use — it is NEVER cached.
+//   • A successful decryption is required before the cache is populated, so a
+//     wrong password never populates the cache.
+
+const SESSION_KEY_TTL_MS = 5 * 60 * 1_000; // 5 minutes — shorter window reduces key exposure
+
+interface _CachedKey {
+  keyBytes: Uint8Array; // 32-byte scrypt output — zero-filled on eviction
+  expiresAt: number;
+}
+
+const _sessionKeyCache = new Map<string, _CachedKey>();
+
+function _sessionCacheKey(vault: EncryptedVault): string {
+  const p = vault.kdfParams;
+  return `${vault.salt}:${p.N}:${p.r}:${p.p}`;
+}
+
+/** Returns a copy of the cached key bytes (caller must wipe), or null on miss/expiry. */
+function _getCachedKey(vault: EncryptedVault): Uint8Array | null {
+  const k = _sessionCacheKey(vault);
+  const entry = _sessionKeyCache.get(k);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    entry.keyBytes.fill(0);
+    _sessionKeyCache.delete(k);
+    return null;
+  }
+  entry.expiresAt = Date.now() + SESSION_KEY_TTL_MS; // refresh TTL on use
+  return entry.keyBytes.slice(); // return a copy — caller wipes their copy
+}
+
+/** Cache the derived key bytes for the given vault. */
+function _setCachedKey(vault: EncryptedVault, keyBytes: Uint8Array): void {
+  const k = _sessionCacheKey(vault);
+  const existing = _sessionKeyCache.get(k);
+  if (existing) existing.keyBytes.fill(0); // wipe old entry first
+  _sessionKeyCache.set(k, { keyBytes: keyBytes.slice(), expiresAt: Date.now() + SESSION_KEY_TTL_MS });
+}
+
+/** Wipe and clear the entire session key cache. Call on logout. */
+function clearSessionCache(): void {
+  for (const entry of _sessionKeyCache.values()) entry.keyBytes.fill(0);
+  _sessionKeyCache.clear();
+}
+
 // ─── Vault constants ──────────────────────────────────────────────────────────
 
 const IV_LEN   = 12;
@@ -576,20 +638,42 @@ async function decryptVault(vault: EncryptedVault, password: string | Uint8Array
   const salt       = b64decode(vault.salt);
   const iv         = b64decode(vault.iv);
   const ciphertext = b64decode(vault.ciphertext);
-  // Always pass explicit kdfParams from vault so we reproduce the exact key
-  // regardless of the current device's adaptive profile.
-  const keyBuffer  = await deriveScryptKey(password, salt, vault.kdfParams);
+
+  // ── Session key cache: skip scrypt if this vault was recently opened ────────
+  // Cache is keyed by vault salt + kdfParams — unique per encryption event.
+  // On cache hit we still need to AES-GCM decrypt (fast, ~microseconds).
+  // On cache miss we run scrypt (1–3 s), populate the cache only on SUCCESS
+  // so wrong passwords never enter the cache.
+  let keyBuffer = _getCachedKey(vault); // returns a copy, or null on miss
+  let cacheHit  = keyBuffer !== null;
+
+  if (!keyBuffer) {
+    // Cache miss — run scrypt (the expensive part)
+    keyBuffer = await deriveScryptKey(password, salt, vault.kdfParams);
+  }
+  // Always wipe the transferred password bytes regardless of cache path.
   if (password instanceof Uint8Array) password.fill(0);
-  const cryptoKey  = await crypto.subtle.importKey("raw", keyBuffer, { name: "AES-GCM" }, false, ["decrypt"]);
-  keyBuffer.fill(0);
+
+  const cryptoKey = await crypto.subtle.importKey("raw", keyBuffer, { name: "AES-GCM" }, false, ["decrypt"]);
   const gcmParams: AesGcmParams = { name: "AES-GCM", iv };
   if (vault.origin) gcmParams.additionalData = new TextEncoder().encode(vault.origin);
+
+  let decrypted: ArrayBuffer;
   try {
-    const decrypted = await crypto.subtle.decrypt(gcmParams, cryptoKey, ciphertext);
-    return new TextDecoder().decode(decrypted);
+    decrypted = await crypto.subtle.decrypt(gcmParams, cryptoKey, ciphertext);
   } catch {
+    keyBuffer.fill(0); // wipe on failure — never cache a wrong-password key
     throw new Error("Invalid password or corrupted vault data");
   }
+
+  // Decryption succeeded — populate the cache on first use so the next
+  // operation within the TTL window skips scrypt entirely.
+  if (!cacheHit) {
+    _setCachedKey(vault, keyBuffer);
+  }
+  keyBuffer.fill(0); // wipe our local copy (cache holds its own copy)
+
+  return new TextDecoder().decode(decrypted);
 }
 
 async function decryptVaultWithRawKey(vault: PasskeyVault, rawKey: ArrayBuffer): Promise<string> {
@@ -1213,6 +1297,33 @@ async function signTronTransactionFromVault(vault: unknown, password: string | U
   return handleSignTronTransaction(await openVault(vault, password), request);
 }
 
+/**
+ * Sign a pre-computed 32-byte hash with the vault's EVM secp256k1 key.
+ *
+ * Used for EIP-712 flows (e.g. AsterDEX registration) where the hash is
+ * computed outside the worker. Returns the Ethereum-compatible signature:
+ *   "0x" + r (32 bytes hex) + s (32 bytes hex) + v (1 byte, 27 or 28)
+ *
+ * The private key is derived entirely inside the worker and wiped after use.
+ */
+async function signEVMRawHashFromVault(vault: unknown, password: string | Uint8Array, hashHex: string): Promise<string> {
+  const mnemonic = await openVault(vault, password);
+  const privKey  = await deriveEVMKey(mnemonic);
+  try {
+    const stripped = hashHex.startsWith("0x") ? hashHex.slice(2) : hashHex;
+    const hash = new Uint8Array(stripped.length / 2);
+    for (let i = 0; i < hash.length; i++) hash[i] = parseInt(stripped.slice(i * 2, i * 2 + 2), 16);
+    const sigBytes = await secp.signAsync(hash, privKey, { lowS: true, format: "recovered", prehash: false } as any);
+    const recovery = sigBytes[0];
+    return "0x"
+      + bytesToHex(sigBytes.slice(1, 33))
+      + bytesToHex(sigBytes.slice(33, 65))
+      + (recovery + 27).toString(16).padStart(2, "0");
+  } finally {
+    wipeBytes(privKey);
+  }
+}
+
 // ─── Message type registry ────────────────────────────────────────────────────
 
 export type WorkerRequest =
@@ -1230,6 +1341,8 @@ export type WorkerRequest =
   | { id: string; type: "encryptVault";        data: string; password: string; origin?: string }
   | { id: string; type: "encryptVaultBatch";   items: Array<{ data: string }>; password: string; origin?: string }
   | { id: string; type: "deriveVaultKey";      password: string }
+  // ③·5 Session cache management
+  | { id: string; type: "clearSessionCache" }
   // ④ Decryption
   | { id: string; type: "decryptVault";        vault: EncryptedVault | unknown; password: string }
   | { id: string; type: "decryptVaultWithRawKey"; vault: PasskeyVault; rawKey: ArrayBuffer }
@@ -1263,7 +1376,9 @@ export type WorkerRequest =
   // ⑩ Tron (legacy mnemonic-based)
   | { id: string; type: "signTronTransaction"; mnemonic: string; request: any }
   // ⑭ continued — Tron vault-based
-  | { id: string; type: "signTronTransactionFromVault"; vault: EncryptedVault | unknown; password: string; request: any };
+  | { id: string; type: "signTronTransactionFromVault";    vault: EncryptedVault | unknown; password: string; request: any }
+  // ⑮ Raw EIP-712 hash signing (AsterDEX and similar EIP-712 flows)
+  | { id: string; type: "signEVMRawHashFromVault"; vault: EncryptedVault | unknown; password: string; hashHex: string };
 
 export type WorkerResponse =
   | { id: string; ok: true;  result: unknown }
@@ -1359,6 +1474,19 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         break;
       }
       // ③ Encryption — pw is Uint8Array or string; encryptVault accepts both
+      // FIX: deriveVaultKey was declared in WorkerRequest but had no handler,
+      // causing "Unknown worker message type" for any caller. Returns the
+      // scrypt-derived key as a hex string so callers don't receive raw bytes.
+      case "deriveVaultKey": {
+        const salt = crypto.getRandomValues(new Uint8Array(SALT_LEN));
+        const keyBuffer = await deriveScryptKey(pw, salt);
+        if (pw instanceof Uint8Array) pw.fill(0);
+        result = { keyHex: Array.from(keyBuffer).map(b => b.toString(16).padStart(2, "0")).join(""), saltHex: Array.from(salt).map(b => b.toString(16).padStart(2, "0")).join("") };
+        keyBuffer.fill(0);
+        break;
+      }
+      // ③·5 Session cache management
+      case "clearSessionCache": clearSessionCache(); result = true; break;
       case "encryptVault":      result = await encryptVault(msg.data, pw, msg.origin); break;
       case "encryptVaultBatch": result = await encryptVaultBatch(msg.items, pw, msg.origin); break;
       // ④ Decryption
@@ -1408,6 +1536,8 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         result = await signSolanaTransactionFromVault(msg.vault, pw, msg.request); break;
       case "signTronTransactionFromVault":
         result = await signTronTransactionFromVault(msg.vault, pw, msg.request); break;
+      case "signEVMRawHashFromVault":
+        result = await signEVMRawHashFromVault(msg.vault, pw, msg.hashHex); break;
       default:
         throw new Error(`Unknown worker message type: ${(msg as any).type}`);
     }

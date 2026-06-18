@@ -1228,6 +1228,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const supabase = await getSupabase();
     await supabase.auth.signOut();
 
+    // Clear the worker's in-memory session key cache first (zero-fills the
+    // cached scrypt-derived key bytes in the worker heap immediately).
+    try {
+      const { clearWorkerSessionCache } = await import("@/hooks/use-signing-worker");
+      await clearWorkerSessionCache();
+    } catch { /* non-fatal — worker may not be running */ }
+
     // Wipe all browser storage: localStorage, sessionStorage, and IndexedDB.
     // This ensures no decrypted wallet data, cached keys, or session tokens remain.
     const { wipeSecureStorage } = await import("./secure-storage-wiper");

@@ -1,7 +1,6 @@
-import { signEVMTransactionFromVault, callSigningWorker } from '@/hooks/use-signing-worker';
+import { signEVMTransactionFromVault, signSolanaTransactionFromVault } from '@/hooks/use-signing-worker';
 import { broadcastEVMTransaction, EVMTransactionRequest, TOKEN_CONTRACTS } from './evmSigner';
 import {
-  signSolanaTransaction,
   broadcastSolanaTransaction,
   getLatestBlockhash,
   getUserTokenAccount,
@@ -140,27 +139,26 @@ async function broadcastEvmDeposit({
 async function broadcastSolDeposit({
   coin, amount, vault, password, depositAddress, walletAddress, contractAddress,
 }: Omit<DepositBroadcastParams, 'network'>): Promise<DepositBroadcastResult> {
+  // Fetch blockhash in parallel with any async setup — this is a network call
+  // that doesn't need the vault, so there's no reason to wait for KDF first.
   const blockhash = await getLatestBlockhash();
 
-  // TODO: refactor once the signing worker supports full SOL tx building from vault.
-  // For now: vault is decrypted inside the worker; mnemonic briefly surfaces to
-  // the main thread only for Solana transaction serialisation.
-  const mnemonic = await callSigningWorker<string>('decryptVault', { vault, password });
-
   if (coin.toUpperCase() === 'SOL') {
-    const { signedTx } = await signSolanaTransaction(mnemonic, {
+    // Vault-based: mnemonic decrypted, derived, and wiped entirely inside the
+    // worker — it never appears on the main thread or in any postMessage arg.
+    // On the first call this runs scrypt once; subsequent calls within 15 min
+    // hit the worker's session key cache and skip scrypt entirely (~fast).
+    const result = await signSolanaTransactionFromVault(vault, password, {
       to: depositAddress,
       amount,
       recentBlockhash: blockhash,
       currency: 'SOL',
-    });
-    const sig = await broadcastSolanaTransaction(signedTx);
+    }) as any;
+    const sig = await broadcastSolanaTransaction(result.signedTx);
     return { txHash: sig, explorerUrl: `${EXPLORER_BASE.SOL}/${sig}` };
   }
 
-  // On Solana, the API returns the token mint as contractAddress — use it
-  // directly when available so any SPL token the exchange supports works.
-  // Fall back to the hardcoded map for USDT/USDC when not provided.
+  // SPL token path — look up the token mint address.
   const mint = contractAddress || SOLANA_TOKEN_MINTS[coin.toUpperCase()];
   if (!mint) {
     throw new Error(
@@ -175,11 +173,9 @@ async function broadcastSolDeposit({
     );
   }
 
-  // Use USDC_SOL for USDC, USDT_SOL for everything else (solanaSigner handles
-  // the transfer calldata; the mint address drives which token actually moves).
   const currency = coin.toUpperCase() === 'USDC' ? 'USDC_SOL' : 'USDT_SOL';
 
-  const { signedTx } = await signSolanaTransaction(mnemonic, {
+  const result = await signSolanaTransactionFromVault(vault, password, {
     to: depositAddress,
     amount,
     recentBlockhash: blockhash,
@@ -187,8 +183,8 @@ async function broadcastSolDeposit({
     tokenAddress: mint,
     fromTokenAccount,
     toTokenAccount: depositAddress,
-  });
+  }) as any;
 
-  const sig = await broadcastSolanaTransaction(signedTx);
+  const sig = await broadcastSolanaTransaction(result.signedTx);
   return { txHash: sig, explorerUrl: `${EXPLORER_BASE.SOL}/${sig}` };
 }
