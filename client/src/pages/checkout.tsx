@@ -151,7 +151,7 @@ export function Checkout() {
   }
 
   if (pendingOrder) {
-    const processingFee = pendingOrder.type === "giftcard" ? 0.55 : 0.5;
+    const processingFee = pendingOrder.type === "giftcard" ? 0.55 : 0;
     const pendingTotal = pendingOrder.amount + processingFee;
     const deliveryEmail = pendingGiftDelivery === "gift"
       ? pendingGiftRecipientEmail
@@ -523,10 +523,12 @@ export function Checkout() {
                       <span className="font-medium text-muted-foreground">USD {pendingAmountUsd.toFixed(2)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Processing fee</span>
-                    <span>USD {processingFee.toFixed(2)}</span>
-                  </div>
+                  {processingFee > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Processing fee</span>
+                      <span>USD {processingFee.toFixed(2)}</span>
+                    </div>
+                  )}
                 </div>
                 <Separator />
                 <div className="flex items-baseline justify-between">
