@@ -259,3 +259,7 @@ export const signBitcoinTransactionFromVault = (vault: unknown, password: string
 /** Sign a Solana transaction from vault */
 export const signSolanaTransactionFromVault = (vault: unknown, password: string, request: any) =>
   callSigningWorker("signSolanaTransactionFromVault", { vault, password, request });
+
+/** Sign a Tron transaction from vault */
+export const signTronTransactionFromVault = (vault: unknown, password: string, request: any) =>
+  callSigningWorker("signTronTransactionFromVault", { vault, password, request });
