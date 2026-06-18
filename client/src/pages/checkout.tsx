@@ -346,14 +346,6 @@ export function Checkout() {
                       </div>
                     )}
 
-                    {/* Currency conversion info */}
-                    {pendingAmountUsd !== null && pendingOrder.currency.toUpperCase() !== "USD" && (
-                      <div className="flex items-center gap-1.5 rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-                        <span>≈</span>
-                        <span className="font-semibold text-foreground">USD {pendingAmountUsd.toFixed(2)}</span>
-                        <span>at today's exchange rate (you pay in USD)</span>
-                      </div>
-                    )}
                   </div>
                 </section>
               )}
