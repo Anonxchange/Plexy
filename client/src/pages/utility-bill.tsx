@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
 import { ChevronDown, ArrowRight, Search, Zap, Bot, Check, Receipt, Filter } from '@/lib/icons';
 import { PexlyFooter } from "@/components/pexly-footer";
@@ -71,6 +71,8 @@ const ProviderCard = ({
 
 const UtilityBill = () => {
   const [, setLocation] = useLocation();
+  useEffect(() => { localStorage.removeItem("pexly_pending_order"); }, []);
+
   const [accountNumber, setAccountNumber] = useState("");
   const [selectedCountry, setSelectedCountry] = useState<string>("");
   const [selectedService, setSelectedService] = useState<string>("ALL");

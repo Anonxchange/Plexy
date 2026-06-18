@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
 import { ChevronDown, ArrowRight, Search, Bot, Smartphone } from '@/lib/icons';
 import { PexlyFooter } from "@/components/pexly-footer";
@@ -55,6 +55,8 @@ const ProviderCard = ({
 
 const Index = () => {
   const [, setLocation] = useLocation();
+  useEffect(() => { localStorage.removeItem("pexly_pending_order"); }, []);
+
   const [phoneNumber, setPhoneNumber] = useState("");
   const [selectedCountry, setSelectedCountry] = useState<string>("");
   const [selectedOperator, setSelectedOperator] = useState<any>(null);

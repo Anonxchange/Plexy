@@ -104,6 +104,8 @@ export function GiftCardDetail() {
   const [, setLocation] = useLocation();
   const [, params] = useRoute("/gift-cards/:id");
   const [cardValue, setCardValue] = useState("");
+  useEffect(() => { localStorage.removeItem("pexly_pending_order"); }, []);
+
   const [numberOfCards, setNumberOfCards] = useState("1");
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showExternalWalletDialog, setShowExternalWalletDialog] = useState(false);
@@ -125,7 +127,7 @@ export function GiftCardDetail() {
 
   const handleBuyCard = () => {
     if (!card) return;
-    sessionStorage.setItem("pexly_pending_order", JSON.stringify({
+    localStorage.setItem("pexly_pending_order", JSON.stringify({
       type: "giftcard",
       title: `${card.productName} Gift Card`,
       description: `${qty}x ${card.productName} Gift Card`,
@@ -141,7 +143,9 @@ export function GiftCardDetail() {
         cardValue: value,
       },
     }));
-    window.open("/checkout", "_blank");
+    const seg = window.location.pathname.split("/")[1];
+    const langBase = seg && seg.length === 2 ? `/${seg}` : "/en";
+    window.open(`${langBase}/checkout`, "_blank");
   };
 
   const handleContinueOrder = () => {
