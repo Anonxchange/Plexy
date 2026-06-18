@@ -82,6 +82,10 @@ export function Checkout() {
     } catch { return null; }
   });
   const [pendingDeliveryEmail, setPendingDeliveryEmail] = useState("");
+  const [pendingGiftDelivery, setPendingGiftDelivery] = useState<"self" | "gift">("self");
+  const [pendingGiftRecipientEmail, setPendingGiftRecipientEmail] = useState("");
+  const [pendingGiftRecipientName, setPendingGiftRecipientName] = useState("");
+  const [pendingGiftMessageText, setPendingGiftMessageText] = useState("");
   const { checkout: paypalCheckout, loading: paypalLoading } = usePayPal();
 
   const [recipientEmail, setRecipientEmail] = useState("");
@@ -149,7 +153,14 @@ export function Checkout() {
   if (pendingOrder) {
     const processingFee = 0.5;
     const pendingTotal = pendingOrder.amount + processingFee;
-    const deliveryEmail = pendingDeliveryEmail || buyerEmail;
+    const deliveryEmail = pendingGiftDelivery === "gift"
+      ? pendingGiftRecipientEmail
+      : (pendingDeliveryEmail || buyerEmail);
+    const pendingAmountUsd = pendingOrder.currency.toUpperCase() === "USD"
+      ? pendingOrder.amount
+      : rates[pendingOrder.currency.toUpperCase()]
+        ? pendingOrder.amount / rates[pendingOrder.currency.toUpperCase()]
+        : null;
 
     const handleOrderSuccess = () => {
       localStorage.removeItem("pexly_pending_order");
@@ -175,7 +186,8 @@ export function Checkout() {
       if (pendingOrder.type === "topup") {
         return { productType: "airtime" as const, operatorId: Number(pendingOrder.metadata.operatorId), amount: pendingOrder.amount };
       }
-      return { productType: "total" as const, amount: pendingOrder.amount, currency: pendingOrder.currency.toUpperCase() };
+      const usdAmount = pendingAmountUsd ?? pendingOrder.amount;
+      return { productType: "total" as const, amount: usdAmount, currency: "USD" };
     };
 
     return (
@@ -196,21 +208,96 @@ export function Checkout() {
               {/* Step 1 — order-type-specific details */}
               {pendingOrder.type === "giftcard" && (
                 <section>
-                  <SectionTitle step={1} title="Delivery" sub="Where should we send the gift card code?" />
-                  <div className="space-y-3 rounded-2xl border border-border/60 bg-card p-5">
-                    <div>
-                      <FieldLabel>Email address</FieldLabel>
-                      <Input
-                        type="email"
-                        value={deliveryEmail}
-                        onChange={(e) => setPendingDeliveryEmail(e.target.value)}
-                        placeholder="you@example.com"
-                        className="h-11"
-                      />
+                  <SectionTitle step={1} title="Delivery" sub="Send the gift card to yourself or someone special." />
+                  <div className="space-y-4 rounded-2xl border border-border/60 bg-card p-5">
+                    {/* Self / Gift toggle */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {(["self", "gift"] as const).map((mode) => {
+                        const active = pendingGiftDelivery === mode;
+                        return (
+                          <button
+                            key={mode}
+                            type="button"
+                            onClick={() => setPendingGiftDelivery(mode)}
+                            className={`flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm font-semibold transition-all ${
+                              active
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "border-border bg-background text-muted-foreground hover:border-primary/40"
+                            }`}
+                          >
+                            {mode === "self" ? (
+                              <Mail className="h-4 w-4 flex-shrink-0" />
+                            ) : (
+                              <Gift className="h-4 w-4 flex-shrink-0" />
+                            )}
+                            {mode === "self" ? "Send to me" : "Send as a gift"}
+                          </button>
+                        );
+                      })}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Signed in as <strong className="text-foreground">{buyerEmail}</strong> — change above to send as a gift.
-                    </p>
+
+                    {/* Self delivery */}
+                    {pendingGiftDelivery === "self" && (
+                      <div>
+                        <FieldLabel>Your email</FieldLabel>
+                        <Input
+                          type="email"
+                          value={pendingDeliveryEmail || buyerEmail}
+                          onChange={(e) => setPendingDeliveryEmail(e.target.value)}
+                          placeholder="you@example.com"
+                          className="h-11"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1.5">
+                          Signed in as <strong className="text-foreground">{buyerEmail}</strong>
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Gift delivery */}
+                    {pendingGiftDelivery === "gift" && (
+                      <div className="space-y-3">
+                        <div>
+                          <FieldLabel>Recipient email *</FieldLabel>
+                          <Input
+                            type="email"
+                            value={pendingGiftRecipientEmail}
+                            onChange={(e) => setPendingGiftRecipientEmail(e.target.value)}
+                            placeholder="friend@example.com"
+                            className="h-11"
+                          />
+                        </div>
+                        <div>
+                          <FieldLabel>Recipient name (optional)</FieldLabel>
+                          <Input
+                            value={pendingGiftRecipientName}
+                            onChange={(e) => setPendingGiftRecipientName(e.target.value)}
+                            placeholder="Their name"
+                            className="h-11"
+                          />
+                        </div>
+                        <div>
+                          <FieldLabel>Personal message (optional)</FieldLabel>
+                          <Textarea
+                            value={pendingGiftMessageText}
+                            onChange={(e) => setPendingGiftMessageText(e.target.value)}
+                            placeholder="Add a short note to include with the gift…"
+                            className="resize-none"
+                            rows={3}
+                            maxLength={250}
+                          />
+                          <p className="text-xs text-muted-foreground mt-1 text-right">{pendingGiftMessageText.length}/250</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Currency conversion info */}
+                    {pendingAmountUsd !== null && pendingOrder.currency.toUpperCase() !== "USD" && (
+                      <div className="flex items-center gap-1.5 rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+                        <span>≈</span>
+                        <span className="font-semibold text-foreground">USD {pendingAmountUsd.toFixed(2)}</span>
+                        <span>at today's exchange rate (you pay in USD)</span>
+                      </div>
+                    )}
                   </div>
                 </section>
               )}
@@ -374,15 +461,25 @@ export function Checkout() {
                     <span className="text-muted-foreground">Subtotal</span>
                     <span>{pendingOrder.currency.toUpperCase()} {pendingOrder.amount.toFixed(2)}</span>
                   </div>
+                  {pendingAmountUsd !== null && pendingOrder.currency.toUpperCase() !== "USD" && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">≈ in USD</span>
+                      <span className="font-medium text-muted-foreground">USD {pendingAmountUsd.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Processing fee</span>
-                    <span>${processingFee.toFixed(2)}</span>
+                    <span>USD {processingFee.toFixed(2)}</span>
                   </div>
                 </div>
                 <Separator />
                 <div className="flex items-baseline justify-between">
-                  <span className="text-base font-semibold">Total</span>
-                  <span className="text-2xl font-extrabold">{pendingOrder.currency.toUpperCase()} {pendingTotal.toFixed(2)}</span>
+                  <span className="text-base font-semibold">Total (USD)</span>
+                  <span className="text-2xl font-extrabold">
+                    USD {pendingAmountUsd !== null
+                      ? (pendingAmountUsd + processingFee).toFixed(2)
+                      : pendingTotal.toFixed(2)}
+                  </span>
                 </div>
 
                 {/* Trust badges */}
