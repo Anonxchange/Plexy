@@ -398,15 +398,17 @@ async function deriveBTCAddress(mnemonic: string): Promise<string> {
   return p2wpkh.address;
 }
 
-async function deriveSOLAddress(mnemonic: string): Promise<string> {
-  const seed = await mnemonicToSeed(mnemonic);
-  // SLIP-0010 hardened derivation: m/44'/501'/0'/0 — matches Phantom, Solflare, solanaSigner.ts
-  let I = hmac(sha512, new TextEncoder().encode("ed25519 seed"), seed);
+/**
+ * Derive the Solana private key via SLIP-0010 hardened path m/44'/501'/0'/0.
+ * Matches Phantom, Solflare, and Backpack.
+ * Caller MUST wipe the returned Uint8Array after use.
+ * Does NOT wipe the input `seed` — caller is responsible.
+ */
+async function _deriveSolPriv(seed: Uint8Array): Promise<Uint8Array> {
+  let I  = hmac(sha512, new TextEncoder().encode("ed25519 seed"), seed);
   let IL = I.slice(0, 32);
   let IR = I.slice(32);
-  wipeBytes(seed);
-  const path = [44, 501, 0, 0];
-  for (const index of path) {
+  for (const index of [44, 501, 0, 0]) {
     const data = new Uint8Array(37);
     data[0] = 0;
     data.set(IL, 1);
@@ -417,13 +419,19 @@ async function deriveSOLAddress(mnemonic: string): Promise<string> {
     data[36] =  h         & 0xff;
     I = hmac(sha512, IR, data);
     const nextIL = I.slice(0, 32);
-    IR.fill(0);
-    IR = I.slice(32);
-    IL.fill(0);
-    IL = nextIL;
+    IR.fill(0); IR = I.slice(32);
+    IL.fill(0); IL = nextIL;
   }
-  const pub = await nobleEd.getPublicKeyAsync(IL);
-  wipeBytes(IL);
+  IR.fill(0);
+  return IL;
+}
+
+async function deriveSOLAddress(mnemonic: string): Promise<string> {
+  const seed = await mnemonicToSeed(mnemonic);
+  const priv = await _deriveSolPriv(seed);
+  wipeBytes(seed);
+  const pub  = await nobleEd.getPublicKeyAsync(priv);
+  wipeBytes(priv);
   return base58.encode(pub);
 }
 
@@ -489,8 +497,8 @@ async function deriveXRPAddress(mnemonic: string): Promise<string> {
  * Origin binding: when origin is provided it is used as AES-GCM AAD.
  * A phishing clone on a different domain cannot decrypt vaults created here.
  */
-async function encryptVault(data: string, password: string | Uint8Array, origin?: string): Promise<EncryptedVault> {
-  const kdfParams = getAdaptiveKdfParams(); // adaptive — stored in vault for portability
+async function encryptVault(data: string, password: string | Uint8Array, origin?: string, kdfParamsOverride?: KdfParams): Promise<EncryptedVault> {
+  const kdfParams = kdfParamsOverride ?? getAdaptiveKdfParams();
   const salt = crypto.getRandomValues(new Uint8Array(SALT_LEN));
   const iv   = crypto.getRandomValues(new Uint8Array(IV_LEN));
   const keyBuffer = await deriveScryptKey(password, salt, kdfParams);
@@ -519,9 +527,10 @@ async function encryptVault(data: string, password: string | Uint8Array, origin?
 async function encryptVaultBatch(
   items: Array<{ data: string }>,
   password: string | Uint8Array,
-  origin?: string
+  origin?: string,
+  kdfParamsOverride?: KdfParams,
 ): Promise<EncryptedVault[]> {
-  const kdfParams = getAdaptiveKdfParams();
+  const kdfParams = kdfParamsOverride ?? getAdaptiveKdfParams();
   const salt = crypto.getRandomValues(new Uint8Array(SALT_LEN));
   const keyBuffer = await deriveScryptKey(password, salt, kdfParams);
   if (password instanceof Uint8Array) password.fill(0);
@@ -595,6 +604,54 @@ async function decryptVaultWithRawKey(vault: PasskeyVault, rawKey: ArrayBuffer):
   }
 }
 
+// ─── ④·5  Shared vault-open helper + brute-force lockout ─────────────────────
+
+const _LOCKOUT_MS = 30_000; // 30-second lockout window
+const _MAX_FAILS  = 5;
+const _failMap    = new Map<string, { count: number; until: number }>();
+
+function _vaultKey(v: EncryptedVault): string {
+  return v.ciphertext?.slice(0, 8) ?? "unknown";
+}
+
+function _checkAndBumpFails(vault: EncryptedVault): void {
+  const key   = _vaultKey(vault);
+  const now   = Date.now();
+  const entry = _failMap.get(key) ?? { count: 0, until: 0 };
+  if (now < entry.until) {
+    const secs = Math.ceil((entry.until - now) / 1000);
+    throw new Error(`Too many failed attempts. Try again in ${secs} seconds.`);
+  }
+  entry.count++;
+  if (entry.count >= _MAX_FAILS) {
+    entry.until = now + _LOCKOUT_MS;
+    entry.count = 0;
+  }
+  _failMap.set(key, entry);
+}
+
+function _clearFails(vault: EncryptedVault): void {
+  _failMap.delete(_vaultKey(vault));
+}
+
+/**
+ * Parse + null-check + brute-force-guard + decrypt in one call.
+ * Replaces the repeated three-liner across every *FromVault function.
+ */
+async function openVault(vault: unknown, password: string | Uint8Array): Promise<string> {
+  const parsed = parseVault(vault);
+  if (!parsed) throw new Error("Invalid vault format");
+  _checkAndBumpFails(parsed);
+  let plaintext: string;
+  try {
+    plaintext = await decryptVault(parsed, password);
+  } catch (err) {
+    throw err;
+  }
+  _clearFails(parsed);
+  return plaintext;
+}
+
 // ─── ⑤  Legacy vault migration ────────────────────────────────────────────────
 
 async function migrateLegacyVault(legacyData: any, password: string, userId: string, origin?: string): Promise<EncryptedVault> {
@@ -617,7 +674,9 @@ async function migrateLegacyVault(legacyData: any, password: string, userId: str
   } else {
     throw new Error("Unknown vault format");
   }
-  return encryptVault(mnemonic, password, origin);
+  // Always re-encrypt at maximum strength — migration runs once, device tier doesn't matter.
+  const MAX_KDF: KdfParams = { N: 262_144, r: 8, p: 1, dkLen: 32 };
+  return encryptVault(mnemonic, password, origin, MAX_KDF);
 }
 
 // ─── ⑥  Multi-chain wallet creation ──────────────────────────────────────────
@@ -669,7 +728,8 @@ async function createMultiChainWallet(
   const evmPriv = evmChild.privateKey!.slice();
   const btcPriv = btcChild.privateKey!.slice();
   const trnPriv = trnChild.privateKey!.slice();
-  const solPriv = seed.slice(0, 32); // SLIP-0010 Ed25519
+  // Derive Solana key via SLIP-0010 (m/44'/501'/0'/0) — NOT seed.slice(0,32)
+  const solPriv = await _deriveSolPriv(seed);
 
   wipeBytes(seed);
   wipeHDKey(root); wipeHDKey(evmChild); wipeHDKey(btcChild); wipeHDKey(trnChild);
@@ -755,6 +815,65 @@ function prependTxType(type: number, rlpPayload: Uint8Array): Uint8Array {
   return out;
 }
 
+/**
+ * Shared EIP-1559 type-2 / legacy type-0 EVM signing core.
+ * Eliminates the duplicate signing block that existed in both EVM handlers.
+ */
+async function _signEVMCore(
+  privKey: Uint8Array,
+  from: string,
+  config: typeof CHAIN_CONFIGS[string],
+  nonce: number,
+  to: string,
+  value: bigint,
+  data: string,
+  gasLimit: bigint,
+  request: any,
+): Promise<{ signedTx: string; txHash: string; from: string; type: number }> {
+  const useEip1559 = config.eip1559 && request.type !== 0;
+
+  if (useEip1559) {
+    const rawPri = request.maxPriorityFeePerGas != null
+      ? request.maxPriorityFeePerGas
+      : await rpcCall(config.rpcUrl, "eth_maxPriorityFeePerGas", [], config.rpcFallbacks);
+    const maxPriorityFeePerGas = validateRpcGasPrice(rawPri);
+    let maxFeePerGas: bigint;
+    if (request.maxFeePerGas != null) {
+      maxFeePerGas = validateRpcGasPrice(request.maxFeePerGas);
+    } else {
+      const gp = validateRpcGasPrice(await rpcCall(config.rpcUrl, "eth_gasPrice", [], config.rpcFallbacks));
+      maxFeePerGas = gp * 2n;
+      if (maxFeePerGas > RPC_GAS_PRICE_MAX) maxFeePerGas = RPC_GAS_PRICE_MAX;
+    }
+    if (maxFeePerGas < maxPriorityFeePerGas) maxFeePerGas = maxPriorityFeePerGas;
+    const accessList: never[] = [];
+    const signingRlp     = RLP.encode([config.chainId, nonce, maxPriorityFeePerGas, maxFeePerGas, gasLimit, to, value, data, accessList]);
+    const signingPayload = prependTxType(0x02, signingRlp);
+    const hash           = keccak_256(signingPayload);
+    const sigBytes = await secp.signAsync(hash, privKey, { lowS: true, format: "recovered", prehash: false } as any);
+    const v = BigInt(sigBytes[0]);
+    const r = BigInt("0x" + bytesToHex(sigBytes.slice(1, 33)));
+    const s = BigInt("0x" + bytesToHex(sigBytes.slice(33, 65)));
+    const signedRlp = RLP.encode([config.chainId, nonce, maxPriorityFeePerGas, maxFeePerGas, gasLimit, to, value, data, accessList, v, r, s]);
+    const signedTx  = prependTxType(0x02, signedRlp);
+    return { signedTx: "0x" + bytesToHex(signedTx), txHash: "0x" + bytesToHex(keccak_256(signedTx)), from, type: 2 };
+  }
+
+  const gasPrice = request.gasPrice != null
+    ? validateRpcGasPrice(request.gasPrice)
+    : validateRpcGasPrice(await rpcCall(config.rpcUrl, "eth_gasPrice", [], config.rpcFallbacks));
+  const tx       = [nonce, gasPrice, gasLimit, to, value, data, config.chainId, BigInt(0), BigInt(0)];
+  const encoded  = RLP.encode(tx);
+  const hash     = keccak_256(encoded);
+  const sigBytes = await secp.signAsync(hash, privKey, { lowS: true, format: "recovered", prehash: false } as any);
+  const recovery = sigBytes[0];
+  const v        = BigInt(config.chainId * 2 + 35 + recovery);
+  const r        = BigInt("0x" + bytesToHex(sigBytes.slice(1, 33)));
+  const s        = BigInt("0x" + bytesToHex(sigBytes.slice(33, 65)));
+  const signedTx = RLP.encode([nonce, gasPrice, gasLimit, to, value, data, v, r, s]);
+  return { signedTx: "0x" + bytesToHex(signedTx), txHash: "0x" + bytesToHex(keccak_256(signedTx)), from, type: 0 };
+}
+
 async function handleSignEVMTransaction(mnemonic: string, request: any): Promise<unknown> {
   const privKey = await deriveEVMKey(mnemonic);
   try {
@@ -783,59 +902,8 @@ async function handleSignEVMTransaction(mnemonic: string, request: any): Promise
       gasLimit = request.gasLimit != null ? validateRpcGasLimit(request.gasLimit) : 21_000n;
     }
 
-    // ── EIP-1559 type-2 (default for supported chains) ────────────────────────
-    // Pass request.type = 0 to force legacy on an EIP-1559 chain.
-    const useEip1559 = config.eip1559 && request.type !== 0;
-
-    if (useEip1559) {
-      // Priority fee — caller may supply it; otherwise fetch from node
-      const rawPri = request.maxPriorityFeePerGas != null
-        ? request.maxPriorityFeePerGas
-        : await rpcCall(config.rpcUrl, "eth_maxPriorityFeePerGas", [], config.rpcFallbacks);
-      const maxPriorityFeePerGas = validateRpcGasPrice(rawPri);
-
-      // Max fee — caller may supply; otherwise: baseFee ≈ gasPrice/2, so maxFee = gasPrice * 2
-      let maxFeePerGas: bigint;
-      if (request.maxFeePerGas != null) {
-        maxFeePerGas = validateRpcGasPrice(request.maxFeePerGas);
-      } else {
-        const gp = validateRpcGasPrice(await rpcCall(config.rpcUrl, "eth_gasPrice", [], config.rpcFallbacks));
-        maxFeePerGas = gp * 2n;
-        if (maxFeePerGas > RPC_GAS_PRICE_MAX) maxFeePerGas = RPC_GAS_PRICE_MAX;
-      }
-      if (maxFeePerGas < maxPriorityFeePerGas) maxFeePerGas = maxPriorityFeePerGas;
-
-      const accessList: never[] = [];
-      // EIP-1559: signing payload = 0x02 || RLP([chainId, nonce, maxPriorityFee, maxFee, gasLimit, to, value, data, accessList])
-      const signingRlp     = RLP.encode([config.chainId, nonce, maxPriorityFeePerGas, maxFeePerGas, gasLimit, to, value, data, accessList]);
-      const signingPayload = prependTxType(0x02, signingRlp);
-      const hash           = keccak_256(signingPayload);
-      const sigBytes = await secp.signAsync(hash, privKey, { lowS: true, format: "recovered", prehash: false } as any);
-      const v        = BigInt(sigBytes[0]); // 0 or 1 — NOT EIP-155 adjusted for type-2
-      const r        = BigInt("0x" + bytesToHex(sigBytes.slice(1, 33)));
-      const s        = BigInt("0x" + bytesToHex(sigBytes.slice(33, 65)));
-      const signedRlp = RLP.encode([config.chainId, nonce, maxPriorityFeePerGas, maxFeePerGas, gasLimit, to, value, data, accessList, v, r, s]);
-      const signedTx  = prependTxType(0x02, signedRlp);
-      const txHash    = "0x" + bytesToHex(keccak_256(signedTx));
-      return { signedTx: "0x" + bytesToHex(signedTx), txHash, from, to: request.to, value: request.amount, currency: request.currency, type: 2 };
-    }
-
-    // ── Legacy type-0 (EIP-155 replay protection) ─────────────────────────────
-    const gasPrice = request.gasPrice != null
-      ? validateRpcGasPrice(request.gasPrice)
-      : validateRpcGasPrice(await rpcCall(config.rpcUrl, "eth_gasPrice", [], config.rpcFallbacks));
-
-    const tx       = [nonce, gasPrice, gasLimit, to, value, data, config.chainId, BigInt(0), BigInt(0)];
-    const encoded  = RLP.encode(tx);
-    const hash     = keccak_256(encoded);
-    const sigBytes = await secp.signAsync(hash, privKey, { lowS: true, format: "recovered", prehash: false } as any);
-    const recovery = sigBytes[0];
-    const v        = BigInt(config.chainId * 2 + 35 + recovery); // EIP-155
-    const r        = BigInt("0x" + bytesToHex(sigBytes.slice(1, 33)));
-    const s        = BigInt("0x" + bytesToHex(sigBytes.slice(33, 65)));
-    const signedTx = RLP.encode([nonce, gasPrice, gasLimit, to, value, data, v, r, s]);
-    const txHash   = "0x" + bytesToHex(keccak_256(signedTx));
-    return { signedTx: "0x" + bytesToHex(signedTx), txHash, from, to: request.to, value: request.amount, currency: request.currency, type: 0 };
+    const core = await _signEVMCore(privKey, from, config, nonce, to, value, data, gasLimit, request);
+    return { ...core, to: request.to, value: request.amount, currency: request.currency };
   } finally { wipeBytes(privKey); }
 }
 
@@ -860,56 +928,12 @@ async function handleSignEVMContractCall(mnemonic: string, request: any): Promis
         [{ from, to: request.to, value: "0x" + valueWei.toString(16), data: request.data }],
         config.rpcFallbacks);
       gasLimit = validateRpcGasLimit(raw, 21_000n);
-      gasLimit = (gasLimit * 125n) / 100n; // 25% buffer
+      gasLimit = (gasLimit * 125n) / 100n;
       if (gasLimit < 60_000n) gasLimit = 60_000n;
       if (gasLimit > RPC_GAS_LIMIT_MAX) throw new Error("Estimated gas exceeds block limit — transaction would be invalid");
     }
 
-    // ── EIP-1559 type-2 (default for supported chains) ────────────────────────
-    const useEip1559 = config.eip1559 && request.type !== 0;
-
-    if (useEip1559) {
-      const rawPri = request.maxPriorityFeePerGas != null
-        ? request.maxPriorityFeePerGas
-        : await rpcCall(config.rpcUrl, "eth_maxPriorityFeePerGas", [], config.rpcFallbacks);
-      const maxPriorityFeePerGas = validateRpcGasPrice(rawPri);
-      let maxFeePerGas: bigint;
-      if (request.maxFeePerGas != null) {
-        maxFeePerGas = validateRpcGasPrice(request.maxFeePerGas);
-      } else {
-        const gp = validateRpcGasPrice(await rpcCall(config.rpcUrl, "eth_gasPrice", [], config.rpcFallbacks));
-        maxFeePerGas = gp * 2n;
-        if (maxFeePerGas > RPC_GAS_PRICE_MAX) maxFeePerGas = RPC_GAS_PRICE_MAX;
-      }
-      if (maxFeePerGas < maxPriorityFeePerGas) maxFeePerGas = maxPriorityFeePerGas;
-      const accessList: never[] = [];
-      const signingRlp     = RLP.encode([config.chainId, nonce, maxPriorityFeePerGas, maxFeePerGas, gasLimit, request.to, valueWei, request.data, accessList]);
-      const signingPayload = prependTxType(0x02, signingRlp);
-      const hash           = keccak_256(signingPayload);
-      const sigBytes = await secp.signAsync(hash, privKey, { lowS: true, format: "recovered", prehash: false } as any);
-      const v        = BigInt(sigBytes[0]);
-      const r        = BigInt("0x" + bytesToHex(sigBytes.slice(1, 33)));
-      const s        = BigInt("0x" + bytesToHex(sigBytes.slice(33, 65)));
-      const signedRlp = RLP.encode([config.chainId, nonce, maxPriorityFeePerGas, maxFeePerGas, gasLimit, request.to, valueWei, request.data, accessList, v, r, s]);
-      const signedTx  = prependTxType(0x02, signedRlp);
-      return { signedTx: "0x" + bytesToHex(signedTx), txHash: "0x" + bytesToHex(keccak_256(signedTx)), from, type: 2 };
-    }
-
-    // ── Legacy type-0 ─────────────────────────────────────────────────────────
-    const gasPrice = request.gasPrice != null
-      ? validateRpcGasPrice(request.gasPrice)
-      : validateRpcGasPrice(await rpcCall(config.rpcUrl, "eth_gasPrice", [], config.rpcFallbacks));
-
-    const tx       = [nonce, gasPrice, gasLimit, request.to, valueWei, request.data, config.chainId, BigInt(0), BigInt(0)];
-    const encoded  = RLP.encode(tx);
-    const hash     = keccak_256(encoded);
-    const sigBytes = await secp.signAsync(hash, privKey, { lowS: true, format: "recovered", prehash: false } as any);
-    const recovery = sigBytes[0];
-    const v        = BigInt(config.chainId * 2 + 35 + recovery); // EIP-155
-    const r        = BigInt("0x" + bytesToHex(sigBytes.slice(1, 33)));
-    const s        = BigInt("0x" + bytesToHex(sigBytes.slice(33, 65)));
-    const signedTx = RLP.encode([nonce, gasPrice, gasLimit, request.to, valueWei, request.data, v, r, s]);
-    return { signedTx: "0x" + bytesToHex(signedTx), txHash: "0x" + bytesToHex(keccak_256(signedTx)), from, type: 0 };
+    return await _signEVMCore(privKey, from, config, nonce, request.to, valueWei, request.data, gasLimit, request);
   } finally { wipeBytes(privKey); }
 }
 
@@ -962,17 +986,126 @@ async function handleSignBitcoinTransaction(mnemonic: string, request: any): Pro
   } finally { wipeHDKey(child); }
 }
 
-// ─── ⑨  Solana signing ────────────────────────────────────────────────────────
+// ─── ⑨  Solana signing (SLIP-0010 m/44'/501'/0'/0) ───────────────────────────
+
+function _solEncodeLen(len: number): number[] {
+  const out: number[] = [];
+  while (len >= 0x80) { out.push((len & 0x7f) | 0x80); len >>= 7; }
+  out.push(len);
+  return out;
+}
 
 async function handleSignSolanaTransaction(mnemonic: string, request: any): Promise<unknown> {
   const seed = await mnemonicToSeed(mnemonic);
-  const priv = seed.slice(0, 32);
+  const priv = await _deriveSolPriv(seed);
+  wipeBytes(seed);
   try {
-    const msgBytes = request.messageBytes instanceof Uint8Array ? request.messageBytes : new Uint8Array(request.messageBytes);
-    const signature = await nobleEd.signAsync(msgBytes, priv);
+    // Legacy path: pre-built messageBytes (raw signing without tx construction)
+    if (request.messageBytes != null) {
+      const msgBytes = request.messageBytes instanceof Uint8Array
+        ? request.messageBytes
+        : new Uint8Array(request.messageBytes);
+      const signature = await nobleEd.signAsync(msgBytes, priv);
+      const pub = await nobleEd.getPublicKeyAsync(priv);
+      return { signature: Array.from(signature), publicKey: base58.encode(pub) };
+    }
+
+    // Full transaction path: build from { to, amount, currency, recentBlockhash }
     const pub = await nobleEd.getPublicKeyAsync(priv);
-    return { signature: Array.from(signature), publicKey: base58.encode(pub) };
-  } finally { wipeBytes(seed); }
+    const recentBlockhash = base58.decode(request.recentBlockhash);
+    let message: Uint8Array;
+
+    if (request.currency === "SOL") {
+      const toPubkey = base58.decode(request.to);
+      const systemProgram = base58.decode("11111111111111111111111111111111");
+      const [whole, fraction = ""] = request.amount.split(".");
+      const lamports = BigInt(whole) * 1_000_000_000n + BigInt(fraction.padEnd(9, "0").slice(0, 9));
+      const instrData = new Uint8Array(12);
+      const view = new DataView(instrData.buffer);
+      view.setUint32(0, 2, true);
+      view.setBigUint64(4, lamports, true);
+      const keys = [pub, toPubkey, systemProgram];
+      message = new Uint8Array([
+        1, 0, 1,
+        ..._solEncodeLen(keys.length),
+        ...keys.flatMap(k => Array.from(k)),
+        ...recentBlockhash,
+        ..._solEncodeLen(1),
+        2,
+        ..._solEncodeLen(2), 0, 1,
+        ..._solEncodeLen(instrData.length),
+        ...instrData,
+      ]);
+    } else {
+      if (!request.fromTokenAccount || !request.toTokenAccount || !request.tokenAddress) {
+        throw new Error("fromTokenAccount, toTokenAccount and tokenAddress required for SPL transfers");
+      }
+      const tokenProgram = base58.decode("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+      const fromATA = base58.decode(request.fromTokenAccount);
+      const toATA   = base58.decode(request.toTokenAccount);
+      const mint    = base58.decode(request.tokenAddress);
+      const [whole, fraction = ""] = request.amount.split(".");
+      const amount  = BigInt(whole) * 1_000_000n + BigInt(fraction.padEnd(6, "0").slice(0, 6));
+      const instrData = new Uint8Array(10);
+      const view = new DataView(instrData.buffer);
+      view.setUint8(0, 12);
+      view.setBigUint64(1, amount, true);
+      view.setUint8(9, 6);
+      const keys = [pub, fromATA, mint, toATA, tokenProgram];
+      message = new Uint8Array([
+        1, 0, 3,
+        ..._solEncodeLen(keys.length),
+        ...keys.flatMap(k => Array.from(k)),
+        ...recentBlockhash,
+        ..._solEncodeLen(1),
+        4,
+        ..._solEncodeLen(5), 0, 1, 2, 3, 4,
+        ..._solEncodeLen(instrData.length),
+        ...instrData,
+      ]);
+    }
+
+    const signature = await nobleEd.signAsync(message, priv);
+    const packet = new Uint8Array([1, ...signature, ...message]);
+    return { signedTx: base58.encode(packet), txHash: base58.encode(sha256(message)) };
+  } finally { wipeBytes(priv); }
+}
+
+// ─── ⑩  Tron signing (secp256k1 / keccak-256 — same derivation as EVM) ───────
+
+async function handleSignTronTransaction(mnemonic: string, request: any): Promise<unknown> {
+  const seed = await mnemonicToSeed(mnemonic);
+  const root = HDKey.fromMasterSeed(seed);
+  const account = root.derive("m/44'/195'/0'/0/0");
+  wipeBytes(seed); wipeHDKey(root);
+  const priv = account.privateKey!.slice();
+  wipeHDKey(account);
+  try {
+    const pub       = secp.getPublicKey(priv, false);
+    const addrHash  = keccak_256(pub.slice(1));
+    const addrBytes = new Uint8Array([0x41, ...addrHash.slice(-20)]);
+    const checksum  = sha256(sha256(addrBytes)).slice(0, 4);
+    const full = new Uint8Array(25);
+    full.set(addrBytes); full.set(checksum, 21);
+    const from = base58.encode(full);
+
+    const [whole, fraction = ""] = request.amount.split(".");
+    const sun = BigInt(whole) * 1_000_000n + BigInt(fraction.padEnd(6, "0").slice(0, 6));
+
+    const tx: any = {
+      owner_address: from,
+      to_address: request.to,
+      amount: Number(sun),
+      timestamp: Date.now(),
+      type: "TransferContract",
+    };
+    const txBytes  = new TextEncoder().encode(JSON.stringify(tx));
+    const txHash   = sha256(txBytes);
+    const sigBytes = await secp.signAsync(txHash, priv, { prehash: false } as any);
+    const signedTx = { ...tx, signature: base58.encode(sigBytes) };
+    const txID     = base58.encode(sha256(new TextEncoder().encode(JSON.stringify(signedTx))));
+    return { signedTx: JSON.stringify(signedTx), txID, from, to: request.to, amount: request.amount };
+  } finally { wipeBytes(priv); }
 }
 
 // ─── ⑩  Hashing utilities ─────────────────────────────────────────────────────
@@ -996,7 +1129,7 @@ function workerHmacSha256(keyHex: string, dataHex: string): string {
 
 // ─── ⑪  Validate a vault password (timing-safe: full scrypt every time) ───────
 
-async function validateVaultPassword(vault: EncryptedVault | PasskeyVault | unknown, password: string): Promise<boolean> {
+async function validateVaultPassword(vault: EncryptedVault | PasskeyVault | unknown, password: string | Uint8Array): Promise<boolean> {
   const parsed = parseVault(vault);
   if (!parsed) return false;
   try { await decryptVault(parsed, password); return true; } catch { return false; }
@@ -1035,7 +1168,7 @@ async function createSecureWallet(
 
 async function getMnemonicForBackup(
   vault: EncryptedVault | unknown,
-  password: string,
+  password: string | Uint8Array,
 ): Promise<string> {
   const parsed = parseVault(vault);
   if (!parsed) throw new Error("Invalid mnemonic vault");
@@ -1056,66 +1189,28 @@ async function getMnemonicForBackup(
 //   4. Wipe all key material with wipeBytes / wipeHDKey.
 //   5. Return only the signed output — mnemonic never touches postMessage args.
 
-async function signEVMTransactionFromVault(
-  vault: EncryptedVault | unknown,
-  password: string,
-  request: any,
-): Promise<unknown> {
-  const parsed = parseVault(vault);
-  if (!parsed) throw new Error("Invalid vault");
-  const mnemonic = await decryptVault(parsed, password);
-  try {
-    return await handleSignEVMTransaction(mnemonic, request);
-  } finally {
-    // String interning means we can't zero a JS string's backing buffer, but
-    // we can at least remove the reference so the GC can collect it sooner.
-    // The private key bytes inside handleSignEVMTransaction are already wiped
-    // by its own finally block.
-  }
+async function signEVMTransactionFromVault(vault: unknown, password: string | Uint8Array, request: any): Promise<unknown> {
+  return handleSignEVMTransaction(await openVault(vault, password), request);
 }
 
-async function signEVMContractCallFromVault(
-  vault: EncryptedVault | unknown,
-  password: string,
-  request: any,
-): Promise<unknown> {
-  const parsed = parseVault(vault);
-  if (!parsed) throw new Error("Invalid vault");
-  const mnemonic = await decryptVault(parsed, password);
-  return handleSignEVMContractCall(mnemonic, request);
+async function signEVMContractCallFromVault(vault: unknown, password: string | Uint8Array, request: any): Promise<unknown> {
+  return handleSignEVMContractCall(await openVault(vault, password), request);
 }
 
-async function signEVMMessageFromVault(
-  vault: EncryptedVault | unknown,
-  password: string,
-  message: string,
-): Promise<string> {
-  const parsed = parseVault(vault);
-  if (!parsed) throw new Error("Invalid vault");
-  const mnemonic = await decryptVault(parsed, password);
-  return handleSignEVMMessage(mnemonic, message);
+async function signEVMMessageFromVault(vault: unknown, password: string | Uint8Array, message: string): Promise<string> {
+  return handleSignEVMMessage(await openVault(vault, password), message);
 }
 
-async function signBitcoinTransactionFromVault(
-  vault: EncryptedVault | unknown,
-  password: string,
-  request: any,
-): Promise<unknown> {
-  const parsed = parseVault(vault);
-  if (!parsed) throw new Error("Invalid vault");
-  const mnemonic = await decryptVault(parsed, password);
-  return handleSignBitcoinTransaction(mnemonic, request);
+async function signBitcoinTransactionFromVault(vault: unknown, password: string | Uint8Array, request: any): Promise<unknown> {
+  return handleSignBitcoinTransaction(await openVault(vault, password), request);
 }
 
-async function signSolanaTransactionFromVault(
-  vault: EncryptedVault | unknown,
-  password: string,
-  request: any,
-): Promise<unknown> {
-  const parsed = parseVault(vault);
-  if (!parsed) throw new Error("Invalid vault");
-  const mnemonic = await decryptVault(parsed, password);
-  return handleSignSolanaTransaction(mnemonic, request);
+async function signSolanaTransactionFromVault(vault: unknown, password: string | Uint8Array, request: any): Promise<unknown> {
+  return handleSignSolanaTransaction(await openVault(vault, password), request);
+}
+
+async function signTronTransactionFromVault(vault: unknown, password: string | Uint8Array, request: any): Promise<unknown> {
+  return handleSignTronTransaction(await openVault(vault, password), request);
 }
 
 // ─── Message type registry ────────────────────────────────────────────────────
@@ -1164,7 +1259,11 @@ export type WorkerRequest =
   | { id: string; type: "signEVMContractCallFromVault"; vault: EncryptedVault | unknown; password: string; request: any }
   | { id: string; type: "signEVMMessageFromVault";      vault: EncryptedVault | unknown; password: string; message: string }
   | { id: string; type: "signBitcoinTransactionFromVault"; vault: EncryptedVault | unknown; password: string; request: any }
-  | { id: string; type: "signSolanaTransactionFromVault";  vault: EncryptedVault | unknown; password: string; request: any };
+  | { id: string; type: "signSolanaTransactionFromVault";  vault: EncryptedVault | unknown; password: string; request: any }
+  // ⑩ Tron (legacy mnemonic-based)
+  | { id: string; type: "signTronTransaction"; mnemonic: string; request: any }
+  // ⑭ continued — Tron vault-based
+  | { id: string; type: "signTronTransactionFromVault"; vault: EncryptedVault | unknown; password: string; request: any };
 
 export type WorkerResponse =
   | { id: string; ok: true;  result: unknown }
@@ -1185,7 +1284,13 @@ export type WorkerResponse =
 
 function resolvePassword(msg: any): string | Uint8Array {
   if (msg.passwordBytes instanceof Uint8Array) return msg.passwordBytes;
-  return (msg.password as string) ?? "";
+  if (typeof msg.password === "string") {
+    if (import.meta.env.DEV) {
+      console.warn("[CryptoVaultWorker] Password arrived as plain string — upgrade caller to use passwordBytes transferable");
+    }
+    return msg.password;
+  }
+  return "";
 }
 
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
@@ -1204,15 +1309,55 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       case "getSolanaAddress":    result = await deriveSOLAddress(msg.mnemonic); break;
       case "getTronAddress":      result = await deriveTRONAddress(msg.mnemonic); break;
       case "getXRPAddress":       result = await deriveXRPAddress(msg.mnemonic); break;
-      case "getAllAddresses":
-        result = {
-          EVM: await deriveEVMAddress(msg.mnemonic),
-          BTC: await deriveBTCAddress(msg.mnemonic),
-          SOL: await deriveSOLAddress(msg.mnemonic),
-          TRX: await deriveTRONAddress(msg.mnemonic),
-          XRP: await deriveXRPAddress(msg.mnemonic),
-        };
+      case "getAllAddresses": {
+        // Single mnemonicToSeed call — avoids 5× scrypt by sharing the seed.
+        const _seed = await mnemonicToSeed(msg.mnemonic);
+        const _seedCopy = _seed.slice(); // HDKey mutates the buffer, so keep an immutable copy
+        const _root = HDKey.fromMasterSeed(_seed);
+        const _evmChild = _root.derive("m/44'/60'/0'/0/0");
+        const _btcChild = _root.derive("m/84'/0'/0'/0/0");
+        const _trnChild = _root.derive("m/44'/195'/0'/0/0");
+        const _xrpChild = _root.derive("m/44'/144'/0'/0/0");
+
+        // EVM
+        const _evmPub = secp.getPublicKey(_evmChild.privateKey!, false);
+        const _evmAddr = "0x" + bytesToHex(keccak_256(_evmPub.slice(1)).slice(-20));
+
+        // BTC
+        const _btcPub     = _btcChild.publicKey!;
+        const _btcPkHash  = ripemd160(sha256(_btcPub));
+        const _btcWitness = new Uint8Array([0x00, 0x14, ..._btcPkHash]);
+        const _btcChecksum = sha256(sha256(new Uint8Array([0x05, ...ripemd160(sha256(_btcWitness))]))).slice(0, 4);
+        const _btcPayload  = new Uint8Array([0x05, ...ripemd160(sha256(_btcWitness)), ..._btcChecksum]);
+        const _btcAddr = base58.encode(_btcPayload);
+
+        // SOL — SLIP-0010
+        const _solPriv = await _deriveSolPriv(_seedCopy);
+        const _solPub  = await nobleEd.getPublicKeyAsync(_solPriv);
+        const _solAddr = base58.encode(_solPub);
+        wipeBytes(_solPriv);
+
+        // TRX
+        const _trnPub  = secp.getPublicKey(_trnChild.privateKey!, false);
+        const _trnHash = keccak_256(_trnPub.slice(1));
+        const _trnAddr_bytes = new Uint8Array([0x41, ..._trnHash.slice(-20)]);
+        const _trnCs = sha256(sha256(_trnAddr_bytes)).slice(0, 4);
+        const _trnFull = new Uint8Array(25); _trnFull.set(_trnAddr_bytes); _trnFull.set(_trnCs, 21);
+        const _trnAddr = base58.encode(_trnFull);
+
+        // XRP
+        const _xrpPub     = _xrpChild.publicKey!;
+        const _xrpPayload = new Uint8Array([0x00, ...ripemd160(sha256(_xrpPub))]);
+        const _xrpCs      = sha256(sha256(_xrpPayload)).slice(0, 4);
+        const _xrpFull    = new Uint8Array(25); _xrpFull.set(_xrpPayload); _xrpFull.set(_xrpCs, 21);
+        const _xrpAddr = base58.encode(_xrpFull);
+
+        wipeBytes(_seed); wipeBytes(_seedCopy);
+        wipeHDKey(_root); wipeHDKey(_evmChild); wipeHDKey(_btcChild); wipeHDKey(_trnChild); wipeHDKey(_xrpChild);
+
+        result = { EVM: _evmAddr, BTC: _btcAddr, SOL: _solAddr, TRX: _trnAddr, XRP: _xrpAddr };
         break;
+      }
       // ③ Encryption — pw is Uint8Array or string; encryptVault accepts both
       case "encryptVault":      result = await encryptVault(msg.data, pw, msg.origin); break;
       case "encryptVaultBatch": result = await encryptVaultBatch(msg.items, pw, msg.origin); break;
@@ -1239,7 +1384,9 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       case "signBitcoinTransaction": result = await handleSignBitcoinTransaction(msg.mnemonic, msg.request); break;
       // ⑨ Solana (legacy)
       case "signSolanaTransaction":  result = await handleSignSolanaTransaction(msg.mnemonic, msg.request); break;
-      // ⑩ Hashing
+      // ⑩ Tron (legacy)
+      case "signTronTransaction":    result = await handleSignTronTransaction(msg.mnemonic, msg.request); break;
+      // ⑪ Hashing
       case "hash":      result = workerHash(msg.algorithm, msg.hex); break;
       case "hmacSha256": result = workerHmacSha256(msg.keyHex, msg.dataHex); break;
       // ⑫ Secure wallet creation
@@ -1259,6 +1406,8 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         result = await signBitcoinTransactionFromVault(msg.vault, pw, msg.request); break;
       case "signSolanaTransactionFromVault":
         result = await signSolanaTransactionFromVault(msg.vault, pw, msg.request); break;
+      case "signTronTransactionFromVault":
+        result = await signTronTransactionFromVault(msg.vault, pw, msg.request); break;
       default:
         throw new Error(`Unknown worker message type: ${(msg as any).type}`);
     }
