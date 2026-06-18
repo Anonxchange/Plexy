@@ -24,10 +24,10 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertCircle, Loader2, CheckCircle2, X, ShieldCheck, ShieldAlert } from '@/lib/icons';
-import { signEVMTransactionFromVault, signBitcoinTransactionFromVault, callSigningWorker } from "@/hooks/use-signing-worker";
+import { signEVMTransactionFromVault, signBitcoinTransactionFromVault, signSolanaTransactionFromVault, signTronTransactionFromVault } from "@/hooks/use-signing-worker";
 import { broadcastEVMTransaction } from "@/lib/evmSigner";
-import { signSolanaTransaction, getLatestBlockhash, broadcastSolanaTransaction } from "@/lib/solanaSigner";
-import { signTronTransaction, broadcastTronTransaction } from "@/lib/tronSigner";
+import { getLatestBlockhash, broadcastSolanaTransaction } from "@/lib/solanaSigner";
+import { broadcastTronTransaction } from "@/lib/tronSigner";
 import { useAuth } from "@/lib/auth-context";
 import { CoinIcon } from "@/components/trading/CoinIcon";
 import { useSendFee } from "@/hooks/use-fees";
@@ -244,27 +244,23 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
       await broadcastEVMTransaction(result.signedTx, chainKey);
 
     } else if (selectedNetwork.includes("Solana")) {
-      // TODO: refactor once worker supports full SOL tx building from vault
-      // Mnemonic briefly surfaces to main thread for Solana tx construction only
-      const mnemonic = await callSigningWorker<string>("decryptVault", { vault, password });
-      const blockhash = await getLatestBlockhash();
-      const { signedTx } = await signSolanaTransaction(mnemonic, {
+      // Blockhash must be fetched on main thread; key stays in worker
+      const recentBlockhash = await getLatestBlockhash();
+      const result = await signSolanaTransactionFromVault(vault, password, {
         to: toAddress,
         amount: cryptoAmountNum.toString(),
         currency: "SOL",
-        recentBlockhash: blockhash,
-      });
-      await broadcastSolanaTransaction(signedTx);
+        recentBlockhash,
+      }) as any;
+      await broadcastSolanaTransaction(result.signedTx);
 
     } else if (selectedNetwork.includes("Tron")) {
-      // TODO: add signTronTransactionFromVault to worker
-      const mnemonic = await callSigningWorker<string>("decryptVault", { vault, password });
-      const { signedTx } = await signTronTransaction(mnemonic, {
+      const result = await signTronTransactionFromVault(vault, password, {
         to: toAddress,
         amount: cryptoAmountNum.toString(),
         currency: symbolToUse as any,
-      });
-      await broadcastTronTransaction(signedTx);
+      }) as any;
+      await broadcastTronTransaction(result.signedTx);
 
     } else {
       throw new Error(`Signing not supported for ${selectedNetwork}`);
