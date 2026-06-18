@@ -141,7 +141,7 @@ export function GiftCardDetail() {
         cardValue: value,
       },
     }));
-    setLocation("/checkout");
+    window.open("/checkout", "_blank");
   };
 
   const handleContinueOrder = () => {

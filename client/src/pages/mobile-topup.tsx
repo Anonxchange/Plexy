@@ -473,7 +473,7 @@ const Index = () => {
                       },
                     }));
                     devLog.info("Redirecting to checkout for topup");
-                    setLocation("/checkout");
+                    window.open("/checkout", "_blank");
                   }}
                 >
                   Proceed to Checkout →

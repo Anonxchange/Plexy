@@ -479,7 +479,7 @@ const UtilityBill = () => {
                       },
                     }));
                     devLog.info("Redirecting to checkout for utility bill");
-                    setLocation("/checkout");
+                    window.open("/checkout", "_blank");
                   }}
                 >
                   Proceed to Checkout →
