@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
@@ -77,7 +77,7 @@ export function Checkout() {
   const [rates, setRates] = useState<Record<string, number>>({ USD: 1 });
   const [pendingOrder] = useState<PendingOrder | null>(() => {
     try {
-      const raw = sessionStorage.getItem("pexly_pending_order");
+      const raw = localStorage.getItem("pexly_pending_order");
       return raw ? JSON.parse(raw) : null;
     } catch { return null; }
   });
@@ -152,7 +152,7 @@ export function Checkout() {
     const deliveryEmail = pendingDeliveryEmail || buyerEmail;
 
     const handleOrderSuccess = () => {
-      sessionStorage.removeItem("pexly_pending_order");
+      localStorage.removeItem("pexly_pending_order");
       try {
         const saved = JSON.parse(localStorage.getItem("pexly_digital_orders") || "[]");
         saved.unshift({

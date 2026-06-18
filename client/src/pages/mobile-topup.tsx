@@ -458,7 +458,7 @@ const Index = () => {
                       toast.error("Please enter both phone number and amount");
                       return;
                     }
-                    sessionStorage.setItem("pexly_pending_order", JSON.stringify({
+                    localStorage.setItem("pexly_pending_order", JSON.stringify({
                       type: "topup",
                       title: `${selectedOperator.name} Top-Up`,
                       description: `Mobile top-up — ${selectedOperator.name}`,
@@ -473,7 +473,9 @@ const Index = () => {
                       },
                     }));
                     devLog.info("Redirecting to checkout for topup");
-                    window.open("/checkout", "_blank");
+                    const seg = window.location.pathname.split("/")[1];
+                    const langBase = seg && seg.length === 2 ? `/${seg}` : "/en";
+                    window.open(`${langBase}/checkout`, "_blank");
                   }}
                 >
                   Proceed to Checkout →

@@ -464,7 +464,7 @@ const UtilityBill = () => {
                       toast.error("Please enter account number and amount");
                       return;
                     }
-                    sessionStorage.setItem("pexly_pending_order", JSON.stringify({
+                    localStorage.setItem("pexly_pending_order", JSON.stringify({
                       type: "utility",
                       title: `${selectedProvider.name} Bill Payment`,
                       description: `Utility bill — ${selectedProvider.name}`,
@@ -479,7 +479,9 @@ const UtilityBill = () => {
                       },
                     }));
                     devLog.info("Redirecting to checkout for utility bill");
-                    window.open("/checkout", "_blank");
+                    const seg = window.location.pathname.split("/")[1];
+                    const langBase = seg && seg.length === 2 ? `/${seg}` : "/en";
+                    window.open(`${langBase}/checkout`, "_blank");
                   }}
                 >
                   Proceed to Checkout →
