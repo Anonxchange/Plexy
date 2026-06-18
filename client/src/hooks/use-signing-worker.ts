@@ -68,6 +68,15 @@ function getWorker(): Worker {
   };
   sharedWorker.onerror = (err) => {
     console.error("[CryptoVaultWorker]", err.message ?? err);
+    // FIX: reject ALL pending calls so they don't hang forever.
+    // Without this, any in-flight callSigningWorker() promise would leak
+    // and never resolve if the worker crashes (e.g. OOM, syntax error in
+    // a dynamically loaded module, or an unhandled exception at top level).
+    const workerErr = new Error(`CryptoVaultWorker crashed: ${err.message ?? "unknown error"}`);
+    for (const cb of pending.values()) cb.reject(workerErr);
+    pending.clear();
+    // Null the singleton so the next call recreates the worker.
+    sharedWorker = null;
   };
   return sharedWorker;
 }
@@ -248,6 +257,9 @@ export const signEVMTransactionFromVault = (vault: unknown, password: string, re
 export const signEVMContractCallFromVault = (vault: unknown, password: string, request: any) =>
   callSigningWorker("signEVMContractCallFromVault", { vault, password, request });
 
+export const signEVMRawHashFromVault = (vault: unknown, password: string, hashHex: string) =>
+  callSigningWorker<string>("signEVMRawHashFromVault", { vault, password, hashHex });
+
 /** Sign an EIP-191 personal_sign message from vault */
 export const signEVMMessageFromVault = (vault: unknown, password: string, message: string) =>
   callSigningWorker<string>("signEVMMessageFromVault", { vault, password, message });
@@ -263,3 +275,11 @@ export const signSolanaTransactionFromVault = (vault: unknown, password: string,
 /** Sign a Tron transaction from vault */
 export const signTronTransactionFromVault = (vault: unknown, password: string, request: any) =>
   callSigningWorker("signTronTransactionFromVault", { vault, password, request });
+
+/**
+ * Wipe the worker's session key cache.
+ * Call on logout so the cached scrypt-derived key is zeroed immediately
+ * rather than waiting for the 15-minute TTL to expire.
+ */
+export const clearWorkerSessionCache = () =>
+  callSigningWorker("clearSessionCache", {} as any);
