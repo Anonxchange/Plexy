@@ -151,7 +151,7 @@ export function Checkout() {
   }
 
   if (pendingOrder) {
-    const processingFee = 0.5;
+    const processingFee = pendingOrder.type === "giftcard" ? 0.55 : 0.5;
     const pendingTotal = pendingOrder.amount + processingFee;
     const deliveryEmail = pendingGiftDelivery === "gift"
       ? pendingGiftRecipientEmail
@@ -161,6 +161,10 @@ export function Checkout() {
       : rates[pendingOrder.currency.toUpperCase()]
         ? pendingOrder.amount / rates[pendingOrder.currency.toUpperCase()]
         : null;
+    // For gift cards, always charge in USD (converted amount + fee)
+    const pendingTotalUsd = pendingOrder.type === "giftcard"
+      ? (pendingAmountUsd !== null ? pendingAmountUsd : pendingOrder.amount) + processingFee
+      : pendingTotal;
 
     const handleOrderSuccess = () => {
       localStorage.removeItem("pexly_pending_order");
@@ -186,12 +190,64 @@ export function Checkout() {
       if (pendingOrder.type === "topup") {
         return { productType: "airtime" as const, operatorId: Number(pendingOrder.metadata.operatorId), amount: pendingOrder.amount };
       }
-      const usdAmount = pendingAmountUsd ?? pendingOrder.amount;
-      return { productType: "total" as const, amount: usdAmount, currency: "USD" };
+      return { productType: "total" as const, amount: pendingTotalUsd, currency: "USD" };
     };
 
     return (
       <BrandShell>
+        {/* Mobile order summary toggle — gift card single-item flow */}
+        {pendingOrder.type === "giftcard" && (
+          <div className="lg:hidden border-b border-border/60 bg-secondary/30">
+            <button
+              onClick={() => setShowOrderSummary((v) => !v)}
+              className="w-full flex items-center justify-between px-4 py-3"
+            >
+              <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                <ShoppingBag className="h-4 w-4" />
+                {showOrderSummary ? "Hide" : "Show"} order summary
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold">USD ${pendingTotalUsd.toFixed(2)}</span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${showOrderSummary ? "rotate-180" : ""}`} />
+              </div>
+            </button>
+            {showOrderSummary && (
+              <div className="px-4 pb-4 space-y-3">
+                <div className="flex gap-3 items-center">
+                  <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {pendingOrder.image
+                      ? <img src={pendingOrder.image} alt={pendingOrder.title} className="w-full h-full object-contain p-1.5" />
+                      : <Zap className="h-5 w-5 text-primary" />
+                    }
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate">{pendingOrder.title}</p>
+                    <p className="text-xs text-muted-foreground">{pendingOrder.currency.toUpperCase()} {pendingOrder.amount.toFixed(2)}</p>
+                  </div>
+                  <p className="text-sm font-bold flex-shrink-0">
+                    USD {(pendingAmountUsd ?? pendingOrder.amount).toFixed(2)}
+                  </p>
+                </div>
+                <Separator />
+                <div className="space-y-1.5 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span>USD {(pendingAmountUsd ?? pendingOrder.amount).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Processing fee</span>
+                    <span>USD {processingFee.toFixed(2)}</span>
+                  </div>
+                </div>
+                <Separator />
+                <div className="flex justify-between font-bold text-sm">
+                  <span>Total (USD)</span>
+                  <span>USD {pendingTotalUsd.toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         <main className="max-w-6xl mx-auto px-4 py-8">
           <div className="mb-8">
             <p className="text-xs font-semibold text-primary tracking-widest uppercase">Secure checkout</p>
@@ -363,8 +419,8 @@ export function Checkout() {
 
                     <TabsContent value="crypto" className="p-6 focus-visible:outline-none focus-visible:ring-0">
                       <NowPaymentsCheckout
-                        amount={pendingTotal}
-                        currency={pendingOrder.currency}
+                        amount={pendingOrder.type === "giftcard" ? pendingTotalUsd : pendingTotal}
+                        currency={pendingOrder.type === "giftcard" ? "usd" : pendingOrder.currency}
                         description={pendingOrder.description}
                         metadata={pendingOrder.metadata}
                         onPaymentSuccess={handleOrderSuccess}
@@ -415,7 +471,7 @@ export function Checkout() {
                       </div>
                       <Button className="w-full h-12 font-bold rounded-2xl gap-2">
                         <Lock className="h-4 w-4" />
-                        Pay {pendingOrder.currency.toUpperCase()} {pendingTotal.toFixed(2)}
+                        Pay USD {(pendingOrder.type === "giftcard" ? pendingTotalUsd : pendingTotal).toFixed(2)}
                       </Button>
                     </TabsContent>
                   </Tabs>
@@ -521,7 +577,7 @@ export function Checkout() {
   });
 
   const subtotal = itemsUsd.reduce((acc, i) => acc + i._lineUsd, 0);
-  const processingFee = 0.5;
+  const processingFee = 0.55;
   const discount = promoApplied ? Math.min(subtotal * 0.05, 10) : 0;
   const total = Math.max(0, subtotal + processingFee - discount);
   const totalItems = items.reduce((acc, i) => acc + (i.quantity || 0), 0);
