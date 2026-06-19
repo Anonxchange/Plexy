@@ -950,13 +950,9 @@ export function ProductDetail() {
             }
           }
 
-          // 3. Decide what to show:
-          //    - If description images exist → show them (desc images first, then carousel as fallback)
-          //    - If no description images → show carousel images full-width
+         // 3.          //    - If description images exist → show ONLY those - If no description images → show carousel images full-width
           const hasDescImages = descImages.length > 0;
-          const showcaseImages = hasDescImages
-            ? [...descImages, ...carouselImages]
-            : carouselImages;
+          const showcaseImages = hasDescImages ? descImages : carouselImages;
 
           if (showcaseImages.length === 0) return null;
 
