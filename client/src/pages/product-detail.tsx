@@ -904,12 +904,15 @@ export function ProductDetail() {
           const showcaseImages: string[] = [];
 
           // 1. Extract <img src="..."> URLs from descriptionHtml (CJ detail/spec shots)
+          //    Force https:// — many CJ CDN URLs are http:// which browsers block on https pages
           if (product.descriptionHtml) {
             const imgRe = /<img[^>]+src=["']([^"']+)["']/gi;
             let match: RegExpExecArray | null;
             while ((match = imgRe.exec(product.descriptionHtml)) !== null) {
-              const src = match[1];
-              if (src && !seen.has(src)) {
+              const raw = match[1];
+              if (!raw) continue;
+              const src = raw.startsWith('http://') ? raw.replace('http://', 'https://') : raw;
+              if (!seen.has(src)) {
                 seen.add(src);
                 showcaseImages.push(src);
               }
@@ -958,11 +961,12 @@ export function ProductDetail() {
                       className="w-full h-auto block select-none"
                       loading={idx === 0 ? "eager" : "lazy"}
                       draggable={false}
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        const wrapper = (e.currentTarget as HTMLImageElement).parentElement;
+                        if (wrapper) wrapper.style.display = 'none';
+                      }}
                     />
-                    {/* Hairline separator between images */}
-                    {idx < showcaseImages.length - 1 && (
-                      <div className="absolute bottom-0 left-0 right-0 h-px bg-border/30" />
-                    )}
                   </div>
                 ))}
               </div>
