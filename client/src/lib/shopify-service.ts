@@ -141,12 +141,16 @@ export const shopifyService = {
       const variant = node.merchandise;
       const product = variant?.product;
 
+      // cost.totalAmount is the Storefront API 2022-01+ field; fall back to variant price
+      const costAmount = node.cost?.totalAmount?.amount;
+      const costCurrency = node.cost?.totalAmount?.currencyCode;
+
       return {
         id: node.id,
         variantId: variant?.id || '',
         title: node.title || (product?.title || 'Product') + (variant?.title && variant.title !== 'Default Title' ? ` - ${variant.title}` : ''),
-        price: node.priceV2?.amount ? parseFloat(node.priceV2.amount) : (variant?.price?.amount ? parseFloat(variant.price.amount) : 0),
-        currency: node.priceV2?.currencyCode || variant?.price?.currencyCode || 'USD',
+        price: costAmount ? parseFloat(costAmount) : (variant?.price?.amount ? parseFloat(variant.price.amount) : 0),
+        currency: costCurrency || variant?.price?.currencyCode || 'USD',
         quantity: node.quantity,
         image: node.image?.url || product?.images?.edges?.[0]?.node?.url || product?.images?.nodes?.[0]?.url || ''
       };
