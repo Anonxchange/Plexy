@@ -46,9 +46,18 @@ import { ShippingEstimator } from "@/components/shop/ShippingEstimator";
 import { ReviewSection } from "@/components/shop/ReviewSection";
 import type { ShippingInfo } from "@/components/shop/shipping-types";
 
-/** Strip <img> tags from HTML so description renders text-only (images shown in showcase below) */
+/** Strip <img> tags and CJ "Product Image:" label from description HTML.
+ *  Images are shown in the full-width showcase below, not inline. */
 function stripImgTags(html: string): string {
-  return html.replace(/<img\b[^>]*>/gi, '').replace(/<br\s*\/?>\s*(<br\s*\/?>\s*){2,}/gi, '<br /><br />');
+  return html
+    // Remove all img tags
+    .replace(/<img\b[^>]*\/?>/gi, '')
+    // Remove standalone "Product Image:" label paragraphs (CJ/Alibaba boilerplate)
+    .replace(/<(p|div|span)[^>]*>\s*(?:<(?:strong|b|em|u)[^>]*>)?\s*Product\s+Image\s*:?\s*(?:<\/(?:strong|b|em|u)>)?\s*<\/\1>/gi, '')
+    // Collapse 3+ consecutive <br> tags into two
+    .replace(/(<br\s*\/?>\s*){3,}/gi, '<br /><br />')
+    // Collapse 3+ consecutive empty <p> tags into one
+    .replace(/(<p[^>]*>\s*<\/p>\s*){3,}/gi, '<p></p>');
 }
 
 function shuffleArray<T>(items: T[]): T[] {
