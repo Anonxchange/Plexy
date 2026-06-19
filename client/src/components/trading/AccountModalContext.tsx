@@ -9,10 +9,11 @@ import {
 } from "@/lib/asterdex-service";
 import { supabase } from "@/lib/supabase";
 import type { NonCustodialWallet } from "@/lib/non-custodial-wallet";
-import { deriveEVMPrivateKey } from "@/lib/evmSigner";
-import { wipeBytes } from "@/lib/secureMemory";
+import { signEVMRawHashFromVault } from "@/hooks/use-signing-worker";
+import { bytesToHex } from "@noble/hashes/utils";
 import { broadcastDeposit } from "@/lib/deposit-broadcaster";
 import { useToast } from "@/hooks/use-toast";
+import { usePasswordRateLimit } from "@/hooks/use-password-rate-limit";
 import {
   CHAIN_MAP, DEPOSIT_CHAINS, FALLBACK_COINS, asterRegKey,
 } from "./AccountModalConfig";
@@ -55,6 +56,7 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const sendRateLimit = usePasswordRateLimit({ maxAttempts: 5, baseDelayMs: 10_000 });
   const isSpot = accountType === "Spot account";
   const hasV3 = !!(user?.user_metadata?.aster_signer_key);
 
@@ -124,39 +126,39 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
       setSigningStep("Verifying password…");
       await new Promise(r => setTimeout(r, 30));
 
-      const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
-      const mnemonic = await nonCustodialWalletManager.getWalletMnemonic(userEvmWallet.id, walletPassword, user.id);
-      if (!mnemonic) throw new Error("Incorrect password or wallet not found.");
+      const vault = userEvmWallet.encryptedMnemonic ?? userEvmWallet.encryptedPrivateKey;
+      if (!vault) throw new Error("Wallet data not found. Please recreate your wallet.");
 
       setSigningStep("Preparing wallet…");
       await new Promise(r => setTimeout(r, 30));
-      const privKey = await deriveEVMPrivateKey(mnemonic);
 
-      try {
-        const signerWallet = asterGenerateSignerWallet();
-        const agentName    = `pexly-${userEvmWallet.address.slice(2, 8).toLowerCase()}`;
+      const signerWallet = asterGenerateSignerWallet();
+      const agentName    = `pexly-${userEvmWallet.address.slice(2, 8).toLowerCase()}`;
 
-        setSigningStep("Signing…");
-        await new Promise(r => setTimeout(r, 30));
+      setSigningStep("Signing…");
+      await new Promise(r => setTimeout(r, 30));
 
-        // Single-call V3 registration — POST /fapi/v3/registerAndApproveAgent.
-        // Signs with the main wallet key using EIP-712 (chainId=1666, Message.msg).
-        // Field order in the signed message is FIXED per AsterDEX docs.
-        await asterRegisterAndApproveAgent(privKey, userEvmWallet.address, signerWallet.address, agentName);
+      // Signer callback — private key stays in the worker the entire time
+      const workerSigner = async (hash: Uint8Array) => {
+        const hashHex = "0x" + bytesToHex(hash);
+        return signEVMRawHashFromVault(vault, walletPassword, hashHex);
+      };
 
-        setSigningStep("Almost done…");
-        await new Promise(r => setTimeout(r, 30));
-        const { error: updateError } = await supabase.auth.updateUser({
-          data: {
-            aster_user:       userEvmWallet.address,
-            aster_signer:     signerWallet.address,
-            aster_signer_key: signerWallet.privateKey,
-          },
-        });
-        if (updateError) throw new Error("Wallet linked but failed to save credentials: " + updateError.message);
-      } finally {
-        wipeBytes(privKey);
-      }
+      // Single-call V3 registration — POST /fapi/v3/registerAndApproveAgent.
+      // Signs with the main wallet key using EIP-712 (chainId=1666, Message.msg).
+      // Field order in the signed message is FIXED per AsterDEX docs.
+      await asterRegisterAndApproveAgent(workerSigner, userEvmWallet.address, signerWallet.address, agentName);
+
+      setSigningStep("Almost done…");
+      await new Promise(r => setTimeout(r, 30));
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: {
+          aster_user:       userEvmWallet.address,
+          aster_signer:     signerWallet.address,
+          aster_signer_key: signerWallet.privateKey,
+        },
+      });
+      if (updateError) throw new Error("Wallet linked but failed to save credentials: " + updateError.message);
     },
     onSuccess: () => {
       setSigningStep("");
@@ -471,12 +473,17 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
         decimals: selectedCoinInfo?.decimals,
         isNative: selectedCoinInfo?.isNative,
       });
+      sendRateLimit.reset();
       setSendTxHash(result.txHash);
       setSendTxUrl(result.explorerUrl);
       setSendPassword("");
       toast({ title: "Deposit sent!", description: "Transaction broadcast successfully." });
     } catch (err: any) {
-      setSendError(err.message ?? "Transaction failed. Please try again.");
+      const msg = err.message ?? "";
+      if (/password|decrypt|invalid|corrupted/i.test(msg)) {
+        sendRateLimit.recordFailure();
+      }
+      setSendError(msg || "Transaction failed. Please try again.");
     } finally {
       setSendLoading(false);
     }
@@ -504,6 +511,7 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
     currentBalance, resolvedFee, resolvedFeeNum, withdrawMin, youReceive, feeLoading,
     spotBalanceFor, futuresAvailFor, headerBalance, spotLoading, futuresLoading,
     // Send state
+    sendRateLimit,
     sendPassword, setSendPassword, showSendPwd, setShowSendPwd,
     sendLoading, sendTxHash, sendTxUrl, sendError, handleSendFromWallet, sendCooldownUntil,
     // TX history
