@@ -46,6 +46,11 @@ import { ShippingEstimator } from "@/components/shop/ShippingEstimator";
 import { ReviewSection } from "@/components/shop/ReviewSection";
 import type { ShippingInfo } from "@/components/shop/shipping-types";
 
+/** Strip <img> tags from HTML so description renders text-only (images shown in showcase below) */
+function stripImgTags(html: string): string {
+  return html.replace(/<img\b[^>]*>/gi, '').replace(/<br\s*\/?>\s*(<br\s*\/?>\s*){2,}/gi, '<br /><br />');
+}
+
 function shuffleArray<T>(items: T[]): T[] {
   const shuffled = [...items];
   for (let i = shuffled.length - 1; i > 0; i -= 1) {
@@ -657,7 +662,7 @@ export function ProductDetail() {
                   <p className="text-sm font-semibold">Description</p>
                   <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground">
                     {product.description
-                      ? parse(product.description)
+                      ? parse(stripImgTags(product.description))
                       : "No description provided for this item."}
                   </div>
                 </div>
@@ -868,7 +873,7 @@ export function ProductDetail() {
                 <p className="text-sm font-semibold">Description</p>
                 <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground">
                   {product.description
-                    ? parse(product.description)
+                    ? parse(stripImgTags(product.description))
                     : "No description provided for this item."}
                 </div>
               </div>
