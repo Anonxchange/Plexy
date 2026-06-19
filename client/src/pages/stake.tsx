@@ -12,6 +12,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useHead } from "@unhead/react";
 import { Link } from "wouter";
 import { ArrowRight, ArrowUpRight, ExternalLink, Loader2, ShieldCheck, X, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight, Lock, KeyRound, BellRing, Timer, Building2, Scale, Landmark } from '@/lib/icons';
+import { usePasswordRateLimit } from "@/hooks/use-password-rate-limit";
 
 import securityPadlockImg from "@assets/IMG_5449.webp";
 import iconTrophyImg from "@assets/IMG_5464.webp";
@@ -523,6 +524,7 @@ function StakeDialog({
 }) {
   const { user, isWalletUnlocked, getSessionPassword, setSessionPassword } = useAuth();
   const { toast } = useToast();
+  const rateLimit = usePasswordRateLimit({ maxAttempts: 5, baseDelayMs: 10_000 });
 
   const [amount, setAmount] = useState("");
   const [password, setPassword] = useState("");
@@ -627,10 +629,15 @@ function StakeDialog({
       });
       // Password verified by the worker during first contract call
       if (!isWalletUnlocked) setSessionPassword(pwd);
+      rateLimit.reset();
       setStep("done");
       toast({ title: "Stake submitted", description: `Your ${product.inputSymbol} stake is on its way.` });
     } catch (e: any) {
-      setError(e?.message || "Transaction failed");
+      const msg = e?.message ?? "";
+      if (/password|decrypt|invalid|corrupted/i.test(msg)) {
+        rateLimit.recordFailure();
+      }
+      setError(msg || "Transaction failed");
       setStep("error");
     }
   }
@@ -744,10 +751,15 @@ function StakeDialog({
                 </div>
               )}
 
+              {rateLimit.isLocked && (
+                <p className="text-xs text-destructive text-center">
+                  Too many failed attempts. Try again in {rateLimit.lockoutSeconds}s.
+                </p>
+              )}
               <Button
                 className="w-full rounded-xl bg-lime text-black hover:bg-lime/90 h-12 text-sm font-semibold"
                 onClick={handleConfirm}
-                disabled={!amount}
+                disabled={!amount || rateLimit.isLocked}
               >
                 Confirm stake
               </Button>

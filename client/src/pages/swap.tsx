@@ -18,6 +18,7 @@ import { useSchema, swapPageSchema } from "@/hooks/use-schema";
 import { CoinIcon } from "@/components/trading/CoinIcon";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useSwapPrice, calculateSwapAmount } from "@/hooks/use-swap-price";
+import { usePasswordRateLimit } from "@/hooks/use-password-rate-limit";
 import { useWalletBalances } from "@/hooks/use-wallet-balances";
 import { getCryptoPrices } from "@/lib/crypto-prices";
 import { useToast } from "@/hooks/use-toast";
@@ -79,6 +80,7 @@ export function Swap() {
   const [isUpdatingFromInput, setIsUpdatingFromInput] = useState(true);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [walletPassword, setWalletPassword] = useState("");
+  const rateLimit = usePasswordRateLimit({ maxAttempts: 5, baseDelayMs: 10_000 });
 
   const isMountedRef = useRef(true);
   useEffect(() => {
@@ -503,6 +505,7 @@ export function Swap() {
       }
 
       if (isMountedRef.current) {
+        rateLimit.reset();
         toast({
           title: "Swap Successful!",
           description: `Successfully swapped ${fromAmountNum} ${fromCurrency} → ${toCurrency}`,
@@ -510,10 +513,14 @@ export function Swap() {
       }
     } catch (error: any) {
       console.error("Swap execution failed:", error);
+      const errMsg = error?.message ?? "";
+      if (/password|decrypt|invalid|corrupted/i.test(errMsg)) {
+        rateLimit.recordFailure();
+      }
       if (isMountedRef.current) {
         toast({
           title: "Swap Failed",
-          description: error.message || "Transaction failed. Please ensure your wallet has sufficient balance and the swap service is available.",
+          description: errMsg || "Transaction failed. Please ensure your wallet has sufficient balance and the swap service is available.",
           variant: "destructive",
         });
       }
@@ -525,6 +532,7 @@ export function Swap() {
   };
 
   const handlePasswordSubmit = async () => {
+    if (rateLimit.isLocked) return;
     if (walletPassword.length > 0) {
       setSessionPassword(walletPassword);
       await performSwap(walletPassword);
@@ -1376,12 +1384,18 @@ export function Swap() {
                 value={walletPassword}
                 onChange={(e) => setWalletPassword(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handlePasswordSubmit()}
+                disabled={rateLimit.isLocked}
                 autoFocus
               />
+              {rateLimit.isLocked && (
+                <p className="text-xs text-destructive">
+                  Too many failed attempts. Try again in {rateLimit.lockoutSeconds}s.
+                </p>
+              )}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowPasswordDialog(false)}>Cancel</Button>
-              <Button onClick={handlePasswordSubmit} disabled={isSwapping || walletPassword.length === 0}>
+              <Button onClick={handlePasswordSubmit} disabled={isSwapping || walletPassword.length === 0 || rateLimit.isLocked}>
                 {isSwapping ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : "Confirm Swap"}
               </Button>
             </DialogFooter>
