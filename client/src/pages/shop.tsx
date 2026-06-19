@@ -205,17 +205,11 @@ export function Shop() {
       let page = 0;
       while (hasMore && page < 40) {
         if (fetchId !== shopifyFetchIdRef.current) return;
-        const result = await shopifyService.getProducts(SHOPIFY_FETCH_SIZE, after, undefined, false);
+        const result = await shopifyService.getProducts(SHOPIFY_FETCH_SIZE, after);
         if (fetchId !== shopifyFetchIdRef.current) return;
 
         const fetched: Listing[] = (result.products || []).map((edge: any) => {
           const p = edge.node;
-          const buildTaxonomyPath = (cat: any): string => {
-            if (!cat) return "";
-            const parts: string[] = [...(cat.ancestors || []).map((a: any) => a.name), cat.name];
-            return parts.filter(Boolean).join(CAT_SEPARATOR);
-          };
-          const taxonomyCategory: string = buildTaxonomyPath(p.category) || (p.productType ?? "");
           return {
             id: p.id,
             handle: p.handle,
@@ -223,7 +217,7 @@ export function Shop() {
             description: p.description,
             price: parseFloat(p.priceRange.minVariantPrice.amount),
             currency: p.priceRange.minVariantPrice.currencyCode,
-            category: taxonomyCategory,
+            category: p.productType ?? "",
             tags: Array.isArray(p.tags) ? p.tags.filter((t: string) => t.trim().length > 0) : [],
             images: p.images.edges.map((e: any) => e.node.url),
             location: "Online",

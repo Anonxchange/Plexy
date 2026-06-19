@@ -144,10 +144,8 @@ export function ProductDetail() {
   const [reportReason, setReportReason] = useState("counterfeit");
   const [reportDetails, setReportDetails] = useState("");
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
-  const [selectedSize, setSelectedSize] = useState("");
-  const [selectedColor, setSelectedColor] = useState("");
-  const [availableSizes, setAvailableSizes] = useState<string[]>([]);
-  const [availableColors, setAvailableColors] = useState<string[]>([]);
+  const [productOptions, setProductOptions] = useState<{ name: string; values: string[] }[]>([]);
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [relatedProducts, setRelatedProducts] = useState<Listing[]>([]);
   const [quantity, setQuantity] = useState(1);
   
@@ -218,25 +216,22 @@ export function ProductDetail() {
     if (!shopifyProduct) return null;
 
     const variants = shopifyProduct.variants?.edges || [];
-    
+
     // If no options to select, return first variant
-    if (availableSizes.length === 0 && availableColors.length === 0) {
+    if (productOptions.length === 0) {
       return variants[0]?.node || null;
     }
 
     const match = variants.find((edge: any) => {
-      const opts = edge.node.selectedOptions || [];
-      const matchesSize = !selectedSize || opts.some((opt: any) =>
-        (opt.name.toLowerCase() === 'size' || opt.name.toLowerCase() === 'taille') && opt.value === selectedSize
-      );
-      const matchesColor = !selectedColor || opts.some((opt: any) =>
-        (opt.name.toLowerCase() === 'color' || opt.name.toLowerCase() === 'couleur' || opt.name.toLowerCase() === 'colour') && opt.value === selectedColor
-      );
-      return matchesSize && matchesColor;
+      const opts: { name: string; value: string }[] = edge.node.selectedOptions || [];
+      return opts.every(opt => {
+        const chosen = selectedOptions[opt.name];
+        return !chosen || chosen === opt.value;
+      });
     });
 
     return match?.node || null;
-  }, [selectedSize, selectedColor, availableSizes, availableColors]);
+  }, [selectedOptions, productOptions]);
 
   // Resolve cjVid safely: variant metafield → product-level fallback → variant SKU.
   // Never passes an empty string to the shipping estimator.
@@ -259,21 +254,16 @@ export function ProductDetail() {
   const applyShopifyProduct = (p: any) => {
     shopifyDataRef.current = p;
 
-    const options = p.options || [];
-    const sizeOption = options.find((opt: any) =>
-      opt.name.toLowerCase() === 'size' || opt.name.toLowerCase() === 'taille'
-    );
-    const colorOption = options.find((opt: any) =>
-      opt.name.toLowerCase() === 'color' || opt.name.toLowerCase() === 'couleur' || opt.name.toLowerCase() === 'colour'
+    const options: { name: string; values: string[] }[] = (p.options || []).filter(
+      (opt: any) => Array.isArray(opt.values) && opt.values.length > 0 &&
+        !(opt.values.length === 1 && opt.values[0] === 'Default Title')
     );
 
-    const sizes = sizeOption?.values || [];
-    const colors = colorOption?.values || [];
-
-    setAvailableSizes(sizes);
-    setAvailableColors(colors);
-    if (sizes.length > 0) setSelectedSize(sizes[0]);
-    if (colors.length > 0) setSelectedColor(colors[0]);
+    setProductOptions(options);
+    // Pre-select first value for each option
+    const defaults: Record<string, string> = {};
+    options.forEach((opt) => { defaults[opt.name] = opt.values[0]; });
+    setSelectedOptions(defaults);
 
     setProduct({
       id: p.id,
@@ -496,7 +486,7 @@ export function ProductDetail() {
       return;
     }
 
-    const optionLabel = [selectedSize, selectedColor].filter(Boolean).join(' / ');
+    const optionLabel = Object.values(selectedOptions).filter(Boolean).join(' / ');
 
     await addToCart(targetVariantId, {
       variantId: targetVariantId,
@@ -726,53 +716,39 @@ export function ProductDetail() {
             <Separator />
 
             <div className="space-y-5">
-              {/* Options selection */}
-              <div className="space-y-4">
-                {availableSizes.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold">Size</p>
-                      <span className="text-xs text-muted-foreground cursor-pointer hover:underline">Size Guide</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {availableSizes.map((size) => (
-                        <button
-                          key={size}
-                          onClick={() => setSelectedSize(size)}
-                          className={`h-10 min-w-[3rem] px-3 rounded-lg text-sm font-bold border-2 transition-all ${
-                            selectedSize === size
-                              ? 'bg-foreground text-background border-foreground shadow-md'
-                              : 'bg-background text-foreground border-border/40 hover:border-primary/50'
-                          }`}
-                        >
-                          {size}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {availableColors.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-semibold">Color</p>
-                    <div className="flex flex-wrap gap-2">
-                      {availableColors.map((color) => (
-                        <button
-                          key={color}
-                          onClick={() => setSelectedColor(color)}
-                          className={`h-10 min-w-[3rem] px-3 rounded-lg text-sm font-bold border-2 transition-all ${
-                            selectedColor === color
-                              ? 'bg-foreground text-background border-foreground shadow-md'
-                              : 'bg-background text-foreground border-border/40 hover:border-primary/50'
-                          }`}
-                        >
-                          {color}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+              {/* Options selection — all product options rendered generically */}
+              {productOptions.length > 0 && (
+                <div className="space-y-4">
+                  {productOptions.map((opt) => {
+                    const isSizeOption = opt.name.toLowerCase().includes('size') || opt.name.toLowerCase() === 'taille';
+                    return (
+                      <div key={opt.name} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-semibold">{opt.name}</p>
+                          {isSizeOption && (
+                            <span className="text-xs text-muted-foreground cursor-pointer hover:underline">Size Guide</span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {opt.values.map((val) => (
+                            <button
+                              key={val}
+                              onClick={() => setSelectedOptions(prev => ({ ...prev, [opt.name]: val }))}
+                              className={`h-10 min-w-[3rem] px-3 rounded-lg text-sm font-bold border-2 transition-all ${
+                                selectedOptions[opt.name] === val
+                                  ? 'bg-foreground text-background border-foreground shadow-md'
+                                  : 'bg-background text-foreground border-border/40 hover:border-primary/50'
+                              }`}
+                            >
+                              {val}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               <div className="space-y-3">
                 {/* Quantity selector + Add to Cart */}
@@ -919,22 +895,10 @@ export function ProductDetail() {
 
         {/* Full-width product image showcase */}
         {!isLoading && product && (() => {
-          // Priority order for showcase images:
-          // 1. Images embedded in descriptionHtml (Shopify/CJ detail/spec shots)
-          // 2. Additional media images not already in the top carousel
-          // 3. Fallback: all product images (deduplicated)
           const seen = new Set<string>();
           const showcaseImages: string[] = [];
 
-          // Mark carousel images as seen so we don't duplicate them in the showcase
-          const carouselUrls = new Set<string>(
-            (product.media && product.media.length > 0
-              ? product.media.filter(m => m.type === 'image').map(m => (m as any).url)
-              : product.images
-            )
-          );
-
-          // 1. Extract <img src="..."> URLs from descriptionHtml
+          // 1. Extract <img src="..."> URLs from descriptionHtml (CJ detail/spec shots)
           if (product.descriptionHtml) {
             const imgRe = /<img[^>]+src=["']([^"']+)["']/gi;
             let match: RegExpExecArray | null;
@@ -947,7 +911,7 @@ export function ProductDetail() {
             }
           }
 
-          // 2. If no description images, fall back to media/images (excluding carousel dupes)
+          // 2. Fall back to carousel images so the section always shows
           if (showcaseImages.length === 0) {
             const candidates = product.media && product.media.length > 0
               ? product.media.filter(m => m.type === 'image').map(m => (m as any).url as string)
