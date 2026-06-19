@@ -912,14 +912,14 @@ export function ProductDetail() {
           const seen = new Set<string>();
           const descImages: string[] = [];
 
-          // Helper: normalise a raw src — force https, skip blanks/placeholders
+          // Helper: normalise a raw src — force https, skip blanks/data URIs
           const normSrc = (raw: string): string | null => {
             if (!raw || raw.startsWith('data:') || raw.length < 8) return null;
             return raw.startsWith('http://') ? raw.replace('http://', 'https://') : raw;
           };
 
           // 1. Extract images from descriptionHtml
-          //    Check both src AND data-src (CJ/Alibaba use lazy-load data-src)
+          //    Check both src AND data-src (CJ uses lazy-load data-src in some themes)
           if (product.descriptionHtml) {
             const tagRe = /<img[^>]+>/gi;
             let tagMatch: RegExpExecArray | null;
@@ -950,7 +950,9 @@ export function ProductDetail() {
             }
           }
 
-         // 3.          //    - If description images exist → show ONLY those - If no description images → show carousel images full-width
+          // 3. Decide what to show:
+          //    - If description images exist → show ONLY those
+          //    - If no description images → show carousel images full-width
           const hasDescImages = descImages.length > 0;
           const showcaseImages = hasDescImages ? descImages : carouselImages;
 
