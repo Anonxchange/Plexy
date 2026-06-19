@@ -123,6 +123,20 @@ class NonCustodialWalletManager {
     return `${STORAGE_KEY_PREFIX}_${userId}`;
   }
 
+  /**
+   * Generates a single-chain wallet on the MAIN THREAD.
+   *
+   * ⚠️  SECURITY NOTE — main-thread mnemonic:
+   * The mnemonic is generated and handled as a plain JS string on the main
+   * thread heap.  JS strings are immutable and cannot be zeroed.  The seed
+   * (Uint8Array) and HDKey objects are wiped in the finally block, but the
+   * mnemonic and private-key hex strings cannot be.
+   *
+   * For new call-sites prefer callSigningWorker("createSecureWallet") which
+   * keeps the mnemonic entirely inside the worker thread and never exposes it
+   * on the main thread.  This method is kept to support the legacy per-chain
+   * generation flow in WalletSetupDialog.
+   */
   async generateNonCustodialWallet(
     chainId: string = "ethereum",
     userPassword: string,

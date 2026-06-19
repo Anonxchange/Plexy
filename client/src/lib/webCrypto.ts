@@ -136,6 +136,12 @@ export async function encryptVaultWithKey(
  * Encrypts a mnemonic into a secure vault using scrypt + AES-256-GCM.
  * The current browser origin is bound into the AES-GCM AAD so the vault can
  * only be decrypted on the same origin it was created on.
+ *
+ * ⚠️  MAIN-THREAD CRYPTO — runs scrypt (N=262 144) on the UI thread, freezing
+ * the browser for 1-3 s.  For new code prefer the worker path:
+ *   callSigningWorker("encryptVault", { data, password, origin })
+ * This function is kept for the legacy wallet-generation flow in
+ * NonCustodialWalletManager which will be migrated to createSecureWallet.
  */
 export async function encryptVault(mnemonic: string, password: string): Promise<EncryptedVault> {
   const encoder = new TextEncoder();
@@ -177,6 +183,11 @@ export async function encryptVault(mnemonic: string, password: string): Promise<
 /**
  * Decrypts an EncryptedVault using the provided password. If the vault was
  * created with an origin binding, refuses to decrypt on any other origin.
+ *
+ * ⚠️  MAIN-THREAD CRYPTO — runs scrypt on the UI thread.
+ * NonCustodialWalletManager.decryptPrivateKey() already routes through
+ * callSigningWorker("decryptVault", …) — do not call this function directly
+ * from UI code. It is kept for webauthn passkey flows that cannot use workers.
  */
 export async function decryptVault(vault: EncryptedVault, password: string): Promise<string> {
   // Origin binding: hard-fail before doing expensive scrypt work if the user
