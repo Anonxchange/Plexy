@@ -5,6 +5,7 @@ import { sha256 } from "@noble/hashes/sha256";
 import { ripemd160 } from "@noble/hashes/ripemd160";
 import { getValue, setValue } from "./ids";
 import { devLog } from "./dev-logger";
+import { wipeBytes, wipeHDKey } from "./secureMemory";
 
 // Local Signer Imports
 import { getEVMAddress } from "./evmSigner";
@@ -136,112 +137,108 @@ class NonCustodialWalletManager {
     const mnemonic = existingMnemonic || generateMnemonic(wordlist, 256);
     const seed = await mnemonicToSeed(mnemonic);
     const root = HDKey.fromMasterSeed(seed);
-    
+
     let privateKey: string;
     let address: string;
     let walletType: string;
 
-    if (chainId === "bitcoin" || chainId === "Bitcoin (SegWit)" || chainId === "Bitcoin (Taproot)") {
-      // Trust Wallet standard: Native SegWit (BIP84, bc1q...) only.
-      address = await getBitcoinAddress(mnemonic);
-      const account = root.derive("m/84'/0'/0'/0/0");
-      privateKey = toHex(account.privateKey!);
-      walletType = "bitcoin";
-    } else if (chainId === "Solana") {
-      // FIX: Use SLIP-0010 derivation instead of BIP32 HDKey
-      address = await getSolanaAddress(mnemonic);
-      const privKeyBytes = await deriveSolanaPrivateKey(mnemonic);
-      
-      if (!privKeyBytes) {
-        throw new Error("Failed to derive Solana private key");
+    // finally block guarantees seed + root are wiped on every exit path:
+    // normal return, early return inside EVM branch, or any thrown exception.
+    try {
+      if (chainId === "bitcoin" || chainId === "Bitcoin (SegWit)" || chainId === "Bitcoin (Taproot)") {
+        address = await getBitcoinAddress(mnemonic);
+        const account = root.derive("m/84'/0'/0'/0/0");
+        privateKey = toHex(account.privateKey!);
+        wipeHDKey(account);
+        walletType = "bitcoin";
+      } else if (chainId === "Solana") {
+        address = await getSolanaAddress(mnemonic);
+        const privKeyBytes = await deriveSolanaPrivateKey(mnemonic);
+        if (!privKeyBytes) throw new Error("Failed to derive Solana private key");
+        privateKey = toHex(privKeyBytes);
+        wipeBytes(privKeyBytes);
+        walletType = "solana";
+      } else if (chainId === "Tron (TRC-20)") {
+        address = await getTronAddress(mnemonic);
+        const account = root.derive("m/44'/195'/0'/0/0");
+        privateKey = toHex(account.privateKey!);
+        wipeHDKey(account);
+        walletType = "tron";
+      } else if (chainId === "XRP") {
+        const account = root.derive("m/44'/144'/0'/0/0");
+        privateKey = toHex(account.privateKey!);
+        address = deriveXrpAddress(account.publicKey!);
+        wipeHDKey(account);
+        walletType = "xrp";
+      } else if (["ethereum", "ETH", "Ethereum", "BNB", "BSC", "Binance Coin", "Tether", "Polygon", "Arbitrum", "Optimism", "Base", "Avalanche", "USDT", "USDC"].includes(chainId)) {
+        address = await getEVMAddress(mnemonic);
+        const account = root.derive("m/44'/60'/0'/0/0");
+        privateKey = toHex(account.privateKey!);
+        wipeHDKey(account);
+
+        if (chainId === "BNB" || chainId === "BSC" || chainId === "Binance Coin") {
+          walletType = "binance";
+        } else if (chainId === "USDT" || chainId === "USDC") {
+          walletType = "evm-token";
+        } else {
+          walletType = "ethereum";
+        }
+
+        const assetType = (chainId === "USDT" || chainId === "USDC") ? chainId : undefined;
+
+        const encryptedPrivateKey = await this.encryptPrivateKey(privateKey, userPassword, precomputedKey);
+        const encryptedMnemonic = await this.encryptPrivateKey(mnemonic, userPassword, precomputedKey);
+
+        const newWallet: NonCustodialWallet = {
+          id: crypto.randomUUID(),
+          chainId,
+          address,
+          walletType,
+          encryptedPrivateKey,
+          encryptedMnemonic,
+          createdAt: new Date().toISOString(),
+          isActive: true,
+          isBackedUp: false,
+          assetType,
+        };
+
+        const wallets = await this.getWalletsFromStorage(userId);
+        await this.saveWalletsToStorage([...wallets, newWallet], userId);
+        if (supabase) await this.saveWalletToSupabase(supabase, newWallet, userId);
+
+        return { wallet: newWallet, mnemonicPhrase: mnemonic };
+      } else {
+        address = await getEVMAddress(mnemonic);
+        const account = root.derive("m/44'/60'/0'/0/0");
+        privateKey = toHex(account.privateKey!);
+        wipeHDKey(account);
+        walletType = chainId.toLowerCase();
       }
 
-      privateKey = toHex(privKeyBytes);
-      walletType = "solana";
-    } else if (chainId === "Tron (TRC-20)") {
-      address = await getTronAddress(mnemonic);
-      const account = root.derive("m/44'/195'/0'/0/0");
-      privateKey = toHex(account.privateKey!);
-      walletType = "tron";
-    } else if (chainId === "XRP") {
-      const account = root.derive("m/44'/144'/0'/0/0");
-      privateKey = toHex(account.privateKey!);
-      // Fix: Derive address from public key properly using ripemd160(sha256(pub))
-      address = deriveXrpAddress(account.publicKey!); 
-      walletType = "xrp";
-    } else if (["ethereum", "ETH", "Ethereum", "BNB", "BSC", "Binance Coin", "Tether", "Polygon", "Arbitrum", "Optimism", "Base", "Avalanche", "USDT", "USDC"].includes(chainId)) {
-      address = await getEVMAddress(mnemonic);
-      const account = root.derive("m/44'/60'/0'/0/0");
-      privateKey = toHex(account.privateKey!);
-      
-      // Determine wallet type for internal tracking
-      if (chainId === "BNB" || chainId === "BSC" || chainId === "Binance Coin") {
-        walletType = "binance";
-      } else if (chainId === "USDT" || chainId === "USDC") {
-        walletType = "evm-token";
-      } else {
-        walletType = "ethereum";
-      }
-      
-      // Ensure we explicitly set the assetType for tokens if needed
-      const assetType = (chainId === "USDT" || chainId === "USDC") ? chainId : undefined;
-      
-      const encryptedPrivateKey = await this.encryptPrivateKey(privateKey, userPassword, precomputedKey);
+      const encryptedPrivateKey = await this.encryptPrivateKey(privateKey!, userPassword, precomputedKey);
       const encryptedMnemonic = await this.encryptPrivateKey(mnemonic, userPassword, precomputedKey);
-      
+
       const newWallet: NonCustodialWallet = {
         id: crypto.randomUUID(),
         chainId,
-        address,
-        walletType,
+        address: address!,
+        walletType: walletType!,
         encryptedPrivateKey,
         encryptedMnemonic,
         createdAt: new Date().toISOString(),
         isActive: true,
         isBackedUp: false,
-        assetType,
       };
-      
+
       const wallets = await this.getWalletsFromStorage(userId);
-      const updatedWallets = [...wallets, newWallet];
-      await this.saveWalletsToStorage(updatedWallets, userId);
+      await this.saveWalletsToStorage([...wallets, newWallet], userId);
+      if (supabase) await this.saveWalletToSupabase(supabase, newWallet, userId);
 
-      if (supabase) {
-        await this.saveWalletToSupabase(supabase, newWallet, userId);
-      }
-      
       return { wallet: newWallet, mnemonicPhrase: mnemonic };
-    } else {
-      address = await getEVMAddress(mnemonic);
-      const account = root.derive("m/44'/60'/0'/0/0");
-      privateKey = toHex(account.privateKey!);
-      walletType = chainId.toLowerCase();
+    } finally {
+      wipeBytes(seed);
+      wipeHDKey(root);
     }
-    
-    const encryptedPrivateKey = await this.encryptPrivateKey(privateKey, userPassword, precomputedKey);
-    const encryptedMnemonic = await this.encryptPrivateKey(mnemonic, userPassword, precomputedKey);
-    
-    const newWallet: NonCustodialWallet = {
-      id: crypto.randomUUID(),
-      chainId,
-      address,
-      walletType,
-      encryptedPrivateKey,
-      encryptedMnemonic,
-      createdAt: new Date().toISOString(),
-      isActive: true,
-      isBackedUp: false,
-    };
-    
-    const wallets = await this.getWalletsFromStorage(userId);
-    const updatedWallets = [...wallets, newWallet];
-    await this.saveWalletsToStorage(updatedWallets, userId);
-
-    if (supabase) {
-      await this.saveWalletToSupabase(supabase, newWallet, userId);
-    }
-    
-    return { wallet: newWallet, mnemonicPhrase: mnemonic };
   }
 
   public async getWalletsFromStorage(userId: string): Promise<NonCustodialWallet[]> {
