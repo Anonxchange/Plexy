@@ -122,6 +122,11 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
       // Derive the scrypt key ONCE and reuse across all 6 chain wallets.
       // Without this, scrypt would run 12× (private key + mnemonic per chain)
       // taking 15–30 s on a mobile CPU. One derivation takes ~1–3 s.
+      //
+      // TODO(security): migrate this to callSigningWorker("createSecureWallet")
+      // so that (a) scrypt runs off the main thread and (b) the mnemonic
+      // never appears as a JS string on the main thread heap.
+      // See: signing.worker.ts → createSecureWallet / SecureWalletResult
       const vaultKey = await deriveVaultKey(password);
 
       // Pass null supabase so each generation skips individual RPC saves.
