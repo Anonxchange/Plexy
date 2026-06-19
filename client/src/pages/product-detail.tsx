@@ -901,38 +901,58 @@ export function ProductDetail() {
         {/* Full-width product image showcase */}
         {!isLoading && product && (() => {
           const seen = new Set<string>();
-          const showcaseImages: string[] = [];
+          const descImages: string[] = [];
 
-          // 1. Extract <img src="..."> URLs from descriptionHtml (CJ detail/spec shots)
-          //    Force https:// — many CJ CDN URLs are http:// which browsers block on https pages
+          // Helper: normalise a raw src — force https, skip blanks/placeholders
+          const normSrc = (raw: string): string | null => {
+            if (!raw || raw.startsWith('data:') || raw.length < 8) return null;
+            return raw.startsWith('http://') ? raw.replace('http://', 'https://') : raw;
+          };
+
+          // 1. Extract images from descriptionHtml
+          //    Check both src AND data-src (CJ/Alibaba use lazy-load data-src)
           if (product.descriptionHtml) {
-            const imgRe = /<img[^>]+src=["']([^"']+)["']/gi;
-            let match: RegExpExecArray | null;
-            while ((match = imgRe.exec(product.descriptionHtml)) !== null) {
-              const raw = match[1];
-              if (!raw) continue;
-              const src = raw.startsWith('http://') ? raw.replace('http://', 'https://') : raw;
-              if (!seen.has(src)) {
+            const tagRe = /<img[^>]+>/gi;
+            let tagMatch: RegExpExecArray | null;
+            while ((tagMatch = tagRe.exec(product.descriptionHtml)) !== null) {
+              const tag = tagMatch[0];
+              // Prefer data-src (lazy-load real URL) over src (may be placeholder)
+              const dataSrcMatch = /data-src=["']([^"']+)["']/i.exec(tag);
+              const srcMatch = /\bsrc=["']([^"']+)["']/i.exec(tag);
+              const raw = dataSrcMatch?.[1] || srcMatch?.[1] || '';
+              const src = normSrc(raw);
+              if (src && !seen.has(src)) {
                 seen.add(src);
-                showcaseImages.push(src);
+                descImages.push(src);
               }
             }
           }
 
-          // 2. Fall back to carousel images so the section always shows
-          if (showcaseImages.length === 0) {
-            const candidates = product.media && product.media.length > 0
-              ? product.media.filter(m => m.type === 'image').map(m => (m as any).url as string)
-              : product.images;
-            for (const url of candidates) {
-              if (url && !seen.has(url)) {
-                seen.add(url);
-                showcaseImages.push(url);
-              }
+          // 2. Carousel images (Shopify CDN — always load reliably)
+          const carouselImages: string[] = [];
+          const candidates = product.media && product.media.length > 0
+            ? product.media.filter(m => m.type === 'image').map(m => (m as any).url as string)
+            : product.images;
+          for (const url of candidates) {
+            const src = normSrc(url);
+            if (src && !seen.has(src)) {
+              seen.add(src);
+              carouselImages.push(src);
             }
           }
+
+          // 3. Decide what to show:
+          //    - If description images exist → show them (desc images first, then carousel as fallback)
+          //    - If no description images → show carousel images full-width
+          const hasDescImages = descImages.length > 0;
+          const showcaseImages = hasDescImages
+            ? [...descImages, ...carouselImages]
+            : carouselImages;
 
           if (showcaseImages.length === 0) return null;
+
+          const sectionLabel = hasDescImages ? 'Product Details' : 'Product Images';
+
           return (
             <div className="mt-14">
               <div className="flex items-center gap-4 mb-0">
@@ -940,19 +960,19 @@ export function ProductDetail() {
                 <div className="flex items-center gap-2 px-4">
                   <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                   <span className="text-xs font-semibold tracking-[0.18em] uppercase text-muted-foreground">
-                    Product Details
+                    {sectionLabel}
                   </span>
                   <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                 </div>
                 <div className="h-px flex-1 bg-gradient-to-l from-transparent via-border to-transparent" />
               </div>
 
-              {/* Edge-to-edge image stack — no gaps, no borders */}
+              {/* Edge-to-edge image stack */}
               <div className="-mx-4 sm:-mx-6 md:-mx-8 lg:-mx-0 overflow-hidden rounded-none lg:rounded-2xl mt-5">
                 {showcaseImages.map((url, idx) => (
                   <div
                     key={idx}
-                    className="relative w-full overflow-hidden"
+                    className="w-full"
                     style={{ lineHeight: 0 }}
                   >
                     <img
@@ -963,6 +983,7 @@ export function ProductDetail() {
                       draggable={false}
                       referrerPolicy="no-referrer"
                       onError={(e) => {
+                        // Hide this image's wrapper on failure — don't leave empty space
                         const wrapper = (e.currentTarget as HTMLImageElement).parentElement;
                         if (wrapper) wrapper.style.display = 'none';
                       }}
