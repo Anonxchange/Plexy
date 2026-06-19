@@ -1,5 +1,6 @@
 
 import { useState, useEffect, useRef } from "react";
+import { usePasswordRateLimit } from "@/hooks/use-password-rate-limit";
 import {
   Dialog,
   DialogContent,
@@ -48,6 +49,7 @@ type Step = "select" | "details";
 
 export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, onSuccess }: SendCryptoDialogProps) {
   const { user, isWalletUnlocked, getSessionPassword, setSessionPassword } = useAuth();
+  const rateLimit = usePasswordRateLimit({ maxAttempts: 5, baseDelayMs: 10_000 });
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -298,8 +300,12 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
       if (!vault) throw new Error("Wallet vault not found. Please recreate your wallet.");
       if (!getSessionPassword() && userPassword) setSessionPassword(userPassword);
       await executeSend(vault, passwordToUse, targetWallet.address);
+      rateLimit.reset();
     } catch (err: any) {
-      setError(err.message || "Failed to send crypto");
+      const msg = err.message || "Failed to send crypto";
+      const isWrongPassword = /password|decrypt|invalid|corrupted/i.test(msg);
+      if (isWrongPassword) rateLimit.recordFailure();
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -387,13 +393,19 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
                 <p className="text-xs text-blue-800 dark:text-blue-200">
                   Enter your password once - it will be cached for this session.
                 </p>
-                <Input
-                  type="password"
-                  placeholder="Wallet password"
-                  value={userPassword}
-                  onChange={(e) => setUserPassword(e.target.value)}
-                  className="h-10 mt-2 bg-muted"
-                />
+                {rateLimit.isLocked ? (
+                  <p className="text-xs text-destructive font-medium mt-2">
+                    Too many failed attempts — try again in {rateLimit.lockoutSeconds}s
+                  </p>
+                ) : (
+                  <Input
+                    type="password"
+                    placeholder="Wallet password"
+                    value={userPassword}
+                    onChange={(e) => setUserPassword(e.target.value)}
+                    className="h-10 mt-2 bg-muted"
+                  />
+                )}
               </div>
             )}
 
@@ -697,13 +709,15 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
             <Button
               onClick={handleSend}
               className="flex-1 h-12"
-              disabled={loading || !selectedCrypto || !toAddress || !amount}
+              disabled={loading || !selectedCrypto || !toAddress || !amount || rateLimit.isLocked}
             >
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Sending...
                 </>
+              ) : rateLimit.isLocked ? (
+                `Locked (${rateLimit.lockoutSeconds}s)`
               ) : (
                 "Continue"
               )}
