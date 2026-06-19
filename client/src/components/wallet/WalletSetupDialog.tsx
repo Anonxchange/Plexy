@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { usePasswordRateLimit } from "@/hooks/use-password-rate-limit";
 import {
   Dialog,
   DialogContent,
@@ -47,6 +48,7 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
+  const rateLimit = usePasswordRateLimit({ maxAttempts: 3, baseDelayMs: 15_000 });
 
   const passwordValidation = useMemo(() => validateWalletPassword(password), [password]);
 
@@ -166,11 +168,14 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
         });
       }
 
-      // Wipe password from React state immediately after use
+      rateLimit.reset();
       setPassword("");
       setConfirmPassword("");
       setStep("success");
     } catch (error: any) {
+      rateLimit.recordFailure();
+      setPassword("");
+      setConfirmPassword("");
       setStep("password");
       toast({
         title: "Generation failed",
@@ -297,12 +302,19 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
                     />
                   </div>
 
+                  {rateLimit.isLocked && (
+                    <p className="text-xs text-destructive text-center font-medium py-1">
+                      Too many failed attempts — try again in {rateLimit.lockoutSeconds}s
+                    </p>
+                  )}
                   <Button
-                    className="w-full h-14 bg-[#B4F22E] hover:bg-[#a3db29] text-black font-bold text-lg rounded-full mt-2 transition-all hover:scale-[1.02] shadow-[0_4px_12px_rgba(180,242,46,0.2)]"
+                    className="w-full h-14 bg-[#B4F22E] hover:bg-[#a3db29] text-black font-bold text-lg rounded-full mt-2 transition-all hover:scale-[1.02] shadow-[0_4px_12px_rgba(180,242,46,0.2)] disabled:opacity-50"
                     onClick={handleCreatePassword}
-                    disabled={isGenerating}
+                    disabled={isGenerating || rateLimit.isLocked}
                   >
-                    Confirm & Secure
+                    {rateLimit.isLocked
+                      ? `Locked (${rateLimit.lockoutSeconds}s)`
+                      : "Confirm & Secure"}
                   </Button>
                 </div>
               </div>

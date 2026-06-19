@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useId, useRef } from "react";
+import { usePasswordRateLimit } from "@/hooks/use-password-rate-limit";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   Drawer,
@@ -97,6 +98,7 @@ function useRevealState(onOpenChange: (v: boolean) => void) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const rateLimit = usePasswordRateLimit({ maxAttempts: 5, baseDelayMs: 10_000 });
   // Bumped after a successful decrypt to trigger a re-render that will
   // pull the words from the volatile Map. The number itself reveals
   // nothing about the mnemonic.
@@ -123,6 +125,7 @@ function useRevealState(onOpenChange: (v: boolean) => void) {
   };
 
   const handleReveal = async (userId: string) => {
+    if (rateLimit.isLocked) return;
     if (!password) {
       toast({ title: "Password required", description: "Please enter your wallet password", variant: "destructive" });
       return;
@@ -134,12 +137,13 @@ function useRevealState(onOpenChange: (v: boolean) => void) {
       if (wallets.length === 0) throw new Error("No non-custodial wallet found.");
       const phrase = await nonCustodialWalletManager.getWalletMnemonic(wallets[0].id, password, userId);
       if (!phrase) throw new Error("Failed to decrypt recovery phrase. Check your password.");
-      // Stash in the volatile Map — NOT in React state.
+      rateLimit.reset();
       setVolatileMnemonic(instanceId, phrase);
       setPassword("");
       setStep("phrase");
       setRevealNonce((n) => n + 1);
     } catch (error: any) {
+      rateLimit.recordFailure();
       toast({ title: "Incorrect password", description: error.message || "Could not decrypt your recovery phrase.", variant: "destructive" });
     } finally {
       setIsLoading(false);
@@ -168,6 +172,7 @@ function useRevealState(onOpenChange: (v: boolean) => void) {
     handleClose,
     handleReveal,
     handleCopy,
+    rateLimit,
   };
 }
 
@@ -189,6 +194,7 @@ function ModalInner({
   handleClose,
   handleReveal,
   handleCopy,
+  rateLimit,
   userId,
   isMobile,
 }: ModalInnerProps) {
@@ -265,15 +271,22 @@ function ModalInner({
               </p>
             </div>
 
+            {rateLimit.isLocked && (
+              <div className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-destructive/10 border border-destructive/20 text-destructive text-sm font-medium">
+                <Lock className="w-4 h-4 shrink-0" />
+                Too many attempts — try again in {rateLimit.lockoutSeconds}s
+              </div>
+            )}
+
             <div className="relative">
               <Input
                 type={showPassword ? "text" : "password"}
                 placeholder="Wallet password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && !isLoading && handleReveal(userId)}
+                onKeyDown={(e) => e.key === "Enter" && !isLoading && !rateLimit.isLocked && handleReveal(userId)}
                 className="h-12 px-5 pr-12 rounded-full text-base"
-                disabled={isLoading}
+                disabled={isLoading || rateLimit.isLocked}
                 autoFocus
               />
               <button
@@ -288,13 +301,18 @@ function ModalInner({
 
             <Button
               onClick={() => handleReveal(userId)}
-              disabled={isLoading || !password}
+              disabled={isLoading || !password || rateLimit.isLocked}
               className="w-full h-12 bg-[#B4F22E] hover:bg-[#c8ff44] text-black font-bold text-base rounded-full transition-all disabled:opacity-40 shadow-[0_4px_14px_rgba(180,242,46,0.25)]"
             >
               {isLoading ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Decrypting…
+                </span>
+              ) : rateLimit.isLocked ? (
+                <span className="flex items-center gap-2">
+                  <Lock className="w-4 h-4" />
+                  Locked ({rateLimit.lockoutSeconds}s)
                 </span>
               ) : (
                 "Reveal Phrase"
