@@ -5,6 +5,7 @@ import { useSchema, createProductSchema } from "@/hooks/use-schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import parse from "html-react-parser";
 import { 
   ChevronLeft, 
   ShoppingCart, 
@@ -16,6 +17,8 @@ import {
   Heart,
   PlayCircle,
   Flag,
+  Minus,
+  Plus,
 } from '@/lib/icons';
 import {
   AlertDialog,
@@ -61,6 +64,7 @@ interface Listing {
   id: string;
   title: string;
   description: string;
+  descriptionHtml?: string;
   price: number;
   currency: string;
   category: string;
@@ -145,6 +149,7 @@ export function ProductDetail() {
   const [availableSizes, setAvailableSizes] = useState<string[]>([]);
   const [availableColors, setAvailableColors] = useState<string[]>([]);
   const [relatedProducts, setRelatedProducts] = useState<Listing[]>([]);
+  const [quantity, setQuantity] = useState(1);
   
   // Store the raw Shopify product data so we don't re-fetch on add-to-cart
   const shopifyDataRef = useRef<any>(null);
@@ -273,7 +278,8 @@ export function ProductDetail() {
     setProduct({
       id: p.id,
       title: p.title,
-      description: p.description,
+      description: p.descriptionHtml || p.description,
+      descriptionHtml: p.descriptionHtml,
       price: parseFloat(p.priceRange.minVariantPrice.amount),
       currency: p.priceRange.minVariantPrice.currencyCode,
       category: p.productType || "Shopify",
@@ -501,6 +507,40 @@ export function ProductDetail() {
     });
   };
 
+  const [isBuyingWithPayPal, setIsBuyingWithPayPal] = useState(false);
+
+  const handleBuyWithPayPal = async () => {
+    if (!product) return;
+    if (product.user_id !== 'shopify') {
+      toast.info("Marketplace checkout coming soon.");
+      return;
+    }
+
+    const targetVariantId = selectedVariant?.id || product.variantId;
+    if (!targetVariantId) {
+      toast.error("Please select all required options");
+      return;
+    }
+    if (selectedVariant && !selectedVariant.availableForSale) {
+      toast.error("This item is currently out of stock");
+      return;
+    }
+
+    setIsBuyingWithPayPal(true);
+    try {
+      const result = await shopifyService.createCart({ variantId: targetVariantId, quantity });
+      if (result?.checkoutUrl) {
+        window.location.href = result.checkoutUrl;
+      } else {
+        toast.error("Could not initiate checkout. Please try again.");
+      }
+    } catch {
+      toast.error("Could not initiate checkout. Please try again.");
+    } finally {
+      setIsBuyingWithPayPal(false);
+    }
+  };
+
   return (
     <div>
       <div className="container mx-auto py-8 max-w-6xl px-4">
@@ -625,9 +665,11 @@ export function ProductDetail() {
               <div className="hidden md:block space-y-4 pt-2">
                 <div className="space-y-2">
                   <p className="text-sm font-semibold">Description</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {product.description || "No description provided for this item."}
-                  </p>
+                  <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground">
+                    {product.description
+                      ? parse(product.description)
+                      : "No description provided for this item."}
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="flex items-center gap-2">
@@ -733,23 +775,78 @@ export function ProductDetail() {
               </div>
 
               <div className="space-y-3">
-                <Button
-                  className="w-full h-12 text-base"
-                  size="lg"
-                  onClick={handleAddToCart}
-                  disabled={isAddingToCart || !isAvailable}
-                >
-                  {isAddingToCart ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : !isAvailable ? (
-                    "Out of Stock"
-                  ) : (
-                    <>
-                      <ShoppingCart className="h-5 w-5 mr-2" />
-                      Add to Cart
-                    </>
-                  )}
-                </Button>
+                {/* Quantity selector + Add to Cart */}
+                <div className="flex gap-3 items-stretch">
+                  <div className="flex items-center border border-border rounded-lg overflow-hidden h-12 shrink-0">
+                    <button
+                      className="px-3 h-full flex items-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-40"
+                      onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                      disabled={quantity <= 1}
+                      aria-label="Decrease quantity"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </button>
+                    <span className="w-10 text-center text-sm font-semibold tabular-nums select-none">
+                      {quantity}
+                    </span>
+                    <button
+                      className="px-3 h-full flex items-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      onClick={() => setQuantity(q => q + 1)}
+                      aria-label="Increase quantity"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <Button
+                    className="flex-1 h-12 text-base"
+                    size="lg"
+                    onClick={handleAddToCart}
+                    disabled={isAddingToCart || !isAvailable}
+                  >
+                    {isAddingToCart ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : !isAvailable ? (
+                      "Out of Stock"
+                    ) : (
+                      <>
+                        <ShoppingCart className="h-5 w-5 mr-2" />
+                        Add to Cart
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {/* PayPal button — only for Shopify products */}
+                {product.user_id === 'shopify' && isAvailable && (
+                  <div className="space-y-2">
+                    <button
+                      onClick={handleBuyWithPayPal}
+                      disabled={isBuyingWithPayPal || !isAvailable}
+                      className="w-full h-12 rounded-lg bg-[#FFC439] hover:bg-[#f0b429] active:bg-[#e0a420] transition-colors flex items-center justify-center gap-2 font-semibold text-[#003087] disabled:opacity-60 disabled:cursor-not-allowed"
+                      aria-label="Pay with PayPal"
+                    >
+                      {isBuyingWithPayPal ? (
+                        <Loader2 className="h-5 w-5 animate-spin text-[#003087]" />
+                      ) : (
+                        <>
+                          <svg viewBox="0 0 101 32" className="h-5" aria-hidden="true" fill="none">
+                            <path fill="#003087" d="M12.237 2.6h-8.5a1.2 1.2 0 0 0-1.19 1.02L.01 25.16a.72.72 0 0 0 .712.834h4.059a1.2 1.2 0 0 0 1.19-1.02l.678-4.3a1.2 1.2 0 0 1 1.187-1.02h2.69c5.59 0 8.81-2.705 9.652-8.065.38-2.347.016-4.19-1.08-5.482C17.86 3.36 15.41 2.6 12.237 2.6Z"/>
+                            <path fill="#009CDE" d="M36.297 2.6h-8.5a1.2 1.2 0 0 0-1.19 1.02L23.07 25.16a.72.72 0 0 0 .712.834h4.348a.84.84 0 0 0 .833-.714l.713-4.522a1.2 1.2 0 0 1 1.187-1.02h2.69c5.59 0 8.81-2.705 9.652-8.065.38-2.347.016-4.19-1.08-5.482C40.92 3.36 38.47 2.6 36.297 2.6Z"/>
+                            <path fill="#012069" d="M19.347 10.14c-.097.635-.556 1.138-1.18 1.376a2.63 2.63 0 0 1-.946.175h-3.805a.36.36 0 0 0-.356.305l-.484 3.065-.138.874a.24.24 0 0 0 .237.278h2.665a.84.84 0 0 0 .832-.713l.034-.178.66-4.184.043-.23a.84.84 0 0 1 .832-.712h.523c3.398 0 6.057-1.38 6.832-5.374.325-1.665.157-3.054-.698-4.034a3.47 3.47 0 0 0-.98-.773c-.272 2.748-1.146 4.6-3.071 5.93Z"/>
+                          </svg>
+                          <span>Pay with PayPal</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={handleBuyWithPayPal}
+                      disabled={isBuyingWithPayPal}
+                      className="w-full text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                    >
+                      More payment options
+                    </button>
+                  </div>
+                )}
 
                 <div className="flex items-center gap-2 text-sm">
                   <Package className="h-4 w-4 text-muted-foreground" />
@@ -793,9 +890,11 @@ export function ProductDetail() {
               {/* Description + store — mobile only (desktop version is in col 1 under images) */}
               <div className="space-y-2 md:hidden">
                 <p className="text-sm font-semibold">Description</p>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {product.description || "No description provided for this item."}
-                </p>
+                <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground">
+                  {product.description
+                    ? parse(product.description)
+                    : "No description provided for this item."}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 text-sm md:hidden">
@@ -819,8 +918,49 @@ export function ProductDetail() {
         </div>}
 
         {/* Full-width product image showcase */}
-        {!isLoading && product && product.images.length > 1 && (() => {
-          const showcaseImages = product.images.slice(0, 5);
+        {!isLoading && product && (() => {
+          // Priority order for showcase images:
+          // 1. Images embedded in descriptionHtml (Shopify/CJ detail/spec shots)
+          // 2. Additional media images not already in the top carousel
+          // 3. Fallback: all product images (deduplicated)
+          const seen = new Set<string>();
+          const showcaseImages: string[] = [];
+
+          // Mark carousel images as seen so we don't duplicate them in the showcase
+          const carouselUrls = new Set<string>(
+            (product.media && product.media.length > 0
+              ? product.media.filter(m => m.type === 'image').map(m => (m as any).url)
+              : product.images
+            )
+          );
+
+          // 1. Extract <img src="..."> URLs from descriptionHtml
+          if (product.descriptionHtml) {
+            const imgRe = /<img[^>]+src=["']([^"']+)["']/gi;
+            let match: RegExpExecArray | null;
+            while ((match = imgRe.exec(product.descriptionHtml)) !== null) {
+              const src = match[1];
+              if (src && !seen.has(src)) {
+                seen.add(src);
+                showcaseImages.push(src);
+              }
+            }
+          }
+
+          // 2. If no description images, fall back to media/images (excluding carousel dupes)
+          if (showcaseImages.length === 0) {
+            const candidates = product.media && product.media.length > 0
+              ? product.media.filter(m => m.type === 'image').map(m => (m as any).url as string)
+              : product.images;
+            for (const url of candidates) {
+              if (url && !seen.has(url)) {
+                seen.add(url);
+                showcaseImages.push(url);
+              }
+            }
+          }
+
+          if (showcaseImages.length === 0) return null;
           return (
             <div className="mt-14">
               <div className="flex items-center gap-4 mb-0">
