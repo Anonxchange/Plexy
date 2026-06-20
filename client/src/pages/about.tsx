@@ -1,6 +1,6 @@
 import { useHead } from "@unhead/react";
 import { Link } from "wouter";
-import { ArrowRight, Linkedin, MapPin, Twitter } from '@/lib/icons';
+import { ArrowRight, Linkedin, MapPin } from '@/lib/icons';
 
 import { Button } from "@/components/ui/button";
 import { AppFooter } from "@/components/app-footer";
@@ -8,10 +8,10 @@ import { AppFooter } from "@/components/app-footer";
 /* ─────────────────────────────────────── data ── */
 
 const stats = [
-  { value: "180+",  label: "Countries supported" },
-  { value: "120+",  label: "Cryptoassets listed" },
-  { value: "$2.4B+",label: "Trading volume" },
-  { value: "850K+", label: "Verified users" },
+  { value: "180+", label: "Countries supported" },
+  { value: "120+", label: "Cryptoassets listed" },
+  { value: "2021", label: "Year founded" },
+  { value: "24/7", label: "Platform uptime" },
 ];
 
 const values = [
@@ -59,14 +59,18 @@ const values = [
   },
 ];
 
-const team = [
-  { name: "Oluwole Olamide", role: "CEO & Co-Founder",    img: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80" },
-  { name: "Priya Nair",      role: "CTO & Co-Founder",    img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80" },
-  { name: "James Whitfield", role: "Chief Risk Officer",  img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80" },
-  { name: "Sofia Mendes",    role: "VP of Product",       img: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=400&q=80" },
-  { name: "Liam O'Brien",    role: "Head of Engineering", img: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=400&q=80" },
-  { name: "Yuki Tanaka",     role: "Head of Compliance",  img: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=400&q=80" },
+const coreBeliefs = [
+  { title: "Born from necessity", body: "Pexly started because existing crypto platforms were either too complex, too expensive, or inaccessible to most of the world. We set out to change that." },
+  { title: "Built lean, built right", body: "We're a small, focused team that moves fast and takes quality seriously. Every feature ships because it solves a real problem for real users." },
+  { title: "Community first", body: "Our roadmap is shaped by our users. We listen closely, iterate quickly, and build the things that matter — not the things that look good in a pitch deck." },
 ];
+
+const founder = {
+  name: "Oluwole Olamide",
+  role: "Founder & CEO",
+  bio: "Oluwole founded Pexly with a simple belief: crypto services should be accessible, transparent, and built for everyone — regardless of where they live or their level of technical knowledge.",
+  linkedin: "https://ng.linkedin.com/in/pexly-llc-8594843b3",
+};
 
 const S = "currentColor";
 const svgProps = { viewBox: "0 0 24 24", fill: "none", stroke: S, strokeWidth: 1.6, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, className: "w-5 h-5" };
@@ -220,11 +224,11 @@ const services = [
 ];
 
 const positions = [
-  { title: "Junior Frontend Developer",  location: "San Francisco, CA", type: "Part time" },
-  { title: "UI/UX and Product Designer", location: "London, UK",        type: "Full time" },
-  { title: "Head of Branding",           location: "Remote",            type: "Full time" },
-  { title: "Senior Backend Developer",   location: "San Francisco, CA", type: "Full time" },
-  { title: "Customer Support Agent",     location: "Remote",            type: "Part time" },
+  { title: "Junior Frontend Developer",  location: "Remote", type: "Part time" },
+  { title: "UI/UX and Product Designer", location: "Remote", type: "Full time" },
+  { title: "Head of Branding",           location: "Remote", type: "Full time" },
+  { title: "Senior Backend Developer",   location: "Remote", type: "Full time" },
+  { title: "Customer Support Agent",     location: "Remote", type: "Part time" },
 ];
 
 const officePhotos = [
@@ -419,61 +423,73 @@ const About = () => {
         </div>
       </section>
 
-      {/* ══ 6. TEAM — light, tucked under Values curve ═══════════════════ */}
+      {/* ══ 6. OUR STORY — light, tucked under Values curve ════════════════ */}
       <section className="relative z-10 -mt-20 pt-24 bg-background pb-14">
         <div className="max-w-7xl mx-auto px-6 lg:px-10">
 
-          {/* Mobile: label + heading + desc stacked, then 2-col grid */}
+          {/* Mobile */}
           <div className="lg:hidden">
-            <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-3">Our People</p>
-            <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground mb-2">Senior management</h2>
-            <p className="text-foreground/50 text-base leading-relaxed mb-10 max-w-xl">
-              Our leadership team is comprised of seasoned executives with years of experience across fintech, compliance, and crypto.
+            <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-3">Our Story</p>
+            <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground mb-4">Built from the ground up</h2>
+            <p className="text-foreground/50 text-base leading-relaxed mb-8 max-w-xl">
+              Pexly is an independent, founder-led startup. No committees, no bureaucracy — just a clear mission and the drive to build something that works for everyone.
             </p>
-            <div className="grid grid-cols-2 gap-x-5 gap-y-8">
-              {team.map((person, i) => (
-                <div key={i}>
-                  <div className="w-full aspect-[3/4] rounded-2xl overflow-hidden bg-muted mb-3">
-                    <img src={person.img} alt={person.name} className="w-full h-full object-cover object-top" />
-                  </div>
-                  <p className="font-bold text-foreground text-sm leading-snug">{person.name}</p>
-                  <p className="text-foreground/50 text-xs mt-0.5 mb-2">{person.role}</p>
-                  <div className="flex items-center gap-2">
-                    <a href="#" className="text-foreground/30 hover:text-foreground/70 transition-colors"><Twitter className="w-3.5 h-3.5" /></a>
-                    <a href="#" className="text-foreground/30 hover:text-foreground/70 transition-colors"><Linkedin className="w-3.5 h-3.5" /></a>
-                  </div>
+            {/* Founder card */}
+            <div className="flex items-center gap-4 border border-border/60 rounded-2xl p-5 mb-8">
+              <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-lg shrink-0">
+                {founder.name.charAt(0)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-foreground text-sm">{founder.name}</p>
+                <p className="text-primary text-xs font-semibold">{founder.role}</p>
+              </div>
+              <a href={founder.linkedin} target="_blank" rel="noopener noreferrer" className="text-foreground/40 hover:text-[#0A66C2] transition-colors shrink-0" aria-label="LinkedIn">
+                <Linkedin className="w-4 h-4" />
+              </a>
+            </div>
+            <p className="text-foreground/50 text-sm leading-relaxed mb-8">{founder.bio}</p>
+            <div className="flex flex-col gap-6">
+              {coreBeliefs.map((b, i) => (
+                <div key={i} className="border border-border/60 rounded-2xl p-6">
+                  <p className="font-bold text-foreground text-base mb-2">{b.title}</p>
+                  <p className="text-foreground/50 text-sm leading-relaxed">{b.body}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Desktop: left label/heading/desc + right 3-col grid */}
+          {/* Desktop: left sticky label + right cards */}
           <div className="hidden lg:grid grid-cols-[1fr_2fr] gap-16 xl:gap-24 items-start">
-
-            {/* Left — sticky label, heading, description */}
             <div className="sticky top-24">
-              <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-4">Our People</p>
+              <p className="text-primary uppercase tracking-[0.18em] text-xs font-semibold mb-4">Our Story</p>
               <h2 className="text-5xl xl:text-6xl font-extrabold tracking-tight text-foreground leading-tight mb-5">
-                Senior management
+                Built from the ground up
               </h2>
-              <p className="text-foreground/50 text-base leading-relaxed">
-                Our leadership team is comprised of seasoned executives with years of experience across fintech, compliance, and crypto.
+              <p className="text-foreground/50 text-base leading-relaxed mb-8">
+                Pexly is an independent, founder-led startup. No committees, no bureaucracy — just a clear mission and the drive to build something that works for everyone.
               </p>
+              {/* Founder card */}
+              <div className="border border-border/60 rounded-2xl p-5">
+                <div className="flex items-center gap-4 mb-3">
+                  <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-lg shrink-0">
+                    {founder.name.charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-foreground text-sm">{founder.name}</p>
+                    <p className="text-primary text-xs font-semibold">{founder.role}</p>
+                  </div>
+                  <a href={founder.linkedin} target="_blank" rel="noopener noreferrer" className="text-foreground/40 hover:text-[#0A66C2] transition-colors shrink-0" aria-label="LinkedIn">
+                    <Linkedin className="w-4 h-4" />
+                  </a>
+                </div>
+                <p className="text-foreground/50 text-xs leading-relaxed">{founder.bio}</p>
+              </div>
             </div>
-
-            {/* Right — 3-col portrait grid */}
-            <div className="grid grid-cols-3 gap-x-6 gap-y-10">
-              {team.map((person, i) => (
-                <div key={i}>
-                  <div className="w-full aspect-[3/4] rounded-2xl overflow-hidden bg-muted mb-4">
-                    <img src={person.img} alt={person.name} className="w-full h-full object-cover object-top" />
-                  </div>
-                  <p className="font-bold text-foreground text-base leading-snug">{person.name}</p>
-                  <p className="text-foreground/50 text-sm mt-1 mb-3">{person.role}</p>
-                  <div className="flex items-center gap-2">
-                    <a href="#" className="text-foreground/30 hover:text-foreground/70 transition-colors"><Twitter className="w-4 h-4" /></a>
-                    <a href="#" className="text-foreground/30 hover:text-foreground/70 transition-colors"><Linkedin className="w-4 h-4" /></a>
-                  </div>
+            <div className="flex flex-col gap-6 pt-2">
+              {coreBeliefs.map((b, i) => (
+                <div key={i} className="border border-border/60 rounded-2xl p-8">
+                  <p className="font-bold text-foreground text-lg mb-3">{b.title}</p>
+                  <p className="text-foreground/50 text-base leading-relaxed">{b.body}</p>
                 </div>
               ))}
             </div>
@@ -615,9 +631,9 @@ const About = () => {
             {/* Right — open positions list */}
             <div className="rounded-2xl overflow-hidden bg-black/10">
               {positions.map((pos, i) => (
-                <a
+                <Link
                   key={i}
-                  href="#"
+                  href="/careers"
                   className="flex items-center justify-between px-5 py-4 border-b border-black/10 last:border-0 hover:bg-black/10 transition-colors group"
                 >
                   <div>
@@ -632,7 +648,7 @@ const About = () => {
                     </p>
                   </div>
                   <ArrowRight className="w-4 h-4 text-primary-foreground/50 group-hover:translate-x-1 transition-transform flex-shrink-0" />
-                </a>
+                </Link>
               ))}
             </div>
           </div>
