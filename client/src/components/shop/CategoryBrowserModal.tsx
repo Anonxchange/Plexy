@@ -364,7 +364,7 @@ function CategoryCard({ node, image, count, onClick, subtitle }: CategoryCardPro
         )}
       </div>
       <div className="px-2 py-2">
-        <p className="text-xs font-medium text-foreground leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+        <p className="text-xs font-medium text-foreground leading-snug group-hover:text-primary transition-colors">
           {node.name}
         </p>
         {subtitle && (
