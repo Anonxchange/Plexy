@@ -87,6 +87,7 @@ interface Listing {
   location: string;
   user_id: string;
   status: string;
+  tags?: string[];
   variantId?: string;
   availableForSale?: boolean;
   inventoryQuantity?: number;
@@ -287,6 +288,7 @@ export function ProductDetail() {
       price: parseFloat(p.priceRange.minVariantPrice.amount),
       currency: p.priceRange.minVariantPrice.currencyCode,
       category: p.productType || "Shopify",
+      tags: Array.isArray(p.tags) ? p.tags.filter((t: string) => t.trim().length > 0) : [],
       images: p.images.edges.map((e: any) => e.node.url),
       media: parseMedia(p),
       location: "Online",
@@ -706,6 +708,15 @@ export function ProductDetail() {
                   <Heart className="h-4 w-4" />
                 </Button>
               </div>
+              {product.tags && product.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {product.tags.map(tag => (
+                    <Badge key={tag} variant="outline" className="text-xs font-normal text-muted-foreground">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
 
               <h1 className="text-2xl md:text-3xl font-bold">{product.title}</h1>
 

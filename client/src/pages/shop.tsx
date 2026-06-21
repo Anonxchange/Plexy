@@ -198,69 +198,112 @@ export function Shop() {
     }
 
     const allFetched: Listing[] = [];
+    const catPathSet = new Set<string>();
     let firstPageDone = false;
+
     try {
-      let after: string | undefined;
-      let hasMore = true;
-      let page = 0;
-      while (hasMore && page < 40) {
-        if (fetchId !== shopifyFetchIdRef.current) return;
-        const result = await shopifyService.getProducts(SHOPIFY_FETCH_SIZE, after);
-        if (fetchId !== shopifyFetchIdRef.current) return;
+      // Step 1: fetch all collections
+      const collectionsResult = await shopifyService.getCollections(50);
+      if (fetchId !== shopifyFetchIdRef.current) return;
+      const collections = collectionsResult.collections as Array<{ node: { handle: string; title: string } }>;
 
-        const fetched: Listing[] = (result.products || []).map((edge: any) => {
-          const p = edge.node;
-          return {
-            id: p.id,
-            handle: p.handle,
-            title: p.title,
-            description: p.description,
-            price: parseFloat(p.priceRange.minVariantPrice.amount),
-            currency: p.priceRange.minVariantPrice.currencyCode,
-            category: p.productType ?? "",
-            tags: Array.isArray(p.tags) ? p.tags.filter((t: string) => t.trim().length > 0) : [],
-            images: p.images.edges.map((e: any) => e.node.url),
-            location: "Online",
-            user_id: "shopify",
-            status: "active",
-            metadata: [],
-            variantId: p.variants.edges[0]?.node?.id,
-          };
-        });
-
-        allFetched.push(...fetched);
-
-        const newCats = fetched.map(p => p.category).filter((c): c is string => c.trim().length > 0);
-        if (newCats.length > 0) {
-          setShopifyCategories(prev => {
-            if (fetchId !== shopifyFetchIdRef.current) return prev;
-            const merged = new Set(prev);
-            newCats.forEach(c => merged.add(c));
-            return Array.from(merged).sort((a, b) => a === "All" ? -1 : b === "All" ? 1 : a.localeCompare(b));
+      if (collections.length === 0) {
+        // Fallback: no collections — use flat productType list
+        let after: string | undefined;
+        let hasMore = true;
+        let page = 0;
+        while (hasMore && page < 40) {
+          if (fetchId !== shopifyFetchIdRef.current) return;
+          const result = await shopifyService.getProducts(SHOPIFY_FETCH_SIZE, after);
+          if (fetchId !== shopifyFetchIdRef.current) return;
+          const fetched: Listing[] = (result.products || []).map((edge: any) => {
+            const p = edge.node;
+            const pt = p.productType?.trim() || "";
+            return {
+              id: p.id, handle: p.handle, title: p.title, description: p.description,
+              price: parseFloat(p.priceRange.minVariantPrice.amount),
+              currency: p.priceRange.minVariantPrice.currencyCode,
+              category: pt,
+              tags: Array.isArray(p.tags) ? p.tags.filter((t: string) => t.trim()) : [],
+              images: p.images.edges.map((e: any) => e.node.url),
+              location: "Online", user_id: "shopify", status: "active", metadata: [],
+              variantId: p.variants.edges[0]?.node?.id,
+            };
           });
-        }
-
-        if (!firstPageDone) {
-          // Show first batch immediately so the page isn't blank while remaining pages load
-          if (!isBackground) {
-            setShopifyProducts(shuffleArray(fetched));
+          allFetched.push(...fetched);
+          fetched.forEach(p => { if (p.category) catPathSet.add(p.category); });
+          if (!firstPageDone && !isBackground) {
+            setShopifyProducts(shuffleArray([...allFetched]));
             setIsShopifyLoading(false);
             setVisibleCount(SHOPIFY_DISPLAY_PAGE_SIZE);
+            firstPageDone = true;
           }
-          firstPageDone = true;
+          hasMore = result.pageInfo?.hasNextPage || false;
+          after = result.pageInfo?.endCursor;
+          page++;
         }
+      } else {
+        // Step 2: per collection, fetch products and build Collection > ProductType > Tag paths
+        for (const colEdge of collections) {
+          if (fetchId !== shopifyFetchIdRef.current) return;
+          const colHandle = colEdge.node.handle;
+          const colTitle = colEdge.node.title;
+          catPathSet.add(colTitle);
 
-        hasMore = result.pageInfo?.hasNextPage || false;
-        after = result.pageInfo?.endCursor || undefined;
-        page++;
+          let after: string | undefined;
+          let hasMore = true;
+          let page = 0;
+          while (hasMore && page < 20) {
+            if (fetchId !== shopifyFetchIdRef.current) return;
+            const result = await shopifyService.getCollectionProducts(colHandle, SHOPIFY_FETCH_SIZE, after);
+            if (fetchId !== shopifyFetchIdRef.current) return;
+
+            const fetched: Listing[] = (result.products || []).map((edge: any) => {
+              const p = edge.node;
+              const pt = p.productType?.trim() || "";
+              const tags: string[] = Array.isArray(p.tags) ? p.tags.filter((t: string) => t.trim()) : [];
+
+              // Build category path: "Collection > ProductType"
+              // Tags register their own deep paths for the tree
+              let category = colTitle;
+              if (pt) {
+                category = `${colTitle}${CAT_SEPARATOR}${pt}`;
+                catPathSet.add(category);
+                tags.forEach(tag => catPathSet.add(`${colTitle}${CAT_SEPARATOR}${pt}${CAT_SEPARATOR}${tag}`));
+              }
+
+              return {
+                id: p.id, handle: p.handle, title: p.title, description: p.description,
+                price: parseFloat(p.priceRange.minVariantPrice.amount),
+                currency: p.priceRange.minVariantPrice.currencyCode,
+                category,
+                tags,
+                images: p.images.edges.map((e: any) => e.node.url),
+                location: "Online", user_id: "shopify", status: "active", metadata: [],
+                variantId: p.variants.edges[0]?.node?.id,
+              };
+            });
+
+            allFetched.push(...fetched);
+
+            if (!firstPageDone && !isBackground && allFetched.length > 0) {
+              setShopifyProducts(shuffleArray([...allFetched]));
+              setShopifyCategories(["All", ...Array.from(catPathSet).sort()]);
+              setIsShopifyLoading(false);
+              setVisibleCount(SHOPIFY_DISPLAY_PAGE_SIZE);
+              firstPageDone = true;
+            }
+
+            hasMore = result.pageInfo?.hasNextPage || false;
+            after = result.pageInfo?.endCursor;
+            page++;
+          }
+        }
       }
 
       if (fetchId === shopifyFetchIdRef.current && allFetched.length > 0) {
-        const allCats = ["All", ...Array.from(new Set(
-          allFetched.map(p => p.category).filter((c): c is string => c.trim().length > 0)
-        )).sort()];
+        const allCats = ["All", ...Array.from(catPathSet).sort()];
         writeShopCache(allFetched, allCats);
-        // Set the full shuffled list all at once so every product gets equal visibility
         if (!isBackground) {
           setShopifyProducts(shuffleArray(allFetched));
           setShopifyCategories(allCats);
@@ -317,10 +360,22 @@ export function Shop() {
         const q = searchQuery.toLowerCase();
         const matchesSearch = !q || p.title.toLowerCase().includes(q) || p.description.toLowerCase().includes(q);
 
-        const matchesCategory =
-          selectedCategory === "All" ||
-          p.category === selectedCategory ||
-          p.category.startsWith(selectedCategory + CAT_SEPARATOR);
+        let matchesCategory = false;
+        if (selectedCategory === "All") {
+          matchesCategory = true;
+        } else {
+          const parts = selectedCategory.split(CAT_SEPARATOR);
+          if (parts.length <= 2) {
+            // Collection or Collection > ProductType — match by category prefix
+            matchesCategory = p.category === selectedCategory || p.category.startsWith(selectedCategory + CAT_SEPARATOR);
+          } else {
+            // Collection > ProductType > Tag — match category prefix AND tag
+            const catPath = parts.slice(0, 2).join(CAT_SEPARATOR);
+            const tagFilter = parts[2];
+            matchesCategory = (p.category === catPath || p.category.startsWith(catPath + CAT_SEPARATOR))
+              && Array.isArray(p.tags) && p.tags.includes(tagFilter);
+          }
+        }
 
         return matchesSearch && matchesCategory;
       })
@@ -344,11 +399,21 @@ export function Shop() {
     const counts: Record<string, number> = { All: currentListings.length };
     currentListings.forEach(p => {
       if (!p.category) return;
-      // Increment every ancestor path so parent nodes show cumulative counts
+      // Increment every ancestor path (Collection, Collection > ProductType)
       const parts = p.category.split(CAT_SEPARATOR);
       for (let i = 1; i <= parts.length; i++) {
         const path = parts.slice(0, i).join(CAT_SEPARATOR);
         counts[path] = (counts[path] || 0) + 1;
+      }
+      // Also count tag-level paths: Collection > ProductType > Tag
+      if (parts.length >= 2 && Array.isArray(p.tags)) {
+        const basePath = parts.slice(0, 2).join(CAT_SEPARATOR);
+        p.tags.forEach((tag: string) => {
+          if (tag.trim()) {
+            const tagPath = `${basePath}${CAT_SEPARATOR}${tag}`;
+            counts[tagPath] = (counts[tagPath] || 0) + 1;
+          }
+        });
       }
     });
     return counts;
