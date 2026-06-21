@@ -59,6 +59,9 @@ export interface ShopifyProduct {
 export const PRODUCTS_QUERY = 'getProducts';
 export const PRODUCT_BY_HANDLE_QUERY = 'getProductByHandle';
 export const PRODUCT_TYPES_QUERY = 'getProductTypes';
+export const COLLECTIONS_QUERY = 'getCollections';
+export const COLLECTION_BY_HANDLE_QUERY = 'getCollectionByHandle';
+export const COLLECTION_PRODUCT_TYPES_QUERY = 'getCollectionProductTypes';
 export const CART_QUERY = 'cartQuery';
 export const CART_CREATE_MUTATION = 'cartCreate';
 export const CART_LINES_ADD_MUTATION = 'cartLinesAdd';
@@ -125,6 +128,42 @@ export const shopifyService = {
     return edges
       .map((edge: any) => typeof edge.node === 'string' ? edge.node : edge.node?.productType)
       .filter((type: unknown): type is string => typeof type === 'string' && type.trim().length > 0);
+  },
+
+  async getCollections(first: number = 50, after?: string) {
+    const data = await storefrontApiRequest(COLLECTIONS_QUERY, { first, after });
+    return {
+      collections: data?.data?.collections?.edges || [],
+      pageInfo: data?.data?.collections?.pageInfo,
+    };
+  },
+
+  async getCollectionProductTypes(handle: string, first: number = 250) {
+    const data = await storefrontApiRequest(COLLECTION_PRODUCT_TYPES_QUERY, { handle, first });
+    const edges = data?.data?.collectionByHandle?.products?.edges || [];
+    const productTypes = new Map<string, Set<string>>();
+    for (const edge of edges) {
+      const pt: string = edge.node?.productType?.trim() || '';
+      const tags: string[] = Array.isArray(edge.node?.tags) ? edge.node.tags : [];
+      if (!pt) continue;
+      if (!productTypes.has(pt)) productTypes.set(pt, new Set());
+      tags.forEach((t: string) => { if (t.trim()) productTypes.get(pt)!.add(t.trim()); });
+    }
+    return productTypes;
+  },
+
+  async getCollectionProducts(handle: string, first: number = 250, after?: string, productType?: string, tag?: string) {
+    const data = await storefrontApiRequest(COLLECTION_BY_HANDLE_QUERY, {
+      handle, first, after,
+      ...(productType ? { productType } : {}),
+      ...(tag ? { tag } : {}),
+    });
+    const col = data?.data?.collectionByHandle;
+    return {
+      collection: col ? { id: col.id, title: col.title, handle: col.handle, description: col.description, image: col.image } : null,
+      products: col?.products?.edges || [],
+      pageInfo: col?.products?.pageInfo,
+    };
   },
 
   async getProductByHandle(handle: string) {
