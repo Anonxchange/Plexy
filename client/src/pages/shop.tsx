@@ -428,11 +428,24 @@ export function Shop() {
   const categoryImages = useMemo(() => {
     const map: Record<string, string> = {};
     currentListings.forEach(p => {
-      if (!p.category || !p.images[0]) return;
-      const parts = p.category.split(CAT_SEPARATOR);
-      for (let i = 1; i <= parts.length; i++) {
-        const path = parts.slice(0, i).join(CAT_SEPARATOR);
-        if (!map[path]) map[path] = p.images[0];
+      if (!p.images[0]) return;
+      // Register Collection and Collection > ProductType paths
+      if (p.category) {
+        const parts = p.category.split(CAT_SEPARATOR);
+        for (let i = 1; i <= parts.length; i++) {
+          const path = parts.slice(0, i).join(CAT_SEPARATOR);
+          if (!map[path]) map[path] = p.images[0];
+        }
+        // Register Collection > ProductType > Tag paths
+        if (parts.length >= 2 && Array.isArray(p.tags)) {
+          const basePath = parts.slice(0, 2).join(CAT_SEPARATOR);
+          p.tags.forEach((tag: string) => {
+            if (tag.trim()) {
+              const tagPath = `${basePath}${CAT_SEPARATOR}${tag}`;
+              if (!map[tagPath]) map[tagPath] = p.images[0];
+            }
+          });
+        }
       }
     });
     return map;
