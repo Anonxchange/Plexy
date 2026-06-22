@@ -84,7 +84,6 @@ export function CategoryBrowserModal({
     );
   }, [search, allNodes]);
 
-  // Products that belong to the selected L1 category (or any subcategory under it)
   const categoryProducts = useMemo(() => {
     if (!selectedL1Node) return [];
     return products.filter(
@@ -120,6 +119,12 @@ export function CategoryBrowserModal({
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
+          <button
+            onClick={onClose}
+            className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+          >
+            <ChevronRight className="h-5 w-5 rotate-180" />
+          </button>
           <h2 className="text-base font-semibold">All Categories</h2>
           <button
             onClick={onClose}
@@ -159,13 +164,13 @@ export function CategoryBrowserModal({
             <div className="w-28 sm:w-36 flex-shrink-0 border-r border-border overflow-y-auto py-2 bg-muted/30">
               <button
                 onClick={() => { setActiveL1(null); handleSelectLeaf("All"); }}
-                className={`w-full flex items-center justify-center gap-1.5 px-2 py-3 text-xs font-medium transition-colors ${
+                className={`w-full flex flex-col items-center gap-1 px-2 py-3 text-xs font-medium transition-colors ${
                   activeL1 === null
                     ? "text-primary font-semibold bg-primary/10"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
               >
-                <LayoutGrid className="h-3.5 w-3.5 flex-shrink-0" />
+                <LayoutGrid className="h-4 w-4 flex-shrink-0" />
                 <span>All</span>
               </button>
 
@@ -173,7 +178,7 @@ export function CategoryBrowserModal({
                 <button
                   key={node.fullPath}
                   onClick={() => setActiveL1(activeL1 === node.fullPath ? null : node.fullPath)}
-                  className={`w-full text-left px-3 py-2.5 text-xs font-medium transition-colors leading-snug border-l-2 ${
+                  className={`w-full text-center px-2 py-2.5 text-xs font-medium transition-colors leading-snug border-l-2 ${
                     activeL1 === node.fullPath
                       ? "border-primary text-foreground font-semibold bg-background"
                       : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -186,28 +191,19 @@ export function CategoryBrowserModal({
           )}
 
           {/* ── Right panel ── */}
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto">
 
             {/* Search results */}
             {isSearching ? (
               searchResults!.length > 0 ? (
-                <div className="space-y-3">
-                  <p className="text-xs text-muted-foreground">
-                    {searchResults!.length} {searchResults!.length === 1 ? "category" : "categories"} found
-                  </p>
-                  <div className="grid grid-cols-3 gap-2.5">
+                <div className="p-4 space-y-1">
+                  <div className="grid grid-cols-3 gap-x-3 gap-y-5">
                     {searchResults!.map(node => (
-                      <CategoryCard
+                      <CategoryTile
                         key={node.fullPath}
                         node={node}
                         image={categoryImages[node.fullPath]}
-                        count={productCountByCategory[node.fullPath]}
                         onClick={() => handleSelectLeaf(node.fullPath)}
-                        subtitle={
-                          node.fullPath.includes(CAT_SEPARATOR)
-                            ? node.fullPath.slice(0, node.fullPath.lastIndexOf(CAT_SEPARATOR))
-                            : undefined
-                        }
                       />
                     ))}
                   </div>
@@ -226,64 +222,49 @@ export function CategoryBrowserModal({
               )
 
             ) : !selectedL1Node ? (
-              /* No selection → show all L1 categories as image cards */
-              <div className="grid grid-cols-3 gap-2.5">
-                {categoryTree.map(node => (
-                  <CategoryCard
-                    key={node.fullPath}
-                    node={node}
-                    image={categoryImages[node.fullPath]}
-                    count={productCountByCategory[node.fullPath]}
-                    onClick={() => setActiveL1(node.fullPath)}
-                  />
-                ))}
+              /* No selection → show all L1 categories */
+              <div className="p-4">
+                <div className="grid grid-cols-3 gap-x-3 gap-y-5">
+                  {categoryTree.map(node => (
+                    <CategoryTile
+                      key={node.fullPath}
+                      node={node}
+                      image={categoryImages[node.fullPath]}
+                      onClick={() => setActiveL1(node.fullPath)}
+                    />
+                  ))}
+                </div>
               </div>
 
             ) : selectedL1Node.children.length > 0 ? (
-              /* L1 has subcategories → show subcategory image cards */
-              <div className="space-y-5">
-                <button
-                  onClick={() => handleSelectLeaf(selectedL1Node.fullPath)}
-                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors"
-                >
-                  All in{" "}
-                  <span className="font-medium text-foreground ml-1">{selectedL1Node.name}</span>
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </button>
-
+              /* L1 has subcategories → sections per L2, tiles per L3 */
+              <div className="pb-6">
                 {selectedL1Node.children.map(l2 => (
                   <div key={l2.fullPath}>
+                    {/* Section header */}
                     <button
                       onClick={() => handleSelectLeaf(l2.fullPath)}
-                      className="flex items-center gap-1 mb-3 group"
+                      className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
                     >
-                      <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                        {l2.name}
-                      </h3>
-                      {productCountByCategory[l2.fullPath] ? (
-                        <span className="text-xs text-muted-foreground ml-1">
-                          ({productCountByCategory[l2.fullPath]})
-                        </span>
-                      ) : null}
-                      <ChevronRight className="h-3 w-3 text-muted-foreground group-hover:text-primary ml-0.5" />
+                      <span className="text-sm font-semibold text-foreground">{l2.name}</span>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </button>
 
-                    <div className="grid grid-cols-3 gap-2.5">
+                    {/* Tiles grid */}
+                    <div className="px-4 pb-4 grid grid-cols-3 gap-x-3 gap-y-5">
                       {l2.children.length > 0
                         ? l2.children.map(l3 => (
-                            <CategoryCard
+                            <CategoryTile
                               key={l3.fullPath}
                               node={l3}
                               image={categoryImages[l3.fullPath]}
-                              count={productCountByCategory[l3.fullPath]}
                               onClick={() => handleSelectLeaf(l3.fullPath)}
                             />
                           ))
                         : (
-                            <CategoryCard
+                            <CategoryTile
                               node={l2}
                               image={categoryImages[l2.fullPath]}
-                              count={productCountByCategory[l2.fullPath]}
                               onClick={() => handleSelectLeaf(l2.fullPath)}
                             />
                           )}
@@ -293,25 +274,14 @@ export function CategoryBrowserModal({
               </div>
 
             ) : (
-              /* Leaf category — no subcategories → show products */
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-foreground">{selectedL1Node.name}</p>
-                  {categoryProducts.length > 0 && (
-                    <button
-                      onClick={() => handleSelectLeaf(selectedL1Node.fullPath)}
-                      className="text-xs text-primary hover:underline flex items-center gap-0.5"
-                    >
-                      See all {categoryProducts.length}
-                      <ChevronRight className="h-3 w-3" />
-                    </button>
-                  )}
-                </div>
+              /* Leaf category — show products */
+              <div className="p-4 space-y-3">
+                <p className="text-sm font-semibold text-foreground">{selectedL1Node.name}</p>
 
                 {categoryProducts.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-3">
-                    {categoryProducts.slice(0, 8).map(product => (
-                      <ProductMiniCard
+                  <div className="grid grid-cols-3 gap-x-3 gap-y-5">
+                    {categoryProducts.slice(0, 9).map(product => (
+                      <ProductTile
                         key={product.id}
                         product={product}
                         onClick={() => handleViewProduct(product)}
@@ -333,22 +303,20 @@ export function CategoryBrowserModal({
   );
 }
 
-/* ── Category image card ── */
-interface CategoryCardProps {
+/* ── Category tile — no card border, just image + label ── */
+interface CategoryTileProps {
   node: CategoryNode;
   image?: string;
-  count?: number;
   onClick: () => void;
-  subtitle?: string;
 }
 
-function CategoryCard({ node, image, count, onClick, subtitle }: CategoryCardProps) {
+function CategoryTile({ node, image, onClick }: CategoryTileProps) {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col rounded-xl border border-border hover:border-primary/50 bg-background hover:bg-muted/40 transition-all overflow-hidden text-left group"
+      className="flex flex-col items-center gap-1.5 text-center group"
     >
-      <div className="w-full aspect-square bg-muted/60 flex items-center justify-center overflow-hidden">
+      <div className="w-full aspect-square rounded-xl overflow-hidden bg-muted/60">
         {image ? (
           <img
             src={image}
@@ -359,38 +327,30 @@ function CategoryCard({ node, image, count, onClick, subtitle }: CategoryCardPro
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <LayoutGrid className="h-8 w-8 text-muted-foreground/30" />
+            <LayoutGrid className="h-7 w-7 text-muted-foreground/30" />
           </div>
         )}
       </div>
-      <div className="px-2 py-2">
-        <p className="text-xs font-medium text-foreground leading-snug group-hover:text-primary transition-colors">
-          {node.name}
-        </p>
-        {subtitle && (
-          <p className="text-[10px] text-muted-foreground/70 mt-0.5 truncate">{subtitle}</p>
-        )}
-        {count ? (
-          <p className="text-[10px] text-muted-foreground mt-0.5">{count}</p>
-        ) : null}
-      </div>
+      <p className="text-xs text-foreground leading-snug group-hover:text-primary transition-colors px-0.5">
+        {node.name}
+      </p>
     </button>
   );
 }
 
-/* ── Mini product card (for leaf category product list) ── */
-interface ProductMiniCardProps {
+/* ── Product tile — no card border, just image + label ── */
+interface ProductTileProps {
   product: Listing;
   onClick: () => void;
 }
 
-function ProductMiniCard({ product, onClick }: ProductMiniCardProps) {
+function ProductTile({ product, onClick }: ProductTileProps) {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col rounded-xl border border-border hover:border-primary/50 bg-background hover:bg-muted/40 transition-all overflow-hidden text-left group"
+      className="flex flex-col items-center gap-1.5 text-center group"
     >
-      <div className="w-full aspect-square bg-muted/60 overflow-hidden">
+      <div className="w-full aspect-square rounded-xl overflow-hidden bg-muted/60">
         {product.images[0] ? (
           <img
             src={sanitizeImageUrl(product.images[0])}
@@ -400,18 +360,13 @@ function ProductMiniCard({ product, onClick }: ProductMiniCardProps) {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Package className="h-8 w-8 text-muted-foreground/30" />
+            <Package className="h-7 w-7 text-muted-foreground/30" />
           </div>
         )}
       </div>
-      <div className="px-2 py-2">
-        <p className="text-xs font-medium text-foreground leading-snug line-clamp-2 group-hover:text-primary transition-colors">
-          {product.title}
-        </p>
-        <p className="text-xs font-semibold text-foreground mt-1">
-          {product.currency} {product.price.toLocaleString()}
-        </p>
-      </div>
+      <p className="text-xs text-foreground leading-snug line-clamp-2 group-hover:text-primary transition-colors px-0.5">
+        {product.title}
+      </p>
     </button>
   );
 }
