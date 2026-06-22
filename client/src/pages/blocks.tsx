@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useHead } from "@unhead/react";
 import { BlockchainBlocks } from "@/components/blockchain-blocks";
 import { Search, Menu, X, ArrowRight, Github, Twitter, Loader, ChevronRight } from '@/lib/icons';
 import { PexlyIcon } from "@/components/pexly-icon";
@@ -284,6 +285,7 @@ const BlocksTable = () => {
 // ==================== MAIN PAGE ====================
 
 export default function Blocks() {
+  useHead({ meta: [{ name: "robots", content: "noindex, nofollow" }] });
   return (
     <>
       <style>{`

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useHead } from "@unhead/react";
 import { Copy, TrendingUp, TrendingDown, Clock, DollarSign, Search, Menu, X, Github, Twitter, ArrowRight, ArrowDown, CheckCircle2, ChevronRight } from '@/lib/icons';
 import { PexlyIcon } from "@/components/pexly-icon";
 import { useLocation } from "wouter";
@@ -133,6 +134,7 @@ const Footer = () => (
 );
 
 export default function AddressDetail() {
+  useHead({ meta: [{ name: "robots", content: "noindex, nofollow" }] });
   const location = useLocation();
   const address = location[0].split('/').pop();
   const [addressData, setAddressData] = useState<any>(null);

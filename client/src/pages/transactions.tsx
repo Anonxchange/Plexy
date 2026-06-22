@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useHead } from "@unhead/react";
 import { Search, Menu, X, ArrowRight, Github, Twitter, RefreshCw, ChevronRight } from '@/lib/icons';
 import { PexlyIcon } from "@/components/pexly-icon";
 import { Button } from "@/components/ui/button";
@@ -221,6 +222,7 @@ const Footer = () => (
 // ==================== MAIN PAGE ====================
 
 export default function Transactions() {
+  useHead({ meta: [{ name: "robots", content: "noindex, nofollow" }] });
   const [unconfirmedTransactions, setUnconfirmedTransactions] = useState<any[]>(defaultUnconfirmedTransactions);
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());

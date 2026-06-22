@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useHead } from "@unhead/react";
 import { Copy, Search, Menu, X, Github, Twitter, CheckCircle2, Download, ChevronRight } from '@/lib/icons';
 import { PexlyIcon } from "@/components/pexly-icon";
 import { useLocation } from "wouter";
@@ -132,6 +133,7 @@ const Footer = () => (
 );
 
 export default function TransactionDetail() {
+  useHead({ meta: [{ name: "robots", content: "noindex, nofollow" }] });
   const location = useLocation();
   const txHash = location[0].split('/').pop();
   const [txData, setTxData] = useState<any>(null);

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useHead } from "@unhead/react";
 import { ArrowLeft, Copy, Blocks, Clock, HardDrive } from '@/lib/icons';
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { getBlock, formatHash, formatTimestamp } from "@/lib/blockchain-api";
 import { Link } from "wouter";
 
 export default function BlockDetail() {
+  useHead({ meta: [{ name: "robots", content: "noindex, nofollow" }] });
   const location = useLocation();
   const blockHash = location[0].split('/').pop();
   const [blockData, setBlockData] = useState<any>(null);
