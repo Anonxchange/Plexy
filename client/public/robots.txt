@@ -1,5 +1,9 @@
 User-agent: *
-Allow: /
+Disallow: /explorer/transaction/
+Disallow: /explorer/block/
+Disallow: /explorer/address/
+Disallow: /explorer/blocks
+Disallow: /explorer/transactions
 
 # Block AI training crawlers
 User-agent: GPTBot
