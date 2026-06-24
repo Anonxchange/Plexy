@@ -3,6 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "packageManager": "npm@11.17.0",
+  "engines": {
+    "node": ">=24.18.0",
+    "npm": ">=11.17.0"
+  },
   "scripts": {
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
     "build": "vite build --config vite.config.ts",
@@ -78,7 +83,8 @@
   "overrides": {
     "lodash": ">=4.17.21",
     "ws": ">=8.20.1",
-    "qs": ">=6.15.2"
+    "qs": ">=6.15.2",
+    "esbuild": "^0.28.0"
   },
   "dependencies": {
     "@ethereumjs/rlp": "^10.1.1",
@@ -102,6 +108,7 @@
     "html-react-parser": "^6.0.1",
     "i18next": "^26.0.8",
     "idb": "^8.0.3",
+    "lightweight-charts": "^5.2.0",
     "qrcode.react": "^4.2.0",
     "react-i18next": "^17.0.6",
     "scrypt-js": "^3.0.1"
