@@ -112,7 +112,7 @@ const DesktopPerpetualLayout = ({
       {/* ── Chart — col 1, row 2 ── */}
       {chartVisible && (
         <div className="col-start-1 row-start-2 min-h-0 min-w-0 h-full">
-          <CandlestickChart pair={pair} className="h-full w-full" />
+          <CandlestickChart pair={pair} mode="futures" className="h-full w-full" />
         </div>
       )}
 

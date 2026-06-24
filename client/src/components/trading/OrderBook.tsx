@@ -19,14 +19,11 @@ interface OrderBookProps {
   count?: number;
 }
 
-const toSymbol = (pair: string) => pair.replace("/", "");
+const toApiSym = (pair: string) => pair.replace("/", "");
 
 const fmtPrice = (n: number): string => {
-  const decimals = n >= 10000 ? 1 : n >= 100 ? 2 : n >= 1 ? 4 : 6;
-  return n.toLocaleString("en-US", {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  });
+  const d = n >= 10000 ? 1 : n >= 100 ? 2 : n >= 1 ? 4 : 6;
+  return n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 };
 
 const fmtSize = (qty: number): string =>
@@ -34,30 +31,29 @@ const fmtSize = (qty: number): string =>
 
 const fmtCountdown = (ms: number): string => {
   if (ms <= 0) return "00:00:00";
-  const totalSecs = Math.floor(ms / 1000);
-  const h = Math.floor(totalSecs / 3600);
-  const m = Math.floor((totalSecs % 3600) / 60);
-  const s = totalSecs % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
 };
 
 const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) => {
   const isMobile = useIsMobile();
   const count = countProp ?? (isMobile ? 15 : 12);
 
-  const [asks, setAsks] = useState<OrderRow[]>([]);
-  const [bids, setBids] = useState<OrderRow[]>([]);
-  const [midPrice, setMidPrice] = useState<string>("");
-  const [midRaw, setMidRaw] = useState<number>(0);
-  const [tickSize, setTickSize] = useState("0.1");
-  const [tickOpen, setTickOpen] = useState(false);
-  const [countdown, setCountdown] = useState<string>("");
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const tickRef = useRef<HTMLDivElement>(null);
-  const fetchGenRef = useRef(0); // generation counter — discards stale responses
+  const [asks, setAsks]       = useState<OrderRow[]>([]);
+  const [bids, setBids]       = useState<OrderRow[]>([]);
+  const [midPrice, setMid]    = useState("");
+  const [midRaw, setMidRaw]   = useState(0);
+  const [tickSize, setTick]   = useState("0.1");
+  const [tickOpen, setTickO]  = useState(false);
+  const [countdown, setCd]    = useState("");
 
-  const apiSymbol = toSymbol(symbol);
+  const loopRef      = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const tickRef      = useRef<HTMLDivElement>(null);
+
+  const apiSymbol = toApiSym(symbol);
 
   const { data: markPriceData } = useQuery({
     queryKey: ["mark-price", apiSymbol],
@@ -68,93 +64,83 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
   });
 
   const fundingEntry = Array.isArray(markPriceData) ? markPriceData[0] : markPriceData;
-  const fundingRate = fundingEntry?.lastFundingRate
+  const fundingRate  = fundingEntry?.lastFundingRate
     ? (parseFloat(fundingEntry.lastFundingRate) * 100).toFixed(4) + "%"
     : "—";
   const nextFundingTime: number = fundingEntry?.nextFundingTime
-    ? parseInt(fundingEntry.nextFundingTime)
-    : 0;
+    ? parseInt(fundingEntry.nextFundingTime) : 0;
 
   useEffect(() => {
     if (!nextFundingTime || mode !== "futures") return;
-    const tick = () => setCountdown(fmtCountdown(nextFundingTime - Date.now()));
+    const tick = () => setCd(fmtCountdown(nextFundingTime - Date.now()));
     tick();
     countdownRef.current = setInterval(tick, 1000);
     return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
   }, [nextFundingTime, mode]);
 
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (tickRef.current && !tickRef.current.contains(e.target as Node)) {
-        setTickOpen(false);
-      }
+    const handler = (e: MouseEvent) => {
+      if (tickRef.current && !tickRef.current.contains(e.target as Node)) setTickO(false);
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const fetchOrderBook = async () => {
-    const gen = ++fetchGenRef.current;
-    try {
-      const validLimit = count <= 5 ? 10 : 20;
-      const data = mode === "futures"
-        ? await asterMarket.futuresOrderBook(toSymbol(symbol), String(validLimit))
-        : await asterMarket.spotOrderBook(toSymbol(symbol), String(validLimit));
-      if (gen !== fetchGenRef.current) return; // superseded by a newer request
-      if (!data?.bids || !data?.asks) return;
-
-      const rawAsks: [string, string][] = data.asks;
-      const rawBids: [string, string][] = data.bids;
-
-      const maxQty = Math.max(
-        ...rawAsks.slice(0, count).map(([, q]: [string, string]) => parseFloat(q)),
-        ...rawBids.slice(0, count).map(([, q]: [string, string]) => parseFloat(q)),
-      );
-
-      const formattedAsks: OrderRow[] = rawAsks.slice(0, count).map(([p, q]: [string, string]) => {
-        const qty = parseFloat(q);
-        const price = parseFloat(p);
-        return {
-          price: fmtPrice(price),
-          rawPrice: price,
-          size: fmtSize(qty),
-          percent: Math.min((qty / maxQty) * 100, 100),
-        };
-      }).reverse();
-
-      const formattedBids: OrderRow[] = rawBids.slice(0, count).map(([p, q]: [string, string]) => {
-        const qty = parseFloat(q);
-        const price = parseFloat(p);
-        return {
-          price: fmtPrice(price),
-          rawPrice: price,
-          size: fmtSize(qty),
-          percent: Math.min((qty / maxQty) * 100, 100),
-        };
-      });
-
-      setAsks(formattedAsks);
-      setBids(formattedBids);
-
-      if (rawAsks[0] && rawBids[0]) {
-        const bestAsk = parseFloat(rawAsks[0][0]);
-        const bestBid = parseFloat(rawBids[0][0]);
-        const mid = (bestAsk + bestBid) / 2;
-        setMidRaw(mid);
-        setMidPrice(fmtPrice(mid));
-      }
-    } catch (_) {}
-  };
-
+  /* ── Main polling loop — one `cancelled` flag per mount/symbol change ── */
   useEffect(() => {
-    // Clear stale data immediately so previous coin's prices aren't shown
-    setAsks([]);
-    setBids([]);
-    setMidPrice("");
-    setMidRaw(0);
-    fetchOrderBook();
-    intervalRef.current = setInterval(fetchOrderBook, 500);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    let cancelled = false;
+
+    setAsks([]); setBids([]); setMid(""); setMidRaw(0);
+
+    const limit = String(count <= 5 ? 10 : 20);
+
+    const loop = async () => {
+      if (cancelled) return;
+
+      try {
+        const data = mode === "futures"
+          ? await asterMarket.futuresOrderBook(toApiSym(symbol), limit)
+          : await asterMarket.spotOrderBook(toApiSym(symbol), limit);
+
+        if (!cancelled && data?.bids && data?.asks) {
+          const rawAsks: [string, string][] = data.asks;
+          const rawBids: [string, string][] = data.bids;
+
+          const maxQty = Math.max(
+            ...rawAsks.slice(0, count).map(([, q]: [string,string]) => parseFloat(q)),
+            ...rawBids.slice(0, count).map(([, q]: [string,string]) => parseFloat(q)),
+            1,
+          );
+
+          setAsks(rawAsks.slice(0, count).map(([p, q]: [string,string]) => {
+            const qty = parseFloat(q), price = parseFloat(p);
+            return { price: fmtPrice(price), rawPrice: price, size: fmtSize(qty), percent: Math.min((qty/maxQty)*100, 100) };
+          }).reverse());
+
+          setBids(rawBids.slice(0, count).map(([p, q]: [string,string]) => {
+            const qty = parseFloat(q), price = parseFloat(p);
+            return { price: fmtPrice(price), rawPrice: price, size: fmtSize(qty), percent: Math.min((qty/maxQty)*100, 100) };
+          }));
+
+          if (rawAsks[0] && rawBids[0]) {
+            const mid = (parseFloat(rawAsks[0][0]) + parseFloat(rawBids[0][0])) / 2;
+            setMidRaw(mid);
+            setMid(fmtPrice(mid));
+          }
+        }
+      } catch (_) {}
+
+      if (!cancelled) {
+        loopRef.current = setTimeout(loop, 150);
+      }
+    };
+
+    loop();
+
+    return () => {
+      cancelled = true;
+      if (loopRef.current) { clearTimeout(loopRef.current); loopRef.current = null; }
+    };
   }, [symbol, mode]);
 
   const quote = symbol.split("/")[1] || "USDT";
@@ -162,7 +148,6 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
   return (
     <div className="flex flex-col bg-background h-full select-none">
 
-      {/* Funding / Countdown — futures mobile only */}
       {mode === "futures" && isMobile && (
         <div className="px-2 pt-1 pb-0.5 flex-shrink-0">
           <span className="text-[9px] text-muted-foreground leading-none block">Funding (8h) / Countdown</span>
@@ -172,7 +157,6 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
         </div>
       )}
 
-      {/* Column headers */}
       <div className="flex items-center justify-between px-2 pt-1 pb-0.5 flex-shrink-0">
         <span className="text-[9px] text-muted-foreground leading-none">Price ({quote})</span>
         <button className="flex items-center gap-0.5 text-[9px] text-muted-foreground leading-none">
@@ -180,55 +164,33 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
         </button>
       </div>
 
-      {/* Asks — anchored to bottom so closest-to-mid rows are always visible */}
       <div className="flex-1 flex flex-col justify-end overflow-hidden">
-        {asks.map((order, i) => (
-          <div key={`ask-${i}`} className="relative flex items-center justify-between px-2 py-[3px]">
-            <div
-              className="absolute right-0 top-0 bottom-0 bg-trading-red/10"
-              style={{ width: `${order.percent}%` }}
-            />
-            <span className="relative font-mono-num text-[11px] font-medium text-trading-red leading-tight">
-              {order.price}
-            </span>
-            <span className="relative font-mono-num text-[11px] text-muted-foreground leading-tight">
-              {order.size}
-            </span>
+        {asks.map((o, i) => (
+          <div key={`a${i}`} className="relative flex items-center justify-between px-2 py-[3px]">
+            <div className="absolute right-0 top-0 bottom-0 bg-trading-red/10" style={{ width: `${o.percent}%` }} />
+            <span className="relative font-mono-num text-[11px] font-medium text-trading-red leading-tight">{o.price}</span>
+            <span className="relative font-mono-num text-[11px] text-muted-foreground leading-tight">{o.size}</span>
           </div>
         ))}
       </div>
 
-      {/* Mid price */}
       <div className="flex flex-col px-2 py-1 border-y border-border/40 flex-shrink-0">
-        <span className="font-mono-num text-[13px] font-bold text-foreground leading-tight">
-          {midPrice || "—"}
-        </span>
+        <span className="font-mono-num text-[13px] font-bold text-foreground leading-tight">{midPrice || "—"}</span>
         {midRaw > 0 && (
-          <span className="font-mono-num text-[9px] text-muted-foreground leading-tight">
-            ${fmtPrice(midRaw)}
-          </span>
+          <span className="font-mono-num text-[9px] text-muted-foreground leading-tight">${fmtPrice(midRaw)}</span>
         )}
       </div>
 
-      {/* Bids — anchored to top so closest-to-mid rows are always visible */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {bids.map((order, i) => (
-          <div key={`bid-${i}`} className="relative flex items-center justify-between px-2 py-[3px]">
-            <div
-              className="absolute right-0 top-0 bottom-0 bg-trading-green/10"
-              style={{ width: `${order.percent}%` }}
-            />
-            <span className="relative font-mono-num text-[11px] font-medium text-trading-green leading-tight">
-              {order.price}
-            </span>
-            <span className="relative font-mono-num text-[11px] text-muted-foreground leading-tight">
-              {order.size}
-            </span>
+        {bids.map((o, i) => (
+          <div key={`b${i}`} className="relative flex items-center justify-between px-2 py-[3px]">
+            <div className="absolute right-0 top-0 bottom-0 bg-trading-green/10" style={{ width: `${o.percent}%` }} />
+            <span className="relative font-mono-num text-[11px] font-medium text-trading-green leading-tight">{o.price}</span>
+            <span className="relative font-mono-num text-[11px] text-muted-foreground leading-tight">{o.size}</span>
           </div>
         ))}
       </div>
 
-      {/* Tick size selector */}
       <div className="flex items-center justify-between px-2 py-1 border-t border-border/40 flex-shrink-0 relative" ref={tickRef}>
         <div className="grid grid-cols-2 gap-0.5 opacity-60">
           {[...Array(4)].map((_, i) => (
@@ -236,7 +198,7 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
           ))}
         </div>
         <button
-          onClick={() => setTickOpen((o) => !o)}
+          onClick={() => setTickO(o => !o)}
           className="flex items-center gap-0.5 text-[10px] text-foreground font-mono-num hover:text-muted-foreground transition-colors"
         >
           {tickSize}
@@ -244,10 +206,10 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
         </button>
         {tickOpen && (
           <div className="absolute right-0 bottom-full mb-1 z-50 rounded-md border border-border bg-popover shadow-lg overflow-hidden min-w-[70px]">
-            {TICK_OPTIONS.map((opt) => (
+            {TICK_OPTIONS.map(opt => (
               <button
                 key={opt}
-                onClick={() => { setTickSize(opt); setTickOpen(false); }}
+                onClick={() => { setTick(opt); setTickO(false); }}
                 className={`w-full text-left px-3 py-1.5 text-[11px] font-mono-num transition-colors ${
                   tickSize === opt ? "text-trading-green bg-trading-green/5" : "text-foreground hover:bg-accent"
                 }`}
