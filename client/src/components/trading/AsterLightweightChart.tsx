@@ -224,8 +224,8 @@ export default function AsterLightweightChart({
       mode:          logScale ? 1 : 0,
       invertScale:   invertScale ?? false,
       scaleMargins: {
-        top:    scaleMarginTop    ?? 0.1,
-        bottom: scaleMarginBottom ?? 0.15,
+        top:    scaleMarginTop    ?? 0.04,
+        bottom: scaleMarginBottom ?? 0.1,
       },
     });
   }, [logScale, invertScale, scaleMarginTop, scaleMarginBottom]);
@@ -287,6 +287,7 @@ export default function AsterLightweightChart({
         borderColor: borderCol,
         minimumWidth: 52,
         autoScale: true,
+        scaleMargins: { top: 0.04, bottom: 0.1 },
       },
       timeScale: {
         borderColor: borderCol,

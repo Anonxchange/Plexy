@@ -665,8 +665,8 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
   const [showLegend,        setShowLegend]        = useState(true);
   const [logScale,          setLogScale]          = useState(false);
   const [invertScale,       setInvertScale]       = useState(false);
-  const [scaleMarginTop,    setScaleMarginTop]    = useState(0.1);
-  const [scaleMarginBottom, setScaleMarginBottom] = useState(0.15);
+  const [scaleMarginTop,    setScaleMarginTop]    = useState(0.04);
+  const [scaleMarginBottom, setScaleMarginBottom] = useState(0.1);
   const [showHorzGrid,      setShowHorzGrid]      = useState(true);
   const [showVertGrid,      setShowVertGrid]      = useState(true);
   const [showCrosshair,     setShowCrosshair]     = useState(true);

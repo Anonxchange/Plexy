@@ -367,7 +367,7 @@ const BottomTabs = ({ chartVisible, pair, viewMode, onViewModeChange: setViewMod
       {viewMode === "list" && (
         <>
           {chartVisible && (
-            <div className="h-[350px] flex-shrink-0">
+            <div className="h-[52svh] flex-shrink-0">
               <CandlestickChart pair={pair} />
             </div>
           )}
@@ -387,7 +387,7 @@ const BottomTabs = ({ chartVisible, pair, viewMode, onViewModeChange: setViewMod
       {viewMode === "chart" && (() => {
         switch (activeChartTab) {
           case "Chart":
-            return <div className="h-[400px] flex-shrink-0"><CandlestickChart pair={pair} /></div>;
+            return <div className="h-[56svh] flex-shrink-0"><CandlestickChart pair={pair} /></div>;
           case "Order book":
             return <OrderBookTwoCol symbol={pair} mode="spot" />;
           case "Trades":

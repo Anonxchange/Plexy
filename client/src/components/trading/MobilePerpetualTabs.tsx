@@ -445,7 +445,7 @@ const MobilePerpetualTabs = ({ chartVisible, pair, viewMode, onViewModeChange: s
       {viewMode === "list" && (
         <>
           {chartVisible && (
-            <div className="h-[350px] flex-shrink-0">
+            <div className="h-[52svh] flex-shrink-0">
               <CandlestickChart pair={pair} />
             </div>
           )}
@@ -465,7 +465,7 @@ const MobilePerpetualTabs = ({ chartVisible, pair, viewMode, onViewModeChange: s
       {viewMode === "chart" && (() => {
         switch (activeChartTab) {
           case "Chart":
-            return <div className="h-[400px] flex-shrink-0"><CandlestickChart pair={pair} /></div>;
+            return <div className="h-[56svh] flex-shrink-0"><CandlestickChart pair={pair} /></div>;
           case "Order book":
             return <OrderBookTwoCol symbol={pair} />;
           case "Trades":
