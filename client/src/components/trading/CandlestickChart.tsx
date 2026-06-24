@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from "react";
+import AsterLightweightChart from "./AsterLightweightChart";
+import DrawingToolbar from "./DrawingToolbar";
+import type { DrawingTool } from "./DrawingToolbar";
 import {
   ChevronLeft, ChevronRight, ChevronDown,
   ReceiptText,
   Maximize2, Minimize2, Cog, X, Check,
   CandlestickChart as CandleIcon, BarChart2, TrendingUp, AreaChart,
-  Volume2, VolumeX, Loader2, Search, Star, Activity,
+  Volume2, VolumeX, Loader2,
   AlignLeft, Sliders, Layers, Target, Minus
 } from '@/lib/icons';
 import { useTheme } from "@/components/theme-provider";
@@ -22,11 +25,15 @@ interface CandlestickChartProps {
 
 /* TradingView chart style codes */
 const CHART_STYLES = [
-  { label: "Candles",      value: 1, Icon: CandleIcon   },
-  { label: "Heikin Ashi",  value: 8, Icon: CandleIcon   },
-  { label: "Bars",         value: 0, Icon: BarChart2     },
-  { label: "Line",         value: 2, Icon: TrendingUp    },
-  { label: "Area",         value: 3, Icon: AreaChart     },
+  { label: "Candles",        value: 1,  Icon: CandleIcon  },
+  { label: "Heikin Ashi",    value: 8,  Icon: CandleIcon  },
+  { label: "Hollow Candles", value: 9,  Icon: CandleIcon  },
+  { label: "Bars",           value: 0,  Icon: BarChart2   },
+  { label: "Line",           value: 2,  Icon: TrendingUp  },
+  { label: "Step Line",      value: 7,  Icon: TrendingUp  },
+  { label: "Area",           value: 3,  Icon: AreaChart   },
+  { label: "Baseline",       value: 10, Icon: AreaChart   },
+  { label: "Columns",        value: 13, Icon: BarChart2   },
 ];
 
 const INTERVALS = [
@@ -40,127 +47,6 @@ const INTERVALS = [
 
 const PRICE_TYPES = ["Last Price", "Mark Price", "Index Price"];
 
-/**
- * Tier 1 — confirmed on Binance spot/futures.
- */
-const BINANCE_SYMBOLS = new Set([
-  "BTC","ETH","SOL","BNB","XRP","DOGE","ADA","AVAX","DOT",
-  "MATIC","POL","LINK","UNI","AAVE","ATOM","NEAR","LTC","BCH",
-  "ETC","APT","SUI","ARB","OP","INJ","SEI","WLD","JUP","FET",
-  "RENDER","PENDLE","ONDO","ENA","SHIB","PEPE","FLOKI","BLUR",
-  "ARKM","FIL","GALA","SAND","CHZ","ENJ","SNX","SUSHI","CAKE",
-  "PYTH","TRX","TON","HBAR","XLM","ALGO","ZEC","DASH","FTM",
-  "MNT","VIRTUAL","USDE","PYUSD","WBTC","WETH","HYPE","TAO",
-  "BONK","WIF","BOME","NOT","BRETT","MEME","NEIRO","EIGEN",
-  "1000PEPE","1000FLOKI","1000SHIB","1000BONK","1000X",
-]);
-
-/**
- * Tier 2 — coins best covered by OKX on TradingView:
- * OKX-native / ecosystem tokens plus altcoins with strong OKX liquidity
- * that may not have reliable data on MEXC's TradingView feed.
- */
-const OKX_SYMBOLS = new Set([
-  // OKX ecosystem
-  "OKB","OKT",
-  // Older smart-contract chains primarily listed on OKX
-  "NEO","GAS","ONT","QTUM","WAN",
-  // Mid-cap alts with strong OKX presence
-  "CFX","ROSE","MINA","CELO","KAVA","BAND","CELR","CTSI",
-  "DYDX","CRV","1INCH","YFI","COMP","MKR","BAL","REN",
-  "ANKR","AUDIO","REEF","ALPHA","BICO","AGLD","DODO","PERP",
-  "RLC","STMX","ACH","GHST","POND","TRB","MDT","LOOM",
-  "MASK","PEOPLE","ACE","ORDI","SATS","RATS","PIZZA",
-]);
-
-/**
- * Resolve the best TradingView exchange:symbol for a given pair.
- * Priority (spot):    BINANCE → OKX → MEXC (broadest altcoin fallback)
- * Priority (futures): BINANCE → BYBIT (widest perps coverage)
- */
-function getTvSymbol(pair: string, mode: "spot" | "futures"): string {
-  const raw  = pair.replace("/", "");     // e.g. "ALLOUSDT"
-  const base = raw.replace(/USDT$|USDC$|BTC$|ETH$|BNB$/, ""); // e.g. "ALLO"
-  if (BINANCE_SYMBOLS.has(base)) {
-    if (mode === "futures") return `BINANCE:${raw}.P`;
-    return `BINANCE:${raw}`;
-  }
-  // Futures altcoins: Bybit has the widest perp coverage on TradingView
-  if (mode === "futures") return `BYBIT:${raw}.P`;
-  // Spot tier-2: OKX for known OKX-strong coins
-  if (OKX_SYMBOLS.has(base)) return `OKX:${raw}`;
-  // Spot fallback: MEXC has the broadest overall altcoin coverage on TradingView
-  return `MEXC:${raw}`;
-}
-
-const STUDIES: { id: string; label: string }[] = [
-  { id: "52WeekHighLow@tv-basicstudies",           label: "52 Week High/Low"                },
-  { id: "Acceleration@tv-basicstudies",             label: "Accelerator Oscillator"          },
-  { id: "AccumulationDistribution@tv-basicstudies", label: "Accumulation/Distribution"       },
-  { id: "AccumulativeSwingIndex@tv-basicstudies",   label: "Accumulative Swing Index"        },
-  { id: "AdvanceDecline@tv-basicstudies",           label: "Advance/Decline"                 },
-  { id: "ALMA@tv-basicstudies",                     label: "Arnaud Legoux Moving Average"    },
-  { id: "Aroon@tv-basicstudies",                    label: "Aroon"                           },
-  { id: "ADX@tv-basicstudies",                      label: "Average Directional Index"       },
-  { id: "AveragePrice@tv-basicstudies",             label: "Average Price"                   },
-  { id: "ATR@tv-basicstudies",                      label: "Average True Range"              },
-  { id: "AwesomeOscillator@tv-basicstudies",        label: "Awesome Oscillator"              },
-  { id: "BalanceOfPower@tv-basicstudies",           label: "Balance of Power"                },
-  { id: "BB@tv-basicstudies",                       label: "Bollinger Bands"                 },
-  { id: "BollingerBandsPct@tv-basicstudies",        label: "Bollinger Bands %B"              },
-  { id: "BollingerBandsWidth@tv-basicstudies",      label: "Bollinger Bands Width"           },
-  { id: "BullBearPower@tv-basicstudies",            label: "Bull Bear Power"                 },
-  { id: "CCI@tv-basicstudies",                      label: "Commodity Channel Index"         },
-  { id: "CMF@tv-basicstudies",                      label: "Chaikin Money Flow"              },
-  { id: "ChandeKrollStop@tv-basicstudies",          label: "Chande Kroll Stop"               },
-  { id: "CMO@tv-basicstudies",                      label: "Chande Momentum Oscillator"      },
-  { id: "ChoppinessIndex@tv-basicstudies",          label: "Choppiness Index"                },
-  { id: "ConnorsRSI@tv-basicstudies",               label: "Connors RSI"                     },
-  { id: "CoppockCurve@tv-basicstudies",             label: "Coppock Curve"                   },
-  { id: "DEMA@tv-basicstudies",                     label: "Double EMA"                      },
-  { id: "DPO@tv-basicstudies",                      label: "Detrended Price Oscillator"      },
-  { id: "DMI@tv-basicstudies",                      label: "Directional Movement"            },
-  { id: "DonchianChannels@tv-basicstudies",         label: "Donchian Channels"               },
-  { id: "EaseOfMovement@tv-basicstudies",           label: "Ease of Movement"                },
-  { id: "MAExp@tv-basicstudies",                    label: "Exponential Moving Average"      },
-  { id: "FisherTransform@tv-basicstudies",          label: "Fisher Transform"                },
-  { id: "HistoricalVolatility@tv-basicstudies",     label: "Historical Volatility"           },
-  { id: "HullMA@tv-basicstudies",                   label: "Hull Moving Average"             },
-  { id: "IchimokuCloud@tv-basicstudies",            label: "Ichimoku Cloud"                  },
-  { id: "KeltnerChannels@tv-basicstudies",          label: "Keltner Channels"                },
-  { id: "KnowSureThing@tv-basicstudies",            label: "Know Sure Thing"                 },
-  { id: "MACD@tv-basicstudies",                     label: "MACD"                            },
-  { id: "MassIndex@tv-basicstudies",                label: "Mass Index"                      },
-  { id: "McGinleyDynamic@tv-basicstudies",          label: "McGinley Dynamic"                },
-  { id: "MFI@tv-basicstudies",                      label: "Money Flow Index"                },
-  { id: "MOM@tv-basicstudies",                      label: "Momentum"                        },
-  { id: "MASimple@tv-basicstudies",                 label: "Moving Average"                  },
-  { id: "OBV@tv-basicstudies",                      label: "On Balance Volume"               },
-  { id: "PSAR@tv-basicstudies",                     label: "Parabolic SAR"                   },
-  { id: "PriceOsc@tv-basicstudies",                 label: "Price Oscillator"                },
-  { id: "PriceVolumeTrend@tv-basicstudies",         label: "Price Volume Trend"              },
-  { id: "ROC@tv-basicstudies",                      label: "Rate of Change"                  },
-  { id: "RelativeVigorIndex@tv-basicstudies",       label: "Relative Vigor Index"            },
-  { id: "RSI@tv-basicstudies",                      label: "Relative Strength Index"         },
-  { id: "SMIErgodicIndicator@tv-basicstudies",      label: "SMI Ergodic Indicator"           },
-  { id: "MASimple@tv-basicstudies-2",               label: "Smoothed Moving Average"         },
-  { id: "Stochastic@tv-basicstudies",               label: "Stochastic"                      },
-  { id: "StochasticRSI@tv-basicstudies",            label: "Stochastic RSI"                  },
-  { id: "TEMA@tv-basicstudies",                     label: "Triple EMA"                      },
-  { id: "Trix@tv-basicstudies",                     label: "TRIX"                            },
-  { id: "TSI@tv-basicstudies",                      label: "True Strength Index"             },
-  { id: "UltimateOscillator@tv-basicstudies",       label: "Ultimate Oscillator"             },
-  { id: "VWAP@tv-basicstudies",                     label: "VWAP"                            },
-  { id: "VWMA@tv-basicstudies",                     label: "Volume Weighted MA"              },
-  { id: "VolatilityStop@tv-basicstudies",           label: "Volatility Stop"                 },
-  { id: "Volume@tv-basicstudies",                   label: "Volume"                          },
-  { id: "VOscillator@tv-basicstudies",              label: "Volume Oscillator"               },
-  { id: "Alligator@tv-basicstudies",                label: "Williams Alligator"              },
-  { id: "WilliamsFractals@tv-basicstudies",         label: "Williams Fractals"               },
-  { id: "WilliamR@tv-basicstudies",                 label: "Williams %R"                     },
-  { id: "WoodiesCCI@tv-basicstudies",               label: "Woodies CCI"                     },
-  { id: "ZigZag@tv-basicstudies",                   label: "Zig Zag"                         },
-];
 
 interface CandleColors {
   bullBody:    string;
@@ -178,106 +64,6 @@ interface CandleToggles {
   wicks:   boolean;
 }
 
-/* ── Indicators Modal ────────────────────────────────────────────── */
-const IndicatorsModal = ({
-  selected, favorites, onToggle, onFavorite, onClose,
-}: {
-  selected: string[];
-  favorites: string[];
-  onToggle: (id: string) => void;
-  onFavorite: (id: string) => void;
-  onClose: () => void;
-}) => {
-  const [search, setSearch] = useState("");
-
-  const filtered = STUDIES.filter(s =>
-    s.label.toLowerCase().includes(search.toLowerCase())
-  );
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/60" />
-      <div
-        className="relative z-10 w-[480px] max-h-[70vh] flex flex-col bg-card border border-border rounded-xl shadow-2xl overflow-hidden"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <h2 className="text-base font-semibold text-foreground">Indicators</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Search */}
-        <div className="px-4 py-3 border-b border-border">
-          <div className="flex items-center gap-2 bg-background border border-border rounded-lg px-3 py-2">
-            <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-            <input
-              autoFocus
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search"
-              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
-            />
-          </div>
-        </div>
-
-        {/* Column header */}
-        <div className="px-5 py-2 border-b border-border/50">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-            Script Name
-          </span>
-        </div>
-
-        {/* List */}
-        <div className="flex-1 overflow-y-auto">
-          {filtered.length === 0 ? (
-            <div className="px-5 py-8 text-center text-sm text-muted-foreground">No indicators found</div>
-          ) : (
-            filtered.map(({ id, label }) => {
-              const active = selected.includes(id);
-              const starred = favorites.includes(id);
-              return (
-                <div
-                  key={id}
-                  className={`group flex items-center gap-2 px-4 py-2.5 cursor-pointer transition-colors ${
-                    active ? "bg-primary/10" : "hover:bg-accent"
-                  }`}
-                  onClick={() => onToggle(id)}
-                >
-                  <button
-                    onClick={e => { e.stopPropagation(); onFavorite(id); }}
-                    className={`flex-shrink-0 transition-colors ${starred ? "text-yellow-400" : "text-muted-foreground/30 group-hover:text-muted-foreground/60"}`}
-                  >
-                    <Star className="w-3.5 h-3.5" fill={starred ? "currentColor" : "none"} />
-                  </button>
-                  <span className={`flex-1 text-sm ${active ? "text-primary font-medium" : "text-foreground"}`}>
-                    {label}
-                  </span>
-                  {active && <Check className="w-4 h-4 text-primary flex-shrink-0" />}
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {/* Footer */}
-        {selected.length > 0 && (
-          <div className="px-5 py-3 border-t border-border flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">{selected.length} active</span>
-            <button
-              onClick={() => selected.forEach(id => onToggle(id))}
-              className="text-xs text-trading-red hover:opacity-80 transition-opacity"
-            >
-              Clear all
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
 
 /* ── Color Swatch ────────────────────────────────────────────────── */
 const ColorSwatch = ({ color, onChange }: { color: string; onChange: (c: string) => void }) => {
@@ -307,12 +93,32 @@ const SettingsModal = ({
   showVolume, onVolumeToggle,
   candleColors, onCandleColorChange,
   candleToggles, onCandleToggleChange,
+  showLegend, onShowLegendToggle,
+  logScale, onLogScaleToggle,
+  invertScale, onInvertScaleToggle,
+  scaleMarginTop, onScaleMarginTopChange,
+  scaleMarginBottom, onScaleMarginBottomChange,
+  showHorzGrid, onShowHorzGridToggle,
+  showVertGrid, onShowVertGridToggle,
+  showCrosshair, onShowCrosshairToggle,
+  showPriceScale, onShowPriceScaleToggle,
+  showWatermark, onShowWatermarkToggle,
   onClose, onApply,
 }: {
   chartStyle: number; onStyleChange: (s: number) => void;
   showVolume: boolean; onVolumeToggle: () => void;
   candleColors: CandleColors; onCandleColorChange: (key: keyof CandleColors, val: string) => void;
   candleToggles: CandleToggles; onCandleToggleChange: (key: keyof CandleToggles) => void;
+  showLegend: boolean; onShowLegendToggle: () => void;
+  logScale: boolean; onLogScaleToggle: () => void;
+  invertScale: boolean; onInvertScaleToggle: () => void;
+  scaleMarginTop: number; onScaleMarginTopChange: (v: number) => void;
+  scaleMarginBottom: number; onScaleMarginBottomChange: (v: number) => void;
+  showHorzGrid: boolean; onShowHorzGridToggle: () => void;
+  showVertGrid: boolean; onShowVertGridToggle: () => void;
+  showCrosshair: boolean; onShowCrosshairToggle: () => void;
+  showPriceScale: boolean; onShowPriceScaleToggle: () => void;
+  showWatermark: boolean; onShowWatermarkToggle: () => void;
   onClose: () => void; onApply: () => void;
 }) => {
   const [section, setSection] = useState<SettingsSection>("Symbol");
@@ -486,20 +292,83 @@ const SettingsModal = ({
             )}
 
             {section === "Status line" && (
-              <div className="text-sm text-muted-foreground py-8 text-center">
-                Status line settings coming soon
+              <div className="space-y-5">
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-3">Legend</p>
+                  <div className="space-y-2">
+                    <CheckRow
+                      label="Show OHLC legend"
+                      checked={showLegend}
+                      onToggle={onShowLegendToggle}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-3">Indicator Values</p>
+                  <p className="text-xs text-muted-foreground">Values shown in the legend when hovering over a bar.</p>
+                </div>
               </div>
             )}
 
             {section === "Scales" && (
-              <div className="text-sm text-muted-foreground py-8 text-center">
-                Scale settings coming soon
+              <div className="space-y-5">
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-3">Price Scale</p>
+                  <div className="space-y-2">
+                    <CheckRow label="Show price scale" checked={showPriceScale} onToggle={onShowPriceScaleToggle} />
+                    <CheckRow label="Logarithmic scale" checked={logScale} onToggle={onLogScaleToggle} />
+                    <CheckRow label="Invert scale" checked={invertScale} onToggle={onInvertScaleToggle} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-3">Margins</p>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-foreground flex-1">Top</span>
+                      <input
+                        type="range" min="0" max="40" step="1"
+                        value={Math.round(scaleMarginTop * 100)}
+                        onChange={e => onScaleMarginTopChange(Number(e.target.value) / 100)}
+                        className="w-24 accent-primary"
+                      />
+                      <span className="text-xs text-muted-foreground w-8 text-right">{Math.round(scaleMarginTop * 100)}%</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-foreground flex-1">Bottom</span>
+                      <input
+                        type="range" min="0" max="40" step="1"
+                        value={Math.round(scaleMarginBottom * 100)}
+                        onChange={e => onScaleMarginBottomChange(Number(e.target.value) / 100)}
+                        className="w-24 accent-primary"
+                      />
+                      <span className="text-xs text-muted-foreground w-8 text-right">{Math.round(scaleMarginBottom * 100)}%</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
             {section === "Canvas" && (
-              <div className="text-sm text-muted-foreground py-8 text-center">
-                Canvas settings coming soon
+              <div className="space-y-5">
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-3">Grid Lines</p>
+                  <div className="space-y-2">
+                    <CheckRow label="Vertical lines" checked={showVertGrid} onToggle={onShowVertGridToggle} />
+                    <CheckRow label="Horizontal lines" checked={showHorzGrid} onToggle={onShowHorzGridToggle} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-3">Crosshair</p>
+                  <div className="space-y-2">
+                    <CheckRow label="Show crosshair" checked={showCrosshair} onToggle={onShowCrosshairToggle} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-3">Watermark</p>
+                  <div className="space-y-2">
+                  <CheckRow label="Show symbol watermark" checked={showWatermark} onToggle={onShowWatermarkToggle} />
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -748,11 +617,15 @@ const DetailsPanel = ({ symbol, mode }: { symbol: string; mode: "spot" | "future
 const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: CandlestickChartProps) => {
   const { theme } = useTheme();
   const isMobile = useIsMobile();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const wrapperRef   = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   /* toolbar state */
   const [toolsVisible,    setToolsVisible]    = useState(() => window.innerWidth >= 768);
+  const [activeTool,      setActiveTool]      = useState<DrawingTool>("cursor");
+  const [magnetMode,      setMagnetMode]      = useState(false);
+  const [lockMode,        setLockMode]        = useState(false);
+  const [hiddenMode,      setHiddenMode]      = useState(false);
+  const clearAllRef = useRef<() => void>(() => {});
   const [interval,        setInterval]        = useState("D");
   const [showOrdersMenu,  setShowOrdersMenu]  = useState(false);
   const [orderOverlays,   setOrderOverlays]   = useState<OrderOverlays>({
@@ -767,12 +640,7 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
   const [priceType,       setPriceType]       = useState("Last Price");
   const [showPriceMenu,   setShowPriceMenu]   = useState(false);
   const [showLineType,    setShowLineType]    = useState(false);
-  const [showIndicators,  setShowIndicators]  = useState(false);
   const [showSettings,    setShowSettings]    = useState(false);
-  const [selectedStudies, setSelectedStudies] = useState<string[]>(() =>
-    window.innerWidth >= 768 ? ["MAExp@tv-basicstudies", "MASimple@tv-basicstudies"] : []
-  );
-  const [favoriteStudies, setFavoriteStudies] = useState<string[]>([]);
   const [chartStyle,      setChartStyle]      = useState(1);
   const [showVolume,      setShowVolume]      = useState(true);
   const [loaded,          setLoaded]          = useState(false);
@@ -793,13 +661,19 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
     wicks:   true,
   });
 
+  /* ── Extra chart settings ── */
+  const [showLegend,        setShowLegend]        = useState(true);
+  const [logScale,          setLogScale]          = useState(false);
+  const [invertScale,       setInvertScale]       = useState(false);
+  const [scaleMarginTop,    setScaleMarginTop]    = useState(0.1);
+  const [scaleMarginBottom, setScaleMarginBottom] = useState(0.15);
+  const [showHorzGrid,      setShowHorzGrid]      = useState(true);
+  const [showVertGrid,      setShowVertGrid]      = useState(true);
+  const [showCrosshair,     setShowCrosshair]     = useState(true);
+  const [showPriceScale,    setShowPriceScale]    = useState(true);
+  const [showWatermark,     setShowWatermark]     = useState(false);
+
   const apiSymbol = pair.replace("/", "");
-
-  const toggleStudy = (id: string) =>
-    setSelectedStudies(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]);
-
-  const toggleFavorite = (id: string) =>
-    setFavoriteStudies(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]);
 
   /* close toolbar dropdowns on outside click */
   useEffect(() => {
@@ -822,77 +696,12 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
     return () => { document.body.style.overflow = ""; };
   }, [fullscreen]);
 
-  /* TradingView widget */
+  const isDark = theme === "dark";
+
+  /* Reset loaded state when symbol/interval changes so loader shows */
   useEffect(() => {
-    if (view !== "chart") return;
-    setLoaded(false);
-    if (!containerRef.current) return;
-    containerRef.current.innerHTML = "";
-
-    const widgetContainer = document.createElement("div");
-    widgetContainer.className = "tradingview-widget-container";
-    widgetContainer.style.height = "100%";
-    widgetContainer.style.width = "100%";
-
-    const innerDiv = document.createElement("div");
-    innerDiv.className = "tradingview-widget-container__widget";
-    innerDiv.style.height = "100%";
-    innerDiv.style.width = "100%";
-    widgetContainer.appendChild(innerDiv);
-
-    const isDark = theme === "dark";
-    const bgColor   = isDark ? "rgba(26, 26, 26, 1)"   : "rgba(245, 245, 245, 1)";
-    const toolbarBg = isDark ? "rgba(33, 33, 33, 1)"   : "rgba(255, 255, 255, 1)";
-    const gridColor = isDark ? "rgba(54, 54, 54, 0.8)" : "rgba(220, 220, 220, 1)";
-
-    const script = document.createElement("script");
-    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
-    script.type = "text/javascript";
-    script.async = true;
-    script.textContent = JSON.stringify({
-      autosize: true,
-      symbol: getTvSymbol(pair, mode),
-      interval,
-      timezone: "Etc/UTC",
-      theme: isDark ? "dark" : "light",
-      style: chartStyle,
-      locale: "en",
-      backgroundColor: bgColor,
-      toolbarBg,
-      gridColor,
-      hide_top_toolbar: true,
-      hide_legend: false,
-      hide_side_toolbar: !toolsVisible,
-      hide_volume: !showVolume,
-      allow_symbol_change: false,
-      save_image: false,
-      calendar: false,
-      studies: selectedStudies,
-      support_host: "https://www.tradingview.com",
-    });
-    widgetContainer.appendChild(script);
-    containerRef.current.appendChild(widgetContainer);
-
-    const observer = new MutationObserver(() => {
-      const iframe = containerRef.current?.querySelector("iframe");
-      if (iframe) {
-        observer.disconnect();
-        if (iframe.contentDocument?.readyState === "complete") {
-          setLoaded(true);
-        } else {
-          iframe.addEventListener("load", () => setLoaded(true), { once: true });
-        }
-      }
-    });
-    observer.observe(containerRef.current, { childList: true, subtree: true });
-    const fallback = setTimeout(() => setLoaded(true), 8000);
-
-    return () => {
-      observer.disconnect();
-      clearTimeout(fallback);
-      if (containerRef.current) containerRef.current.innerHTML = "";
-    };
-  }, [toolsVisible, pair, theme, isMobile, interval, view, selectedStudies, chartStyle, showVolume]);
+    if (view === "chart") setLoaded(false);
+  }, [pair, interval, chartStyle, showVolume, isDark]);
 
   return (
     <div ref={wrapperRef} className={`flex flex-col min-h-0 h-full bg-background ${fullscreen ? "" : className || ""}`}>
@@ -920,25 +729,6 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
         </div>
 
         <div className="w-px h-5 bg-border mx-2 flex-shrink-0" />
-
-        {/* ── Indicators — opens modal with full list + search */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={() => setShowIndicators(true)}
-              className={`p-1.5 rounded transition-colors flex-shrink-0 ${
-                selectedStudies.length > 0
-                  ? "text-primary bg-primary/10"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
-              }`}
-            >
-              <Activity className="w-4 h-4" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="text-xs">
-            Indicators{selectedStudies.length > 0 ? ` (${selectedStudies.length})` : ""}
-          </TooltipContent>
-        </Tooltip>
 
         {/* ── Line Type — chart style selector */}
         <div className="relative flex-shrink-0" onClick={e => e.stopPropagation()}>
@@ -1103,11 +893,61 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
       {/* ══ Body ══ */}
       <div className="relative flex-1 min-h-0">
 
-        {/* TradingView chart */}
+        {/* Aster Lightweight Chart */}
         <div className={`absolute inset-0 ${view === "chart" ? "block" : "hidden"}`}>
-          <div ref={containerRef} className="h-full w-full" />
+
+          {/* Drawing toolbar — 28px wide strip on the left */}
+          {toolsVisible && (
+            <DrawingToolbar
+              activeTool={activeTool}
+              onToolSelect={(tool) => {
+                if (tool === "eraseall") {
+                  clearAllRef.current?.();
+                  setActiveTool("cursor");
+                  return;
+                }
+                setActiveTool(tool);
+              }}
+              magnetMode={magnetMode}
+              onMagnetToggle={() => setMagnetMode(v => !v)}
+              lockMode={lockMode}
+              onLockToggle={() => setLockMode(v => !v)}
+              hiddenMode={hiddenMode}
+              onHiddenToggle={() => setHiddenMode(v => !v)}
+            />
+          )}
+
+          {/* Chart area — full width, toolbar overlays left edge */}
+          <div className="absolute inset-0">
+            <AsterLightweightChart
+              symbol={apiSymbol}
+              interval={interval}
+              mode={mode}
+              chartStyle={chartStyle}
+              showVolume={showVolume}
+              isDark={isDark}
+              candleColors={candleColors}
+              candleToggles={candleToggles}
+              onReady={() => setLoaded(true)}
+              activeTool={activeTool}
+              onToolReset={() => setActiveTool("cursor")}
+              clearAllRef={clearAllRef}
+              magnetMode={magnetMode}
+              showLegend={showLegend}
+              logScale={logScale}
+              invertScale={invertScale}
+              scaleMarginTop={scaleMarginTop}
+              scaleMarginBottom={scaleMarginBottom}
+              showHorzGrid={showHorzGrid}
+              showVertGrid={showVertGrid}
+              showCrosshair={showCrosshair}
+              showPriceScale={showPriceScale}
+              showWatermark={showWatermark}
+            />
+          </div>
+
           {!loaded && view === "chart" && (
-            <div className="absolute inset-0 z-20 flex items-center justify-center bg-background">
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-background pointer-events-none">
               <div className="animate-pulse">
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
                   <path d="M13 2L4.5 13.5H11.5L10 22L20 9.5H13.5L13 2Z" fill="hsl(var(--primary))" />
@@ -1115,14 +955,14 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
               </div>
             </div>
           )}
-          {/* Orders overlay — shown when "Order" is checked */}
+          {/* Orders overlay */}
           {orderOverlays.order && <OrdersOverlay symbol={apiSymbol} mode={mode} />}
           {/* Side tools toggle tab */}
           <button
-            onClick={() => setToolsVisible(!toolsVisible)}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-50 bg-card/90 border border-l-0 border-border rounded-r-md py-4 px-0.5 text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => setToolsVisible(v => !v)}
+            className={`absolute top-1/2 -translate-y-1/2 z-50 bg-card border-y border-r border-border rounded-r-md py-5 px-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-all duration-150 shadow-sm ${toolsVisible ? "left-10 border-l-0" : "left-0"}`}
           >
-            {toolsVisible ? <ChevronLeft className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+            {toolsVisible ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
           </button>
         </div>
 
@@ -1142,16 +982,6 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
       </div>
 
       {/* ══ Modals ══ */}
-      {showIndicators && (
-        <IndicatorsModal
-          selected={selectedStudies}
-          favorites={favoriteStudies}
-          onToggle={toggleStudy}
-          onFavorite={toggleFavorite}
-          onClose={() => setShowIndicators(false)}
-        />
-      )}
-
       {showSettings && (
         <SettingsModal
           chartStyle={chartStyle}
@@ -1162,6 +992,26 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
           onCandleColorChange={(key, val) => setCandleColors(prev => ({ ...prev, [key]: val }))}
           candleToggles={candleToggles}
           onCandleToggleChange={(key) => setCandleToggles(prev => ({ ...prev, [key]: !prev[key] }))}
+          showLegend={showLegend}
+          onShowLegendToggle={() => setShowLegend(v => !v)}
+          logScale={logScale}
+          onLogScaleToggle={() => setLogScale(v => !v)}
+          invertScale={invertScale}
+          onInvertScaleToggle={() => setInvertScale(v => !v)}
+          scaleMarginTop={scaleMarginTop}
+          onScaleMarginTopChange={setScaleMarginTop}
+          scaleMarginBottom={scaleMarginBottom}
+          onScaleMarginBottomChange={setScaleMarginBottom}
+          showHorzGrid={showHorzGrid}
+          onShowHorzGridToggle={() => setShowHorzGrid(v => !v)}
+          showVertGrid={showVertGrid}
+          onShowVertGridToggle={() => setShowVertGrid(v => !v)}
+          showCrosshair={showCrosshair}
+          onShowCrosshairToggle={() => setShowCrosshair(v => !v)}
+          showPriceScale={showPriceScale}
+          onShowPriceScaleToggle={() => setShowPriceScale(v => !v)}
+          showWatermark={showWatermark}
+          onShowWatermarkToggle={() => setShowWatermark(v => !v)}
           onClose={() => setShowSettings(false)}
           onApply={() => setView("chart")}
         />
