@@ -34,6 +34,9 @@ import {
   Calendar01Icon as _Calendar,
   Camera01Icon as _Camera,
   Chart01Icon as _Chart,
+  ChartCandlestickIcon as _ChartCandlestick,
+  ChartHighLowIcon as _ChartHighLow,
+  ChartLineData01Icon as _ChartLineData,
   CheckIcon as _Check,
   CheckCheckIcon as _CheckCheck,
   CheckmarkCircle01Icon as _CheckmarkCircle,
@@ -248,6 +251,9 @@ export const Building2 = makeIcon(_Building2, 'Building2');
 export const Calendar = makeIcon(_Calendar, 'Calendar');
 export const Camera = makeIcon(_Camera, 'Camera');
 export const CandlestickChart = makeIcon(_Chart, 'CandlestickChart');
+export const ChartCandlestick = makeIcon(_ChartCandlestick, 'ChartCandlestick');
+export const ChartHighLow = makeIcon(_ChartHighLow, 'ChartHighLow');
+export const ChartLineData = makeIcon(_ChartLineData, 'ChartLineData');
 export const Check = makeIcon(_Check, 'Check');
 export const CheckCheck = makeIcon(_CheckCheck, 'CheckCheck');
 export const CheckCircle = makeIcon(_CheckmarkCircle, 'CheckCircle');
