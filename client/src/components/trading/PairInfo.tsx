@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Star, ChevronDown, BarChart3, TrendingUp, TrendingDown } from '@/lib/icons';
+import { Star, ChevronDown, ChartLineData, TrendingUp, TrendingDown } from '@/lib/icons';
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useQuery } from "@tanstack/react-query";
 import { asterMarket } from "@/lib/asterdex-service";
@@ -111,7 +111,7 @@ const PairInfo = ({ pair, onPairChange, chartVisible, onToggleChart, viewMode = 
             <div className="ml-auto flex items-center gap-0.5">
               {starBtn}
               <button onClick={onToggleChart} className="p-1.5 rounded hover:bg-accent transition-colors" aria-label="Toggle chart">
-                <BarChart3 className={`w-[18px] h-[18px] ${chartVisible ? "text-foreground" : "text-muted-foreground"}`} />
+                <ChartLineData className={`w-[18px] h-[18px] ${chartVisible ? "text-foreground" : "text-muted-foreground"}`} />
               </button>
             </div>
           </div>
