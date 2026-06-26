@@ -61,12 +61,14 @@ export function CategoryBrowserModal({
   const [search, setSearch] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
 
+  const wasOpen = useRef(false);
   useEffect(() => {
-    if (open) {
+    if (open && !wasOpen.current) {
       setSearch("");
       setActiveL1(initialL1);
       setTimeout(() => searchRef.current?.focus(), 80);
     }
+    wasOpen.current = open;
   }, [open, initialL1]);
 
   const selectedL1Node = useMemo(
@@ -239,8 +241,8 @@ export function CategoryBrowserModal({
             ) : selectedL1Node.children.length > 0 ? (
               /* L1 has subcategories → sections per L2, tiles per L3 */
               <div className="pb-6">
-                {selectedL1Node.children.map(l2 => (
-                  <div key={l2.fullPath}>
+                {selectedL1Node.children.map((l2, idx) => (
+                  <div key={l2.fullPath} className={idx > 0 ? "border-t border-border" : ""}>
                     {/* Section header */}
                     <button
                       onClick={() => handleSelectLeaf(l2.fullPath)}
