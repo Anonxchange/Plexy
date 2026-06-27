@@ -283,63 +283,107 @@ export function GiftCards() {
 
         <div className="lg:col-span-3">
           {/* ── HERO ── */}
-          <section className="relative overflow-hidden rounded-3xl mb-6 bg-[#0b1120]">
-            {/* Fanned gift cards — taller, less clipping */}
-            <div className="relative h-56 flex items-end justify-center">
-              {([
-                { bg: "#E50914", label: "Netflix",   rotate: -14, tx: -115 },
-                { bg: "#FF385C", label: "Airbnb",    rotate:  -4, tx:  -30 },
-                { bg: "#1A1F71", label: "VISA",      rotate:   6, tx:   52 },
-                { bg: "#00704A", label: "Starbucks", rotate:  16, tx:  138 },
-              ] as const).map((card, i) => (
-                <div
-                  key={card.label}
-                  className="absolute bottom-4 w-36 h-[96px] rounded-2xl shadow-2xl flex flex-col justify-end p-3"
-                  style={{
-                    background: card.bg,
-                    transform: `rotate(${card.rotate}deg) translateX(${card.tx}px)`,
-                    zIndex: i + 1,
-                  }}
-                >
-                  <span className="text-white font-extrabold text-sm tracking-tight">{card.label}</span>
+          <section className="relative rounded-3xl mb-6 overflow-hidden bg-[#0b1120] min-h-[300px] lg:min-h-[340px]">
+
+            {/* Mobile: diagonal slash across bottom half */}
+            <div
+              className="absolute inset-0 lg:hidden"
+              style={{
+                background: "#120d35",
+                clipPath: "polygon(0% 58%, 100% 38%, 100% 100%, 0% 100%)",
+              }}
+            />
+
+            {/* Desktop: diagonal slash — right half gets deep purple */}
+            <div
+              className="absolute inset-0 hidden lg:block"
+              style={{
+                background: "#120d35",
+                clipPath: "polygon(38% 0%, 100% 0%, 100% 100%, 48% 100%)",
+              }}
+            />
+
+            <div className="relative z-10 flex flex-col lg:flex-row lg:items-stretch h-full">
+
+              {/* LEFT — headline + trust + cart */}
+              <div className="flex-1 px-7 pt-8 pb-6 lg:px-10 lg:pt-10 flex flex-col justify-between">
+                <div>
+                  <h1 className="text-3xl lg:text-5xl font-black text-white leading-[1.1] tracking-tight mb-3">
+                    Buy Gift Cards<br className="hidden lg:block" /> with Crypto
+                  </h1>
+                  <p className="text-sm lg:text-base text-zinc-400 mb-5 lg:mb-7 max-w-sm">
+                    500+ brands across gaming, streaming, food & travel.
+                    Instant delivery. Up to 20% off.
+                  </p>
+
+                  {/* Trust badges — desktop only */}
+                  <div className="hidden lg:flex flex-wrap gap-3">
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
+                      <span className="text-sm">⚡</span>
+                      <span className="text-xs text-zinc-300 font-medium">Instant delivery</span>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
+                      <img src="/logos/bitcoin-btc-logo.svg" className="w-4 h-4 object-contain" alt="BTC" />
+                      <img src="/logos/ethereum-eth-logo.svg" className="w-4 h-4 object-contain" alt="ETH" />
+                      <span className="text-xs text-zinc-300 font-medium">Pay with BTC / ETH</span>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
+                      <span className="text-sm">🏷️</span>
+                      <span className="text-xs text-zinc-300 font-medium">Up to 20% off</span>
+                    </div>
+                  </div>
                 </div>
-              ))}
+
+                {/* Bottom row */}
+                <div className="flex items-center justify-between mt-6 lg:mt-0">
+                  <p className="text-xs text-zinc-600 font-medium uppercase tracking-widest">Click a card to filter</p>
+                  <button
+                    onClick={() => setCartOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-zinc-300 hover:bg-white/10 transition-colors"
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                    {cartCount > 0
+                      ? <span className="font-bold text-white">{cartCount} in cart</span>
+                      : <span>Cart</span>
+                    }
+                  </button>
+                </div>
+              </div>
+
+              {/* RIGHT — 2×2 brand tiles */}
+              <div className="lg:w-[360px] flex-shrink-0 grid grid-cols-2 gap-2.5 p-5 lg:p-6 content-center">
+                {([
+                  { name: "Netflix",  logo: "/logos/brands/netflix.svg",     bg: "#E50914" },
+                  { name: "Amazon",   logo: "/logos/brands/amazon.svg",       bg: "#FF9900" },
+                  { name: "Spotify",  logo: "/logos/brands/spotify.svg",      bg: "#1DB954" },
+                  { name: "Steam",    logo: "/logos/brands/steampowered.svg", bg: "#1b2838" },
+                ] as const).map((card) => (
+                  <button
+                    key={card.name}
+                    onClick={() => { setInputValue(card.name); setSearchQuery(card.name); setPage(1); }}
+                    className="rounded-2xl flex flex-col justify-between p-4 aspect-[3/2] hover:scale-[1.03] hover:brightness-110 transition-all duration-200"
+                    style={{ background: card.bg, boxShadow: `0 8px 24px ${card.bg}44` }}
+                  >
+                    <img src={card.logo} alt={card.name} className="w-8 h-8 object-contain" style={{ filter: "brightness(0) invert(1)" }} />
+                    <span className="text-white font-bold text-sm">{card.name}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Text + Search */}
-            <div className="px-5 pt-5 pb-6">
-              {/* Heading row with cart on the right */}
-              <div className="flex items-start justify-between gap-3 mb-1">
-                <div>
-                  <h1 className="text-3xl font-extrabold text-white leading-tight">
-                    Buy Gift Cards.
-                  </h1>
-                  <p className="text-sm text-zinc-400 mt-1 mb-5">
-                    Instant delivery · Up to 20% off · Pay with crypto
-                  </p>
-                </div>
-                <button
-                  onClick={() => setCartOpen(true)}
-                  className="relative flex-shrink-0 p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-colors"
-                >
-                  <ShoppingCart className="h-5 w-5 text-white" />
-                  {cartCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
-                      {cartCount}
-                    </span>
-                  )}
-                </button>
-              </div>
+            {/* Search bar — full width, pinned to bottom */}
+            <div className="px-6 pb-6 lg:px-10 lg:pb-8">
 
               {/* Search name */}
               <div className="relative mb-2.5">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500 pointer-events-none" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30 pointer-events-none" />
                 <Input
                   placeholder="Search brands… (Amazon, Apple, Netflix)"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
-                  className="pl-9 h-12 bg-white/5 border border-white/10 text-white placeholder:text-zinc-500 rounded-xl focus:border-primary"
+                  className="pl-9 h-12 border border-white/10 text-white placeholder:text-white/30 rounded-xl focus:border-indigo-400/60"
+                  style={{ background: "rgba(255,255,255,0.06)", backdropFilter: "blur(12px)" }}
                 />
               </div>
 
@@ -352,14 +396,16 @@ export function GiftCards() {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
-                  className="w-24 flex-shrink-0 h-11 bg-white/5 border border-white/10 text-white placeholder:text-zinc-500 rounded-xl focus:border-primary"
+                  className="w-24 flex-shrink-0 h-11 border border-white/10 text-white placeholder:text-white/30 rounded-xl focus:border-indigo-400/60"
+                  style={{ background: "rgba(255,255,255,0.06)", backdropFilter: "blur(12px)" }}
                 />
                 <Popover open={openCountry} onOpenChange={setOpenCountry}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="ghost"
                       role="combobox"
-                      className="flex-1 min-w-0 justify-between h-11 font-normal bg-white/5 border border-white/10 text-white hover:bg-white/10 rounded-xl"
+                      className="flex-1 min-w-0 justify-between h-11 font-normal border border-white/10 text-white hover:bg-white/10 rounded-xl"
+                      style={{ background: "rgba(255,255,255,0.06)", backdropFilter: "blur(12px)" }}
                     >
                       <span className="truncate">
                         {activeCountryObj ? `${activeCountryObj.flag} ${activeCountryObj.name}` : "All Countries"}
