@@ -8,6 +8,8 @@ import {
   MessageCircle,
   Sparkles,
   Globe,
+  CheckCircle,
+  Bell,
   Facebook,
   Twitter,
   Instagram,
@@ -15,20 +17,12 @@ import {
   Mail,
   Home as HomeIcon,
   Phone,
-  TrendingUp,
-  CheckCircle,
-  AlertTriangle,
-  AlertCircle,
-  Bell,
 } from '@/lib/icons';
 import { LiveChatWidget } from "@/components/live-chat/LiveChatWidget";
 import { useState } from "react";
 import { Link } from "wouter";
 import {
   faqItems,
-  platformStatus,
-  trendingArticles,
-  type StatusLevel,
 } from "@/lib/support-content";
 
 /* ─── App-icon SVGs ──────────────────────────────────────────────────────── */
@@ -111,29 +105,6 @@ const IconTrading = () => (
     <path d="M13 20l4-5 5 3 7-7" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
-
-/* ─── Status helpers ─────────────────────────────────────────────────────── */
-
-const statusConfig: Record<StatusLevel, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
-  operational: {
-    label: "All systems operational",
-    color: "text-green-600 dark:text-green-400",
-    bg: "bg-green-500/10 border-green-500/20",
-    icon: <CheckCircle className="w-4 h-4 text-green-500" />,
-  },
-  degraded: {
-    label: "Partial degradation",
-    color: "text-yellow-600 dark:text-yellow-400",
-    bg: "bg-yellow-500/10 border-yellow-500/20",
-    icon: <AlertTriangle className="w-4 h-4 text-yellow-500" />,
-  },
-  outage: {
-    label: "Service disruption",
-    color: "text-red-600 dark:text-red-400",
-    bg: "bg-red-500/10 border-red-500/20",
-    icon: <AlertCircle className="w-4 h-4 text-red-500" />,
-  },
-};
 
 /* ─── Category config ────────────────────────────────────────────────────── */
 
@@ -228,58 +199,6 @@ const promotedArticles = [
   { title: "Get help from Pexly", slug: "get-help" },
   { title: "What to do if I was scammed?", slug: "scam-recovery" },
 ];
-
-/* ─── Status Banner ──────────────────────────────────────────────────────── */
-
-const StatusBanner = () => {
-  const [expanded, setExpanded] = useState(false);
-  const config = statusConfig[platformStatus.overall];
-
-  return (
-    <div className={`border rounded-xl overflow-hidden ${config.bg}`}>
-      <button
-        className="w-full flex items-center justify-between px-4 py-3 text-left"
-        onClick={() => setExpanded(!expanded)}
-      >
-        <div className="flex items-center gap-2.5">
-          {config.icon}
-          <span className={`text-sm font-semibold ${config.color}`}>{config.label}</span>
-          <span className="text-muted-foreground text-xs hidden sm:inline">
-            Updated {platformStatus.lastChecked}
-          </span>
-        </div>
-        <ChevronDown
-          className={`w-4 h-4 text-muted-foreground transition-transform flex-shrink-0 ${expanded ? "rotate-180" : ""}`}
-        />
-      </button>
-
-      {expanded && (
-        <div className="border-t border-border/50 px-4 py-3 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-          {platformStatus.services.map((svc) => {
-            const sc = statusConfig[svc.status];
-            return (
-              <div key={svc.name} className="flex items-center gap-2">
-                <span
-                  className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                    svc.status === "operational"
-                      ? "bg-green-500"
-                      : svc.status === "degraded"
-                      ? "bg-yellow-500"
-                      : "bg-red-500"
-                  }`}
-                />
-                <span className="text-xs text-foreground">{svc.name}</span>
-                {svc.status !== "operational" && (
-                  <span className={`text-xs font-medium ${sc.color}`}>{sc.label}</span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-};
 
 /* ─── FAQ Accordion ─────────────────────────────────────────────────────── */
 
@@ -522,11 +441,8 @@ const HelpCenter = () => {
             </div>
           )}
 
-          {/* Status banner — only show when not searching */}
-          {!q && <StatusBanner />}
-
           {/* Two-column layout */}
-          <div className={`flex flex-col lg:flex-row gap-8 ${!q ? "mt-8" : ""}`}>
+          <div className="flex flex-col lg:flex-row gap-8">
             {/* Left — categories */}
             {filteredCategories.length > 0 && (
               <div className="flex-1 min-w-0">
@@ -566,33 +482,6 @@ const HelpCenter = () => {
                           <span className="text-foreground text-sm font-medium truncate">{article.title}</span>
                         </div>
                         <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0 ml-2" />
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Trending articles — only show when not searching */}
-              {!q && (
-                <div>
-                  <h2 className="text-base font-semibold text-foreground mb-3 px-1 flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-primary" />
-                    Trending this week
-                  </h2>
-                  <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
-                    {trendingArticles.map((article, i) => (
-                      <Link
-                        key={article.slug}
-                        href={`/support/article/${article.slug}`}
-                        className="group flex items-center gap-3 px-4 py-3 border-b border-border last:border-0 hover:bg-muted/40 transition-colors"
-                      >
-                        <span className="text-xs font-bold text-muted-foreground/50 w-4 flex-shrink-0 text-center">
-                          {i + 1}
-                        </span>
-                        <span className="flex-1 text-foreground text-sm font-medium leading-snug group-hover:text-primary transition-colors line-clamp-2">
-                          {article.title}
-                        </span>
-                        <span className="text-xs text-muted-foreground flex-shrink-0">{article.views}</span>
                       </Link>
                     ))}
                   </div>
