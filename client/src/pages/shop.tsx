@@ -657,15 +657,15 @@ export function Shop() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setSortBy("newest")} className="gap-2">
+                <DropdownMenuItem onSelect={() => setSortBy("newest")} className="gap-2">
                   {sortBy === "newest" && <Check className="h-3.5 w-3.5" />}
                   <span className={sortBy !== "newest" ? "pl-5" : ""}>Newest</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSortBy("price-low")} className="gap-2">
+                <DropdownMenuItem onSelect={() => setSortBy("price-low")} className="gap-2">
                   {sortBy === "price-low" && <Check className="h-3.5 w-3.5" />}
                   <span className={sortBy !== "price-low" ? "pl-5" : ""}>Price: Low to High</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSortBy("price-high")} className="gap-2">
+                <DropdownMenuItem onSelect={() => setSortBy("price-high")} className="gap-2">
                   {sortBy === "price-high" && <Check className="h-3.5 w-3.5" />}
                   <span className={sortBy !== "price-high" ? "pl-5" : ""}>Price: High to Low</span>
                 </DropdownMenuItem>
