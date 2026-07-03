@@ -17,8 +17,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { Search, Package, Plus, Store, LayoutGrid, ChevronRight } from '@/lib/icons';
-import { Shuffle, SlidersHorizontal, Check } from 'lucide-react';
+import { Search, Package, Plus, Store, LayoutGrid, ChevronRight, Shuffle, SlidersHorizontal, Check } from '@/lib/icons';
 import {
   DropdownMenu,
   DropdownMenuContent,
