@@ -152,6 +152,7 @@ import {
   ShoppingBag01Icon as _ShoppingBag,
   ShoppingCart01Icon as _ShoppingCart,
   SlidersHorizontalIcon as _SlidersHorizontal,
+  ShuffleIcon as _Shuffle,
   SlidersVerticalIcon as _SlidersVertical,
   SmartPhone01Icon as _SmartPhone,
   SnowIcon as _Snow,
@@ -379,6 +380,7 @@ export const ShieldOff = makeIcon(_Ban, 'ShieldOff');
 export const ShieldQuestion = makeIcon(_ShieldQuestion, 'ShieldQuestion');
 export const ShoppingBag = makeIcon(_ShoppingBag, 'ShoppingBag');
 export const ShoppingCart = makeIcon(_ShoppingCart, 'ShoppingCart');
+export const Shuffle = makeIcon(_Shuffle, 'Shuffle');
 export const Sliders = makeIcon(_SlidersHorizontal, 'Sliders');
 export const SlidersHorizontal = makeIcon(_SlidersHorizontal, 'SlidersHorizontal');
 export const SlidersVertical = makeIcon(_SlidersVertical, 'SlidersVertical');
