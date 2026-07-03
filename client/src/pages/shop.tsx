@@ -18,6 +18,13 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { Search, Package, Plus, Store, LayoutGrid, ChevronRight } from '@/lib/icons';
+import { Shuffle, SlidersHorizontal, Check } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useLocation } from "wouter";
 import { getSupabase } from "@/lib/supabase";
 import { shopifyService } from "@/lib/shopify-service";
@@ -87,7 +94,7 @@ function ShopBanner() {
     <div
       role="region"
       aria-label="Promotional banners"
-      className="relative overflow-hidden mb-5 select-none"
+      className="relative overflow-hidden mb-2 select-none"
       style={{ background: slide.bg, minHeight: 118, transition: 'background 0.5s ease' }}
       onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
       onTouchEnd={e => {
@@ -274,7 +281,8 @@ export function Shop() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
-  const [sortBy, setSortBy] = useState("shuffle");
+  const [sortBy, setSortBy] = useState("newest");
+  const [shuffleSeed, setShuffleSeed] = useState(0);
   const [listings, setListings] = useState<Listing[]>([]);
   const [shopifyProducts, setShopifyProducts] = useState<Listing[]>([]);
   const [marketplaceCategories, setMarketplaceCategories] = useState<string[]>(["All"]);
@@ -509,19 +517,23 @@ export function Shop() {
         }
 
         return matchesSearch && matchesCategory;
-      })
-      .sort((a, b) => {
-        if (sortBy === "price-low") return a.price - b.price;
-        if (sortBy === "price-high") return b.price - a.price;
-        if (sortBy === "newest") {
-          const gidNum = (p: Listing) => { const m = p.id.match(/\/(\d+)$/); return m ? parseInt(m[1], 10) : 0; };
-          const av = a.user_id === "shopify" ? gidNum(a) : new Date((a as any).created_at || 0).getTime();
-          const bv = b.user_id === "shopify" ? gidNum(b) : new Date((b as any).created_at || 0).getTime();
-          return bv - av;
-        }
-        return 0;
       });
-  }, [currentListings, searchQuery, selectedCategory, sortBy]);
+
+    if (sortBy === "price-low") filtered.sort((a, b) => a.price - b.price);
+    else if (sortBy === "price-high") filtered.sort((a, b) => b.price - a.price);
+    else if (sortBy === "newest") {
+      filtered.sort((a, b) => {
+        const gidNum = (p: Listing) => { const m = p.id.match(/\/(\d+)$/); return m ? parseInt(m[1], 10) : 0; };
+        const av = a.user_id === "shopify" ? gidNum(a) : new Date((a as any).created_at || 0).getTime();
+        const bv = b.user_id === "shopify" ? gidNum(b) : new Date((b as any).created_at || 0).getTime();
+        return bv - av;
+      });
+    } else if (sortBy === "shuffled") {
+      return shuffleArray(filtered);
+    }
+
+    return filtered;
+  }, [currentListings, searchQuery, selectedCategory, sortBy, shuffleSeed]);
 
   const visibleProducts = activeTab === "shopify" ? filteredProducts.slice(0, visibleCount) : filteredProducts;
   const hasMoreToShow = activeTab === "shopify" && visibleCount < filteredProducts.length;
@@ -594,7 +606,7 @@ export function Shop() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <main className="flex-1 container mx-auto px-4 py-6 max-w-7xl">
+      <main className="flex-1 container mx-auto px-4 pt-0 pb-6 lg:pt-6 max-w-7xl">
 
         {/* Banner carousel — mobile only, sits at the very top before the header */}
         <div className="lg:hidden -mx-4">
@@ -618,21 +630,55 @@ export function Shop() {
 
         {/* Search + Sort + Tabs row */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search products..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
+          <div className="flex gap-2 flex-1">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            {/* Shuffle icon — mobile only */}
+            <Button
+              variant="outline"
+              size="icon"
+              className="sm:hidden flex-shrink-0"
+              onClick={() => { setSortBy("shuffled"); setShuffleSeed(s => s + 1); }}
+              aria-label="Shuffle products"
+            >
+              <Shuffle className="h-4 w-4" />
+            </Button>
+            {/* Filter icon — mobile only, replaces the long sort dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="sm:hidden flex-shrink-0" aria-label="Sort options">
+                  <SlidersHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setSortBy("newest")} className="gap-2">
+                  {sortBy === "newest" && <Check className="h-3.5 w-3.5" />}
+                  <span className={sortBy !== "newest" ? "pl-5" : ""}>Newest</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortBy("price-low")} className="gap-2">
+                  {sortBy === "price-low" && <Check className="h-3.5 w-3.5" />}
+                  <span className={sortBy !== "price-low" ? "pl-5" : ""}>Price: Low to High</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortBy("price-high")} className="gap-2">
+                  {sortBy === "price-high" && <Check className="h-3.5 w-3.5" />}
+                  <span className={sortBy !== "price-high" ? "pl-5" : ""}>Price: High to Low</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
+          {/* Sort select — desktop only */}
           <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectTrigger className="hidden sm:flex w-full sm:w-[180px]">
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="shuffle">Shuffle</SelectItem>
               <SelectItem value="newest">Newest</SelectItem>
               <SelectItem value="price-low">Price: Low to High</SelectItem>
               <SelectItem value="price-high">Price: High to Low</SelectItem>
