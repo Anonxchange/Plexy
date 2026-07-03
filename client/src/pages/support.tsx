@@ -4,6 +4,7 @@ import {
   Search,
   Star,
   ChevronRight,
+  ChevronDown,
   MessageCircle,
   Sparkles,
   Globe,
@@ -14,10 +15,21 @@ import {
   Mail,
   Home as HomeIcon,
   Phone,
+  TrendingUp,
+  CheckCircle,
+  AlertTriangle,
+  AlertCircle,
+  Bell,
 } from '@/lib/icons';
 import { LiveChatWidget } from "@/components/live-chat/LiveChatWidget";
 import { useState } from "react";
 import { Link } from "wouter";
+import {
+  faqItems,
+  platformStatus,
+  trendingArticles,
+  type StatusLevel,
+} from "@/lib/support-content";
 
 /* ─── App-icon SVGs ──────────────────────────────────────────────────────── */
 
@@ -100,6 +112,29 @@ const IconTrading = () => (
   </svg>
 );
 
+/* ─── Status helpers ─────────────────────────────────────────────────────── */
+
+const statusConfig: Record<StatusLevel, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
+  operational: {
+    label: "All systems operational",
+    color: "text-green-600 dark:text-green-400",
+    bg: "bg-green-500/10 border-green-500/20",
+    icon: <CheckCircle className="w-4 h-4 text-green-500" />,
+  },
+  degraded: {
+    label: "Partial degradation",
+    color: "text-yellow-600 dark:text-yellow-400",
+    bg: "bg-yellow-500/10 border-yellow-500/20",
+    icon: <AlertTriangle className="w-4 h-4 text-yellow-500" />,
+  },
+  outage: {
+    label: "Service disruption",
+    color: "text-red-600 dark:text-red-400",
+    bg: "bg-red-500/10 border-red-500/20",
+    icon: <AlertCircle className="w-4 h-4 text-red-500" />,
+  },
+};
+
 /* ─── Category config ────────────────────────────────────────────────────── */
 
 interface Category {
@@ -148,13 +183,13 @@ const categories: Category[] = [
   {
     icon: <IconAccount />,
     title: "Account and settings",
-    description: "Manage your wallets, account names, recovery phrases, privacy, and device settings in Pexly.",
+    description: "Manage your wallets, account names, recovery phrases, privacy, and device settings.",
     slug: "account-settings",
   },
   {
     icon: <IconBuySell />,
     title: "Buy and sell tokens",
-    description: "Use on-ramps and off-ramps to buy, sell, or withdraw tokens — and fix common purchase issues.",
+    description: "Use on-ramps and off-ramps to buy, sell, or withdraw tokens and fix common purchase issues.",
     slug: "buy-sell",
   },
   {
@@ -166,7 +201,7 @@ const categories: Category[] = [
   {
     icon: <IconSecurity />,
     title: "Security",
-    description: "Protect your wallet from scams, phishing, and hacks — plus tips on staying safe.",
+    description: "Protect your wallet from scams, phishing, and hacks, plus tips on staying safe.",
     slug: "security",
   },
   {
@@ -178,7 +213,7 @@ const categories: Category[] = [
   {
     icon: <IconTrading />,
     title: "Trading",
-    description: "Swap, bridge, or trade tokens and perps — plus understand gas, slippage, and trade execution.",
+    description: "Swap, bridge, or trade tokens and perps, plus understand gas, slippage, and trade execution.",
     slug: "trading",
   },
 ];
@@ -194,10 +229,163 @@ const promotedArticles = [
   { title: "What to do if I was scammed?", slug: "scam-recovery" },
 ];
 
+/* ─── Status Banner ──────────────────────────────────────────────────────── */
+
+const StatusBanner = () => {
+  const [expanded, setExpanded] = useState(false);
+  const config = statusConfig[platformStatus.overall];
+
+  return (
+    <div className={`border rounded-xl overflow-hidden ${config.bg}`}>
+      <button
+        className="w-full flex items-center justify-between px-4 py-3 text-left"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-center gap-2.5">
+          {config.icon}
+          <span className={`text-sm font-semibold ${config.color}`}>{config.label}</span>
+          <span className="text-muted-foreground text-xs hidden sm:inline">
+            Updated {platformStatus.lastChecked}
+          </span>
+        </div>
+        <ChevronDown
+          className={`w-4 h-4 text-muted-foreground transition-transform flex-shrink-0 ${expanded ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {expanded && (
+        <div className="border-t border-border/50 px-4 py-3 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+          {platformStatus.services.map((svc) => {
+            const sc = statusConfig[svc.status];
+            return (
+              <div key={svc.name} className="flex items-center gap-2">
+                <span
+                  className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                    svc.status === "operational"
+                      ? "bg-green-500"
+                      : svc.status === "degraded"
+                      ? "bg-yellow-500"
+                      : "bg-red-500"
+                  }`}
+                />
+                <span className="text-xs text-foreground">{svc.name}</span>
+                {svc.status !== "operational" && (
+                  <span className={`text-xs font-medium ${sc.color}`}>{sc.label}</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ─── FAQ Accordion ─────────────────────────────────────────────────────── */
+
+const FaqAccordion = () => {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  return (
+    <section className="mt-14">
+      <h2 className="text-xl font-bold text-foreground mb-1">Frequently asked questions</h2>
+      <p className="text-muted-foreground text-sm mb-6">
+        Quick answers to the questions we hear most often.
+      </p>
+      <div className="divide-y divide-border border border-border rounded-xl overflow-hidden bg-card shadow-sm">
+        {faqItems.map((item, i) => (
+          <div key={i}>
+            <button
+              className="w-full flex items-start justify-between gap-4 px-5 py-4 text-left hover:bg-muted/40 transition-colors"
+              onClick={() => setOpenIndex(openIndex === i ? null : i)}
+              aria-expanded={openIndex === i}
+            >
+              <span className="text-sm font-semibold text-foreground leading-snug">{item.question}</span>
+              <ChevronDown
+                className={`w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5 transition-transform ${
+                  openIndex === i ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+            {openIndex === i && (
+              <div className="px-5 pb-5">
+                <p className="text-sm text-muted-foreground leading-relaxed">{item.answer}</p>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+};
+
+/* ─── Newsletter ─────────────────────────────────────────────────────────── */
+
+const NewsletterSignup = () => {
+  const [email, setEmail] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setSubmitted(true);
+  };
+
+  return (
+    <div className="mt-14 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 p-6 md:p-8">
+      <div className="flex flex-col md:flex-row md:items-center gap-6">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <Bell className="w-4 h-4 text-primary" />
+            <span className="text-xs font-bold uppercase tracking-widest text-primary">Stay in the loop</span>
+          </div>
+          <h3 className="text-lg font-bold text-foreground mb-1">Subscribe to Pexly updates</h3>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Get notified about new features, platform updates, security advisories, and maintenance windows — delivered straight to your inbox.
+          </p>
+        </div>
+        <div className="flex-shrink-0 w-full md:w-80">
+          {submitted ? (
+            <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
+              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">You're subscribed!</p>
+                <p className="text-xs text-muted-foreground">We'll keep you posted on what matters.</p>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="email"
+                placeholder="your@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="flex-1 px-4 py-2.5 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              <button
+                type="submit"
+                className="px-4 py-2.5 bg-primary text-primary-foreground text-sm font-semibold rounded-xl hover:opacity-90 transition-opacity whitespace-nowrap"
+              >
+                Subscribe
+              </button>
+            </form>
+          )}
+          <p className="text-xs text-muted-foreground mt-2 text-center sm:text-left">
+            No spam, ever. Unsubscribe at any time.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ─── Main component ─────────────────────────────────────────────────────── */
+
 const HelpCenter = () => {
   useHead({
     title: "Help Center | Pexly",
-    meta: [{ name: "description", content: "Browse support articles or contact our team for help with your Pexly wallet." }],
+    meta: [{ name: "description", content: "Browse support articles, watch guides, or contact our team for help with your Pexly wallet." }],
   });
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -213,11 +401,20 @@ const HelpCenter = () => {
     ? promotedArticles.filter((a) => a.title.toLowerCase().includes(q))
     : promotedArticles;
 
-  const hasResults = filteredCategories.length > 0 || filteredArticles.length > 0;
+  const filteredFaq = q
+    ? faqItems.filter(
+        (f) =>
+          f.question.toLowerCase().includes(q) ||
+          f.answer.toLowerCase().includes(q)
+      )
+    : faqItems;
+
+  const hasResults =
+    filteredCategories.length > 0 || filteredArticles.length > 0 || filteredFaq.length > 0;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Warning Banner */}
+      {/* Security warning banner */}
       <div className="bg-[#FF7A45] py-3 px-6 text-white text-center flex items-center justify-center gap-3">
         <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold flex-shrink-0">!</div>
         <p className="text-sm font-medium">
@@ -250,7 +447,6 @@ const HelpCenter = () => {
                 Pexly
               </Link>
 
-              {/* Desktop nav links */}
               <div className="hidden md:flex items-center gap-1">
                 <Link href="/" className="flex items-center gap-2 px-4 py-2 text-black/80 hover:text-black hover:bg-black/5 rounded-lg transition-colors text-sm font-medium">
                   <HomeIcon className="w-4 h-4" />
@@ -262,7 +458,6 @@ const HelpCenter = () => {
                 </Link>
               </div>
 
-              {/* Mobile hamburger */}
               <div className="relative md:hidden">
                 <button
                   className="text-black p-2 hover:bg-black/5 rounded-lg transition-colors"
@@ -313,6 +508,7 @@ const HelpCenter = () => {
 
         {/* Main content */}
         <div className="max-w-7xl mx-auto px-6 py-10">
+          {/* No results */}
           {q && !hasResults && (
             <div className="text-center py-20">
               <p className="text-foreground text-lg mb-2 font-medium">No results for "{searchQuery}"</p>
@@ -326,8 +522,11 @@ const HelpCenter = () => {
             </div>
           )}
 
-          {/* Desktop two-column layout */}
-          <div className="flex flex-col lg:flex-row gap-8">
+          {/* Status banner — only show when not searching */}
+          {!q && <StatusBanner />}
+
+          {/* Two-column layout */}
+          <div className={`flex flex-col lg:flex-row gap-8 ${!q ? "mt-8" : ""}`}>
             {/* Left — categories */}
             {filteredCategories.length > 0 && (
               <div className="flex-1 min-w-0">
@@ -347,8 +546,9 @@ const HelpCenter = () => {
               </div>
             )}
 
-            {/* Right — promoted articles + contact CTA */}
+            {/* Right — promoted articles + trending + contact CTA */}
             <div className="w-full lg:w-80 flex-shrink-0 space-y-6">
+              {/* Popular / matching articles */}
               {filteredArticles.length > 0 && (
                 <div>
                   <h2 className="text-base font-semibold text-foreground mb-3 px-1">
@@ -366,6 +566,33 @@ const HelpCenter = () => {
                           <span className="text-foreground text-sm font-medium truncate">{article.title}</span>
                         </div>
                         <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0 ml-2" />
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Trending articles — only show when not searching */}
+              {!q && (
+                <div>
+                  <h2 className="text-base font-semibold text-foreground mb-3 px-1 flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-primary" />
+                    Trending this week
+                  </h2>
+                  <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+                    {trendingArticles.map((article, i) => (
+                      <Link
+                        key={article.slug}
+                        href={`/support/article/${article.slug}`}
+                        className="group flex items-center gap-3 px-4 py-3 border-b border-border last:border-0 hover:bg-muted/40 transition-colors"
+                      >
+                        <span className="text-xs font-bold text-muted-foreground/50 w-4 flex-shrink-0 text-center">
+                          {i + 1}
+                        </span>
+                        <span className="flex-1 text-foreground text-sm font-medium leading-snug group-hover:text-primary transition-colors line-clamp-2">
+                          {article.title}
+                        </span>
+                        <span className="text-xs text-muted-foreground flex-shrink-0">{article.views}</span>
                       </Link>
                     ))}
                   </div>
@@ -400,6 +627,27 @@ const HelpCenter = () => {
               )}
             </div>
           </div>
+
+          {/* FAQ — show always (filtered when searching) */}
+          {filteredFaq.length > 0 && !q && <FaqAccordion />}
+
+          {/* FAQ search results */}
+          {q && filteredFaq.length > 0 && (
+            <div className="mt-10">
+              <h2 className="text-base font-semibold text-foreground mb-3 px-1">Matching FAQ answers</h2>
+              <div className="divide-y divide-border border border-border rounded-xl overflow-hidden bg-card shadow-sm">
+                {filteredFaq.map((item, i) => (
+                  <div key={i} className="px-5 py-4">
+                    <p className="text-sm font-semibold text-foreground mb-1.5">{item.question}</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{item.answer}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Newsletter — only show when not searching */}
+          {!q && <NewsletterSignup />}
         </div>
       </main>
 
