@@ -111,8 +111,8 @@ const Careers = () => {
               <p className="text-muted-foreground text-lg leading-relaxed mb-10 max-w-lg mx-auto">
                 Looking for an exciting new role at a high-growth blockchain scale-up? We need passionate, thoughtful, curious, and purpose-led people. Come join us.
               </p>
-              <Button size="lg" className="rounded-full px-10 text-base font-semibold">
-                <a href="#positions">View open positions</a>
+              <Button size="lg" className="rounded-full px-10 text-base font-semibold" asChild>
+                <a href="https://pexly.zohorecruit.com/jobs/Careers" target="_blank" rel="noopener noreferrer">View open positions</a>
               </Button>
             </div>
             <div className="grid grid-cols-3 gap-3">
@@ -136,8 +136,8 @@ const Careers = () => {
               <p className="text-muted-foreground text-lg leading-relaxed mb-10 max-w-md">
                 Looking for an exciting new role at a high-growth blockchain scale-up? We need passionate, thoughtful, curious, and purpose-led people.
               </p>
-              <Button size="lg" className="rounded-full px-10 text-base font-semibold">
-                <a href="#positions">View open positions</a>
+              <Button size="lg" className="rounded-full px-10 text-base font-semibold" asChild>
+                <a href="https://pexly.zohorecruit.com/jobs/Careers" target="_blank" rel="noopener noreferrer">View open positions</a>
               </Button>
             </div>
 
@@ -347,8 +347,11 @@ const Careers = () => {
                 size="lg"
                 variant="secondary"
                 className="rounded-full px-8 font-semibold bg-primary-foreground text-primary hover:bg-primary-foreground/90 mb-10"
+                asChild
               >
-                View open positions
+                <a href="https://pexly.zohorecruit.com/jobs/Careers" target="_blank" rel="noopener noreferrer">
+                  View open positions
+                </a>
               </Button>
 
               <div className="flex flex-wrap gap-6">
