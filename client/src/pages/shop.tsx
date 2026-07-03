@@ -465,44 +465,108 @@ export function Shop() {
     <div className="min-h-screen flex flex-col bg-background">
       <main className="flex-1 container mx-auto px-4 py-6 max-w-7xl">
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <h1 className="text-3xl font-bold">Shop</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Discover amazing products for every need</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button onClick={() => navigate("/shop/post")} className="gap-2 bg-primary hover:bg-primary/90">
-              <Plus className="h-4 w-4" />
-              Post an Ad
-            </Button>
+        {/* Top action bar — Post an Ad + Cart only, search lives below the banner */}
+        <div className="flex items-center justify-end gap-2 mb-4">
+          <Button
+            onClick={() => navigate("/shop/post")}
+            className="gap-1.5 h-10 px-4 bg-primary hover:bg-primary/90 flex-shrink-0"
+          >
+            <Plus className="h-4 w-4" />
+            Post an Ad
+          </Button>
+          <div className="flex-shrink-0">
             <CartSheet />
           </div>
         </div>
 
-        {/* Search + Sort + Tabs row */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        {/* 1 ── Sales banner — full, standalone, no product strip */}
+        <div
+          className="relative overflow-hidden rounded-2xl mb-4 select-none"
+          style={{ background: 'linear-gradient(125deg,#ccc5f8 0%,#a89ef0 28%,#7b6dda 58%,#4f44b8 100%)' }}
+        >
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute top-[-20px] right-[30%] w-28 h-28 rounded-full bg-white/10 blur-2xl" />
+            <div className="absolute bottom-[-10px] left-[20%] w-20 h-20 rounded-full bg-white/5 blur-xl" />
+          </div>
+          <div className="relative z-10 flex items-center justify-between px-4 py-5 gap-3">
+            <div className="min-w-0">
+              <p className="text-white/70 text-[10px] font-semibold tracking-widest uppercase mb-1">Sale Ends:</p>
+              <div className="flex items-center gap-2">
+                <h2 className="text-white font-extrabold text-xl sm:text-2xl leading-tight">
+                  Shop popular items now
+                </h2>
+                <div className="flex-shrink-0 w-7 h-7 rounded-full bg-white/25 flex items-center justify-center">
+                  <ChevronRight className="h-4 w-4 text-white" />
+                </div>
+              </div>
+            </div>
+            <div
+              className="flex-shrink-0 rounded-full flex flex-col items-center justify-center w-[62px] h-[62px] shadow-lg"
+              style={{ background: 'linear-gradient(135deg,#a8e063 0%,#56ab2f 100%)' }}
+            >
+              <span className="text-[7px] font-black text-black/80 uppercase leading-none tracking-wider">UP TO</span>
+              <span className="text-[22px] font-black text-black leading-none">60%</span>
+              <span className="text-[7px] font-black text-black/80 uppercase leading-none tracking-wider">OFF</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 2 ── Search bar — below the banner */}
+        <div className="flex items-center gap-2 mb-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search products..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="pl-10 h-11 rounded-xl bg-card border-border/60 shadow-sm"
             />
           </div>
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="shuffle">Shuffle</SelectItem>
-              <SelectItem value="newest">Newest</SelectItem>
-              <SelectItem value="price-low">Price: Low to High</SelectItem>
-              <SelectItem value="price-high">Price: High to Low</SelectItem>
-            </SelectContent>
-          </Select>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
+        </div>
+
+        {/* 3 ── Featured products — own separate white card container */}
+        {(() => {
+          const stripProducts = (activeTab === "shopify" ? shopifyProducts : listings).slice(0, 6);
+          const mockItems = [
+            { title: 'Original Samsung 45W Fast Charger',   price: 'NGN 1,500.85', mockImg: 'https://picsum.photos/seed/charger/120/120' },
+            { title: 'Samsung Watch Wireless Charger',       price: 'NGN 1,500.85', mockImg: 'https://picsum.photos/seed/wireless/120/120' },
+            { title: '45W 25W Super Fast Charging Cable',    price: 'NGN 1,500.85', mockImg: 'https://picsum.photos/seed/cable/120/120' },
+          ];
+          const items = stripProducts.length > 0 ? stripProducts : mockItems;
+          return (
+            <div className="rounded-2xl overflow-hidden mb-5 border border-border/30 shadow-sm bg-card">
+              <div className="flex overflow-x-auto scrollbar-hide divide-x divide-border/50">
+                {items.map((product: any, i: number) => (
+                  <button
+                    key={product.id ?? i}
+                    onClick={() => product.id ? handleViewDetails(product) : undefined}
+                    className="flex-shrink-0 flex items-center gap-3 px-3 py-3 text-left hover:bg-muted/40 transition-colors"
+                    style={{ minWidth: 160, maxWidth: 210 }}
+                  >
+                    <div className="w-[62px] h-[62px] flex-shrink-0 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                      {product.images?.[0]
+                        ? <img src={product.images[0]} alt={product.title} className="w-full h-full object-contain" />
+                        : <img src={product.mockImg} alt={product.title} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                      }
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[12px] font-bold leading-snug line-clamp-2 text-foreground mb-1">{product.title}</p>
+                      <p className="text-[12px] font-bold" style={{ color: '#e03131' }}>
+                        {product.id
+                          ? `${product.currency} ${product.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : product.price}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Store / Marketplace tabs + Sort — locked to one row, no wrap */}
+        <div className="flex items-center gap-2 mb-6 overflow-hidden">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-shrink-0">
             <TabsList>
               <TabsTrigger value="shopify" className="gap-1.5">
                 <Store className="h-3.5 w-3.5" />
@@ -514,6 +578,17 @@ export function Shop() {
               </TabsTrigger>
             </TabsList>
           </Tabs>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-[130px] flex-shrink-0">
+              <SelectValue placeholder="Sort" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="shuffle">Shuffle</SelectItem>
+              <SelectItem value="newest">Newest</SelectItem>
+              <SelectItem value="price-low">Price: Low → High</SelectItem>
+              <SelectItem value="price-high">Price: High → Low</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Mobile: horizontal category pills — L1 only, clicking opens modal */}
