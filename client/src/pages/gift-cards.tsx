@@ -316,10 +316,12 @@ function HorizontalSection({
   );
 }
 
-// ── Mobile 2-row grid section (used for the "8k+ products" showcase) ─────────
+// ── Mobile 2-row grid section (used for the "2k+ products" showcase) ─────────
+// Pulls page 2 (not page 1) so this row never shows the exact same items as
+// the "Popular" row above it, which also queries with no category filter.
 function GridSection({ countryCode }: { countryCode?: string }) {
   const [, setLocation] = useLocation();
-  const { data, isLoading } = useGiftCardProducts({ page: 1, size: 24, countryCode });
+  const { data, isLoading } = useGiftCardProducts({ page: 2, size: 24, countryCode });
   const cards = mapProducts(dedupeByBrand(data?.content || [], countryCode)).slice(0, 12);
 
   if (isLoading) {
