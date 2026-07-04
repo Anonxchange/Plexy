@@ -701,7 +701,7 @@ export function GiftCards() {
                 ? `Popular in ${activeCountryObj.name} ${activeCountryObj.flag}`
                 : activeTab === "Popular" ? "Popular" : activeTab
             }
-            onSeeAll={() => goToBrowse(activeTab, activeTabObj.id)}
+            onSeeAll={() => goToBrowse(activeTab === "Popular" ? "All Gift Cards" : activeTab, activeTabObj.id)}
             categoryId={activeTabObj.id}
             countryCode={activeCountryCode}
           />
@@ -757,21 +757,23 @@ export function GiftCards() {
             </section>
           )}
 
-          {/* 8k+ products section */}
+          {/* 8k+ products section — scrolls independently, same treatment as the other product rows */}
           {activeTab === "Popular" && (
-            <section className="mb-8 mx-4 rounded-2xl p-5 bg-card border border-border">
-              <div className="flex items-start justify-between mb-5">
-                <h2 className="text-3xl font-black text-foreground leading-tight">
+            <section className="mb-8">
+              <div className="flex items-end justify-between px-4 mb-3">
+                <h2 className="text-2xl font-black text-foreground leading-tight">
                   8k+ products in<br />180+ countries
                 </h2>
                 <button
                   onClick={() => goToBrowse("All Gift Cards")}
-                  className="text-sm text-muted-foreground underline underline-offset-2 flex-shrink-0 mt-1 ml-4"
+                  className="text-sm text-muted-foreground underline underline-offset-2 flex-shrink-0 ml-4"
                 >
                   See all
                 </button>
               </div>
-              <GridSection countryCode={activeCountryCode} />
+              <div className="px-4">
+                <GridSection countryCode={activeCountryCode} />
+              </div>
             </section>
           )}
 
@@ -800,26 +802,6 @@ export function GiftCards() {
                 <img src="https://images.unsplash.com/photo-1507608616759-54f48f0af0ee?w=600&h=200&fit=crop&auto=format" alt="Travel" className="w-full h-full object-cover" />
               </div>
               <HorizontalSection title="" categoryId={travelCategory.id} countryCode={activeCountryCode} />
-            </section>
-          )}
-
-          {/* Bonus category banner (eSIM when available, otherwise another real category) */}
-          {activeTab === "Popular" && bonusCategory && (
-            <section className="mb-8 mx-4 rounded-2xl bg-primary/10 border border-primary/20 p-5">
-              <div className="flex items-start justify-between mb-4">
-                <h2 className="text-2xl font-black text-foreground leading-tight flex-1">
-                  {esimCategory
-                    ? <>eSIMs, your<br />passport to data<br />in 140+ countries!</>
-                    : <>Check out our<br />{bonusCategory.name}<br />gift cards!</>}
-                </h2>
-                <button
-                  onClick={() => goToBrowse(bonusCategory.name, bonusCategory.id)}
-                  className="text-sm text-muted-foreground underline underline-offset-2 flex-shrink-0 mt-1 ml-4"
-                >
-                  See all
-                </button>
-              </div>
-              <HorizontalSection title="" categoryId={bonusCategory.id} countryCode={activeCountryCode} />
             </section>
           )}
 
@@ -855,6 +837,26 @@ export function GiftCards() {
               </a>
             </div>
           </section>
+
+          {/* Bonus category banner (eSIM when available, otherwise another real category) */}
+          {activeTab === "Popular" && bonusCategory && (
+            <section className="mb-8 mx-4 rounded-2xl bg-primary/10 border border-primary/20 p-5">
+              <div className="flex items-start justify-between mb-4">
+                <h2 className="text-2xl font-black text-foreground leading-tight flex-1">
+                  {esimCategory
+                    ? <>eSIMs, your<br />passport to data<br />in 140+ countries!</>
+                    : <>Check out our<br />{bonusCategory.name}<br />gift cards!</>}
+                </h2>
+                <button
+                  onClick={() => goToBrowse(bonusCategory.name, bonusCategory.id)}
+                  className="text-sm text-muted-foreground underline underline-offset-2 flex-shrink-0 mt-1 ml-4"
+                >
+                  See all
+                </button>
+              </div>
+              <HorizontalSection title="" categoryId={bonusCategory.id} countryCode={activeCountryCode} />
+            </section>
+          )}
 
           {/* FAQ */}
           <section className="mx-4 mt-4">

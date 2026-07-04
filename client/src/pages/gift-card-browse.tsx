@@ -1,5 +1,5 @@
 import { useHead } from "@unhead/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import { ArrowLeft, Search, SlidersHorizontal, Gift, ChevronDown, Check, ChevronsUpDown } from "@/lib/icons";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { useGiftCardProducts, useGiftCardCategories, useGiftCardCountries } from "@/hooks/use-reloadly";
-import { mapProducts, ProductCardGrid } from "@/pages/gift-cards";
+import { mapProducts, dedupeByBrand, ProductCardGrid } from "@/pages/gift-cards";
 
 // ── Sidebar (shared with main page, but locally defined here to avoid circular imports) ──
 const STATIC_SIDEBAR = [
@@ -81,6 +81,7 @@ export function GiftCardBrowse() {
   const [page,         setPage]           = useState(1);
   const [openCountry,  setOpenCountry]    = useState(false);
   const [countryCode,  setCountryCode]    = useState<string | undefined>(undefined);
+  const [accumulated,  setAccumulated]    = useState<import("@/hooks/use-reloadly").ReloadlyProduct[]>([]);
 
   useHead({
     title: `${categoryName} | Pexly Gift Cards`,
@@ -90,7 +91,7 @@ export function GiftCardBrowse() {
   const { data: reloadlyCountries } = useGiftCardCountries();
   const activeCountryObj = (reloadlyCountries ?? []).find(c => c.isoName === countryCode);
 
-  const { data, isLoading } = useGiftCardProducts({
+  const { data, isLoading, isFetching } = useGiftCardProducts({
     page,
     size: 20,
     categoryId,
@@ -98,7 +99,20 @@ export function GiftCardBrowse() {
     countryCode,
   });
 
-  const apiCards = mapProducts(data?.content || []);
+  useEffect(() => {
+    if (!data) return;
+    if (page === 1) {
+      setAccumulated(data.content || []);
+    } else {
+      setAccumulated(prev => [...prev, ...(data.content || [])]);
+    }
+  }, [data, page]);
+
+  const apiCards = mapProducts(dedupeByBrand(accumulated, countryCode));
+  const totalElements = data?.totalElements ?? 0;
+  const totalPages = data?.totalPages ?? 1;
+  const showingCount = Math.min(accumulated.length, totalElements || accumulated.length);
+  const progressPct = totalElements > 0 ? Math.min(100, (showingCount / totalElements) * 100) : 100;
 
   const sortedCards = [...apiCards].sort((a, b) => {
     if (sortBy === "Price: Low to High") {
@@ -119,11 +133,24 @@ export function GiftCardBrowse() {
     setSearchInput("");
     setSearchQuery("");
     setPage(1);
+    setAccumulated([]);
   };
 
   const handleSearch = () => {
     setSearchQuery(searchInput);
     setPage(1);
+    setAccumulated([]);
+  };
+
+  const handleCountrySelect = (code: string | undefined) => {
+    setCountryCode(code);
+    setOpenCountry(false);
+    setPage(1);
+    setAccumulated([]);
+  };
+
+  const handleLoadMore = () => {
+    setPage(p => p + 1);
   };
 
   return (
@@ -197,12 +224,12 @@ export function GiftCardBrowse() {
                 <CommandList>
                   <CommandEmpty className="text-sm py-4 text-center text-muted-foreground">No country found.</CommandEmpty>
                   <CommandGroup>
-                    <CommandItem value="all" onSelect={() => { setCountryCode(undefined); setOpenCountry(false); }}>
+                    <CommandItem value="all" onSelect={() => handleCountrySelect(undefined)}>
                       <Check className={cn("mr-2 h-4 w-4", !countryCode ? "opacity-100" : "opacity-0")} />
                       <span className="mr-2">🌍</span>All Countries
                     </CommandItem>
                     {(reloadlyCountries ?? []).map(c => (
-                      <CommandItem key={c.isoName} value={`${c.name} ${c.isoName}`} onSelect={() => { setCountryCode(c.isoName); setOpenCountry(false); }}>
+                      <CommandItem key={c.isoName} value={`${c.name} ${c.isoName}`} onSelect={() => handleCountrySelect(c.isoName)}>
                         <Check className={cn("mr-2 h-4 w-4", countryCode === c.isoName ? "opacity-100" : "opacity-0")} />
                         <span className="mr-2">{c.flag}</span>
                         <span>{c.name}</span>
@@ -232,7 +259,7 @@ export function GiftCardBrowse() {
                 <p className="text-foreground font-bold text-lg mb-1">No gift cards found</p>
                 <p className="text-muted-foreground text-sm">Try a different search or category</p>
                 {searchQuery && (
-                  <button onClick={() => { setSearchInput(""); setSearchQuery(""); setPage(1); }} className="mt-4 text-sm text-primary underline">
+                  <button onClick={() => { setSearchInput(""); setSearchQuery(""); setPage(1); setAccumulated([]); }} className="mt-4 text-sm text-primary underline">
                     Clear search
                   </button>
                 )}
@@ -252,18 +279,24 @@ export function GiftCardBrowse() {
               </div>
             )}
 
-            {/* Pagination */}
-            {data && data.totalPages > 1 && (
-              <div className="flex justify-center items-center gap-4 mt-8">
-                <button disabled={page <= 1} onClick={() => { setPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                  className="px-4 py-2 rounded-xl border border-border text-sm font-medium disabled:opacity-40 hover:bg-secondary transition-colors">
-                  Previous
-                </button>
-                <span className="text-sm text-muted-foreground">Page {page} of {data.totalPages}</span>
-                <button disabled={page >= data.totalPages} onClick={() => { setPage(p => p + 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                  className="px-4 py-2 rounded-xl border border-border text-sm font-medium disabled:opacity-40 hover:bg-secondary transition-colors">
-                  Next
-                </button>
+            {/* Load more */}
+            {!isLoading && sortedCards.length > 0 && totalElements > 0 && (
+              <div className="flex flex-col items-center gap-4 mt-10">
+                <p className="text-sm text-muted-foreground">
+                  Showing {showingCount} out of {totalElements}
+                </p>
+                <div className="w-full max-w-xs h-1.5 rounded-full bg-secondary overflow-hidden">
+                  <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progressPct}%` }} />
+                </div>
+                {page < totalPages && (
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={isFetching}
+                    className="px-6 py-2.5 rounded-full bg-secondary text-foreground text-sm font-semibold hover:bg-muted transition-colors disabled:opacity-50"
+                  >
+                    {isFetching ? "Loading…" : "Load more"}
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -354,7 +387,7 @@ export function GiftCardBrowse() {
               <p className="text-foreground font-semibold mb-1">No gift cards found</p>
               <p className="text-muted-foreground text-sm">Try a different search term</p>
               {searchQuery && (
-                <button onClick={() => { setSearchInput(""); setSearchQuery(""); setPage(1); }} className="mt-3 text-sm text-primary underline">
+                <button onClick={() => { setSearchInput(""); setSearchQuery(""); setPage(1); setAccumulated([]); }} className="mt-3 text-sm text-primary underline">
                   Clear search
                 </button>
               )}
@@ -374,18 +407,24 @@ export function GiftCardBrowse() {
             </div>
           )}
 
-          {/* Pagination */}
-          {data && data.totalPages > 1 && (
-            <div className="flex justify-center items-center gap-4 mt-6">
-              <button disabled={page <= 1} onClick={() => { setPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                className="px-4 py-2 rounded-xl border border-border text-sm font-medium disabled:opacity-40 hover:bg-secondary transition-colors">
-                Previous
-              </button>
-              <span className="text-sm text-muted-foreground">Page {page} of {data.totalPages}</span>
-              <button disabled={page >= data.totalPages} onClick={() => { setPage(p => p + 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                className="px-4 py-2 rounded-xl border border-border text-sm font-medium disabled:opacity-40 hover:bg-secondary transition-colors">
-                Next
-              </button>
+          {/* Load more */}
+          {!isLoading && sortedCards.length > 0 && totalElements > 0 && (
+            <div className="flex flex-col items-center gap-3 mt-8">
+              <p className="text-sm text-muted-foreground">
+                Showing {showingCount} out of {totalElements}
+              </p>
+              <div className="w-full max-w-[220px] h-1.5 rounded-full bg-secondary overflow-hidden">
+                <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progressPct}%` }} />
+              </div>
+              {page < totalPages && (
+                <button
+                  onClick={handleLoadMore}
+                  disabled={isFetching}
+                  className="px-6 py-2.5 rounded-full bg-secondary text-foreground text-sm font-semibold hover:bg-muted transition-colors disabled:opacity-50"
+                >
+                  {isFetching ? "Loading…" : "Load more"}
+                </button>
+              )}
             </div>
           )}
         </div>
