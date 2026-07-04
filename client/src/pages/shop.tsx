@@ -292,11 +292,12 @@ function TrendingNowSection({
           </span>
         </div>
       </div>
-      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+      {/* Mobile: horizontal scroll  |  Desktop: 6-column grid */}
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1 lg:grid lg:grid-cols-6 lg:gap-x-4 lg:gap-y-5 lg:overflow-x-visible lg:mx-0 lg:px-0 lg:pb-0">
         {trending.length === 0
           ? Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="flex-shrink-0 w-36">
-                <div className="w-36 h-36 rounded-xl bg-muted animate-pulse mb-2" />
+              <div key={i} className="flex-shrink-0 w-36 lg:w-auto">
+                <div className="w-36 h-36 lg:w-full lg:h-44 rounded-xl bg-muted animate-pulse mb-2" />
                 <div className="h-3 bg-muted animate-pulse rounded mb-1 w-4/5" />
                 <div className="h-3 bg-muted animate-pulse rounded w-2/5" />
               </div>
@@ -314,9 +315,9 @@ function TrendingNowSection({
                 <div
                   key={product.id}
                   onClick={() => onViewDetails(product)}
-                  className="flex-shrink-0 w-36 cursor-pointer group"
+                  className="flex-shrink-0 w-36 lg:w-auto cursor-pointer group"
                 >
-                  <div className="w-36 h-36 rounded-xl bg-muted overflow-hidden relative mb-2">
+                  <div className="w-36 h-36 lg:w-full lg:h-44 rounded-xl bg-muted overflow-hidden relative mb-2">
                     {product.images[0] ? (
                       <img
                         src={product.images[0]}
@@ -402,11 +403,12 @@ function FlashDealsSection({ listings, onViewDetails }: { listings: Listing[]; o
           <span className="bg-foreground text-background px-1.5 py-0.5 rounded text-xs">{pad(s)}</span>
         </div>
       </div>
-      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+      {/* Mobile: horizontal scroll  |  Desktop: 5-column grid */}
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1 lg:grid lg:grid-cols-5 lg:gap-x-4 lg:gap-y-5 lg:overflow-x-visible lg:mx-0 lg:px-0 lg:pb-0">
         {deals.length === 0
-          ? Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="flex-shrink-0 w-36">
-                <div className="w-36 h-36 rounded-xl bg-muted animate-pulse mb-2" />
+          ? Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex-shrink-0 w-36 lg:w-auto">
+                <div className="w-36 h-36 lg:w-full lg:h-44 rounded-xl bg-muted animate-pulse mb-2" />
                 <div className="h-3 bg-muted animate-pulse rounded mb-1 w-4/5" />
                 <div className="h-3 bg-muted animate-pulse rounded w-2/5" />
               </div>
@@ -420,9 +422,9 @@ function FlashDealsSection({ listings, onViewDetails }: { listings: Listing[]; o
                 <div
                   key={product.id}
                   onClick={() => onViewDetails(product)}
-                  className="flex-shrink-0 w-36 cursor-pointer group"
+                  className="flex-shrink-0 w-36 lg:w-auto cursor-pointer group"
                 >
-                  <div className="w-36 h-36 rounded-xl bg-muted overflow-hidden relative mb-2">
+                  <div className="w-36 h-36 lg:w-full lg:h-44 rounded-xl bg-muted overflow-hidden relative mb-2">
                     {product.images[0] ? (
                       <img src={product.images[0]} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                     ) : (
@@ -473,7 +475,7 @@ export function Shop() {
   const [shopifyProducts, setShopifyProducts] = useState<Listing[]>([]);
   const [marketplaceCategories, setMarketplaceCategories] = useState<string[]>(["All"]);
   const [shopifyCategories, setShopifyCategories] = useState<string[]>(["All"]);
-  const [activeTab, setActiveTab] = useState("marketplace");
+  const [activeTab, setActiveTab] = useState("shopify");
   const [isShopifyLoading, setIsShopifyLoading] = useState(true);
   const [isMarketplaceLoading, setIsMarketplaceLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(SHOPIFY_DISPLAY_PAGE_SIZE);
