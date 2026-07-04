@@ -58,6 +58,16 @@ function getCategoryIcon(name: string): ComponentType<{ className?: string }> {
   return Gift;
 }
 
+// When a country is selected, only show cards actually available in that
+// country. The Reloadly edge function may ignore/only partially honor the
+// countryCode query param, so we also enforce the filter client-side —
+// otherwise the country picker can appear "faulty" (selecting a country
+// doesn't change what's shown).
+export function filterByCountry(content: any[], countryCode?: string): any[] {
+  if (!countryCode) return content || [];
+  return (content || []).filter((item) => item?.country?.isoName === countryCode);
+}
+
 // Reloadly stores every country variant of a brand (e.g. "Google Play UAE",
 // "Google Play MX") as a separate product. Promo rows should show each brand
 // once — preferring the shopper's selected country when one is available.
@@ -219,7 +229,7 @@ function DesktopCategoryGrid({
 }) {
   const [page, setPage] = useState(1);
   const { data, isLoading } = useGiftCardProducts({ page, size: 20, categoryId, countryCode });
-  const cards = mapProducts(dedupeByBrand(data?.content || [], countryCode));
+  const cards = mapProducts(dedupeByBrand(filterByCountry(data?.content || [], countryCode), countryCode));
 
   return (
     <div className="flex-1 min-w-0">
@@ -283,7 +293,7 @@ function HorizontalSection({
 }) {
   const [, setLocation] = useLocation();
   const { data, isLoading } = useGiftCardProducts({ page: 1, size: 20, categoryId, countryCode });
-  const cards = mapProducts(dedupeByBrand(data?.content || [], countryCode)).slice(0, 10);
+  const cards = mapProducts(dedupeByBrand(filterByCountry(data?.content || [], countryCode), countryCode)).slice(0, 10);
 
   return (
     <section className="mb-8">
@@ -322,7 +332,7 @@ function HorizontalSection({
 function GridSection({ countryCode }: { countryCode?: string }) {
   const [, setLocation] = useLocation();
   const { data, isLoading } = useGiftCardProducts({ page: 2, size: 24, countryCode });
-  const cards = mapProducts(dedupeByBrand(data?.content || [], countryCode)).slice(0, 12);
+  const cards = mapProducts(dedupeByBrand(filterByCountry(data?.content || [], countryCode), countryCode)).slice(0, 12);
 
   if (isLoading) {
     return (
@@ -595,59 +605,36 @@ export function GiftCards() {
           <button
             onClick={() => document.getElementById("mobile-catalog")?.scrollIntoView({ behavior: "smooth" })}
             className="inline-flex items-center px-6 py-3 rounded-full font-bold text-sm mb-6 text-white"
-            style={{ background: "#e8434e" }}
+            style={{ background: "hsl(168 40% 18%)" }}
           >
             Take a Look
           </button>
-          {/* Category tiles row */}
-          <div className="flex gap-2.5 overflow-x-auto scrollbar-hide pb-1">
-            {/* Sneakers / Fashion */}
-            <button
-              onClick={() => goToBrowse("Fashion")}
-              className="flex-shrink-0 w-[88px] h-[88px] rounded-2xl overflow-hidden"
-              style={{ background: "#e8b84b" }}
-            >
-              <img
-                src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&h=200&fit=crop&auto=format"
-                alt="Fashion"
-                className="w-full h-full object-cover mix-blend-multiply"
-              />
-            </button>
-            {/* Gaming controller */}
-            <button
-              onClick={() => goToBrowse("Gaming", gamingCategory?.id)}
-              className="flex-shrink-0 w-[88px] h-[88px] rounded-2xl overflow-hidden"
-              style={{ background: "#1a4a3a" }}
-            >
-              <img
-                src="https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=200&h=200&fit=crop&auto=format"
-                alt="Gaming"
-                className="w-full h-full object-cover"
-              />
-            </button>
-            {/* Groceries */}
-            <button
-              onClick={() => goToBrowse("Food & Groceries")}
-              className="flex-shrink-0 w-[88px] h-[88px] rounded-2xl overflow-hidden"
-              style={{ background: "#c0392b" }}
-            >
-              <img
-                src="https://images.unsplash.com/photo-1542838132-92c53300491e?w=200&h=200&fit=crop&auto=format"
-                alt="Food"
-                className="w-full h-full object-cover"
-              />
-            </button>
-            {/* Crypto coins grid */}
-            <button
-              onClick={() => goToBrowse("Payment Cards")}
-              className="flex-shrink-0 w-[88px] h-[88px] rounded-2xl p-2.5"
-              style={{ background: "#1e1e1e", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", alignItems: "center", justifyItems: "center" }}
-            >
-              <img src="/logos/brands/bitcoin.svg"   alt="BTC"  style={{ width: 30, height: 30, objectFit: "contain" }} />
-              <img src="/logos/brands/ethereum.svg"  alt="ETH"  style={{ width: 30, height: 30, objectFit: "contain" }} />
-              <img src="/logos/brands/tether.svg"    alt="USDT" style={{ width: 30, height: 30, objectFit: "contain" }} />
-              <img src="/logos/brands/visa.svg"      alt="Visa" style={{ width: 30, height: 30, objectFit: "contain" }} />
-            </button>
+          {/* Promo hero banner — image + headline + CTA, no category links (already have the tab row below) */}
+          <div className="relative rounded-3xl overflow-hidden h-48">
+            <img
+              src="https://images.unsplash.com/photo-1607083206968-13611e3d76db?w=1000&h=480&fit=crop&auto=format"
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            {/* Diagonal gradient wash instead of a flat overlay */}
+            <div className="absolute inset-0 bg-gradient-to-br from-black/85 via-black/45 to-transparent" />
+            <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-primary/30 blur-3xl" />
+            <div className="absolute -bottom-12 left-16 h-32 w-32 rounded-full bg-[#e8434e]/25 blur-3xl" />
+
+            <div className="relative h-full flex flex-col justify-center gap-3 p-6">
+              <h3 className="text-white text-2xl font-black leading-tight max-w-[240px]">
+                Spend crypto anywhere, instantly
+              </h3>
+              <p className="text-white/70 text-sm max-w-[260px]">
+                Thousands of gift cards, refills &amp; more — all in one wallet.
+              </p>
+              <button
+                onClick={() => document.getElementById("mobile-catalog")?.scrollIntoView({ behavior: "smooth" })}
+                className="self-start mt-1 inline-flex items-center gap-1.5 bg-white text-black text-sm font-semibold px-4 py-2 rounded-full hover:bg-white/90 transition-colors"
+              >
+                Explore now
+              </button>
+            </div>
           </div>
         </section>
 
