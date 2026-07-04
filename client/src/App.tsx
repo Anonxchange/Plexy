@@ -47,6 +47,7 @@ const Shop = lazy(() => import("@/pages/shop").then(m => ({ default: m.Shop })))
 const ShopPost = lazy(() => import("@/pages/shop-post").then(m => ({ default: m.ShopPost })));
 const ProductDetail = lazy(() => import("@/pages/product-detail").then(m => ({ default: m.ProductDetail })));
 const GiftCards = lazy(() => import("@/pages/gift-cards").then(m => ({ default: m.GiftCards })));
+const GiftCardBrowse = lazy(() => import("@/pages/gift-card-browse").then(m => ({ default: m.GiftCardBrowse })));
 const GiftCardDetail = lazy(() => import("@/pages/gift-card-detail").then(m => ({ default: m.GiftCardDetail })));
 const Checkout = lazy(() => import("@/pages/checkout").then(m => ({ default: m.Checkout })));
 const CheckoutPayCrypto = lazy(() => import("@/pages/checkout-pay-crypto").then(m => ({ default: m.CheckoutPayCrypto })));
@@ -252,6 +253,7 @@ function AppRoutes() {
       <Route path="/spot">{() => <LazyRoute component={spot} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/buy-crypto">{() => <LazyRoute component={BuyCrypto} />}</Route>
       <Route path="/gift-cards">{() => <LazyRoute component={GiftCards} />}</Route>
+      <Route path="/gift-cards/browse">{() => <LazyRoute component={GiftCardBrowse} />}</Route>
       <Route path="/gift-cards/:id">{() => <LazyRoute component={GiftCardDetail} />}</Route>
       <Route path="/shop">{() => <LazyRoute component={Shop} skeleton={<ShopPageSkeleton />} />}</Route>
       <Route path="/shop/product/:id">{() => <LazyRoute component={ProductDetail} />}</Route>
