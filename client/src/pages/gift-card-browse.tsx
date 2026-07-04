@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { useGiftCardProducts, useGiftCardCategories, useGiftCardCountries } from "@/hooks/use-reloadly";
-import { mapProducts, dedupeByBrand, ProductCardGrid } from "@/pages/gift-cards";
+import { mapProducts, ProductCardGrid } from "@/pages/gift-cards";
 
 // ── Sidebar (shared with main page, but locally defined here to avoid circular imports) ──
 const STATIC_SIDEBAR = [
@@ -93,7 +93,7 @@ export function GiftCardBrowse() {
 
   const { data, isLoading, isFetching } = useGiftCardProducts({
     page,
-    size: 20,
+    size: 40,
     categoryId,
     productName: searchQuery || undefined,
     countryCode,
@@ -108,7 +108,7 @@ export function GiftCardBrowse() {
     }
   }, [data, page]);
 
-  const apiCards = mapProducts(dedupeByBrand(accumulated, countryCode));
+  const apiCards = mapProducts(accumulated);
   const totalElements = data?.totalElements ?? 0;
   const totalPages = data?.totalPages ?? 1;
   const showingCount = Math.min(accumulated.length, totalElements || accumulated.length);
@@ -335,9 +335,34 @@ export function GiftCardBrowse() {
 
         {/* Sort / filter bar */}
         <div className="px-4 py-2 flex items-center gap-2 overflow-x-auto scrollbar-hide">
-          <button className="flex-shrink-0 h-9 w-9 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors">
-            <SlidersHorizontal className="h-4 w-4 text-foreground" />
-          </button>
+          <Popover open={openCountry} onOpenChange={setOpenCountry}>
+            <PopoverTrigger asChild>
+              <button className="flex-shrink-0 h-9 w-9 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors">
+                <SlidersHorizontal className="h-4 w-4 text-foreground" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[280px] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search country..." />
+                <CommandList>
+                  <CommandEmpty className="text-sm py-4 text-center text-muted-foreground">No country found.</CommandEmpty>
+                  <CommandGroup heading="Country">
+                    <CommandItem value="all" onSelect={() => handleCountrySelect(undefined)}>
+                      <Check className={cn("mr-2 h-4 w-4", !countryCode ? "opacity-100" : "opacity-0")} />
+                      <span className="mr-2">🌍</span>All Countries
+                    </CommandItem>
+                    {(reloadlyCountries ?? []).map(c => (
+                      <CommandItem key={c.isoName} value={`${c.name} ${c.isoName}`} onSelect={() => handleCountrySelect(c.isoName)}>
+                        <Check className={cn("mr-2 h-4 w-4", countryCode === c.isoName ? "opacity-100" : "opacity-0")} />
+                        <span className="mr-2">{c.flag}</span>
+                        <span>{c.name}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
           <div className="relative">
             <button
               onClick={() => setSortOpen(v => !v)}
@@ -359,19 +384,23 @@ export function GiftCardBrowse() {
               </div>
             )}
           </div>
-          <button className="flex-shrink-0 flex items-center gap-1.5 px-3 h-9 rounded-full border border-border bg-secondary text-sm font-medium text-foreground hover:bg-muted transition-colors">
-            Online/In-store
-            <ChevronDown className="h-3.5 w-3.5" />
-          </button>
         </div>
 
-        {/* Active sort chip */}
-        {sortBy !== "Popular" && (
-          <div className="px-4 pb-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20">
-              {sortBy}
-              <button onClick={() => setSortBy("Popular")} className="hover:opacity-70 ml-0.5">×</button>
-            </span>
+        {/* Active filter chips */}
+        {(sortBy !== "Popular" || countryCode) && (
+          <div className="px-4 pb-2 flex items-center gap-2 flex-wrap">
+            {sortBy !== "Popular" && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20">
+                {sortBy}
+                <button onClick={() => setSortBy("Popular")} className="hover:opacity-70 ml-0.5">×</button>
+              </span>
+            )}
+            {countryCode && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20">
+                {activeCountryObj ? `${activeCountryObj.flag} ${activeCountryObj.name}` : countryCode}
+                <button onClick={() => handleCountrySelect(undefined)} className="hover:opacity-70 ml-0.5">×</button>
+              </span>
+            )}
           </div>
         )}
 
