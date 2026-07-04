@@ -29,22 +29,34 @@ const HOW_IT_WORKS_BRANDS = [
   "/logos/brands/xbox.svg",        "/logos/brands/apple.svg",      "/logos/brands/ebay.svg",
 ];
 
-// ── Static sidebar categories ─────────────────────────────────────────────────
-const SIDEBAR_CATEGORIES = [
-  { name: "All Gift Cards",     id: undefined },
-  { name: "Payment Cards",      id: undefined },
-  { name: "Travel",             id: undefined },
-  { name: "Food & Groceries",   id: undefined },
-  { name: "Gaming",             id: undefined },
-  { name: "Transportation",     id: undefined },
-  { name: "Electronics",        id: undefined },
-  { name: "Fashion",            id: undefined },
-  { name: "Entertainment",      id: undefined },
-  { name: "Home & DIY",         id: undefined },
-  { name: "Health & Beauty",    id: undefined },
-  { name: "Sports & Outdoors",  id: undefined },
-  { name: "Multi-Brand",        id: undefined },
-];
+// ── Icon lookup for dynamically-loaded Reloadly categories ───────────────────
+const CATEGORY_ICON_MAP: Record<string, ComponentType<{ className?: string }>> = {
+  "payment card": CreditCard,
+  "software": Package,
+  "gaming": Gamepad2,
+  "entertainment": Music,
+  "shopping": ShoppingBag,
+  "crypto": Coins,
+  "travel": Globe,
+  "transport": Globe,
+  "charity": Heart,
+  "esim": Smartphone,
+  "food": UtensilsCrossed,
+  "fashion": ShoppingBag,
+  "electronics": Smartphone,
+  "home": Home,
+  "health": Heart,
+  "beauty": Heart,
+  "sports": Dumbbell,
+};
+
+function getCategoryIcon(name: string): ComponentType<{ className?: string }> {
+  const key = name.toLowerCase();
+  for (const [needle, Icon] of Object.entries(CATEGORY_ICON_MAP)) {
+    if (key.includes(needle)) return Icon;
+  }
+  return Gift;
+}
 
 // Reloadly stores every country variant of a brand (e.g. "Google Play UAE",
 // "Google Play MX") as a separate product. Promo rows should show each brand
@@ -158,29 +170,36 @@ function ProductCardHorizontalSkeleton() {
 
 // ── Sidebar (desktop only) ────────────────────────────────────────────────────
 function Sidebar({ activeCategory, onSelect }: { activeCategory: string; onSelect: (name: string, id?: number) => void }) {
-  const { data: apiCategories } = useGiftCardCategories();
-  const categories = apiCategories && apiCategories.length > 0
-    ? [{ name: "All Gift Cards", id: undefined as number | undefined }, ...apiCategories.map(c => ({ name: c.name, id: c.id as number | undefined }))]
-    : SIDEBAR_CATEGORIES;
+  const { data: apiCategories, isLoading } = useGiftCardCategories();
+  const categories = [
+    { name: "All Gift Cards", id: undefined as number | undefined },
+    ...(apiCategories ?? []).map(c => ({ name: c.name, id: c.id as number | undefined })),
+  ];
 
   return (
     <nav className="w-56 flex-shrink-0 pr-4">
       <ul className="space-y-0.5">
-        {categories.map((cat) => (
-          <li key={cat.name}>
-            <button
-              onClick={() => onSelect(cat.name, cat.id)}
-              className={cn(
-                "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors font-medium",
-                activeCategory === cat.name
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-              )}
-            >
-              {cat.name}
-            </button>
-          </li>
-        ))}
+        {isLoading ? (
+          [...Array(9)].map((_, i) => (
+            <li key={i} className="px-3 py-2"><Skeleton className="h-5 w-full" /></li>
+          ))
+        ) : (
+          categories.map((cat) => (
+            <li key={cat.name}>
+              <button
+                onClick={() => onSelect(cat.name, cat.id)}
+                className={cn(
+                  "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors font-medium",
+                  activeCategory === cat.name
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                )}
+              >
+                {cat.name}
+              </button>
+            </li>
+          ))
+        )}
       </ul>
     </nav>
   );
@@ -406,11 +425,12 @@ export function GiftCards() {
   );
 
   const mobileTabs: { name: string; Icon: ComponentType<{ className?: string }>; id: number | undefined }[] = [
-    { name: "Popular",       Icon: Flame,           id: undefined },
-    { name: "Payment Cards", Icon: CreditCard,      id: undefined },
-    ...(travelCategory ? [{ name: "Travel",  Icon: Globe,            id: travelCategory.id  as number | undefined }] : []),
-    ...(gamingCategory ? [{ name: "Gaming",  Icon: Gamepad2,         id: gamingCategory.id  as number | undefined }] : []),
-    ...(bonusCategory  ? [{ name: bonusCategory.name, Icon: Smartphone, id: bonusCategory.id as number | undefined }] : []),
+    { name: "Popular", Icon: Flame, id: undefined },
+    ...(reloadlyCategories ?? []).map(c => ({
+      name: c.name,
+      Icon: getCategoryIcon(c.name),
+      id: c.id as number | undefined,
+    })),
   ];
   const activeTabObj = mobileTabs.find(t => t.name === activeTab) ?? mobileTabs[0];
 
@@ -635,7 +655,7 @@ export function GiftCards() {
             {mobileTabs.map(tab => (
               <button
                 key={tab.name}
-                onClick={() => setActiveTab(tab.name)}
+                onClick={() => tab.name === "Popular" ? setActiveTab("Popular") : goToBrowse(tab.name, tab.id)}
                 className={cn(
                   "flex flex-col items-center gap-1 px-4 py-3 flex-shrink-0 border-b-2 transition-colors",
                   activeTab === tab.name ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
