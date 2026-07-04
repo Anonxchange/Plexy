@@ -74,19 +74,49 @@ export function useGiftCardProduct(productId: string | undefined) {
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token ?? import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+        "Content-Type": "application/json",
+      };
 
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reloadly-products?productId=${productId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-          "Content-Type": "application/json",
-        },
-      });
+      const extractProduct = (data: any): ReloadlyProduct | undefined => {
+        if (!data) return undefined;
+        if (Array.isArray(data)) {
+          return data.find((p) => String(p.productId) === String(productId)) ?? data[0];
+        }
+        if (Array.isArray(data.content)) {
+          return data.content.find((p: ReloadlyProduct) => String(p.productId) === String(productId)) ?? data.content[0];
+        }
+        if (typeof data.productId !== "undefined") return data as ReloadlyProduct;
+        return undefined;
+      };
 
-      if (!res.ok) throw new Error("Failed to fetch product");
-      const data = await res.json();
-      // If it's a single product request, it might return the object directly or in an array
-      return Array.isArray(data) ? data[0] : data;
+      // 1. Try the direct productId query first (fast path, works if the
+      //    edge function supports filtering a single product).
+      try {
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reloadly-products?productId=${productId}`,
+          { headers }
+        );
+        if (res.ok) {
+          const product = extractProduct(await res.json());
+          if (product) return product;
+        }
+      } catch { /* fall through to list search */ }
+
+      // 2. Fall back to scanning the full product list for this productId,
+      //    since some deployments of the edge function only support listing
+      //    products and don't support filtering by a single productId.
+      const url = new URL(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reloadly-products`);
+      url.searchParams.set("page", "1");
+      url.searchParams.set("size", "200");
+      const listRes = await fetch(url.toString(), { headers });
+      if (!listRes.ok) throw new Error("Failed to fetch product");
+      const listData: ProductsResponse = await listRes.json();
+      const product = (listData.content ?? []).find((p) => String(p.productId) === String(productId));
+      if (!product) throw new Error("Failed to fetch product");
+      return product;
     },
   });
 }
