@@ -394,13 +394,20 @@ export function GiftCards() {
   const gamingCategory = (reloadlyCategories ?? []).find(c => c.name.toLowerCase().includes("gaming"));
   const travelCategory = (reloadlyCategories ?? []).find(c => c.name.toLowerCase().includes("travel") || c.name.toLowerCase().includes("transport"));
   const esimCategory   = (reloadlyCategories ?? []).find(c => c.name.toLowerCase().includes("esim"));
+  // Fallback "bonus" category shown as the banner before the FAQ. eSIM isn't
+  // always present in the real category list, so if it's missing we fall
+  // back to the first category not already featured above, using its real
+  // name/id instead of a hardcoded label, so the section is never empty.
+  const bonusCategory = esimCategory ?? (reloadlyCategories ?? []).find(
+    c => c.id !== gamingCategory?.id && c.id !== travelCategory?.id
+  );
 
   const mobileTabs: { name: string; Icon: ComponentType<{ className?: string }>; id: number | undefined }[] = [
     { name: "Popular",       Icon: Flame,           id: undefined },
     { name: "Payment Cards", Icon: CreditCard,      id: undefined },
     ...(travelCategory ? [{ name: "Travel",  Icon: Globe,            id: travelCategory.id  as number | undefined }] : []),
     ...(gamingCategory ? [{ name: "Gaming",  Icon: Gamepad2,         id: gamingCategory.id  as number | undefined }] : []),
-    ...(esimCategory   ? [{ name: "eSIM",    Icon: Smartphone,       id: esimCategory.id    as number | undefined }] : []),
+    ...(bonusCategory  ? [{ name: bonusCategory.name, Icon: Smartphone, id: bonusCategory.id as number | undefined }] : []),
   ];
   const activeTabObj = mobileTabs.find(t => t.name === activeTab) ?? mobileTabs[0];
 
@@ -796,21 +803,23 @@ export function GiftCards() {
             </section>
           )}
 
-          {/* eSIM banner */}
-          {activeTab === "Popular" && esimCategory && (
+          {/* Bonus category banner (eSIM when available, otherwise another real category) */}
+          {activeTab === "Popular" && bonusCategory && (
             <section className="mb-8 mx-4 rounded-2xl bg-primary/10 border border-primary/20 p-5">
               <div className="flex items-start justify-between mb-4">
                 <h2 className="text-2xl font-black text-foreground leading-tight flex-1">
-                  eSIMs, your<br />passport to data<br />in 140+ countries!
+                  {esimCategory
+                    ? <>eSIMs, your<br />passport to data<br />in 140+ countries!</>
+                    : <>Check out our<br />{bonusCategory.name}<br />gift cards!</>}
                 </h2>
                 <button
-                  onClick={() => goToBrowse("eSIM", esimCategory.id)}
+                  onClick={() => goToBrowse(bonusCategory.name, bonusCategory.id)}
                   className="text-sm text-muted-foreground underline underline-offset-2 flex-shrink-0 mt-1 ml-4"
                 >
                   See all
                 </button>
               </div>
-              <HorizontalSection title="" categoryId={esimCategory.id} countryCode={activeCountryCode} />
+              <HorizontalSection title="" categoryId={bonusCategory.id} countryCode={activeCountryCode} />
             </section>
           )}
 
