@@ -1,221 +1,53 @@
 import { useHead } from "@unhead/react";
+import { useState, useRef, ComponentType } from "react";
+import cryptoQrImg from "@assets/IMG_6447_1783164012414.webp";
+import orderCompleteImg from "@assets/IMG_6446_1783164012415.webp";
+import { useLocation } from "wouter";
+import {
+  Search, Coffee, Gamepad2, ShoppingBag, Music, Home, Globe,
+  Smartphone, Coins, Gift, Heart, Dumbbell, Package, ShoppingCart,
+  Check, ChevronsUpDown, Plus, ChevronLeft, ChevronRight,
+  Flame, CreditCard, UtensilsCrossed,
+} from "@/lib/icons";
 import { Button } from "@/components/ui/button";
-import { Search, LayoutGrid, Coffee, Gamepad2, ShoppingBag, Music, Check, ChevronsUpDown, UtensilsCrossed, Zap, Home, Globe, Smartphone, Coins, Gift, Heart, Dumbbell, Lightbulb, Lock, Package, ShoppingCart, Plus } from '@/lib/icons';
 import { Input } from "@/components/ui/input";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { useState } from "react";
-import { PexlyFooter } from "@/components/pexly-footer";
-import { useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { sanitizeImageUrl } from "@/lib/sanitize";
-
-interface GiftCardProps {
-  card: any;
-  setLocation: (loc: string) => void;
-  index: number;
-}
-
-// Component for the gift card itself, defined internally
-function GiftCardComponent({ card, setLocation, index }: GiftCardProps) {
-  return (
-    <div
-      className="cursor-pointer animate-slide-up"
-      onClick={() => setLocation(`/gift-cards/${card.id}`)}
-      style={{ animationDelay: `${index * 0.03}s` }}
-    >
-      {/* Free image — no card/border wrapper, just rounded image sitting on the page */}
-      <div className="w-full aspect-[3/2] rounded-2xl overflow-hidden mb-1.5">
-        <img
-          src={card.image}
-          alt={card.name}
-          loading="lazy"
-          decoding="async"
-          className="w-full h-full object-cover"
-        />
-      </div>
-      {/* Plain text below — no container */}
-      <h3 className="font-semibold text-foreground text-xs leading-tight line-clamp-2">{card.name}</h3>
-      <p className="text-[10px] text-muted-foreground font-medium mt-0.5">{card.priceRange}</p>
-      {card.discount && card.discount !== "0%" && (
-        <span className="inline-block text-[9px] font-bold text-red-500 bg-red-50 dark:bg-red-500/10 px-1 py-0.5 rounded mt-0.5">
-          {card.discount} off
-        </span>
-      )}
-    </div>
-  );
-}
-
-
-function GiftCardSkeleton() {
-  return (
-    <div>
-      <Skeleton className="w-full aspect-[3/2] rounded-2xl mb-1.5" />
-      <Skeleton className="h-3 w-3/4 mb-1" />
-      <Skeleton className="h-2.5 w-1/2" />
-    </div>
-  );
-}
-
-
-
-
-const faqs = [
-  {
-    question: "What payment options do you accept?",
-    answer: "We accept cryptocurrency payments including Bitcoin (BTC), Ethereum (ETH), and USDT. This ensures fast, secure, and private transactions."
-  },
-  {
-    question: "Do I need to create an account to purchase a gift card?",
-    answer: "No! You can purchase gift cards without creating an account. Simply select your card, pay with crypto, and receive your gift card code via email."
-  },
-  {
-    question: "How long does it take to receive my purchased gift card?",
-    answer: "Most gift cards are delivered instantly via email after your cryptocurrency payment is confirmed. Delivery typically takes 5-15 minutes depending on network congestion."
-  },
-  {
-    question: "What happens if I don't receive my gift card email?",
-    answer: "First, check your spam or junk folder — our emails occasionally get filtered. If it's not there, wait a few more minutes as delivery can sometimes be delayed. If you still haven't received it, contact our support team with your order details and we'll resolve it promptly."
-  }
-];
-
+import { PexlyFooter } from "@/components/pexly-footer";
 import { useGiftCardProducts, useGiftCardCategories, useGiftCardCountries } from "@/hooks/use-reloadly";
 import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
 import { GiftCardCartSheet } from "@/components/gift-card-cart-sheet";
 
-const CATEGORY_ICON_MAP: Record<string, ComponentType<{ className?: string }>> = {
-  "gaming": Gamepad2,
-  "entertainment": Music,
-  "food": Coffee,
-  "food & groceries": Coffee,
-  "groceries": Coffee,
-  "travel": Globe,
-  "transportation": Smartphone,
-  "shopping": ShoppingBag,
-  "fashion": ShoppingBag,
-  "department stores": ShoppingBag,
-  "multi-brand": ShoppingBag,
-  "electronics": Lightbulb,
-  "home": Home,
-  "home & diy": Home,
-  "health": Heart,
-  "health & beauty": Heart,
-  "beauty": Heart,
-  "sports": Dumbbell,
-  "sports & outdoors": Dumbbell,
-  "gifts": Gift,
-  "kids": Gift,
-  "crypto": Coins,
-  "voip": Smartphone,
-  "prepaid phones": Smartphone,
-  "phone codes": Smartphone,
-  "esims": Smartphone,
-  "privacy & tools": Lock,
-  "other bundles": Package,
-};
+// ── Brand logos shown in the "How it works → Pick a product" visual ──────────
+const HOW_IT_WORKS_BRANDS = [
+  "/logos/brands/airbnb.svg",      "/logos/brands/mastercard.svg", "/logos/brands/playstation.svg",
+  "/logos/brands/visa.svg",        "/logos/brands/netflix.svg",    "/logos/brands/steampowered.svg",
+  "/logos/brands/uber.svg",        "/logos/brands/google.svg",     "/logos/brands/spotify.svg",
+  "/logos/brands/xbox.svg",        "/logos/brands/apple.svg",      "/logos/brands/ebay.svg",
+];
 
-function getCategoryIcon(name: string): ComponentType<{ className?: string }> {
-  return CATEGORY_ICON_MAP[name.toLowerCase()] ?? Package;
-}
+// ── Static sidebar categories ─────────────────────────────────────────────────
+const SIDEBAR_CATEGORIES = [
+  { name: "All Gift Cards",     id: undefined },
+  { name: "Payment Cards",      id: undefined },
+  { name: "Travel",             id: undefined },
+  { name: "Food & Groceries",   id: undefined },
+  { name: "Gaming",             id: undefined },
+  { name: "Transportation",     id: undefined },
+  { name: "Electronics",        id: undefined },
+  { name: "Fashion",            id: undefined },
+  { name: "Entertainment",      id: undefined },
+  { name: "Home & DIY",         id: undefined },
+  { name: "Health & Beauty",    id: undefined },
+  { name: "Sports & Outdoors",  id: undefined },
+  { name: "Multi-Brand",        id: undefined },
+];
 
-function FaqItem({ question, answer, index }: { question: string; answer: string; index: number }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div
-      className={`rounded-2xl border transition-colors duration-300 overflow-hidden ${
-        open
-          ? "border-primary/30 bg-primary/5"
-          : "border-border/60 bg-card hover:border-border"
-      }`}
-    >
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-3.5 px-5 py-4 text-left"
-      >
-        <span
-          className={`flex-shrink-0 h-7 w-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-colors duration-300 ${
-            open ? "bg-primary text-black" : "bg-secondary text-muted-foreground"
-          }`}
-        >
-          {String(index + 1).padStart(2, "0")}
-        </span>
-        <span className="flex-1 text-sm font-semibold leading-snug">{question}</span>
-        <span
-          className={`flex-shrink-0 h-6 w-6 rounded-full border flex items-center justify-center transition-all duration-300 ${
-            open ? "border-primary/40 bg-primary/10 rotate-45" : "border-border rotate-0"
-          }`}
-        >
-          <Plus className="h-3 w-3" />
-        </span>
-      </button>
-      <div
-        className="transition-all duration-300 ease-in-out"
-        style={{ maxHeight: open ? "400px" : "0px", overflow: "hidden" }}
-      >
-        <p className="text-sm text-muted-foreground leading-relaxed px-5 pb-5 ml-[42px]">
-          {answer}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-
-export function GiftCards() {
-  useHead({ title: "Gift Cards | Pexly", meta: [{ name: "description", content: "Buy digital gift cards from hundreds of brands worldwide and pay with cryptocurrency." }] });
-  const [, setLocation] = useLocation();
-  const [cartOpen, setCartOpen] = useState(false);
-  const { items: cartItems } = useGiftCardCart();
-  const cartCount = cartItems.reduce((acc, i) => acc + i.quantity, 0);
-  const { data: reloadlyCategories } = useGiftCardCategories();
-  const { data: reloadlyCountries } = useGiftCardCountries();
-  const [openCountry, setOpenCountry] = useState(false);
-  const [selectedSidebarCategory, setSelectedSidebarCategory] = useState("All Categories");
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(undefined);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [inputValue, setInputValue] = useState("");
-  const [amount, setAmount] = useState("");
-  const [page, setPage] = useState(1);
-  const pageSize = 30;
-
-  // Country filter applies immediately on selection; amount/search apply on Search press
-  const [activeCountryCode, setActiveCountryCode] = useState<string | undefined>(undefined);
-  const [activeAmount, setActiveAmount] = useState<number | undefined>(undefined);
-
-  const { data, isLoading, error } = useGiftCardProducts({
-    productName: searchQuery,
-    page: page,
-    size: pageSize,
-    categoryId: selectedCategoryId,
-    countryCode: activeCountryCode,
-  });
-
-  const handleSearch = () => {
-    setSearchQuery(inputValue);
-    setActiveAmount(amount && !isNaN(Number(amount)) && Number(amount) > 0 ? Number(amount) : undefined);
-    setPage(1);
-  };
-
-  const handleSelectCountry = (isoName: string) => {
-    setActiveCountryCode(isoName || undefined);
-    setPage(1);
-    setOpenCountry(false);
-  };
-
-  const clearCountryFilter = () => {
-    setActiveCountryCode(undefined);
-    setPage(1);
-  };
-
-  const clearAmountFilter = () => {
-    setAmount("");
-    setActiveAmount(undefined);
-  };
-
-  const activeCountryObj = (reloadlyCountries ?? []).find((c) => c.isoName === activeCountryCode);
-
-  const allGiftCards = data?.content?.map((card: any) => {
+export function mapProducts(content: any[]): { id: string; name: string; priceRange: string; discount: number; image: string }[] {
+  return (content || []).map((card: any) => {
     const currencyCode: string = card.recipientCurrencyCode || "USD";
     const fixedDenominations: number[] = card.fixedRecipientDenominations || [];
     const minVal = card.denominationType === "FIXED"
@@ -225,358 +57,758 @@ export function GiftCards() {
       ? (fixedDenominations.length > 0 ? Math.max(...fixedDenominations) : 0)
       : (card.maxRecipientDenomination || 0);
     return {
-      id: card.productId,
+      id: String(card.productId),
       name: card.productName,
-      brand: card.brand?.brandName || "",
       priceRange: `${currencyCode} ${minVal} – ${maxVal}`,
-      cryptoRange: card.country?.name || "",
-      discount: `${card.discountPercentage || 0}%`,
-      image: sanitizeImageUrl(card.logoUrls?.[0]) || "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=300&fit=crop",
-      gradient: "from-gray-100 to-white",
-      description: card.redeemInstruction?.concise || "",
-      minValue: minVal,
-      maxValue: maxVal,
-      fixedDenominations,
-      denominationType: card.denominationType,
+      discount: card.discountPercentage || 0,
+      image: sanitizeImageUrl(card.logoUrls?.[0]) || "",
     };
-  }) || [];
+  });
+}
 
-  // Client-side amount filter: keep cards that support the requested denomination
-  const giftCards = activeAmount
-    ? allGiftCards.filter((card) => {
-        if (card.denominationType === "FIXED") {
-          return card.fixedDenominations.some((d) => Math.abs(d - activeAmount) < 0.01);
-        }
-        return activeAmount >= card.minValue && activeAmount <= card.maxValue;
-      })
-    : allGiftCards;
+// ── Shared card components ────────────────────────────────────────────────────
+export function ProductCardGrid({ card, onClick }: { card: any; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="text-left group w-full">
+      <div className="w-full aspect-square rounded-xl overflow-hidden bg-secondary mb-2 relative border border-border group-hover:border-primary/30 transition-colors">
+        {card.discount > 0 && (
+          <span className="absolute top-2 left-2 z-10 text-[10px] font-bold bg-yellow-400 text-black px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+            ↓ {card.discount}%
+          </span>
+        )}
+        {card.image ? (
+          <img src={card.image} alt={card.name} loading="lazy" decoding="async" className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-200" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+            <Gift className="h-12 w-12" />
+          </div>
+        )}
+      </div>
+      <p className="text-foreground text-sm font-semibold leading-tight line-clamp-2 mb-0.5">{card.name}</p>
+      <p className="text-muted-foreground text-xs">{card.priceRange}</p>
+    </button>
+  );
+}
+
+function ProductCardGridSkeleton() {
+  return (
+    <div>
+      <Skeleton className="w-full aspect-square rounded-xl mb-2" />
+      <Skeleton className="h-4 w-3/4 mb-1" />
+      <Skeleton className="h-3 w-1/2" />
+    </div>
+  );
+}
+
+// ── Mobile horizontal card ────────────────────────────────────────────────────
+function ProductCardHorizontal({ card, onClick }: { card: any; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="flex-shrink-0 w-[140px] text-left group">
+      <div className="w-[140px] h-[100px] rounded-xl overflow-hidden bg-secondary mb-2 relative border border-border">
+        {card.discount > 0 && (
+          <span className="absolute top-1.5 left-1.5 z-10 text-[10px] font-bold bg-yellow-400 text-black px-1.5 py-0.5 rounded-md">
+            {card.discount}%
+          </span>
+        )}
+        {card.image ? (
+          <img src={card.image} alt={card.name} loading="lazy" decoding="async" className="w-full h-full object-contain p-2" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+            <Gift className="h-8 w-8" />
+          </div>
+        )}
+      </div>
+      <p className="text-foreground text-xs font-semibold leading-tight line-clamp-2 mb-0.5">{card.name}</p>
+      <p className="text-muted-foreground text-[11px]">{card.priceRange}</p>
+    </button>
+  );
+}
+
+function ProductCardHorizontalSkeleton() {
+  return (
+    <div className="flex-shrink-0 w-[140px]">
+      <Skeleton className="w-[140px] h-[100px] rounded-xl mb-2" />
+      <Skeleton className="h-3 w-3/4 mb-1" />
+      <Skeleton className="h-2.5 w-1/2" />
+    </div>
+  );
+}
+
+// ── Sidebar (desktop only) ────────────────────────────────────────────────────
+function Sidebar({ activeCategory, onSelect }: { activeCategory: string; onSelect: (name: string, id?: number) => void }) {
+  const { data: apiCategories } = useGiftCardCategories();
+  const categories = apiCategories && apiCategories.length > 0
+    ? [{ name: "All Gift Cards", id: undefined as number | undefined }, ...apiCategories.map(c => ({ name: c.name, id: c.id as number | undefined }))]
+    : SIDEBAR_CATEGORIES;
+
+  return (
+    <nav className="w-56 flex-shrink-0 pr-4">
+      <ul className="space-y-0.5">
+        {categories.map((cat) => (
+          <li key={cat.name}>
+            <button
+              onClick={() => onSelect(cat.name, cat.id)}
+              className={cn(
+                "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors font-medium",
+                activeCategory === cat.name
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+              )}
+            >
+              {cat.name}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
+// ── Desktop main grid section ─────────────────────────────────────────────────
+function DesktopCategoryGrid({
+  categoryName,
+  categoryId,
+  countryCode,
+  onCardClick,
+}: {
+  categoryName: string;
+  categoryId?: number;
+  countryCode?: string;
+  onCardClick: (id: string) => void;
+}) {
+  const [page, setPage] = useState(1);
+  const { data, isLoading } = useGiftCardProducts({ page, size: 20, categoryId, countryCode });
+  const cards = mapProducts(data?.content || []);
+
+  return (
+    <div className="flex-1 min-w-0">
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-2xl font-black text-foreground">
+          {categoryName === "All Gift Cards" ? "Check out the most popular shops!" : categoryName}
+        </h2>
+        <div className="flex gap-1.5">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page <= 1}
+            className="h-9 w-9 rounded-full border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-30 transition-colors"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setPage(p => p + 1)}
+            disabled={!data || page >= data.totalPages}
+            className="h-9 w-9 rounded-full border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-30 transition-colors"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+      {isLoading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {[...Array(8)].map((_, i) => <ProductCardGridSkeleton key={i} />)}
+        </div>
+      ) : cards.length === 0 ? (
+        <div className="text-center py-20">
+          <Gift className="h-14 w-14 text-muted-foreground mx-auto mb-4" />
+          <p className="text-foreground font-semibold text-lg mb-2">No gift cards available</p>
+          <p className="text-muted-foreground text-sm">Connect your Supabase API to browse live products.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {cards.map(card => (
+            <ProductCardGrid
+              key={card.id}
+              card={card}
+              onClick={() => onCardClick(card.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Mobile horizontal section ─────────────────────────────────────────────────
+function HorizontalSection({
+  title,
+  onSeeAll,
+  categoryId,
+  countryCode,
+}: {
+  title: string;
+  onSeeAll?: () => void;
+  categoryId?: number;
+  countryCode?: string;
+}) {
+  const [, setLocation] = useLocation();
+  const { data, isLoading } = useGiftCardProducts({ page: 1, size: 10, categoryId, countryCode });
+  const cards = mapProducts(data?.content || []);
+
+  return (
+    <section className="mb-8">
+      {title && (
+        <div className="flex items-end justify-between px-4 mb-3">
+          <h2 className="font-bold text-xl leading-tight text-foreground">{title}</h2>
+          {onSeeAll && (
+            <button onClick={onSeeAll} className="text-sm text-muted-foreground underline underline-offset-2 flex-shrink-0 ml-4">
+              See all
+            </button>
+          )}
+        </div>
+      )}
+      {isLoading ? (
+        <div className="flex gap-3 overflow-x-auto scrollbar-hide px-4 pb-1">
+          {[...Array(5)].map((_, i) => <ProductCardHorizontalSkeleton key={i} />)}
+        </div>
+      ) : cards.length === 0 ? null : (
+        <div className="flex gap-3 overflow-x-auto scrollbar-hide px-4 pb-1">
+          {cards.map((card) => (
+            <ProductCardHorizontal
+              key={card.id}
+              card={card}
+              onClick={() => setLocation(`/gift-cards/${card.id}`)}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ── FAQ ───────────────────────────────────────────────────────────────────────
+const faqs = [
+  { question: "What payment options do you accept?", answer: "We accept cryptocurrency payments including Bitcoin (BTC), Ethereum (ETH), and USDT. This ensures fast, secure, and private transactions." },
+  { question: "Do I need to create an account to purchase a gift card?", answer: "No! You can purchase gift cards without creating an account. Simply select your card, pay with crypto, and receive your gift card code via email." },
+  { question: "How long does it take to receive my purchased gift card?", answer: "Most gift cards are delivered instantly via email after your cryptocurrency payment is confirmed. Delivery typically takes 5-15 minutes depending on network congestion." },
+  { question: "What happens if I don't receive my gift card email?", answer: "First, check your spam or junk folder. If it's not there, wait a few more minutes. If you still haven't received it, contact our support team with your order details and we'll resolve it promptly." },
+  { question: "What is Pexly?", answer: "Pexly is a non-custodial crypto platform that lets you convert cryptocurrency into everyday purchases — gift cards, eSIMs, payment cards, and phone refills — across 8,000+ products in 180+ countries." },
+];
+
+function FaqItem({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-b border-border">
+      <button onClick={() => setOpen(v => !v)} className="w-full flex items-center justify-between py-4 text-left gap-4">
+        <span className="text-foreground font-semibold text-sm leading-snug">{question}</span>
+        <span className={cn("flex-shrink-0 h-6 w-6 rounded-full border border-border flex items-center justify-center transition-transform duration-200", open ? "rotate-45" : "")}>
+          <Plus className="h-3 w-3 text-muted-foreground" />
+        </span>
+      </button>
+      <div className="overflow-hidden transition-all duration-300" style={{ maxHeight: open ? "300px" : "0px" }}>
+        <p className="text-muted-foreground text-sm leading-relaxed pb-4">{answer}</p>
+      </div>
+    </div>
+  );
+}
+
+// ── HERO brand tiles ──────────────────────────────────────────────────────────
+const FEATURED_BRANDS: Array<
+  | { kind: "logo"; name: string; logo: string; bg: string }
+  | { kind: "image"; name: string; src: string }
+> = [
+  { kind: "logo",  name: "PlayStation",     logo: "/logos/brands/playstation.svg", bg: "#003087" },
+  { kind: "image", name: "Pay with Crypto",  src: cryptoQrImg },
+  { kind: "image", name: "Instant Delivery", src: orderCompleteImg },
+  { kind: "logo",  name: "Spotify",         logo: "/logos/brands/spotify.svg",     bg: "#1DB954" },
+];
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+export function GiftCards() {
+  useHead({
+    title: "Gift Cards | Pexly",
+    meta: [{ name: "description", content: "Buy digital gift cards from hundreds of brands worldwide and pay with cryptocurrency." }],
+  });
+
+  const [, setLocation] = useLocation();
+  const [cartOpen, setCartOpen] = useState(false);
+  const { items: cartItems } = useGiftCardCart();
+  const cartCount = cartItems.reduce((acc, i) => acc + i.quantity, 0);
+
+  const { data: reloadlyCategories } = useGiftCardCategories();
+  const { data: reloadlyCountries }  = useGiftCardCountries();
+
+  // Mobile tab state
+  const [activeTab, setActiveTab] = useState("Popular");
+
+  // Desktop sidebar state
+  const [desktopCategory, setDesktopCategory] = useState("All Gift Cards");
+  const [desktopCategoryId, setDesktopCategoryId] = useState<number | undefined>(undefined);
+
+  const [openCountry, setOpenCountry] = useState(false);
+  const [activeCountryCode, setActiveCountryCode] = useState<string | undefined>(undefined);
+  const [searchInput, setSearchInput] = useState("");
+
+  const activeCountryObj = (reloadlyCountries ?? []).find((c) => c.isoName === activeCountryCode);
+
+  const gamingCategory = (reloadlyCategories ?? []).find(c => c.name.toLowerCase().includes("gaming"));
+  const travelCategory = (reloadlyCategories ?? []).find(c => c.name.toLowerCase().includes("travel") || c.name.toLowerCase().includes("transport"));
+  const esimCategory   = (reloadlyCategories ?? []).find(c => c.name.toLowerCase().includes("esim"));
+
+  const mobileTabs: { name: string; Icon: ComponentType<{ className?: string }>; id: number | undefined }[] = [
+    { name: "Popular",       Icon: Flame,           id: undefined },
+    { name: "Payment Cards", Icon: CreditCard,      id: undefined },
+    ...(travelCategory ? [{ name: "Travel",  Icon: Globe,            id: travelCategory.id  as number | undefined }] : []),
+    ...(gamingCategory ? [{ name: "Gaming",  Icon: Gamepad2,         id: gamingCategory.id  as number | undefined }] : []),
+    ...(esimCategory   ? [{ name: "eSIM",    Icon: Smartphone,       id: esimCategory.id    as number | undefined }] : []),
+  ];
+  const activeTabObj = mobileTabs.find(t => t.name === activeTab) ?? mobileTabs[0];
+
+  const handleSelectCountry = (isoName: string) => {
+    setActiveCountryCode(isoName || undefined);
+    setOpenCountry(false);
+  };
+
+  const goToBrowse = (category: string, categoryId?: number, q?: string) => {
+    const params = new URLSearchParams({ category });
+    if (categoryId) params.set("categoryId", String(categoryId));
+    if (q) params.set("q", q);
+    setLocation(`/gift-cards/browse?${params.toString()}`);
+  };
+
+  const handleSearch = () => {
+    if (searchInput.trim()) goToBrowse("All Gift Cards", undefined, searchInput.trim());
+  };
+
+  const handleSidebarSelect = (name: string, id?: number) => {
+    setDesktopCategory(name);
+    setDesktopCategoryId(id);
+  };
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <aside className="hidden lg:block lg:col-span-1 bg-card rounded-3xl p-6 border border-border/50 h-fit lg:sticky lg:top-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4">Categories</h3>
-          <div className="space-y-1">
-            {[{ name: "All Categories", id: undefined, icon: LayoutGrid }, ...(reloadlyCategories || []).map(c => ({ name: c.name, id: c.id, icon: getCategoryIcon(c.name) }))].map((category, index) => {
-              const IconComponent = category.icon;
-              return (
-                <button
-                  key={index}
-                  onClick={() => {
-                    setSelectedSidebarCategory(category.name);
-                    setSelectedCategoryId(category.id);
-                    setPage(1);
-                  }}
-                  className={`w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    selectedSidebarCategory === category.name
-                      ? "bg-primary text-primary-foreground"
-                      : "text-foreground hover:bg-secondary"
-                  }`}
-                >
-                  <IconComponent className="h-4 w-4 flex-shrink-0" />
-                  <span className="truncate">{category.name}</span>
-                </button>
-              );
-            })}
+
+      {/* Floating cart */}
+      {cartCount > 0 && (
+        <button
+          onClick={() => setCartOpen(true)}
+          className="fixed bottom-6 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-full bg-primary text-primary-foreground font-bold shadow-2xl text-sm"
+        >
+          <ShoppingCart className="h-4 w-4" />
+          {cartCount} in cart
+        </button>
+      )}
+
+      {/* ════════════════════════════════════════════════════════
+          DESKTOP layout (lg+) — sidebar + grid
+          ════════════════════════════════════════════════════════ */}
+      <div className="hidden lg:block max-w-7xl mx-auto px-6">
+
+        {/* Desktop hero strip */}
+        <div className="py-8 flex items-center gap-6 border-b border-border mb-6">
+          <div className="flex-1">
+            <h1 className="text-3xl font-black text-foreground leading-tight mb-1">
+              Turn Crypto Into Everyday Purchases
+            </h1>
+            <p className="text-muted-foreground text-sm">8,000+ gift cards in 180+ countries — pay with any crypto.</p>
           </div>
-        </aside>
+          {/* Desktop search */}
+          <div className="flex gap-2 w-[380px]">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder="Search for products or brands…"
+                value={searchInput}
+                onChange={e => setSearchInput(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") handleSearch(); }}
+                className="pl-9 h-10 rounded-xl text-sm"
+              />
+            </div>
+            <button
+              onClick={handleSearch}
+              className="h-10 px-4 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors flex-shrink-0"
+            >
+              Search
+            </button>
+          </div>
+          {/* Country picker */}
+          <Popover open={openCountry} onOpenChange={setOpenCountry}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="h-10 px-3 rounded-xl text-sm flex-shrink-0">
+                <span className="max-w-[90px] truncate">
+                  {activeCountryObj ? `${activeCountryObj.flag} ${activeCountryObj.name}` : "🌍 All Countries"}
+                </span>
+                <ChevronsUpDown className="h-3 w-3 ml-1 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[280px] p-0" align="end">
+              <Command>
+                <CommandInput placeholder="Search country..." />
+                <CommandList>
+                  <CommandEmpty className="text-sm py-4 text-center text-muted-foreground">No country found.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem value="all" onSelect={() => handleSelectCountry("")}>
+                      <Check className={cn("mr-2 h-4 w-4", !activeCountryCode ? "opacity-100" : "opacity-0")} />
+                      <span className="mr-2">🌍</span>All Countries
+                    </CommandItem>
+                    {(reloadlyCountries ?? []).map(c => (
+                      <CommandItem key={c.isoName} value={`${c.name} ${c.isoName}`} onSelect={() => handleSelectCountry(c.isoName)}>
+                        <Check className={cn("mr-2 h-4 w-4", activeCountryCode === c.isoName ? "opacity-100" : "opacity-0")} />
+                        <span className="mr-2">{c.flag}</span>
+                        <span>{c.name}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
 
-        <div className="lg:col-span-3">
-          {/* ── HERO ── */}
-          <section className="relative rounded-3xl mb-6 overflow-hidden bg-[#0b1120] min-h-[300px] lg:min-h-[340px]">
+        {/* Desktop sidebar + grid */}
+        <div className="flex gap-8 pb-16">
+          <Sidebar activeCategory={desktopCategory} onSelect={handleSidebarSelect} />
+          <DesktopCategoryGrid
+            categoryName={desktopCategory}
+            categoryId={desktopCategoryId}
+            countryCode={activeCountryCode}
+            onCardClick={id => setLocation(`/gift-cards/${id}`)}
+          />
+        </div>
 
-            {/* Mobile: diagonal slash across bottom half */}
-            <div
-              className="absolute inset-0 lg:hidden"
-              style={{
-                background: "#120d35",
-                clipPath: "polygon(0% 58%, 100% 38%, 100% 100%, 0% 100%)",
-              }}
+        {/* Desktop: Shop on the Go */}
+        <div className="max-w-2xl mx-auto mb-10 rounded-2xl overflow-hidden" style={{ background: "hsl(168 40% 18%)" }}>
+          <div className="p-10 text-center">
+            <h2 className="text-4xl font-black text-white uppercase tracking-tight mb-3">Shop on the Go</h2>
+            <p className="text-white/80 text-sm leading-relaxed mb-6">
+              Download our app to manage the shopping from your phone.
+            </p>
+            <div className="flex flex-col items-center gap-3">
+              <a href="#" className="inline-flex items-center gap-3 bg-black text-white px-6 py-3 rounded-xl hover:bg-black/80 transition-colors">
+                <svg viewBox="0 0 24 24" className="h-6 w-6 fill-white flex-shrink-0" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                </svg>
+                <span className="text-left">
+                  <span className="block text-[10px] leading-none text-white/70">Download on the</span>
+                  <span className="block text-base font-semibold leading-tight">App Store</span>
+                </span>
+              </a>
+              <a href="#" className="inline-flex items-center justify-center px-10 py-3 rounded-full bg-white text-black font-semibold text-sm hover:bg-white/90 transition-colors">
+                Get the app
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop FAQ */}
+        <div className="max-w-2xl mx-auto pb-16">
+          <h2 className="text-2xl font-black text-foreground mb-1">Frequently asked questions</h2>
+          <p className="text-muted-foreground text-sm mb-6">
+            Check out our <span className="underline text-foreground/70 cursor-pointer">Knowledge Base</span> for more.
+          </p>
+          <div>{faqs.map((faq, i) => <FaqItem key={i} question={faq.question} answer={faq.answer} />)}</div>
+        </div>
+      </div>
+
+      {/* ════════════════════════════════════════════════════════
+          MOBILE layout (< lg)
+          ════════════════════════════════════════════════════════ */}
+      <div className="lg:hidden">
+
+        {/* Hero */}
+        <section className="px-4 pt-8 pb-6 bg-background">
+          <h1 className="text-4xl font-black text-foreground leading-[1.1] tracking-tight mb-5">
+            Turn Crypto Into<br />Everyday Purchases
+          </h1>
+          <button
+            onClick={() => document.getElementById("mobile-catalog")?.scrollIntoView({ behavior: "smooth" })}
+            className="inline-flex items-center px-6 py-3 rounded-full font-bold text-sm mb-6 text-white"
+            style={{ background: "#e8434e" }}
+          >
+            Take a Look
+          </button>
+          {/* Category tiles row */}
+          <div className="flex gap-2.5 overflow-x-auto scrollbar-hide pb-1">
+            {/* Sneakers / Fashion */}
+            <button
+              onClick={() => goToBrowse("Fashion")}
+              className="flex-shrink-0 w-[88px] h-[88px] rounded-2xl overflow-hidden"
+              style={{ background: "#e8b84b" }}
+            >
+              <img
+                src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&h=200&fit=crop&auto=format"
+                alt="Fashion"
+                className="w-full h-full object-cover mix-blend-multiply"
+              />
+            </button>
+            {/* Gaming controller */}
+            <button
+              onClick={() => goToBrowse("Gaming", gamingCategory?.id)}
+              className="flex-shrink-0 w-[88px] h-[88px] rounded-2xl overflow-hidden"
+              style={{ background: "#1a4a3a" }}
+            >
+              <img
+                src="https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=200&h=200&fit=crop&auto=format"
+                alt="Gaming"
+                className="w-full h-full object-cover"
+              />
+            </button>
+            {/* Groceries */}
+            <button
+              onClick={() => goToBrowse("Food & Groceries")}
+              className="flex-shrink-0 w-[88px] h-[88px] rounded-2xl overflow-hidden"
+              style={{ background: "#c0392b" }}
+            >
+              <img
+                src="https://images.unsplash.com/photo-1542838132-92c53300491e?w=200&h=200&fit=crop&auto=format"
+                alt="Food"
+                className="w-full h-full object-cover"
+              />
+            </button>
+            {/* Crypto coins grid */}
+            <button
+              onClick={() => goToBrowse("Payment Cards")}
+              className="flex-shrink-0 w-[88px] h-[88px] rounded-2xl p-2.5"
+              style={{ background: "#1e1e1e", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", alignItems: "center", justifyItems: "center" }}
+            >
+              <img src="/logos/brands/bitcoin.svg"   alt="BTC"  style={{ width: 30, height: 30, objectFit: "contain" }} />
+              <img src="/logos/brands/ethereum.svg"  alt="ETH"  style={{ width: 30, height: 30, objectFit: "contain" }} />
+              <img src="/logos/brands/tether.svg"    alt="USDT" style={{ width: 30, height: 30, objectFit: "contain" }} />
+              <img src="/logos/brands/visa.svg"      alt="Visa" style={{ width: 30, height: 30, objectFit: "contain" }} />
+            </button>
+          </div>
+        </section>
+
+        {/* Category tabs */}
+        <div id="mobile-catalog" className="border-b border-border">
+          <div className="flex gap-0 overflow-x-auto scrollbar-hide px-4">
+            {mobileTabs.map(tab => (
+              <button
+                key={tab.name}
+                onClick={() => setActiveTab(tab.name)}
+                className={cn(
+                  "flex flex-col items-center gap-1 px-4 py-3 flex-shrink-0 border-b-2 transition-colors",
+                  activeTab === tab.name ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <tab.Icon className="h-5 w-5" />
+                <span className="text-xs font-medium whitespace-nowrap">{tab.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Mobile search */}
+        <div className="px-4 py-3 flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              placeholder="Search brands…"
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") handleSearch(); }}
+              className="pl-9 h-10 rounded-xl text-sm"
             />
+          </div>
+          <button onClick={handleSearch} className="h-10 px-4 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors flex-shrink-0">
+            Search
+          </button>
+          <Popover open={openCountry} onOpenChange={setOpenCountry}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="h-10 px-3 rounded-xl text-sm font-normal flex-shrink-0">
+                <span className="max-w-[70px] truncate">
+                  {activeCountryObj ? `${activeCountryObj.flag} ${activeCountryObj.name}` : "🌍"}
+                </span>
+                <ChevronsUpDown className="h-3 w-3 ml-1 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[280px] p-0" align="end">
+              <Command>
+                <CommandInput placeholder="Search country..." />
+                <CommandList>
+                  <CommandEmpty className="text-sm py-4 text-center text-muted-foreground">No country found.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem value="all" onSelect={() => handleSelectCountry("")}>
+                      <Check className={cn("mr-2 h-4 w-4", !activeCountryCode ? "opacity-100" : "opacity-0")} />
+                      <span className="mr-2">🌍</span>All Countries
+                    </CommandItem>
+                    {(reloadlyCountries ?? []).map(c => (
+                      <CommandItem key={c.isoName} value={`${c.name} ${c.isoName}`} onSelect={() => handleSelectCountry(c.isoName)}>
+                        <Check className={cn("mr-2 h-4 w-4", activeCountryCode === c.isoName ? "opacity-100" : "opacity-0")} />
+                        <span className="mr-2">{c.flag}</span>
+                        <span>{c.name}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
 
-            {/* Desktop: diagonal slash — right half gets deep purple */}
-            <div
-              className="absolute inset-0 hidden lg:block"
-              style={{
-                background: "#120d35",
-                clipPath: "polygon(38% 0%, 100% 0%, 100% 100%, 48% 100%)",
-              }}
-            />
+        <div className="pb-10">
+          {/* Popular / tab section */}
+          <HorizontalSection
+            title={
+              activeTab === "Popular" && activeCountryObj
+                ? `Popular in ${activeCountryObj.name} ${activeCountryObj.flag}`
+                : activeTab === "Popular" ? "Popular" : activeTab
+            }
+            onSeeAll={() => goToBrowse(activeTab, activeTabObj.id)}
+            categoryId={activeTabObj.id}
+            countryCode={activeCountryCode}
+          />
 
-            <div className="relative z-10 flex flex-col lg:flex-row lg:items-stretch h-full">
+          {/* How it works */}
+          {activeTab === "Popular" && (
+            <section className="mx-4 rounded-2xl bg-card border border-border p-5 mb-8">
+              <h2 className="text-2xl font-black text-foreground mb-6">How it works</h2>
+              <div className="space-y-5">
 
-              {/* LEFT — headline + trust + cart */}
-              <div className="flex-1 px-7 pt-8 pb-6 lg:px-10 lg:pt-10 flex flex-col justify-between">
-                <div>
-                  <h1 className="text-3xl lg:text-5xl font-black text-white leading-[1.1] tracking-tight mb-3">
-                    Buy Gift Cards<br className="hidden lg:block" /> with Crypto
-                  </h1>
-                  <p className="text-sm lg:text-base text-zinc-400 mb-5 lg:mb-7 max-w-sm">
-                    500+ brands across gaming, streaming, food & travel.
-                    Instant delivery. Up to 20% off.
-                  </p>
-
-                  {/* Trust badges — desktop only */}
-                  <div className="hidden lg:flex flex-wrap gap-3">
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
-                      <span className="text-sm">⚡</span>
-                      <span className="text-xs text-zinc-300 font-medium">Instant delivery</span>
-                    </div>
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
-                      <img src="/logos/bitcoin-btc-logo.svg" className="w-4 h-4 object-contain" alt="BTC" />
-                      <img src="/logos/ethereum-eth-logo.svg" className="w-4 h-4 object-contain" alt="ETH" />
-                      <span className="text-xs text-zinc-300 font-medium">Pay with BTC / ETH</span>
-                    </div>
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
-                      <span className="text-sm">🏷️</span>
-                      <span className="text-xs text-zinc-300 font-medium">Up to 20% off</span>
-                    </div>
+                {/* Step 1 */}
+                <div className="flex gap-3 items-start">
+                  <span className="flex-shrink-0 h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-black">1</span>
+                  <div>
+                    <p className="text-foreground font-bold text-base mb-0.5">Pick a product</p>
+                    <p className="text-muted-foreground text-sm">Choose from 8,000+ Gift Cards, eSIMs, Payment Cards, and Phone Refills.</p>
                   </div>
                 </div>
-
-                {/* Bottom row */}
-                <div className="flex items-center justify-between mt-6 lg:mt-0">
-                  <p className="text-xs text-zinc-600 font-medium uppercase tracking-widest">Click a card to filter</p>
-                  <button
-                    onClick={() => setCartOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-zinc-300 hover:bg-white/10 transition-colors"
-                  >
-                    <ShoppingCart className="h-4 w-4" />
-                    {cartCount > 0
-                      ? <span className="font-bold text-white">{cartCount} in cart</span>
-                      : <span>Cart</span>
-                    }
-                  </button>
+                {/* Brand logos grid */}
+                <div className="rounded-xl bg-secondary p-4 grid grid-cols-6 gap-2">
+                  {HOW_IT_WORKS_BRANDS.map((logo, i) => (
+                    <div key={i} className="aspect-square rounded-full bg-background flex items-center justify-center p-1.5">
+                      <img src={logo} alt="" loading="lazy" className="w-full h-full object-contain" />
+                    </div>
+                  ))}
                 </div>
+
+                {/* Step 2 */}
+                <div className="flex gap-3 items-start">
+                  <span className="flex-shrink-0 h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-black">2</span>
+                  <div>
+                    <p className="text-foreground font-bold text-base mb-0.5">Pay with crypto</p>
+                    <p className="text-muted-foreground text-sm">Use any wallet. Choose BTC, ETH, USDT and many more.</p>
+                  </div>
+                </div>
+                <div className="rounded-xl overflow-hidden">
+                  <img src={cryptoQrImg} alt="Pay with crypto" className="w-full object-cover rounded-xl" />
+                </div>
+
+                {/* Step 3 */}
+                <div className="flex gap-3 items-start">
+                  <span className="flex-shrink-0 h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-black">3</span>
+                  <div>
+                    <p className="text-foreground font-bold text-base mb-0.5">Receive instantly</p>
+                    <p className="text-muted-foreground text-sm">Your code arrives in seconds, ready to use.</p>
+                  </div>
+                </div>
+                <div className="rounded-xl overflow-hidden bg-secondary">
+                  <img src={orderCompleteImg} alt="Order completed" className="w-full object-cover rounded-xl" />
+                </div>
+
               </div>
+            </section>
+          )}
 
-              {/* RIGHT — 2×2 brand tiles */}
-              <div className="lg:w-[360px] flex-shrink-0 grid grid-cols-2 gap-2.5 p-5 lg:p-6 content-center">
-                {([
-                  { name: "Netflix",  logo: "/logos/brands/netflix.svg",     bg: "#E50914" },
-                  { name: "Amazon",   logo: "/logos/brands/amazon.svg",       bg: "#FF9900" },
-                  { name: "Spotify",  logo: "/logos/brands/spotify.svg",      bg: "#1DB954" },
-                  { name: "Steam",    logo: "/logos/brands/steampowered.svg", bg: "#1b2838" },
-                ] as const).map((card) => (
-                  <button
-                    key={card.name}
-                    onClick={() => { setInputValue(card.name); setSearchQuery(card.name); setPage(1); }}
-                    className="rounded-2xl flex flex-col justify-between p-4 aspect-[3/2] hover:scale-[1.03] hover:brightness-110 transition-all duration-200"
-                    style={{ background: card.bg, boxShadow: `0 8px 24px ${card.bg}44` }}
-                  >
-                    <img src={card.logo} alt={card.name} className="w-8 h-8 object-contain" style={{ filter: "brightness(0) invert(1)" }} />
-                    <span className="text-white font-bold text-sm">{card.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Search bar — full width, pinned to bottom */}
-            <div className="px-6 pb-6 lg:px-10 lg:pb-8">
-
-              {/* Search name */}
-              <div className="relative mb-2.5">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30 pointer-events-none" />
-                <Input
-                  placeholder="Search brands… (Amazon, Apple, Netflix)"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
-                  className="pl-9 h-12 border border-white/10 text-white placeholder:text-white/30 rounded-xl focus:border-indigo-400/60"
-                  style={{ background: "rgba(255,255,255,0.06)", backdropFilter: "blur(12px)" }}
-                />
-              </div>
-
-              {/* Amount + Currency + Search button */}
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Amount"
-                  type="number"
-                  min="0"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
-                  className="w-24 flex-shrink-0 h-11 border border-white/10 text-white placeholder:text-white/30 rounded-xl focus:border-indigo-400/60"
-                  style={{ background: "rgba(255,255,255,0.06)", backdropFilter: "blur(12px)" }}
-                />
-                <Popover open={openCountry} onOpenChange={setOpenCountry}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      role="combobox"
-                      className="flex-1 min-w-0 justify-between h-11 font-normal border border-white/10 text-white hover:bg-white/10 rounded-xl"
-                      style={{ background: "rgba(255,255,255,0.06)", backdropFilter: "blur(12px)" }}
-                    >
-                      <span className="truncate">
-                        {activeCountryObj ? `${activeCountryObj.flag} ${activeCountryObj.name}` : "All Countries"}
-                      </span>
-                      <ChevronsUpDown className="h-3.5 w-3.5 opacity-40 ml-1 flex-shrink-0" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[300px] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Search country..." />
-                      <CommandList>
-                        <CommandEmpty>No country found.</CommandEmpty>
-                        <CommandGroup>
-                          <CommandItem value="all" onSelect={() => handleSelectCountry("")}>
-                            <Check className={cn("mr-2 h-4 w-4", !activeCountryCode ? "opacity-100" : "opacity-0")} />
-                            <span className="mr-2">🌍</span>
-                            <span>All Countries</span>
-                          </CommandItem>
-                          {(reloadlyCountries ?? []).map((c) => (
-                            <CommandItem key={c.isoName} value={`${c.name} ${c.isoName}`} onSelect={() => handleSelectCountry(c.isoName)}>
-                              <Check className={cn("mr-2 h-4 w-4", activeCountryCode === c.isoName ? "opacity-100" : "opacity-0")} />
-                              <span className="mr-2">{c.flag}</span>
-                              <span>{c.name}</span>
-                              <span className="ml-auto text-zinc-500 text-xs">{c.isoName}</span>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-                <Button
-                  className="h-11 px-4 font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl flex-shrink-0"
-                  onClick={handleSearch}
+          {/* 8k+ products section */}
+          {activeTab === "Popular" && (
+            <section className="mb-8 mx-4 rounded-2xl p-5 bg-card border border-border">
+              <div className="flex items-start justify-between mb-5">
+                <h2 className="text-3xl font-black text-foreground leading-tight">
+                  8k+ products in<br />180+ countries
+                </h2>
+                <button
+                  onClick={() => goToBrowse("All Gift Cards")}
+                  className="text-sm text-muted-foreground underline underline-offset-2 flex-shrink-0 mt-1 ml-4"
                 >
-                  Search
-                </Button>
+                  See all
+                </button>
               </div>
+              <HorizontalSection title="" countryCode={activeCountryCode} />
+            </section>
+          )}
 
-              {/* Active filter chips */}
-              {(activeCountryCode || activeAmount) && (
-                <div className="flex flex-wrap gap-2 mt-3">
-                  <span className="text-xs text-zinc-500 self-center">Filters:</span>
-                  {activeCountryCode && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 text-zinc-300 text-xs font-medium">
-                      {activeCountryObj ? `${activeCountryObj.flag} ${activeCountryObj.name}` : activeCountryCode}
-                      <button onClick={clearCountryFilter} className="ml-0.5 hover:opacity-70">×</button>
-                    </span>
-                  )}
-                  {activeAmount && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 text-zinc-300 text-xs font-medium">
-                      {activeAmount}
-                      <button onClick={clearAmountFilter} className="ml-0.5 hover:opacity-70">×</button>
-                    </span>
-                  )}
-                </div>
-              )}
+          {/* eSIM banner */}
+          {activeTab === "Popular" && esimCategory && (
+            <section className="mb-8 mx-4 rounded-2xl bg-primary/10 border border-primary/20 p-5">
+              <div className="flex items-start justify-between mb-4">
+                <h2 className="text-2xl font-black text-foreground leading-tight flex-1">
+                  eSIMs, your<br />passport to data<br />in 140+ countries!
+                </h2>
+                <button
+                  onClick={() => goToBrowse("eSIM", esimCategory.id)}
+                  className="text-sm text-muted-foreground underline underline-offset-2 flex-shrink-0 mt-1 ml-4"
+                >
+                  See all
+                </button>
+              </div>
+              <HorizontalSection title="" categoryId={esimCategory.id} countryCode={activeCountryCode} />
+            </section>
+          )}
+
+          {/* Gaming section */}
+          {activeTab === "Popular" && gamingCategory && (
+            <section className="mb-8">
+              <div className="flex items-end justify-between px-4 mb-3">
+                <h2 className="font-bold text-xl text-foreground">Gaming</h2>
+                <button onClick={() => goToBrowse("Gaming", gamingCategory.id)} className="text-sm text-muted-foreground underline underline-offset-2">See all</button>
+              </div>
+              <div className="mx-4 mb-3 rounded-xl overflow-hidden h-[140px]">
+                <img src="https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?w=600&h=200&fit=crop&auto=format" alt="Gaming" className="w-full h-full object-cover" />
+              </div>
+              <HorizontalSection title="" categoryId={gamingCategory.id} countryCode={activeCountryCode} />
+            </section>
+          )}
+
+          {/* Travel section */}
+          {activeTab === "Popular" && travelCategory && (
+            <section className="mb-8">
+              <div className="flex items-end justify-between px-4 mb-3">
+                <h2 className="font-bold text-xl text-foreground">For Your Travel Needs</h2>
+                <button onClick={() => goToBrowse("Travel", travelCategory.id)} className="text-sm text-muted-foreground underline underline-offset-2">See all</button>
+              </div>
+              <div className="mx-4 mb-3 rounded-xl overflow-hidden h-[140px]">
+                <img src="https://images.unsplash.com/photo-1507608616759-54f48f0af0ee?w=600&h=200&fit=crop&auto=format" alt="Travel" className="w-full h-full object-cover" />
+              </div>
+              <HorizontalSection title="" categoryId={travelCategory.id} countryCode={activeCountryCode} />
+            </section>
+          )}
+
+          {/* Shop on the Go */}
+          <section className="mx-4 mb-8 rounded-2xl overflow-hidden" style={{ background: "hsl(168 40% 18%)" }}>
+            <div className="p-7 text-center">
+              <h2 className="text-3xl font-black text-white uppercase tracking-tight mb-3">
+                Shop on the Go
+              </h2>
+              <p className="text-white/80 text-sm leading-relaxed mb-6">
+                Download our app to manage the shopping from your phone.
+              </p>
+              {/* App Store button */}
+              <a
+                href="#"
+                className="inline-flex items-center gap-3 bg-black text-white px-5 py-3 rounded-xl mb-3 hover:bg-black/80 transition-colors"
+              >
+                <svg viewBox="0 0 24 24" className="h-6 w-6 fill-white flex-shrink-0" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                </svg>
+                <span className="text-left">
+                  <span className="block text-[10px] leading-none text-white/70">Download on the</span>
+                  <span className="block text-base font-semibold leading-tight">App Store</span>
+                </span>
+              </a>
+              <br />
+              {/* Get the app button */}
+              <a
+                href="#"
+                className="inline-flex items-center justify-center px-8 py-3 rounded-full bg-white text-black font-semibold text-sm hover:bg-white/90 transition-colors"
+              >
+                Get the app
+              </a>
             </div>
           </section>
 
-          <div className="lg:hidden">
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {[{ name: "All Categories", id: undefined, icon: LayoutGrid }, ...(reloadlyCategories || []).map(c => ({ name: c.name, id: c.id, icon: getCategoryIcon(c.name) }))].map((category, index) => {
-                const IconComponent = category.icon;
-                return (
-                  <button
-                    key={index}
-                    onClick={() => {
-                      setSelectedSidebarCategory(category.name);
-                      setSelectedCategoryId(category.id);
-                      setPage(1);
-                    }}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors flex-shrink-0 whitespace-nowrap ${
-                      selectedSidebarCategory === category.name
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-card border border-border text-foreground hover:bg-secondary"
-                    }`}
-                  >
-                    <IconComponent className="h-4 w-4 flex-shrink-0" />
-                    <span className="text-xs font-medium">{category.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div>
-            <h2 className="text-lg font-semibold text-foreground mb-4">{selectedSidebarCategory}</h2>
-            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 pb-8">
-              {isLoading ? (
-                [...Array(9)].map((_, i) => (
-                  <GiftCardSkeleton key={i} />
-                ))
-              ) : (
-                giftCards && giftCards.length > 0 ? giftCards.map((card, index) => (
-                  <GiftCardComponent key={card.id} card={card} setLocation={setLocation} index={index} />
-                )) : (
-                  <div className="text-center py-12 w-full col-span-full">
-                    <p className="text-muted-foreground font-medium">
-                      {activeAmount
-                        ? `No gift cards found for amount ${activeAmount}${activeCountryObj ? ` in ${activeCountryObj.flag} ${activeCountryObj.name}` : ""}`
-                        : searchQuery
-                        ? `No results for "${searchQuery}"`
-                        : "No gift cards available"}
-                    </p>
-                    {(activeAmount || searchQuery) && (
-                      <button
-                        onClick={() => {
-                          setInputValue("");
-                          setSearchQuery("");
-                          setAmount("");
-                          setActiveAmount(undefined);
-                          setPage(1);
-                        }}
-                        className="mt-2 text-sm text-primary hover:underline"
-                      >
-                        Clear filters
-                      </button>
-                    )}
-                  </div>
-                )
-              )}
-            </div>
-
-            {/* Pagination */}
-            {data && data.totalPages > 1 && (
-              <div className="flex justify-center items-center gap-4 mb-8">
-                <Button
-                  variant="outline"
-                  disabled={page <= 1}
-                  onClick={() => {
-                    setPage(p => Math.max(1, p - 1));
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                >
-                  Previous
-                </Button>
-                <span className="text-sm font-medium">
-                  Page {page} of {data.totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  disabled={page >= data.totalPages}
-                  onClick={() => {
-                    setPage(p => p + 1);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                >
-                  Next
-                </Button>
-              </div>
-            )}
-          </div>
-
-
-          <div className="mt-10 space-y-3">
-            <div className="flex items-center gap-3 mb-5">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-2.5 py-1 rounded-full">
-                FAQ
-              </span>
-              <h3 className="font-bold text-base">Frequently asked questions</h3>
-            </div>
-            {faqs.map((faq, i) => (
-              <FaqItem key={i} index={i} question={faq.question} answer={faq.answer} />
-            ))}
-          </div>
+          {/* FAQ */}
+          <section className="mx-4 mt-4">
+            <h2 className="text-2xl font-black text-foreground mb-1">Frequently asked</h2>
+            <h2 className="text-2xl font-black text-foreground mb-1">questions</h2>
+            <p className="text-muted-foreground text-sm mb-6">
+              Check out our <span className="underline text-foreground/70 cursor-pointer">Knowledge Base</span> page for more FAQs
+            </p>
+            <div>{faqs.map((faq, i) => <FaqItem key={i} question={faq.question} answer={faq.answer} />)}</div>
+          </section>
         </div>
       </div>
 
       <GiftCardCartSheet open={cartOpen} onOpenChange={setCartOpen} />
-
       <PexlyFooter />
     </div>
   );
