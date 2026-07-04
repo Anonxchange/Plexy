@@ -17,7 +17,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { Search, Package, Plus, Store, LayoutGrid, ChevronRight, Shuffle, SlidersHorizontal, Check } from '@/lib/icons';
+import { Search, Package, Plus, Store, LayoutGrid, ChevronRight, Shuffle, SlidersHorizontal, Check, Zap, Timer } from '@/lib/icons';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -216,6 +216,11 @@ interface Listing {
   status: string;
   metadata: any[];
   variantId?: string;
+  originalPrice?: number;
+  rating?: number;
+  reviewCount?: number;
+  soldCount?: number;
+  badge?: string;
 }
 
 interface CategoryNode {
@@ -262,6 +267,188 @@ function buildCategoryTree(categories: string[]): CategoryNode[] {
     }));
 }
 
+
+// ── Trending Now ──────────────────────────────────────────────────────────────
+function TrendingNowSection({
+  listings,
+  onViewDetails,
+}: {
+  listings: Listing[];
+  onViewDetails: (p: Listing) => void;
+}) {
+  const trending = [...listings]
+    .filter((p) => p.soldCount !== undefined)
+    .sort((a, b) => (b.soldCount ?? 0) - (a.soldCount ?? 0))
+    .slice(0, 12);
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">🔥</span>
+          <h2 className="text-base font-bold">Trending Now</h2>
+          <span className="text-xs text-muted-foreground hidden sm:inline">
+            — most popular right now
+          </span>
+        </div>
+      </div>
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+        {trending.length === 0
+          ? Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex-shrink-0 w-36">
+                <div className="w-36 h-36 rounded-xl bg-muted animate-pulse mb-2" />
+                <div className="h-3 bg-muted animate-pulse rounded mb-1 w-4/5" />
+                <div className="h-3 bg-muted animate-pulse rounded w-2/5" />
+              </div>
+            ))
+          : trending.map((product) => {
+              const disc =
+                product.originalPrice && product.originalPrice > product.price
+                  ? Math.round(
+                      ((product.originalPrice - product.price) /
+                        product.originalPrice) *
+                        100
+                    )
+                  : null;
+              return (
+                <div
+                  key={product.id}
+                  onClick={() => onViewDetails(product)}
+                  className="flex-shrink-0 w-36 cursor-pointer group"
+                >
+                  <div className="w-36 h-36 rounded-xl bg-muted overflow-hidden relative mb-2">
+                    {product.images[0] ? (
+                      <img
+                        src={product.images[0]}
+                        alt={product.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Package className="h-8 w-8 text-muted-foreground/30" />
+                      </div>
+                    )}
+                    {disc && (
+                      <div className="absolute top-1.5 left-1.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                        -{disc}%
+                      </div>
+                    )}
+                    <div className="absolute bottom-1.5 left-1.5 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                      🔥{" "}
+                      {product.soldCount && product.soldCount >= 1000
+                        ? `${(product.soldCount / 1000).toFixed(0)}K`
+                        : product.soldCount}
+                      + sold
+                    </div>
+                  </div>
+                  <p className="text-xs font-medium line-clamp-2 leading-tight text-foreground group-hover:text-primary transition-colors">
+                    {product.title}
+                  </p>
+                  <div className="flex items-baseline gap-1 mt-0.5">
+                    <span className="text-sm font-bold">
+                      {product.currency} {product.price.toLocaleString()}
+                    </span>
+                    {product.originalPrice && (
+                      <span className="text-[11px] text-muted-foreground line-through">
+                        {product.originalPrice.toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+      </div>
+    </div>
+  );
+}
+
+// ── Flash Deals countdown + horizontal scroll ─────────────────────────────────
+function useCountdown(targetMs: number) {
+  const [remaining, setRemaining] = useState(() => Math.max(0, targetMs - Date.now()));
+  useEffect(() => {
+    const id = setInterval(() => setRemaining(r => Math.max(0, r - 1000)), 1000);
+    return () => clearInterval(id);
+  }, [targetMs]);
+  const h = Math.floor(remaining / 3_600_000);
+  const m = Math.floor((remaining % 3_600_000) / 60_000);
+  const s = Math.floor((remaining % 60_000) / 1_000);
+  return { h, m, s };
+}
+
+function FlashDealsSection({ listings, onViewDetails }: { listings: Listing[]; onViewDetails: (p: Listing) => void }) {
+  const deals = listings.filter(p => p.badge === "Flash Deal" || (p.originalPrice && p.originalPrice > p.price && ((p.originalPrice - p.price) / p.originalPrice) >= 0.2));
+
+  // Hook must always run — call unconditionally
+  const endOfDay = new Date();
+  endOfDay.setHours(23, 59, 59, 999);
+  const { h, m, s } = useCountdown(endOfDay.getTime());
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="flex items-center gap-1.5 bg-red-500 text-white px-3 py-1 rounded-lg">
+          <Zap className="h-3.5 w-3.5 fill-white" />
+          <span className="text-sm font-bold tracking-wide">Flash Deals</span>
+        </div>
+        <div className="flex items-center gap-1 text-sm font-mono font-semibold text-muted-foreground">
+          <Timer className="h-3.5 w-3.5" />
+          <span>Ends in</span>
+          <span className="bg-foreground text-background px-1.5 py-0.5 rounded text-xs">{pad(h)}</span>
+          <span>:</span>
+          <span className="bg-foreground text-background px-1.5 py-0.5 rounded text-xs">{pad(m)}</span>
+          <span>:</span>
+          <span className="bg-foreground text-background px-1.5 py-0.5 rounded text-xs">{pad(s)}</span>
+        </div>
+      </div>
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+        {deals.length === 0
+          ? Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex-shrink-0 w-36">
+                <div className="w-36 h-36 rounded-xl bg-muted animate-pulse mb-2" />
+                <div className="h-3 bg-muted animate-pulse rounded mb-1 w-4/5" />
+                <div className="h-3 bg-muted animate-pulse rounded w-2/5" />
+              </div>
+            ))
+          : deals.slice(0, 10).map((product) => {
+              const disc =
+                product.originalPrice && product.originalPrice > product.price
+                  ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+                  : null;
+              return (
+                <div
+                  key={product.id}
+                  onClick={() => onViewDetails(product)}
+                  className="flex-shrink-0 w-36 cursor-pointer group"
+                >
+                  <div className="w-36 h-36 rounded-xl bg-muted overflow-hidden relative mb-2">
+                    {product.images[0] ? (
+                      <img src={product.images[0]} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Package className="h-8 w-8 text-muted-foreground/30" />
+                      </div>
+                    )}
+                    {disc && (
+                      <div className="absolute top-1.5 left-1.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                        -{disc}%
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs font-medium line-clamp-2 leading-tight text-foreground group-hover:text-primary transition-colors">{product.title}</p>
+                  <div className="flex items-baseline gap-1 mt-0.5">
+                    <span className="text-sm font-bold">{product.currency} {product.price.toLocaleString()}</span>
+                    {product.originalPrice && <span className="text-[11px] text-muted-foreground line-through">{product.originalPrice.toLocaleString()}</span>}
+                  </div>
+                </div>
+              );
+            })}
+      </div>
+    </div>
+  );
+}
+
 export function Shop() {
   useHead({
     title: "Crypto Shop | Pexly",
@@ -286,7 +473,7 @@ export function Shop() {
   const [shopifyProducts, setShopifyProducts] = useState<Listing[]>([]);
   const [marketplaceCategories, setMarketplaceCategories] = useState<string[]>(["All"]);
   const [shopifyCategories, setShopifyCategories] = useState<string[]>(["All"]);
-  const [activeTab, setActiveTab] = useState("shopify");
+  const [activeTab, setActiveTab] = useState("marketplace");
   const [isShopifyLoading, setIsShopifyLoading] = useState(true);
   const [isMarketplaceLoading, setIsMarketplaceLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(SHOPIFY_DISPLAY_PAGE_SIZE);
@@ -473,9 +660,13 @@ export function Shop() {
         return { ...item, images: imageUrls };
       });
       setListings(transformed);
-    } catch (err) { devLog.error("Error fetching listings:", err); }
+    } catch (err) {
+      devLog.error("Error fetching listings:", err);
+      setListings([]);
+    }
     finally { setIsMarketplaceLoading(false); }
   };
+
 
   const handleViewDetails = (product: Listing) => {
     if (product.user_id === "shopify" && product.handle) navigate(`/shop/product/${product.handle}`);
@@ -613,7 +804,7 @@ export function Shop() {
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-3xl font-bold">Shop</h1>
             <p className="text-sm text-muted-foreground mt-0.5">Discover amazing products for every need</p>
@@ -626,6 +817,15 @@ export function Shop() {
             <CartSheet />
           </div>
         </div>
+
+        {/* Trending Now */}
+        <TrendingNowSection
+          listings={activeTab === "marketplace" ? listings : shopifyProducts}
+          onViewDetails={handleViewDetails}
+        />
+
+        {/* Flash Deals section */}
+        <FlashDealsSection listings={activeTab === "marketplace" ? listings : shopifyProducts} onViewDetails={handleViewDetails} />
 
         {/* Search + Sort + Tabs row */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
