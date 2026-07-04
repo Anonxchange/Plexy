@@ -1,7 +1,7 @@
 import { useHead } from "@unhead/react";
 import { useState, useRef, ComponentType } from "react";
-import cryptoQrImg from "@assets/IMG_6447_1783164012414.webp";
-import orderCompleteImg from "@assets/IMG_6446_1783164012415.webp";
+import cryptoQrImg from "@assets/IMG_6447.webp";
+import orderCompleteImg from "@assets/IMG_6446.webp";
 import { useLocation } from "wouter";
 import {
   Search, Coffee, Gamepad2, ShoppingBag, Music, Home, Globe,
