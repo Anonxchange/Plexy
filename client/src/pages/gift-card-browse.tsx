@@ -93,7 +93,7 @@ export function GiftCardBrowse() {
 
   const { data, isLoading, isFetching } = useGiftCardProducts({
     page,
-    size: 40,
+    size: 60,
     categoryId,
     productName: searchQuery || undefined,
     countryCode,
@@ -101,17 +101,13 @@ export function GiftCardBrowse() {
 
   useEffect(() => {
     if (!data) return;
-    if (page === 1) {
-      setAccumulated(data.content || []);
-    } else {
-      setAccumulated(prev => [...prev, ...(data.content || [])]);
-    }
-  }, [data, page]);
+    setAccumulated(data.content || []);
+  }, [data]);
 
   const apiCards = mapProducts(accumulated);
   const totalElements = data?.totalElements ?? 0;
   const totalPages = data?.totalPages ?? 1;
-  const showingCount = Math.min(accumulated.length, totalElements || accumulated.length);
+  const showingCount = Math.min(page * 60, totalElements || accumulated.length);
   const progressPct = totalElements > 0 ? Math.min(100, (showingCount / totalElements) * 100) : 100;
 
   const sortedCards = [...apiCards].sort((a, b) => {
@@ -151,6 +147,7 @@ export function GiftCardBrowse() {
 
   const handleLoadMore = () => {
     setPage(p => p + 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
