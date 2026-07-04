@@ -364,6 +364,9 @@ const faqs = [
   { question: "How long does it take to receive my purchased gift card?", answer: "Most gift cards are delivered instantly via email after your cryptocurrency payment is confirmed. Delivery typically takes 5-15 minutes depending on network congestion." },
   { question: "What happens if I don't receive my gift card email?", answer: "First, check your spam or junk folder. If it's not there, wait a few more minutes. If you still haven't received it, contact our support team with your order details and we'll resolve it promptly." },
   { question: "What is Pexly?", answer: "Pexly is a non-custodial crypto platform that lets you convert cryptocurrency into everyday purchases — gift cards, eSIMs, payment cards, and phone refills — across 8,000+ products in 180+ countries." },
+  { question: "Can I get a refund on a gift card purchase?", answer: "Gift card purchases are final once the code has been delivered, since codes cannot be revoked after issue. If your card doesn't work or arrives damaged, contact support within 24 hours and we'll investigate a replacement or refund." },
+  { question: "Are there any fees for buying gift cards with crypto?", answer: "The price you see at checkout is the total price — there are no hidden purchase fees. Standard network fees for your crypto payment still apply and are shown before you confirm." },
+  { question: "Can I use a gift card in a different country than where it was issued?", answer: "Most gift cards are region-locked and can only be redeemed in the country or store region they were issued for. Check the product description for country restrictions before purchasing." },
 ];
 
 function FaqItem({ question, answer }: { question: string; answer: string }) {
