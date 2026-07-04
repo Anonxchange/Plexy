@@ -612,45 +612,6 @@ export function GiftCards() {
           >
             Take a Look
           </button>
-          {/* Category quick-links banner — single image banner with overlay links */}
-          <div className="relative rounded-2xl overflow-hidden">
-            <img
-              src="https://images.unsplash.com/photo-1607083206968-13611e3d76db?w=800&h=260&fit=crop&auto=format"
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/70" />
-            <div className="relative px-4 py-3 flex items-center justify-between gap-2">
-              <button
-                onClick={() => goToBrowse("Shopping", shoppingCategory?.id)}
-                className="flex flex-col items-center gap-1 text-white/90 hover:text-white transition-colors"
-              >
-                <ShoppingBag className="h-5 w-5" />
-                <span className="text-[11px] font-medium">Shopping</span>
-              </button>
-              <button
-                onClick={() => goToBrowse("Travel", travelCategory?.id)}
-                className="flex flex-col items-center gap-1 text-white/90 hover:text-white transition-colors"
-              >
-                <Globe className="h-5 w-5" />
-                <span className="text-[11px] font-medium">Travel</span>
-              </button>
-              <button
-                onClick={() => goToBrowse("Gaming", gamingCategory?.id)}
-                className="flex flex-col items-center gap-1 text-white/90 hover:text-white transition-colors"
-              >
-                <Gamepad2 className="h-5 w-5" />
-                <span className="text-[11px] font-medium">Games</span>
-              </button>
-              <button
-                onClick={() => goToBrowse("Payment Cards")}
-                className="flex flex-col items-center gap-1 text-white/90 hover:text-white transition-colors"
-              >
-                <Coins className="h-5 w-5" />
-                <span className="text-[11px] font-medium">Crypto</span>
-              </button>
-            </div>
-          </div>
         </section>
 
         {/* Category tabs */}
