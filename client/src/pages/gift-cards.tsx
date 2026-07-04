@@ -605,34 +605,46 @@ export function GiftCards() {
           <button
             onClick={() => document.getElementById("mobile-catalog")?.scrollIntoView({ behavior: "smooth" })}
             className="inline-flex items-center px-6 py-3 rounded-full font-bold text-sm mb-6 text-white"
-            style={{ background: "hsl(168 40% 18%)" }}
+            style={{ background: "#e8434e" }}
           >
             Take a Look
           </button>
-          {/* Promo hero banner — image + headline + CTA, no category links (already have the tab row below) */}
-          <div className="relative rounded-3xl overflow-hidden h-48">
+          {/* Category quick-links banner — single image banner with overlay links */}
+          <div className="relative rounded-2xl overflow-hidden">
             <img
-              src="https://images.unsplash.com/photo-1607083206968-13611e3d76db?w=1000&h=480&fit=crop&auto=format"
+              src="https://images.unsplash.com/photo-1607083206968-13611e3d76db?w=800&h=260&fit=crop&auto=format"
               alt=""
               className="absolute inset-0 w-full h-full object-cover"
             />
-            {/* Diagonal gradient wash instead of a flat overlay */}
-            <div className="absolute inset-0 bg-gradient-to-br from-black/85 via-black/45 to-transparent" />
-            <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-primary/30 blur-3xl" />
-            <div className="absolute -bottom-12 left-16 h-32 w-32 rounded-full bg-[#e8434e]/25 blur-3xl" />
-
-            <div className="relative h-full flex flex-col justify-center gap-3 p-6">
-              <h3 className="text-white text-2xl font-black leading-tight max-w-[240px]">
-                Spend crypto anywhere, instantly
-              </h3>
-              <p className="text-white/70 text-sm max-w-[260px]">
-                Thousands of gift cards, refills &amp; more — all in one wallet.
-              </p>
+            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/70" />
+            <div className="relative px-4 py-3 flex items-center justify-between gap-2">
               <button
-                onClick={() => document.getElementById("mobile-catalog")?.scrollIntoView({ behavior: "smooth" })}
-                className="self-start mt-1 inline-flex items-center gap-1.5 bg-white text-black text-sm font-semibold px-4 py-2 rounded-full hover:bg-white/90 transition-colors"
+                onClick={() => goToBrowse("Shopping", shoppingCategory?.id)}
+                className="flex flex-col items-center gap-1 text-white/90 hover:text-white transition-colors"
               >
-                Explore now
+                <ShoppingBag className="h-5 w-5" />
+                <span className="text-[11px] font-medium">Shopping</span>
+              </button>
+              <button
+                onClick={() => goToBrowse("Travel", travelCategory?.id)}
+                className="flex flex-col items-center gap-1 text-white/90 hover:text-white transition-colors"
+              >
+                <Globe className="h-5 w-5" />
+                <span className="text-[11px] font-medium">Travel</span>
+              </button>
+              <button
+                onClick={() => goToBrowse("Gaming", gamingCategory?.id)}
+                className="flex flex-col items-center gap-1 text-white/90 hover:text-white transition-colors"
+              >
+                <Gamepad2 className="h-5 w-5" />
+                <span className="text-[11px] font-medium">Games</span>
+              </button>
+              <button
+                onClick={() => goToBrowse("Payment Cards")}
+                className="flex flex-col items-center gap-1 text-white/90 hover:text-white transition-colors"
+              >
+                <Coins className="h-5 w-5" />
+                <span className="text-[11px] font-medium">Crypto</span>
               </button>
             </div>
           </div>
