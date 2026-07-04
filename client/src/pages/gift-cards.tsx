@@ -46,6 +46,28 @@ const SIDEBAR_CATEGORIES = [
   { name: "Multi-Brand",        id: undefined },
 ];
 
+// Reloadly stores every country variant of a brand (e.g. "Google Play UAE",
+// "Google Play MX") as a separate product. Promo rows should show each brand
+// once — preferring the shopper's selected country when one is available.
+export function dedupeByBrand(content: any[], preferredCountry?: string): any[] {
+  const byBrand = new Map<string, any>();
+  for (const item of content || []) {
+    const key: string = item?.brand?.brandName || item?.productName;
+    if (!key) continue;
+    const existing = byBrand.get(key);
+    if (!existing) {
+      byBrand.set(key, item);
+    } else if (
+      preferredCountry &&
+      item?.country?.isoName === preferredCountry &&
+      existing?.country?.isoName !== preferredCountry
+    ) {
+      byBrand.set(key, item);
+    }
+  }
+  return Array.from(byBrand.values());
+}
+
 export function mapProducts(content: any[]): { id: string; name: string; priceRange: string; discount: number; image: string }[] {
   return (content || []).map((card: any) => {
     const currencyCode: string = card.recipientCurrencyCode || "USD";
@@ -178,7 +200,7 @@ function DesktopCategoryGrid({
 }) {
   const [page, setPage] = useState(1);
   const { data, isLoading } = useGiftCardProducts({ page, size: 20, categoryId, countryCode });
-  const cards = mapProducts(data?.content || []);
+  const cards = mapProducts(dedupeByBrand(data?.content || [], countryCode));
 
   return (
     <div className="flex-1 min-w-0">
@@ -241,8 +263,8 @@ function HorizontalSection({
   countryCode?: string;
 }) {
   const [, setLocation] = useLocation();
-  const { data, isLoading } = useGiftCardProducts({ page: 1, size: 10, categoryId, countryCode });
-  const cards = mapProducts(data?.content || []);
+  const { data, isLoading } = useGiftCardProducts({ page: 1, size: 20, categoryId, countryCode });
+  const cards = mapProducts(dedupeByBrand(data?.content || [], countryCode)).slice(0, 10);
 
   return (
     <section className="mb-8">
@@ -272,6 +294,35 @@ function HorizontalSection({
         </div>
       )}
     </section>
+  );
+}
+
+// ── Mobile 2-row grid section (used for the "8k+ products" showcase) ─────────
+function GridSection({ countryCode }: { countryCode?: string }) {
+  const [, setLocation] = useLocation();
+  const { data, isLoading } = useGiftCardProducts({ page: 1, size: 24, countryCode });
+  const cards = mapProducts(dedupeByBrand(data?.content || [], countryCode)).slice(0, 12);
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-rows-2 grid-flow-col auto-cols-[130px] gap-3 overflow-x-auto scrollbar-hide pb-1">
+        {[...Array(12)].map((_, i) => <ProductCardHorizontalSkeleton key={i} />)}
+      </div>
+    );
+  }
+
+  if (cards.length === 0) return null;
+
+  return (
+    <div className="grid grid-rows-2 grid-flow-col auto-cols-[130px] gap-3 overflow-x-auto scrollbar-hide pb-1">
+      {cards.map((card) => (
+        <ProductCardHorizontal
+          key={card.id}
+          card={card}
+          onClick={() => setLocation(`/gift-cards/${card.id}`)}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -713,25 +764,7 @@ export function GiftCards() {
                   See all
                 </button>
               </div>
-              <HorizontalSection title="" countryCode={activeCountryCode} />
-            </section>
-          )}
-
-          {/* eSIM banner */}
-          {activeTab === "Popular" && esimCategory && (
-            <section className="mb-8 mx-4 rounded-2xl bg-primary/10 border border-primary/20 p-5">
-              <div className="flex items-start justify-between mb-4">
-                <h2 className="text-2xl font-black text-foreground leading-tight flex-1">
-                  eSIMs, your<br />passport to data<br />in 140+ countries!
-                </h2>
-                <button
-                  onClick={() => goToBrowse("eSIM", esimCategory.id)}
-                  className="text-sm text-muted-foreground underline underline-offset-2 flex-shrink-0 mt-1 ml-4"
-                >
-                  See all
-                </button>
-              </div>
-              <HorizontalSection title="" categoryId={esimCategory.id} countryCode={activeCountryCode} />
+              <GridSection countryCode={activeCountryCode} />
             </section>
           )}
 
@@ -760,6 +793,24 @@ export function GiftCards() {
                 <img src="https://images.unsplash.com/photo-1507608616759-54f48f0af0ee?w=600&h=200&fit=crop&auto=format" alt="Travel" className="w-full h-full object-cover" />
               </div>
               <HorizontalSection title="" categoryId={travelCategory.id} countryCode={activeCountryCode} />
+            </section>
+          )}
+
+          {/* eSIM banner */}
+          {activeTab === "Popular" && esimCategory && (
+            <section className="mb-8 mx-4 rounded-2xl bg-primary/10 border border-primary/20 p-5">
+              <div className="flex items-start justify-between mb-4">
+                <h2 className="text-2xl font-black text-foreground leading-tight flex-1">
+                  eSIMs, your<br />passport to data<br />in 140+ countries!
+                </h2>
+                <button
+                  onClick={() => goToBrowse("eSIM", esimCategory.id)}
+                  className="text-sm text-muted-foreground underline underline-offset-2 flex-shrink-0 mt-1 ml-4"
+                >
+                  See all
+                </button>
+              </div>
+              <HorizontalSection title="" categoryId={esimCategory.id} countryCode={activeCountryCode} />
             </section>
           )}
 
