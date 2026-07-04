@@ -393,6 +393,8 @@ export function GiftCards() {
 
   const gamingCategory = (reloadlyCategories ?? []).find(c => c.name.toLowerCase().includes("gaming"));
   const travelCategory = (reloadlyCategories ?? []).find(c => c.name.toLowerCase().includes("travel") || c.name.toLowerCase().includes("transport"));
+  const shoppingCategory = (reloadlyCategories ?? []).find(c => c.name.toLowerCase().includes("shop") || c.name.toLowerCase().includes("fashion") || c.name.toLowerCase().includes("multi-brand") || c.name.toLowerCase().includes("multi brand"));
+  const entertainmentCategory = (reloadlyCategories ?? []).find(c => c.name.toLowerCase().includes("entertainment"));
   const esimCategory   = (reloadlyCategories ?? []).find(c => c.name.toLowerCase().includes("esim"));
   // Fallback "bonus" category shown as the banner before the FAQ. eSIM isn't
   // always present in the real category list, so if it's missing we fall
@@ -400,6 +402,7 @@ export function GiftCards() {
   // name/id instead of a hardcoded label, so the section is never empty.
   const bonusCategory = esimCategory ?? (reloadlyCategories ?? []).find(
     c => c.id !== gamingCategory?.id && c.id !== travelCategory?.id
+      && c.id !== shoppingCategory?.id && c.id !== entertainmentCategory?.id
   );
 
   const mobileTabs: { name: string; Icon: ComponentType<{ className?: string }>; id: number | undefined }[] = [
@@ -762,7 +765,7 @@ export function GiftCards() {
             <section className="mb-8">
               <div className="flex items-end justify-between px-4 mb-3">
                 <h2 className="text-2xl font-black text-foreground leading-tight">
-                  8k+ products in<br />180+ countries
+                  2k+ products in<br />180+ countries
                 </h2>
                 <button
                   onClick={() => goToBrowse("All Gift Cards")}
@@ -802,6 +805,34 @@ export function GiftCards() {
                 <img src="https://images.unsplash.com/photo-1507608616759-54f48f0af0ee?w=600&h=200&fit=crop&auto=format" alt="Travel" className="w-full h-full object-cover" />
               </div>
               <HorizontalSection title="" categoryId={travelCategory.id} countryCode={activeCountryCode} />
+            </section>
+          )}
+
+          {/* Shopping section */}
+          {activeTab === "Popular" && shoppingCategory && (
+            <section className="mb-8">
+              <div className="flex items-end justify-between px-4 mb-3">
+                <h2 className="font-bold text-xl text-foreground">Shopping</h2>
+                <button onClick={() => goToBrowse("Shopping", shoppingCategory.id)} className="text-sm text-muted-foreground underline underline-offset-2">See all</button>
+              </div>
+              <div className="mx-4 mb-3 rounded-xl overflow-hidden h-[140px]">
+                <img src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600&h=200&fit=crop&auto=format" alt="Shopping" className="w-full h-full object-cover" />
+              </div>
+              <HorizontalSection title="" categoryId={shoppingCategory.id} countryCode={activeCountryCode} />
+            </section>
+          )}
+
+          {/* Entertainment section */}
+          {activeTab === "Popular" && entertainmentCategory && (
+            <section className="mb-8">
+              <div className="flex items-end justify-between px-4 mb-3">
+                <h2 className="font-bold text-xl text-foreground">Entertainment</h2>
+                <button onClick={() => goToBrowse("Entertainment", entertainmentCategory.id)} className="text-sm text-muted-foreground underline underline-offset-2">See all</button>
+              </div>
+              <div className="mx-4 mb-3 rounded-xl overflow-hidden h-[140px]">
+                <img src="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600&h=200&fit=crop&auto=format" alt="Entertainment" className="w-full h-full object-cover" />
+              </div>
+              <HorizontalSection title="" categoryId={entertainmentCategory.id} countryCode={activeCountryCode} />
             </section>
           )}
 
