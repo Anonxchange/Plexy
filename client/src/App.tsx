@@ -285,9 +285,9 @@ function AppRoutes() {
       <Route path="/dashboard">{() => <ProtectedRoute component={Dashboard} />}</Route>
       <Route path="/wallet">{() => <ProtectedRoute component={Wallet} skeleton={<WalletPageSkeleton />} />}</Route>
       <Route path="/wallet/visa-card">{() => <LazyRoute component={VisaCard} />}</Route>
-      <Route path="/wallet/mobile-topup">{() => <ProtectedRoute component={MobileTopup} />}</Route>
-      <Route path="/utility">{() => <ProtectedRoute component={UtilityBill} />}</Route>
-      <Route path="/wallet/utility-bill">{() => <ProtectedRoute component={UtilityBill} />}</Route>
+      <Route path="/wallet/mobile-topup">{() => <LazyRoute component={MobileTopup} />}</Route>
+      <Route path="/utility">{() => <LazyRoute component={UtilityBill} />}</Route>
+      <Route path="/wallet/utility-bill">{() => <LazyRoute component={UtilityBill} />}</Route>
       <Route path="/wallet/stake">{() => <LazyRoute component={Stake} />}</Route>
       <Route path="/wallet/lightning">{() => <LazyRoute component={Lightning} />}</Route>
       <Route path="/account-settings">{() => <ProtectedRoute component={AccountSettings} skeleton={<PageSkeleton />} />}</Route>
@@ -301,7 +301,7 @@ function AppRoutes() {
       <Route path="/medals">{() => <ProtectedRoute component={MedalsPage} />}</Route>
       <Route path="/analysis">{() => <ProtectedRoute component={Analysis} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/checkout">{() => <LazyRoute component={Checkout} />}</Route>
-      <Route path="/checkout/pay/crypto">{() => <LazyRoute component={CheckoutPayCrypto} />}
+      <Route path="/checkout/pay/crypto">{() => <LazyRoute component={CheckoutPayCrypto} />}</Route>
       <Route path="/orders">{() => { window.location.replace("/account-settings?section=shop-history"); return null; }}</Route>
       {/* ── Admin pages (require session; pages enforce is_admin internally) ── */}
       <Route path="/admin">{() => <ProtectedRoute component={adminPage} skeleton={<PageSkeleton />} />}</Route>
