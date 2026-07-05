@@ -439,21 +439,79 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
 
-      {/* ── Search header ── */}
-      <section className="px-4 pt-6 pb-4 md:px-6 lg:px-8 border-b border-border/60 bg-background sticky top-0 z-20">
-        <div className="max-w-2xl mx-auto">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={view === "operators" ? "Search operators…" : "Search countries…"}
-              className="w-full h-12 pl-11 pr-4 bg-card border border-border rounded-2xl text-foreground placeholder:text-muted-foreground text-base outline-none focus:ring-2 focus:ring-primary/40 transition-all shadow-sm"
-            />
-          </div>
-        </div>
-      </section>
+      {/* ── Hero + Search (hidden on detail/topup view) ── */}
+      {view !== "topup" && (
+        <>
+          <section className="relative bg-primary pt-8 pb-16 px-4">
+            <div className="absolute inset-0 overflow-hidden opacity-10 pointer-events-none">
+              <div className="absolute top-0 left-1/4 w-96 h-96 bg-white rounded-full blur-3xl" />
+              <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-white rounded-full blur-2xl" />
+            </div>
+            <div className="relative max-w-2xl mx-auto text-center">
+              <h1 className="text-3xl md:text-4xl font-bold text-primary-foreground leading-tight mb-3">
+                Mobile Top-Up with Crypto
+              </h1>
+              <p className="text-primary-foreground/70 text-base mb-6">
+                Refill any prepaid phone in 140+ countries using Bitcoin, USDT, and more.
+              </p>
+            </div>
+
+            {/* Floating phone input bar */}
+            <div className="absolute left-4 right-4 -bottom-6 z-20">
+              <div className="max-w-lg mx-auto">
+                <div className="flex items-center bg-card border border-border rounded-2xl shadow-xl overflow-hidden">
+                  <button
+                    className="flex items-center gap-2 px-4 py-4 border-r border-border text-foreground font-semibold text-sm shrink-0 hover:bg-muted transition-colors"
+                    onClick={() => { setSelectedCountry(""); setView("countries"); }}
+                  >
+                    {selectedCountry ? (
+                      <>
+                        <img
+                          src={`https://flagcdn.com/w40/${selectedCountry.toLowerCase()}.png`}
+                          alt=""
+                          className="w-5 h-3.5 object-cover rounded-sm"
+                        />
+                        <span>{selectedCountry}</span>
+                      </>
+                    ) : (
+                      <span className="text-muted-foreground">Country</span>
+                    )}
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                  <input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="Enter phone number"
+                    className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground text-base py-4 px-4 min-w-0"
+                  />
+                  <button
+                    className="bg-red-500 hover:bg-red-600 text-white px-5 py-4 font-bold text-sm shrink-0 transition-all active:scale-95"
+                    onClick={() => { if (selectedCountry) setView("operators"); else setView("countries"); }}
+                  >
+                    <ArrowRight className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="px-4 py-4 md:px-6 lg:px-8 border-b border-border/60 bg-background sticky top-0 z-20 mt-6">
+            <div className="max-w-2xl mx-auto">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={view === "operators" ? "Search operators…" : "Search countries…"}
+                  className="w-full h-12 pl-11 pr-4 bg-card border border-border rounded-2xl text-foreground placeholder:text-muted-foreground text-base outline-none focus:ring-2 focus:ring-primary/40 transition-all shadow-sm"
+                />
+              </div>
+            </div>
+          </section>
+        </>
+      )}
 
       {/* ── Main Content ── */}
       <section className="pt-6 pb-10 px-4 md:px-6 lg:px-8">
