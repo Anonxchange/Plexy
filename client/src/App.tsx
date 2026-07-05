@@ -300,8 +300,8 @@ function AppRoutes() {
       <Route path="/rewards">{() => <LazyRoute component={RewardsPage} />}</Route>
       <Route path="/medals">{() => <ProtectedRoute component={MedalsPage} />}</Route>
       <Route path="/analysis">{() => <ProtectedRoute component={Analysis} skeleton={<ChartPageSkeleton />} />}</Route>
-      <Route path="/checkout">{() => <ProtectedRoute component={Checkout} />}</Route>
-      <Route path="/checkout/pay/crypto">{() => <ProtectedRoute component={CheckoutPayCrypto} />}</Route>
+      <Route path="/checkout">{() => <LazyRoute component={Checkout} />}</Route>
+      <Route path="/checkout/pay/crypto">{() => <LazyRoute component={CheckoutPayCrypto} />}
       <Route path="/orders">{() => { window.location.replace("/account-settings?section=shop-history"); return null; }}</Route>
       {/* ── Admin pages (require session; pages enforce is_admin internally) ── */}
       <Route path="/admin">{() => <ProtectedRoute component={adminPage} skeleton={<PageSkeleton />} />}</Route>
