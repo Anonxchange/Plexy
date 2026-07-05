@@ -490,12 +490,43 @@ export function GiftCards() {
       <div className="hidden lg:block max-w-7xl mx-auto px-6">
 
         {/* Desktop hero strip */}
-        <div className="py-8 flex items-center gap-6 border-b border-border mb-6">
-          <div className="flex-1">
-            <h1 className="text-3xl font-black text-foreground leading-tight mb-1">
-              Turn Crypto Into Everyday Purchases
-            </h1>
-            <p className="text-muted-foreground text-sm">8,000+ gift cards in 180+ countries — pay with any crypto.</p>
+        <div className="py-8 border-b border-border mb-6">
+          <div className="flex items-center gap-6 mb-5">
+            <div className="flex-1">
+              <h1 className="text-4xl font-black leading-[1.08] tracking-tight mb-1">
+                <span className="text-foreground">Turn </span>
+                <span className="text-primary">Crypto</span>
+                <span className="text-foreground"> Into<br />Everyday Purchases</span>
+              </h1>
+              <p className="text-muted-foreground text-sm">8,000+ gift cards in 180+ countries — pay with any crypto.</p>
+              <button
+                onClick={() => document.getElementById("desktop-catalog")?.scrollIntoView({ behavior: "smooth" })}
+                className="mt-3 inline-flex items-center px-5 py-2.5 rounded-full font-bold text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                Take a Look
+              </button>
+            </div>
+            {/* Hero product tiles */}
+            <div className="flex gap-2.5 flex-shrink-0">
+              {/* Shoes */}
+              <div className="w-[80px] h-[80px] rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: "#F0C93A" }}>
+                <img src="/hero/shoes_nobg.png" alt="Shoes" loading="lazy" className="w-[88%] h-[88%] object-contain drop-shadow-md" />
+              </div>
+              {/* Gamepad */}
+              <div className="w-[80px] h-[80px] rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: "#1B4B3A" }}>
+                <img src="/hero/gamepad_nobg.png" alt="Gamepad" loading="lazy" className="w-[88%] h-[88%] object-contain drop-shadow-md" />
+              </div>
+              {/* Groceries */}
+              <div className="w-[80px] h-[80px] rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: "#C0392B" }}>
+                <img src="/hero/groceries_nobg.png" alt="Groceries" loading="lazy" className="w-[88%] h-[88%] object-contain drop-shadow-md" />
+              </div>
+              {/* Crypto grid */}
+              <div className="w-[80px] h-[80px] rounded-2xl bg-card border border-border flex-shrink-0 overflow-hidden grid grid-cols-2 grid-rows-2 place-items-center gap-0 p-2">
+                {["/logos/bitcoin-btc-logo.svg","/logos/ethereum-eth-logo.svg","/logos/solana-sol-logo.svg","/logos/tether-usdt-logo.svg"].map((src,i) => (
+                  <div key={i} style={{width:28,height:28,backgroundImage:`url(${src})`,backgroundSize:"contain",backgroundRepeat:"no-repeat",backgroundPosition:"center"}} />
+                ))}
+              </div>
+            </div>
           </div>
           {/* Desktop search */}
           <div className="flex gap-2 w-[380px]">
@@ -602,16 +633,37 @@ export function GiftCards() {
 
         {/* Hero */}
         <section className="px-4 pt-8 pb-6 bg-background">
-          <h1 className="text-4xl font-black text-foreground leading-[1.1] tracking-tight mb-5">
+          <h1 className="text-4xl font-black text-foreground leading-[1.1] tracking-tight mb-4">
             Turn Crypto Into<br />Everyday Purchases
           </h1>
           <button
             onClick={() => document.getElementById("mobile-catalog")?.scrollIntoView({ behavior: "smooth" })}
-            className="inline-flex items-center px-6 py-3 rounded-full font-bold text-sm mb-6 text-white"
-            style={{ background: "#e8434e" }}
+            className="inline-flex items-center px-6 py-3 rounded-full font-bold text-sm mb-5 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
           >
             Take a Look
           </button>
+
+          {/* Product tiles row — shoes, gamepad, groceries, crypto grid */}
+          <div className="flex gap-2.5 pb-1">
+            {/* Shoes */}
+            <div className="flex-shrink-0 w-[76px] h-[76px] rounded-2xl flex items-center justify-center overflow-hidden" style={{ background: "#F0C93A" }}>
+              <img src="/hero/shoes_nobg.png" alt="Shoes" loading="lazy" className="w-[90%] h-[90%] object-contain drop-shadow-md" />
+            </div>
+            {/* Gamepad */}
+            <div className="flex-shrink-0 w-[76px] h-[76px] rounded-2xl flex items-center justify-center overflow-hidden" style={{ background: "#1B4B3A" }}>
+              <img src="/hero/gamepad_nobg.png" alt="Gamepad" loading="lazy" className="w-[90%] h-[90%] object-contain drop-shadow-md" />
+            </div>
+            {/* Groceries */}
+            <div className="flex-shrink-0 w-[76px] h-[76px] rounded-2xl flex items-center justify-center overflow-hidden" style={{ background: "#C0392B" }}>
+              <img src="/hero/groceries_nobg.png" alt="Groceries" loading="lazy" className="w-[90%] h-[90%] object-contain drop-shadow-md" />
+            </div>
+            {/* Crypto symbols — 2×2 grid of real logos */}
+            <div className="flex-shrink-0 w-[76px] h-[76px] rounded-2xl bg-card border border-border overflow-hidden grid grid-cols-2 grid-rows-2 place-items-center gap-0 p-2">
+              {["/logos/bitcoin-btc-logo.svg","/logos/ethereum-eth-logo.svg","/logos/solana-sol-logo.svg","/logos/tether-usdt-logo.svg"].map((src,i) => (
+                <div key={i} style={{width:26,height:26,backgroundImage:`url(${src})`,backgroundSize:"contain",backgroundRepeat:"no-repeat",backgroundPosition:"center"}} />
+              ))}
+            </div>
+          </div>
         </section>
 
         {/* Category tabs */}
