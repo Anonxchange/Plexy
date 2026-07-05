@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
-import { ChevronDown, ArrowRight, Search, Bot, Smartphone } from '@/lib/icons';
+import { ChevronDown, ArrowRight, Search, Bot, Smartphone, ShoppingCart, Gift, Star, Shield, Mail, UserCheck, ChevronUp } from '@/lib/icons';
 import { PexlyFooter } from "@/components/pexly-footer";
 import { useAirtime } from "@/hooks/user-airtime";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -49,6 +49,257 @@ const ProviderCard = ({
         <h3 className="font-semibold text-foreground truncate text-sm">{name}</h3>
         <p className="text-xs text-muted-foreground mt-0.5">{priceRange}</p>
       </div>
+    </div>
+  );
+};
+
+// ── Crypto payment icons (inline SVG circles matching Bitrefill style) ──
+const CRYPTO_ICONS = [
+  { label: "Bitcoin",   bg: "#F7931A", icon: "₿" },
+  { label: "Lightning", bg: "#F4BC00", icon: "⚡" },
+  { label: "Ethereum",  bg: "#627EEA", icon: "Ξ" },
+  { label: "USDC",      bg: "#2775CA", icon: "$" },
+  { label: "USDT",      bg: "#26A17B", icon: "₮" },
+  { label: "Solana",    bg: "#9945FF", icon: "◎" },
+];
+
+const FEATURES = [
+  { icon: UserCheck, label: "No Account Required" },
+  { icon: Mail,      label: "Instant Delivery" },
+  { icon: Shield,    label: "Private and Safe" },
+];
+
+const TopupDetailView = ({
+  selectedOperator,
+  currentCountry,
+  proxiedOperatorLogo,
+  phoneNumber,
+  setPhoneNumber,
+  amount,
+  setAmount,
+  suggestedAmounts,
+  selectedCountry,
+  onBack,
+}: {
+  selectedOperator: any;
+  currentCountry: any;
+  proxiedOperatorLogo: string | null;
+  phoneNumber: string;
+  setPhoneNumber: (v: string) => void;
+  amount: string;
+  setAmount: (v: string) => void;
+  suggestedAmounts: { amount: number; description: string | null }[];
+  selectedCountry: string;
+  onBack: () => void;
+}) => {
+  const [descOpen, setDescOpen] = useState(true);
+
+  const currency = selectedOperator.senderCurrencyCode || "USD";
+  const minAmt   = selectedOperator.minAmount ?? "";
+  const maxAmt   = selectedOperator.maxAmount ?? "";
+  const rangePlaceholder = minAmt && maxAmt ? `${minAmt} - ${maxAmt}` : "Enter amount";
+
+  const handleCheckout = () => {
+    if (!amount || !phoneNumber) {
+      toast.error("Please enter both phone number and amount");
+      return;
+    }
+    localStorage.setItem("pexly_pending_order", JSON.stringify({
+      type: "topup",
+      title: `${selectedOperator.name} Top-Up`,
+      description: `Mobile top-up — ${selectedOperator.name}`,
+      amount: Number(amount),
+      currency: currency.toLowerCase(),
+      metadata: {
+        service: "mobile-topup",
+        operatorId: selectedOperator.operatorId,
+        recipientPhone: phoneNumber,
+        recipientCountryCode: selectedCountry,
+        operatorName: selectedOperator.name,
+      },
+    }));
+    devLog.info("Redirecting to checkout for topup");
+    const seg = window.location.pathname.split("/")[1];
+    const langBase = seg && seg.length === 2 ? `/${seg}` : "/en";
+    window.open(`${langBase}/checkout`, "_blank");
+  };
+
+  return (
+    <div className="animate-fade-in max-w-xl mx-auto">
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-5">
+        <button onClick={onBack} className="hover:text-foreground underline underline-offset-2 transition-colors">
+          {currentCountry?.name || selectedCountry}
+        </button>
+        <span>›</span>
+        <span className="text-foreground font-medium">Prepaid phones</span>
+      </nav>
+
+      {/* Operator logo */}
+      <div className="flex justify-center mb-5">
+        <div className="w-28 h-28 bg-card rounded-2xl border border-border flex items-center justify-center p-3 shadow-sm overflow-hidden">
+          {proxiedOperatorLogo ? (
+            <img
+              src={proxiedOperatorLogo}
+              alt={selectedOperator.name}
+              className="w-full h-full object-contain"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+                (e.currentTarget.nextSibling as HTMLElement)!.style.display = "flex";
+              }}
+            />
+          ) : null}
+          <div className={`w-full h-full items-center justify-center ${selectedOperator.logoUrls?.[0] ? "hidden" : "flex"}`}>
+            <Smartphone className="w-12 h-12 text-muted-foreground" />
+          </div>
+        </div>
+      </div>
+
+      {/* Title + rating */}
+      <h2 className="text-2xl font-bold text-foreground text-center mb-1">{selectedOperator.name}</h2>
+      <div className="flex items-center justify-center gap-1.5 mb-4">
+        {[1,2,3,4,5].map(i => (
+          <Star key={i} className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+        ))}
+        <span className="text-sm text-muted-foreground ml-1">4.8 (228)</span>
+      </div>
+
+      {/* Description blurb */}
+      <p className="text-sm text-muted-foreground text-center mb-8 leading-relaxed px-2">
+        {selectedOperator.name} is a mobile operator in {currentCountry?.name || selectedCountry}. Top up mobile
+        minutes and data instantly using Bitcoin, USDT, and other cryptocurrencies.
+      </p>
+
+      {/* Amount input — currency-prefixed */}
+      <div className="mb-5">
+        <p className="text-base font-semibold text-foreground mb-2">Enter amount</p>
+        <div className="flex items-stretch border border-border rounded-xl overflow-hidden bg-card focus-within:ring-2 focus-within:ring-primary/40 transition-all">
+          <div className="flex items-center px-4 border-r border-border bg-muted/40">
+            <span className="text-sm font-semibold text-foreground whitespace-nowrap">{currency}</span>
+          </div>
+          <input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder={rangePlaceholder}
+            min={selectedOperator.minAmount}
+            max={selectedOperator.maxAmount}
+            className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground text-base py-4 px-4 outline-none min-w-0"
+          />
+        </div>
+        {minAmt && maxAmt && (
+          <p className="text-xs text-muted-foreground mt-1.5 px-1">
+            Range: {currency} {minAmt} – {maxAmt}
+          </p>
+        )}
+      </div>
+
+      {/* Quick-select amounts */}
+      {suggestedAmounts.length > 0 && (
+        <div className="grid grid-cols-3 gap-2 mb-5">
+          {suggestedAmounts.slice(0, 9).map((item) => (
+            <button
+              key={item.amount}
+              onClick={() => setAmount(item.amount.toString())}
+              className={`py-2.5 px-2 rounded-xl border transition-all flex flex-col items-center gap-0.5 text-sm font-semibold ${
+                amount === item.amount.toString()
+                  ? "border-primary bg-primary text-primary-foreground ring-2 ring-primary/20"
+                  : "border-border bg-card hover:border-primary/50 text-foreground hover:bg-muted/30"
+              }`}
+            >
+              {selectedOperator.senderCurrencySymbol || ""}{item.amount}
+              {item.description && (
+                <span className={`text-[10px] font-normal line-clamp-1 ${amount === item.amount.toString() ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                  {item.description}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Phone number input */}
+      <div className="mb-7">
+        <p className="text-base font-semibold text-foreground mb-2">The phone number to refill</p>
+        <input
+          type="tel"
+          value={phoneNumber}
+          onChange={(e) => setPhoneNumber(e.target.value)}
+          placeholder="e.g. 0802 123 4567"
+          className="w-full border border-border rounded-xl bg-card text-foreground placeholder:text-muted-foreground text-base py-4 px-4 outline-none focus:ring-2 focus:ring-primary/40 transition-all"
+        />
+      </div>
+
+      {/* CTA buttons */}
+      <div className="space-y-3 mb-8">
+        <button
+          disabled={!amount || !phoneNumber}
+          onClick={handleCheckout}
+          className="w-full flex items-center justify-center gap-2.5 py-4 px-6 rounded-full bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground font-bold text-base transition-all active:scale-[0.98] shadow-md"
+        >
+          <ShoppingCart className="w-5 h-5" />
+          Add to cart
+        </button>
+        <button
+          disabled={!amount || !phoneNumber}
+          onClick={handleCheckout}
+          className="w-full flex items-center justify-center gap-2.5 py-4 px-6 rounded-full bg-muted hover:bg-muted/70 disabled:opacity-50 disabled:cursor-not-allowed text-foreground font-semibold text-base transition-all active:scale-[0.98] border border-border"
+        >
+          <Gift className="w-5 h-5" />
+          Purchase as gift
+        </button>
+      </div>
+
+      {/* Crypto payment icons */}
+      <div className="flex items-center gap-2 flex-wrap mb-6">
+        {CRYPTO_ICONS.map((c) => (
+          <div
+            key={c.label}
+            title={c.label}
+            className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-sm select-none"
+            style={{ backgroundColor: c.bg }}
+          >
+            {c.icon}
+          </div>
+        ))}
+      </div>
+
+      <div className="border-t border-border mb-6" />
+
+      {/* Feature list */}
+      <ul className="space-y-4 mb-6">
+        {FEATURES.map(({ icon: Icon, label }) => (
+          <li key={label} className="flex items-center gap-3">
+            <Icon className="w-5 h-5 text-primary shrink-0" />
+            <span className="text-sm font-medium text-foreground">{label}</span>
+          </li>
+        ))}
+      </ul>
+
+      <div className="border-t border-border mb-5" />
+
+      {/* Description accordion */}
+      <div>
+        <button
+          onClick={() => setDescOpen(o => !o)}
+          className="w-full flex items-center justify-between py-2 text-left"
+        >
+          <span className="font-semibold text-foreground">Description</span>
+          {descOpen ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
+        </button>
+        {descOpen && (
+          <div className="mt-3 space-y-3 text-sm text-muted-foreground leading-relaxed pb-2">
+            <p>
+              {selectedOperator.name} mobile allows you to refill mobile minutes and data instantly with cryptocurrency.
+            </p>
+            <p>
+              Buy {selectedOperator.name} top-up with crypto such as Bitcoin, Ethereum, USDT, USDC, Solana, and many more.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="h-10" />
     </div>
   );
 };
@@ -332,158 +583,20 @@ const Index = () => {
             </div>
           )}
 
-          {/* Topup view */}
+          {/* Topup view — Bitrefill-style product detail */}
           {view === "topup" && selectedOperator && (
-            <div className="animate-fade-in max-w-2xl mx-auto space-y-4">
-
-              {/* Back */}
-              <Button
-                variant="ghost"
-                onClick={() => setView("operators")}
-                className="gap-2 text-muted-foreground hover:text-foreground -ml-2"
-              >
-                <ArrowRight className="w-4 h-4 rotate-180" />
-                Back to operators
-              </Button>
-
-              {/* Operator header */}
-              <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
-                <div className="flex items-center gap-5">
-                  <div className="w-16 h-16 bg-background rounded-2xl flex items-center justify-center p-2.5 border border-border shrink-0">
-                    {proxiedOperatorLogo ? (
-                      <img
-                        src={proxiedOperatorLogo}
-                        alt={selectedOperator.name}
-                        className="w-full h-full object-contain"
-                        onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).style.display = "none";
-                          (e.currentTarget.nextSibling as HTMLElement).style.display = "flex";
-                        }}
-                      />
-                    ) : null}
-                    <div className={`w-full h-full items-center justify-center ${selectedOperator.logoUrls?.[0] ? "hidden" : "flex"}`}>
-                      <Smartphone className="w-8 h-8 text-muted-foreground" />
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h2 className="text-xl font-bold text-foreground truncate">{selectedOperator.name}</h2>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                      {currentCountry?.name} · {selectedOperator.senderCurrencyCode}
-                    </p>
-                    <span className="inline-block mt-2 bg-primary/10 text-primary text-xs font-bold px-3 py-1 rounded-full">
-                      4% discount
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Recipient phone */}
-              <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 bg-primary/10 rounded-xl flex items-center justify-center">
-                    <Smartphone className="w-4 h-4 text-primary" />
-                  </div>
-                  <h3 className="font-bold text-foreground">Recipient Phone</h3>
-                </div>
-                <Input
-                  type="tel"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="Enter phone number"
-                  className="h-14 text-lg px-5 bg-background border-border focus-visible:ring-primary rounded-2xl"
-                />
-                <p className="text-xs text-muted-foreground mt-2 px-1">Enter number without country code prefix</p>
-              </div>
-
-              {/* Amount */}
-              <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 bg-primary/10 rounded-xl flex items-center justify-center">
-                    <Bot className="w-4 h-4 text-primary" />
-                  </div>
-                  <h3 className="font-bold text-foreground">
-                    Select Amount
-                    <span className="ml-1.5 text-muted-foreground font-normal text-sm">({selectedOperator.senderCurrencyCode})</span>
-                  </h3>
-                </div>
-
-                <Input
-                  type="number"
-                  placeholder="Enter amount"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  min={selectedOperator.minAmount}
-                  max={selectedOperator.maxAmount}
-                  className="h-14 text-lg px-5 bg-background border-border focus-visible:ring-primary rounded-2xl mb-2"
-                />
-                {(selectedOperator.minAmount || selectedOperator.maxAmount) && (
-                  <p className="text-xs text-muted-foreground px-1 mb-4">
-                    Range: {selectedOperator.senderCurrencyCode} {selectedOperator.minAmount} – {selectedOperator.maxAmount}
-                  </p>
-                )}
-
-                {suggestedAmounts.length > 0 && (
-                  <div className="grid grid-cols-3 gap-2.5">
-                    {suggestedAmounts.map((item: any) => (
-                      <button
-                        key={item.amount}
-                        onClick={() => setAmount(item.amount.toString())}
-                        className={`py-3 px-2 rounded-2xl border transition-all flex flex-col items-center justify-center gap-0.5 ${
-                          amount === item.amount.toString()
-                            ? "border-primary bg-primary text-primary-foreground ring-2 ring-primary/30"
-                            : "border-border bg-background hover:border-primary/50 text-foreground hover:bg-muted/50"
-                        }`}
-                      >
-                        <span className="text-base font-bold">
-                          {selectedOperator.senderCurrencySymbol || "$"}{item.amount}
-                        </span>
-                        {item.description && (
-                          <span className={`text-[10px] line-clamp-2 text-center font-medium ${
-                            amount === item.amount.toString() ? "text-primary-foreground/80" : "text-muted-foreground"
-                          }`}>
-                            {item.description}
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Proceed to Checkout */}
-              <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
-                <Button
-                  className="w-full h-13 text-base font-bold rounded-2xl gap-2"
-                  disabled={!amount || !phoneNumber}
-                  onClick={() => {
-                    if (!amount || !phoneNumber) {
-                      toast.error("Please enter both phone number and amount");
-                      return;
-                    }
-                    localStorage.setItem("pexly_pending_order", JSON.stringify({
-                      type: "topup",
-                      title: `${selectedOperator.name} Top-Up`,
-                      description: `Mobile top-up — ${selectedOperator.name}`,
-                      amount: Number(amount),
-                      currency: selectedOperator.senderCurrencyCode?.toLowerCase() || "usd",
-                      metadata: {
-                        service: "mobile-topup",
-                        operatorId: selectedOperator.operatorId,
-                        recipientPhone: phoneNumber,
-                        recipientCountryCode: selectedCountry,
-                        operatorName: selectedOperator.name,
-                      },
-                    }));
-                    devLog.info("Redirecting to checkout for topup");
-                    const seg = window.location.pathname.split("/")[1];
-                    const langBase = seg && seg.length === 2 ? `/${seg}` : "/en";
-                    window.open(`${langBase}/checkout`, "_blank");
-                  }}
-                >
-                  Proceed to Checkout →
-                </Button>
-              </div>
-            </div>
+            <TopupDetailView
+              selectedOperator={selectedOperator}
+              currentCountry={currentCountry}
+              proxiedOperatorLogo={proxiedOperatorLogo}
+              phoneNumber={phoneNumber}
+              setPhoneNumber={setPhoneNumber}
+              amount={amount}
+              setAmount={setAmount}
+              suggestedAmounts={suggestedAmounts}
+              selectedCountry={selectedCountry}
+              onBack={() => setView("operators")}
+            />
           )}
         </div>
       </section>

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PexlyIcon } from "@/components/pexly-icon";
 import {
   Lock,
@@ -22,17 +21,110 @@ import {
   Mail,
   Gift,
   TicketPercent,
-  CheckCircle2,
-  ChevronRight,
-  HeartHandshake,
   Smartphone,
 } from '@/lib/icons';
 import { getExchangeRates } from "@/lib/crypto-prices";
 import NowPaymentsCheckout from "@/components/nowpayments-checkout";
-import { usePayPal } from "@/hooks/usePaypal";
 
 type DeliveryTarget = "self" | "gift";
 type PaymentMethod = "card" | "paypal" | "crypto";
+type CheckoutStep = "contact" | "payment" | "paying";
+
+// ── Payment method catalogue — swap these 8 when the user provides them ──
+// `id` must match a NowPayments currency code (e.g. "btc", "eth") for crypto,
+// or "paypal" / "card" for those flows.
+// `networks` are the small chain badges shown on the right of each row.
+type PaymentMethodDef = {
+  id: string;
+  label: string;
+  bg: string;           // icon circle background color
+  symbol: string;       // single glyph shown inside the circle
+  networks?: { label: string; bg: string; text: string }[];
+  fee?: string;         // e.g. "+$1.00" shown next to label
+  kind: "crypto" | "paypal" | "card" | "gift";
+};
+
+const PAYMENT_METHODS: PaymentMethodDef[] = [
+  {
+    id: "btc",
+    label: "BTC",
+    bg: "#F7931A",
+    symbol: "₿",
+    kind: "crypto",
+    networks: [
+      { label: "BTC",       bg: "#F7931A", text: "₿" },
+      { label: "Lightning", bg: "#F4BC00", text: "⚡" },
+      { label: "Liquid",    bg: "#1A478E", text: "L" },
+    ],
+  },
+  {
+    id: "eth",
+    label: "ETH",
+    bg: "#627EEA",
+    symbol: "Ξ",
+    kind: "crypto",
+    networks: [
+      { label: "ETH",    bg: "#627EEA", text: "Ξ" },
+      { label: "Arbitrum", bg: "#28A0F0", text: "A" },
+    ],
+  },
+  {
+    id: "usdcmatic",
+    label: "USDC",
+    bg: "#2775CA",
+    symbol: "$",
+    kind: "crypto",
+    networks: [
+      { label: "Polygon", bg: "#8247E5", text: "P" },
+      { label: "ETH",     bg: "#627EEA", text: "Ξ" },
+      { label: "Solana",  bg: "#9945FF", text: "◎" },
+      { label: "AVAX",    bg: "#E84142", text: "A" },
+    ],
+  },
+  {
+    id: "usdtmatic",
+    label: "USDT",
+    bg: "#26A17B",
+    symbol: "₮",
+    kind: "crypto",
+    networks: [
+      { label: "Polygon", bg: "#8247E5", text: "P" },
+      { label: "TRX",     bg: "#EB0029", text: "T" },
+      { label: "SOL",     bg: "#9945FF", text: "◎" },
+      { label: "BNB",     bg: "#F3BA2F", text: "B" },
+    ],
+  },
+  {
+    id: "sol",
+    label: "SOL",
+    bg: "#9945FF",
+    symbol: "◎",
+    kind: "crypto",
+    networks: [
+      { label: "Solana", bg: "#9945FF", text: "◎" },
+    ],
+  },
+  {
+    id: "ltc",
+    label: "LTC",
+    bg: "#BFBBBB",
+    symbol: "Ł",
+    kind: "crypto",
+    networks: [
+      { label: "LTC", bg: "#BFBBBB", text: "Ł" },
+    ],
+  },
+  {
+    id: "ton",
+    label: "TON",
+    bg: "#0088CC",
+    symbol: "▼",
+    kind: "crypto",
+    networks: [
+      { label: "TON", bg: "#0088CC", text: "T" },
+    ],
+  },
+];
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -73,7 +165,11 @@ export function Checkout() {
   const [deliveryTarget, setDeliveryTarget] = useState<DeliveryTarget>("self");
   const [activePayment, setActivePayment] = useState<PaymentMethod>("card");
   const [fulfilling, setFulfilling] = useState(false);
-  const [showOrderSummary, setShowOrderSummary] = useState(false);
+  const [showOrderSummary, setShowOrderSummary] = useState(true);
+  const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("contact");
+  const [sendAsGift, setSendAsGift] = useState(false);
+  const [promoToggle, setPromoToggle] = useState(false);
+  const [selectedMethodId, setSelectedMethodId] = useState<string>(PAYMENT_METHODS[0].id);
   const [rates, setRates] = useState<Record<string, number>>({ USD: 1 });
   const [pendingOrder] = useState<PendingOrder | null>(() => {
     try {
@@ -104,32 +200,7 @@ export function Checkout() {
     return () => { cancelled = true; };
   }, []);
 
-  useEffect(() => {
-    if (!loading && !user) {
-      setLocation("/signin?redirect=/checkout");
-    }
-  }, [user, loading, setLocation]);
-
   const buyerEmail = user?.email || "";
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-muted-foreground">Loading checkout…</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground text-sm">Redirecting to sign in…</p>
-      </div>
-    );
-  }
 
   if ((!items || items.length === 0) && !pendingOrder) {
     return (
@@ -153,18 +224,16 @@ export function Checkout() {
   if (pendingOrder) {
     const processingFee = pendingOrder.type === "giftcard" ? 0.55 : 0;
     const pendingTotal = pendingOrder.amount + processingFee;
-    const deliveryEmail = pendingGiftDelivery === "gift"
-      ? pendingGiftRecipientEmail
-      : (pendingDeliveryEmail || buyerEmail);
     const pendingAmountUsd = pendingOrder.currency.toUpperCase() === "USD"
       ? pendingOrder.amount
       : rates[pendingOrder.currency.toUpperCase()]
         ? pendingOrder.amount / rates[pendingOrder.currency.toUpperCase()]
         : null;
-    // For gift cards, always charge in USD (converted amount + fee)
     const pendingTotalUsd = pendingOrder.type === "giftcard"
       ? (pendingAmountUsd !== null ? pendingAmountUsd : pendingOrder.amount) + processingFee
       : pendingTotal;
+
+    const contactEmail = pendingDeliveryEmail || buyerEmail;
 
     const handleOrderSuccess = () => {
       localStorage.removeItem("pexly_pending_order");
@@ -193,363 +262,503 @@ export function Checkout() {
       return { productType: "total" as const, amount: pendingTotalUsd, currency: "USD" };
     };
 
+    // Display label for amount
+    const displayCurrency = pendingOrder.currency.toUpperCase();
+    const displayAmount = pendingOrder.amount;
+    const displayTotal = pendingAmountUsd !== null
+      ? (pendingAmountUsd + processingFee)
+      : pendingTotal;
+
+    // Sub-line shown under product name in summary (phone / account / qty)
+    const orderSubline = pendingOrder.metadata?.recipientPhone
+      || pendingOrder.metadata?.accountNumber
+      || (pendingOrder.metadata?.quantity > 1 ? `Qty: ${pendingOrder.metadata.quantity}` : "")
+      || "";
+
     return (
       <BrandShell>
-        {/* Mobile order summary toggle — gift card single-item flow */}
-        {pendingOrder.type === "giftcard" && (
-          <div className="lg:hidden border-b border-border/60 bg-secondary/30">
-            <button
-              onClick={() => setShowOrderSummary((v) => !v)}
-              className="w-full flex items-center justify-between px-4 py-3"
-            >
-              <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-                <ShoppingBag className="h-4 w-4" />
-                {showOrderSummary ? "Hide" : "Show"} order summary
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold">USD ${pendingTotalUsd.toFixed(2)}</span>
-                <ChevronDown className={`h-4 w-4 transition-transform ${showOrderSummary ? "rotate-180" : ""}`} />
-              </div>
-            </button>
-            {showOrderSummary && (
-              <div className="px-4 pb-4 space-y-3">
-                <div className="flex gap-3 items-center">
-                  <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    {pendingOrder.image
-                      ? <img src={pendingOrder.image} alt={pendingOrder.title} className="w-full h-full object-contain p-1.5" />
-                      : <Zap className="h-5 w-5 text-primary" />
-                    }
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">{pendingOrder.title}</p>
-                    <p className="text-xs text-muted-foreground">{pendingOrder.currency.toUpperCase()} {pendingOrder.amount.toFixed(2)}</p>
-                  </div>
-                  <p className="text-sm font-bold flex-shrink-0">
-                    USD {(pendingAmountUsd ?? pendingOrder.amount).toFixed(2)}
-                  </p>
+        <main className="max-w-md mx-auto px-4 py-8 space-y-5">
+
+          {/* ── Step: Contact ── */}
+          {checkoutStep === "contact" && (
+            <>
+              <h1 className="text-2xl font-extrabold text-foreground">
+                Where should we send your order?
+              </h1>
+
+              {/* Email block */}
+              <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
+                <div>
+                  <p className="text-sm font-semibold text-foreground mb-2">Email</p>
+                  <Input
+                    type="email"
+                    value={pendingDeliveryEmail || buyerEmail}
+                    onChange={(e) => setPendingDeliveryEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="h-12 text-base bg-background border-border rounded-xl"
+                  />
                 </div>
-                <Separator />
-                <div className="space-y-1.5 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span>USD {(pendingAmountUsd ?? pendingOrder.amount).toFixed(2)}</span>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                    <Mail className="h-4 w-4 text-primary shrink-0" />
+                    <span>We'll send your order and receipt here</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Processing fee</span>
-                    <span>USD {processingFee.toFixed(2)}</span>
+                  <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                    <ShieldCheck className="h-4 w-4 text-primary shrink-0" />
+                    <span>No account needed</span>
                   </div>
                 </div>
-                <Separator />
-                <div className="flex justify-between font-bold text-sm">
-                  <span>Total (USD)</span>
-                  <span>USD {pendingTotalUsd.toFixed(2)}</span>
-                </div>
               </div>
-            )}
-          </div>
-        )}
-        <main className="max-w-6xl mx-auto px-4 py-8">
-          <div className="mb-8">
-            <p className="text-xs font-semibold text-primary tracking-widest uppercase">Secure checkout</p>
-            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mt-1">Complete your purchase</h1>
-            <p className="text-sm text-muted-foreground mt-1.5 flex items-center gap-1.5">
-              <Zap className="h-3.5 w-3.5 text-primary" />
-              Your order is processed the moment payment confirms.
-            </p>
-          </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-12">
-            <div className="space-y-8">
+              {/* Send as gift toggle */}
+              <div className="rounded-2xl border border-border bg-card px-5 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Gift className="h-5 w-5 text-foreground" />
+                  <span className="text-sm font-medium text-foreground">Send as gift</span>
+                </div>
+                <button
+                  onClick={() => setSendAsGift(v => !v)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                    sendAsGift ? "bg-primary" : "bg-border"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                      sendAsGift ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
 
-              {/* Step 1 — order-type-specific details */}
-              {pendingOrder.type === "giftcard" && (
-                <section>
-                  <SectionTitle step={1} title="Delivery" sub="Send the gift card to yourself or someone special." />
-                  <div className="space-y-4 rounded-2xl border border-border/60 bg-card p-5">
-                    {/* Self / Gift toggle */}
-                    <div className="grid grid-cols-2 gap-3">
-                      {(["self", "gift"] as const).map((mode) => {
-                        const active = pendingGiftDelivery === mode;
-                        return (
-                          <button
-                            key={mode}
-                            type="button"
-                            onClick={() => setPendingGiftDelivery(mode)}
-                            className={`flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm font-semibold transition-all ${
-                              active
-                                ? "border-primary bg-primary/10 text-primary"
-                                : "border-border bg-background text-muted-foreground hover:border-primary/40"
-                            }`}
-                          >
-                            {mode === "self" ? (
-                              <Mail className="h-4 w-4 flex-shrink-0" />
-                            ) : (
-                              <Gift className="h-4 w-4 flex-shrink-0" />
-                            )}
-                            {mode === "self" ? "Send to me" : "Send as a gift"}
-                          </button>
-                        );
-                      })}
-                    </div>
+              {/* Gift recipient fields */}
+              {sendAsGift && (
+                <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground mb-1.5">Recipient email</p>
+                    <Input
+                      type="email"
+                      value={pendingGiftRecipientEmail}
+                      onChange={(e) => setPendingGiftRecipientEmail(e.target.value)}
+                      placeholder="friend@example.com"
+                      className="h-11 bg-background border-border rounded-xl"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground mb-1.5">Recipient name (optional)</p>
+                    <Input
+                      value={pendingGiftRecipientName}
+                      onChange={(e) => setPendingGiftRecipientName(e.target.value)}
+                      placeholder="Their name"
+                      className="h-11 bg-background border-border rounded-xl"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground mb-1.5">Personal message (optional)</p>
+                    <Textarea
+                      value={pendingGiftMessageText}
+                      onChange={(e) => setPendingGiftMessageText(e.target.value)}
+                      placeholder="Add a note…"
+                      className="resize-none bg-background border-border rounded-xl"
+                      rows={3}
+                      maxLength={250}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1 text-right">{pendingGiftMessageText.length}/250</p>
+                  </div>
+                </div>
+              )}
 
-                    {/* Self delivery */}
-                    {pendingGiftDelivery === "self" && (
-                      <div>
-                        <FieldLabel>Your email</FieldLabel>
-                        <Input
-                          type="email"
-                          value={pendingDeliveryEmail || buyerEmail}
-                          onChange={(e) => setPendingDeliveryEmail(e.target.value)}
-                          placeholder="you@example.com"
-                          className="h-11"
-                        />
-                        <p className="text-xs text-muted-foreground mt-1.5">
-                          Signed in as <strong className="text-foreground">{buyerEmail}</strong>
+              {/* Continue CTA */}
+              <button
+                onClick={() => setCheckoutStep("payment")}
+                disabled={!contactEmail}
+                className="w-full py-4 rounded-full bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground font-bold text-base transition-all active:scale-[0.98] shadow-md"
+              >
+                Continue
+              </button>
+
+              <p className="text-xs text-center text-muted-foreground leading-relaxed">
+                By clicking 'Continue', you agree to our{" "}
+                <a href="/terms" className="underline hover:text-foreground">Terms &amp; Conditions</a>
+                {" "}and{" "}
+                <a href="/privacy" className="underline hover:text-foreground">Privacy Policy</a>
+              </p>
+
+              {/* Summary accordion */}
+              <div className="rounded-2xl border border-border bg-card overflow-hidden">
+                <button
+                  onClick={() => setShowOrderSummary(v => !v)}
+                  className="w-full flex items-center justify-between px-5 py-4"
+                >
+                  <span className="font-semibold text-foreground">Summary</span>
+                  {showOrderSummary
+                    ? <ChevronDown className="h-5 w-5 text-muted-foreground rotate-180 transition-transform" />
+                    : <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform" />
+                  }
+                </button>
+
+                {showOrderSummary && (
+                  <div className="px-5 pb-5 space-y-4">
+                    {/* Item row */}
+                    <div className="flex items-center gap-3">
+                      <div className="h-14 w-14 rounded-xl bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                        {pendingOrder.image
+                          ? <img src={pendingOrder.image} alt={pendingOrder.title} className="w-full h-full object-contain p-1.5" />
+                          : <Zap className="h-6 w-6 text-primary" />
+                        }
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-foreground leading-snug">{pendingOrder.title}</p>
+                        {orderSubline ? (
+                          <p className="text-xs text-muted-foreground mt-0.5">{orderSubline}</p>
+                        ) : null}
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {displayCurrency} {displayAmount.toFixed(2)} value
                         </p>
                       </div>
-                    )}
-
-                    {/* Gift delivery */}
-                    {pendingGiftDelivery === "gift" && (
-                      <div className="space-y-3">
-                        <div>
-                          <FieldLabel>Recipient email *</FieldLabel>
-                          <Input
-                            type="email"
-                            value={pendingGiftRecipientEmail}
-                            onChange={(e) => setPendingGiftRecipientEmail(e.target.value)}
-                            placeholder="friend@example.com"
-                            className="h-11"
-                          />
-                        </div>
-                        <div>
-                          <FieldLabel>Recipient name (optional)</FieldLabel>
-                          <Input
-                            value={pendingGiftRecipientName}
-                            onChange={(e) => setPendingGiftRecipientName(e.target.value)}
-                            placeholder="Their name"
-                            className="h-11"
-                          />
-                        </div>
-                        <div>
-                          <FieldLabel>Personal message (optional)</FieldLabel>
-                          <Textarea
-                            value={pendingGiftMessageText}
-                            onChange={(e) => setPendingGiftMessageText(e.target.value)}
-                            placeholder="Add a short note to include with the gift…"
-                            className="resize-none"
-                            rows={3}
-                            maxLength={250}
-                          />
-                          <p className="text-xs text-muted-foreground mt-1 text-right">{pendingGiftMessageText.length}/250</p>
-                        </div>
+                      {/* Quantity pill — fixed at 1 for pending orders, not hardcoded */}
+                      <div className="flex items-center gap-1.5 border border-border rounded-full px-3 py-1 text-sm font-medium text-foreground">
+                        <span>1</span>
+                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                       </div>
-                    )}
-
-                  </div>
-                </section>
-              )}
-
-              {pendingOrder.type === "topup" && (
-                <section>
-                  <SectionTitle step={1} title="Confirm top-up details" sub="We will refill this number immediately after payment." />
-                  <div className="rounded-2xl border border-border/60 bg-card p-5">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <Smartphone className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-base font-bold">{pendingOrder.metadata?.recipientPhone}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{pendingOrder.metadata?.operatorName}</p>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              )}
-
-              {pendingOrder.type === "utility" && (
-                <section>
-                  <SectionTitle step={1} title="Confirm account details" sub="We will pay this bill immediately after payment." />
-                  <div className="rounded-2xl border border-border/60 bg-card p-5">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <Zap className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-base font-bold">{pendingOrder.metadata?.accountNumber}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{pendingOrder.metadata?.providerName}</p>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              )}
-
-              {/* Step 2 — Payment tabs */}
-              <section>
-                <SectionTitle step={2} title="Payment" sub="All transactions are encrypted end-to-end." />
-                <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">
-                  <Tabs defaultValue="crypto" className="w-full">
-                    <TabsList className="w-full h-auto p-0 bg-transparent border-b border-border rounded-none grid grid-cols-3">
-                      <TabsTrigger value="crypto" className="flex flex-col gap-1.5 py-3 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
-                        <div className="flex gap-1">
-                          <span className="text-base">₿</span>
-                        </div>
-                        <span className="text-[11px] font-bold">Crypto</span>
-                      </TabsTrigger>
-                      <TabsTrigger value="paypal" className="flex flex-col gap-1.5 py-3 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" className="h-4" alt="PayPal" />
-                        <span className="text-[11px] font-bold">PayPal</span>
-                      </TabsTrigger>
-                      <TabsTrigger value="card" className="flex flex-col gap-1.5 py-3 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
-                        <div className="flex gap-1">
-                          <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" className="h-3" alt="Visa" />
-                          <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" className="h-4" alt="Mastercard" />
-                        </div>
-                        <span className="text-[11px] font-bold">Card</span>
-                      </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="crypto" className="p-6 focus-visible:outline-none focus-visible:ring-0">
-                      <NowPaymentsCheckout
-                        amount={pendingOrder.type === "giftcard" ? pendingTotalUsd : pendingTotal}
-                        currency={pendingOrder.type === "giftcard" ? "usd" : pendingOrder.currency}
-                        description={pendingOrder.description}
-                        metadata={pendingOrder.metadata}
-                        onPaymentSuccess={handleOrderSuccess}
-                      />
-                    </TabsContent>
-
-                    <TabsContent value="paypal" className="p-6 text-center space-y-4 focus-visible:outline-none focus-visible:ring-0">
-                      <p className="text-sm text-muted-foreground">You will be redirected to PayPal to complete your payment securely.</p>
-                      <Button
-                        className="w-full h-12 bg-[#0070BA] text-white hover:bg-[#005ea6] font-bold rounded-2xl gap-2"
-                        disabled={paypalLoading}
-                        onClick={async () => {
-                          const result = await paypalCheckout(getPayPalPayload());
-                          if (result) handleOrderSuccess();
+                      <button
+                        className="text-muted-foreground hover:text-destructive transition-colors"
+                        onClick={() => {
+                          localStorage.removeItem("pexly_pending_order");
+                          setLocation("/");
                         }}
                       >
-                        {paypalLoading
-                          ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Processing...</>
-                          : <><img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" className="h-4" alt="" /> Continue to PayPal</>
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    {/* Per-item total */}
+                    <div className="flex justify-end">
+                      <span className="text-sm font-semibold text-foreground">
+                        {displayCurrency !== "USD" && pendingAmountUsd !== null
+                          ? `${pendingAmountUsd.toFixed(2)}`
+                          : `${displayAmount.toFixed(2)}`
                         }
-                      </Button>
-                    </TabsContent>
+                      </span>
+                    </div>
 
-                    <TabsContent value="card" className="p-6 space-y-4 focus-visible:outline-none focus-visible:ring-0">
-                      <div className="space-y-3">
-                        <div className="space-y-1.5">
-                          <FieldLabel>Card number</FieldLabel>
-                          <Input placeholder="1234 5678 9012 3456" className="h-12 bg-background border-border rounded-2xl" />
+                    <Separator />
+
+                    {/* Promo code toggle */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <TicketPercent className="h-4 w-4 text-foreground" />
+                        <span className="text-sm font-medium text-foreground">Enter a Promo Code</span>
+                      </div>
+                      <button
+                        onClick={() => setPromoToggle(v => !v)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                          promoToggle ? "bg-primary" : "bg-border"
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                            promoToggle ? "translate-x-6" : "translate-x-1"
+                          }`}
+                        />
+                      </button>
+                    </div>
+
+                    {promoToggle && (
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Promo code"
+                          value={promoCode}
+                          onChange={(e) => { setPromoCode(e.target.value); setPromoApplied(false); }}
+                          className="h-10 bg-background border-border rounded-xl"
+                        />
+                        <Button
+                          variant="outline"
+                          className="h-10 shrink-0"
+                          disabled={!promoCode.trim() || promoApplied}
+                          onClick={() => setPromoApplied(true)}
+                        >
+                          {promoApplied ? "Applied ✓" : "Apply"}
+                        </Button>
+                      </div>
+                    )}
+
+                    <Separator />
+
+                    {/* Total */}
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-base font-bold text-foreground">Total</span>
+                      <span className="text-xl font-extrabold text-foreground">
+                        ${displayTotal.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* ── Step: Payment method selection ── */}
+          {checkoutStep === "payment" && (
+            <>
+              {/* Sticky total + continue row */}
+              <div className="flex items-center justify-between bg-card border border-border rounded-2xl px-5 py-4">
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Total</p>
+                  <p className="text-xl font-extrabold text-foreground">${displayTotal.toFixed(2)}</p>
+                </div>
+                <button
+                  onClick={() => setCheckoutStep("paying")}
+                  className="px-8 py-3 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-sm transition-all active:scale-[0.98]"
+                >
+                  Continue
+                </button>
+              </div>
+
+              {/* Method selection */}
+              <div>
+                <h2 className="text-2xl font-extrabold text-foreground mb-1">Payment method</h2>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4">
+                  Choose a payment method
+                </p>
+
+                <div className="space-y-2">
+                  {PAYMENT_METHODS.map((method) => {
+                    const selected = selectedMethodId === method.id;
+                    return (
+                      <button
+                        key={method.id}
+                        onClick={() => setSelectedMethodId(method.id)}
+                        className={`w-full flex items-center gap-4 rounded-2xl border px-5 py-4 transition-all text-left ${
+                          selected
+                            ? "border-primary bg-primary/5"
+                            : "border-border bg-card hover:border-border/80 hover:bg-muted/30"
+                        }`}
+                      >
+                        {/* Radio indicator */}
+                        <div className={`h-5 w-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors ${
+                          selected ? "border-primary" : "border-muted-foreground/40"
+                        }`}>
+                          {selected && <div className="h-2.5 w-2.5 rounded-full bg-primary" />}
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1.5">
-                            <FieldLabel>Expiry</FieldLabel>
-                            <Input placeholder="MM / YY" className="h-12 bg-background border-border rounded-2xl" />
+
+                        {/* Coin icon */}
+                        <div
+                          className="h-9 w-9 rounded-full shrink-0 flex items-center justify-center text-white font-bold text-sm shadow-sm"
+                          style={{ backgroundColor: method.bg }}
+                        >
+                          {method.symbol}
+                        </div>
+
+                        {/* Label + fee */}
+                        <div className="flex-1 min-w-0">
+                          <span className="text-base font-semibold text-foreground">{method.label}</span>
+                          {method.fee && (
+                            <span className="ml-2 text-xs text-muted-foreground font-medium">{method.fee}</span>
+                          )}
+                        </div>
+
+                        {/* Network badges */}
+                        {method.networks && method.networks.length > 0 && (
+                          <div className="flex items-center -space-x-1.5 shrink-0">
+                            {method.networks.map((net) => (
+                              <div
+                                key={net.label}
+                                title={net.label}
+                                className="h-6 w-6 rounded-full border-2 border-card flex items-center justify-center text-white text-[9px] font-bold shadow-sm"
+                                style={{ backgroundColor: net.bg }}
+                              >
+                                {net.text}
+                              </div>
+                            ))}
                           </div>
-                          <div className="space-y-1.5">
-                            <FieldLabel>CVV</FieldLabel>
-                            <Input placeholder="•••" className="h-12 bg-background border-border rounded-2xl" />
-                          </div>
-                        </div>
-                        <div className="space-y-1.5">
-                          <FieldLabel>Name on card</FieldLabel>
-                          <Input placeholder="Full name" className="h-12 bg-background border-border rounded-2xl" />
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-center gap-2 text-muted-foreground py-1">
-                        <Lock className="h-3.5 w-3.5" />
-                        <span className="text-xs">256-bit encrypted payment</span>
-                      </div>
-                      <Button className="w-full h-12 font-bold rounded-2xl gap-2">
-                        <Lock className="h-4 w-4" />
-                        Pay USD {(pendingOrder.type === "giftcard" ? pendingTotalUsd : pendingTotal).toFixed(2)}
-                      </Button>
-                    </TabsContent>
-                  </Tabs>
-                </div>
-              </section>
-
-              <p className="text-center text-xs text-muted-foreground pb-8">
-                By placing your order you agree to our{" "}
-                <a href="/terms" className="underline hover:text-foreground">Terms of service</a>{" "}
-                and{" "}
-                <a href="/privacy" className="underline hover:text-foreground">Privacy policy</a>
-              </p>
-            </div>
-
-            {/* Order summary sidebar */}
-            <aside className="hidden lg:block">
-              <div className="sticky top-20 rounded-2xl border border-border/60 bg-card p-6 space-y-5">
-                <h3 className="font-semibold">Order summary</h3>
-                <Separator />
-                <div className="flex gap-3 items-start">
-                  <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    {pendingOrder.image
-                      ? <img src={pendingOrder.image} alt={pendingOrder.title} className="w-full h-full object-contain p-1.5" />
-                      : <Zap className="h-5 w-5 text-primary" />
-                    }
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold">{pendingOrder.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {pendingOrder.metadata?.recipientPhone
-                        || pendingOrder.metadata?.accountNumber
-                        || (pendingOrder.metadata?.quantity > 1 ? `Qty: ${pendingOrder.metadata.quantity}` : "")
-                        || ""}
-                    </p>
-                  </div>
-                  <p className="text-sm font-bold flex-shrink-0">
-                    {pendingOrder.currency.toUpperCase()} {pendingOrder.amount.toFixed(2)}
-                  </p>
-                </div>
-                <Separator />
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span>{pendingOrder.currency.toUpperCase()} {pendingOrder.amount.toFixed(2)}</span>
-                  </div>
-                  {pendingAmountUsd !== null && pendingOrder.currency.toUpperCase() !== "USD" && (
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">≈ in USD</span>
-                      <span className="font-medium text-muted-foreground">USD {pendingAmountUsd.toFixed(2)}</span>
-                    </div>
-                  )}
-                  {processingFee > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Processing fee</span>
-                      <span>USD {processingFee.toFixed(2)}</span>
-                    </div>
-                  )}
-                </div>
-                <Separator />
-                <div className="flex items-baseline justify-between">
-                  <span className="text-base font-semibold">Total (USD)</span>
-                  <span className="text-2xl font-extrabold">
-                    USD {pendingAmountUsd !== null
-                      ? (pendingAmountUsd + processingFee).toFixed(2)
-                      : pendingTotal.toFixed(2)}
-                  </span>
-                </div>
-
-                {/* Trust badges */}
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  {[
-                    { icon: Zap, label: "Instant delivery", sub: "On payment confirm" },
-                    { icon: ShieldCheck, label: "Secure payment", sub: "256-bit SSL" },
-                  ].map(({ icon: Icon, label, sub }) => (
-                    <div key={label} className="rounded-xl border border-border/60 bg-card/50 p-3 flex items-center gap-2.5">
-                      <Icon className="h-4 w-4 text-primary flex-shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold leading-tight">{label}</p>
-                        <p className="text-xs text-muted-foreground leading-tight">{sub}</p>
-                      </div>
-                    </div>
-                  ))}
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-            </aside>
-          </div>
+
+              {/* Summary accordion */}
+              <div className="rounded-2xl border border-border bg-card overflow-hidden">
+                <button
+                  onClick={() => setShowOrderSummary(v => !v)}
+                  className="w-full flex items-center justify-between px-5 py-4"
+                >
+                  <span className="font-semibold text-foreground">Summary</span>
+                  <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${showOrderSummary ? "rotate-180" : ""}`} />
+                </button>
+
+                {showOrderSummary && (
+                  <div className="px-5 pb-5 space-y-4">
+                    {/* Item row */}
+                    <div className="flex items-center gap-3">
+                      <div className="h-14 w-14 rounded-xl bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                        {pendingOrder.image
+                          ? <img src={pendingOrder.image} alt={pendingOrder.title} className="w-full h-full object-contain p-1.5" />
+                          : <Zap className="h-6 w-6 text-primary" />
+                        }
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-foreground leading-snug">{pendingOrder.title}</p>
+                        {orderSubline ? <p className="text-xs text-muted-foreground mt-0.5">{orderSubline}</p> : null}
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {displayCurrency} {displayAmount.toFixed(2)} value
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 border border-border rounded-full px-3 py-1 text-sm font-medium text-foreground shrink-0">
+                        <span>1</span>
+                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                      </div>
+                      <button
+                        className="text-muted-foreground hover:text-destructive transition-colors"
+                        onClick={() => { localStorage.removeItem("pexly_pending_order"); setLocation("/"); }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <span className="text-sm font-semibold text-foreground">
+                        ${(pendingAmountUsd ?? displayAmount).toFixed(2)}
+                      </span>
+                    </div>
+
+                    <Separator />
+
+                    {/* Send as gift toggle */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <Gift className="h-4 w-4 text-foreground" />
+                        <span className="text-sm font-medium text-foreground">Send as gift</span>
+                      </div>
+                      <button
+                        onClick={() => setSendAsGift(v => !v)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${sendAsGift ? "bg-primary" : "bg-border"}`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${sendAsGift ? "translate-x-6" : "translate-x-1"}`} />
+                      </button>
+                    </div>
+
+                    {/* Promo code toggle */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <TicketPercent className="h-4 w-4 text-foreground" />
+                        <span className="text-sm font-medium text-foreground">Enter a Promo Code</span>
+                      </div>
+                      <button
+                        onClick={() => setPromoToggle(v => !v)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${promoToggle ? "bg-primary" : "bg-border"}`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${promoToggle ? "translate-x-6" : "translate-x-1"}`} />
+                      </button>
+                    </div>
+
+                    {promoToggle && (
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Promo code"
+                          value={promoCode}
+                          onChange={(e) => { setPromoCode(e.target.value); setPromoApplied(false); }}
+                          className="h-10 bg-background border-border rounded-xl"
+                        />
+                        <Button variant="outline" className="h-10 shrink-0" disabled={!promoCode.trim() || promoApplied} onClick={() => setPromoApplied(true)}>
+                          {promoApplied ? "Applied ✓" : "Apply"}
+                        </Button>
+                      </div>
+                    )}
+
+                    <Separator />
+
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-base font-bold text-foreground">Total</span>
+                      <span className="text-xl font-extrabold text-foreground">${displayTotal.toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom continue */}
+              <button
+                onClick={() => setCheckoutStep("paying")}
+                className="w-full py-4 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-base transition-all active:scale-[0.98] shadow-md"
+              >
+                Continue
+              </button>
+            </>
+          )}
+
+          {/* ── Step: Actual payment widget ── */}
+          {checkoutStep === "paying" && (() => {
+            const method = PAYMENT_METHODS.find(m => m.id === selectedMethodId) ?? PAYMENT_METHODS[0];
+            return (
+              <>
+                <div className="flex items-center gap-3 mb-2">
+                  <button onClick={() => setCheckoutStep("payment")} className="text-muted-foreground hover:text-foreground transition-colors">
+                    <ChevronDown className="h-5 w-5 rotate-90" />
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: method.bg }}>
+                      {method.symbol}
+                    </div>
+                    <h1 className="text-xl font-extrabold text-foreground">Pay with {method.label}</h1>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-xl px-4 py-2.5">
+                  <Mail className="h-3.5 w-3.5 text-primary shrink-0" />
+                  <span>Sending to <strong className="text-foreground">{contactEmail || "your email"}</strong></span>
+                </div>
+
+                {method.kind === "crypto" && (
+                  <NowPaymentsCheckout
+                    amount={pendingOrder.type === "giftcard" ? pendingTotalUsd : pendingTotal}
+                    currency={pendingOrder.type === "giftcard" ? "usd" : pendingOrder.currency}
+                    payCurrency={method.id}
+                    description={pendingOrder.description}
+                    metadata={pendingOrder.metadata}
+                    onPaymentSuccess={handleOrderSuccess}
+                    onChangeMethod={() => setCheckoutStep("payment")}
+                    onChangeEmail={() => setCheckoutStep("contact")}
+                    methodLabel={method.label}
+                    methodBg={method.bg}
+                    methodSymbol={method.symbol}
+                    networkName={method.networks?.[0]?.label}
+                    email={contactEmail}
+                    orderTitle={pendingOrder.title}
+                    orderSubline={orderSubline}
+                    orderCurrency={displayCurrency}
+                    orderAmount={displayAmount}
+                    orderImage={pendingOrder.image}
+                  />
+                )}
+
+                {method.kind === "paypal" && (
+                  <div className="rounded-2xl border border-border bg-card p-6 text-center space-y-4">
+                    <p className="text-sm text-muted-foreground">You will be redirected to PayPal to complete your payment securely.</p>
+                    <Button
+                      className="w-full h-12 bg-[#0070BA] text-white hover:bg-[#005ea6] font-bold rounded-2xl gap-2"
+                      disabled={paypalLoading}
+                      onClick={async () => {
+                        const result = await paypalCheckout(getPayPalPayload());
+                        if (result) handleOrderSuccess();
+                      }}
+                    >
+                      {paypalLoading
+                        ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Processing...</>
+                        : <><img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" className="h-4" alt="" /> Continue to PayPal</>
+                      }
+                    </Button>
+                  </div>
+                )}
+
+                <p className="text-center text-xs text-muted-foreground pb-4">
+                  By placing your order you agree to our{" "}
+                  <a href="/terms" className="underline hover:text-foreground">Terms of service</a>{" "}
+                  and <a href="/privacy" className="underline hover:text-foreground">Privacy policy</a>
+                </p>
+              </>
+            );
+          })()}
         </main>
       </BrandShell>
     );
