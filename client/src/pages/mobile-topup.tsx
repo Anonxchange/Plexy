@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
-import { ChevronDown, ArrowRight, Search, Smartphone, ShoppingCart, Gift, Star, Shield, Mail, UserCheck, ChevronUp, Share2, Heart } from '@/lib/icons';
+import { ChevronDown, ArrowRight, Search, Smartphone, ShoppingCart, Gift, Star, Shield, Mail, UserCheck, ChevronUp, Share2, Heart, Plus } from '@/lib/icons';
+import { cn } from "@/lib/utils";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { useAirtime } from "@/hooks/user-airtime";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -85,6 +86,147 @@ const FEATURES = [
   { icon: Shield,    label: "Private and Safe" },
 ];
 
+// ── FAQ ───────────────────────────────────────────────────────────────────────
+const TOPUP_FAQS = [
+  {
+    question: "Does my carrier accept crypto directly?",
+    answer: "No — carriers don't accept crypto, but Pexly bridges the gap. You pay us in Bitcoin, USDT, ETH, or any supported crypto, and we instantly forward the top-up to your carrier in their local currency.",
+  },
+  {
+    question: "Which countries are supported for mobile top-ups?",
+    answer: "Pexly supports mobile top-ups in 150+ countries across Africa, Asia, Latin America, the Middle East, and Europe. Select your country from the list to see available operators and amounts.",
+  },
+  {
+    question: "How long does the top-up take to arrive?",
+    answer: "Most top-ups are delivered within seconds of your crypto payment being confirmed. In rare cases it can take up to 5 minutes depending on the operator. You'll see a confirmation on screen when it's done.",
+  },
+  {
+    question: "What happens if the top-up fails?",
+    answer: "If a top-up fails after payment, you are not charged. The transaction is reversed automatically. You'll see an error message on screen — try again or contact support if the issue persists.",
+  },
+  {
+    question: "What phone number format should I enter?",
+    answer: "Enter the full international phone number without the + sign. For example, for a Nigerian number +234 801 234 5678, enter 2348012345678. The country you select sets the correct dialling code automatically.",
+  },
+];
+
+// ── Related Operators ──────────────────────────────────────────────────────────
+function RelatedOperators({
+  operators,
+  selectedOperator,
+  currentCountry,
+  onSelect,
+}: {
+  operators: any[];
+  selectedOperator: any | null;
+  currentCountry: any | null;
+  onSelect: (op: any) => void;
+}) {
+  const others = operators
+    .filter((op: any) => op.operatorId !== selectedOperator?.operatorId)
+    .slice(0, 6);
+
+  if (others.length === 0) return null;
+
+  const countryName = currentCountry?.name ?? "";
+
+  return (
+    <section className="py-12 px-4 md:px-6 lg:px-8 border-t border-border">
+      <div className="max-w-2xl mx-auto">
+        <h2 className="text-2xl font-black text-foreground mb-1">
+          {countryName ? `More operators in ${countryName}` : "More operators"}
+        </h2>
+        <p className="text-sm text-muted-foreground mb-6">
+          Other carriers available for this country.
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          {others.map((op: any) => {
+            const logo = sanitizeImageUrl(op.logoUrls?.[0]);
+            const currency = op.senderCurrencyCode || "USD";
+            const symbol = op.senderCurrencySymbol || "$";
+            const hasFixed = op.fixedAmounts?.length > 0;
+            const rangeLabel = hasFixed
+              ? `${symbol}${op.fixedAmounts[0]} – ${symbol}${op.fixedAmounts[op.fixedAmounts.length - 1]}`
+              : op.minAmount && op.maxAmount
+              ? `${symbol}${op.minAmount} – ${symbol}${op.maxAmount}`
+              : null;
+
+            return (
+              <button
+                key={op.operatorId}
+                onClick={() => onSelect(op)}
+                className="text-left bg-card border border-border rounded-2xl overflow-hidden hover:border-primary/50 hover:shadow-md transition-all duration-200 group"
+              >
+                {/* Logo tile */}
+                <div className="bg-background flex items-center justify-center h-28 p-4 border-b border-border">
+                  {logo ? (
+                    <img
+                      src={logo}
+                      alt={op.name}
+                      className="max-h-16 max-w-full object-contain"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Smartphone className="w-6 h-6 text-primary" />
+                    </div>
+                  )}
+                </div>
+                {/* Info */}
+                <div className="p-3">
+                  <p className="font-semibold text-foreground text-sm leading-tight line-clamp-2">
+                    {op.name}
+                  </p>
+                  {rangeLabel && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {rangeLabel} {currency}
+                    </p>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TopupFaqItem({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-b border-border">
+      <button onClick={() => setOpen(v => !v)} className="w-full flex items-center justify-between py-4 text-left gap-4">
+        <span className="text-foreground font-semibold text-sm leading-snug">{question}</span>
+        <span className={cn("flex-shrink-0 h-6 w-6 rounded-full border border-border flex items-center justify-center transition-transform duration-200", open ? "rotate-45" : "")}>
+          <Plus className="h-3 w-3 text-muted-foreground" />
+        </span>
+      </button>
+      <div className="overflow-hidden transition-all duration-300" style={{ maxHeight: open ? "300px" : "0px" }}>
+        <p className="text-muted-foreground text-sm leading-relaxed pb-4">{answer}</p>
+      </div>
+    </div>
+  );
+}
+
+function TopupFaq() {
+  return (
+    <section className="py-14 px-4 md:px-6 lg:px-8 border-t border-border">
+      <div className="max-w-2xl mx-auto">
+        <h2 className="text-3xl font-black text-foreground mb-1">Frequently asked</h2>
+        <h2 className="text-3xl font-black text-foreground mb-2">questions</h2>
+        <p className="text-sm text-muted-foreground mb-8">
+          Everything you need to know about mobile top-ups on Pexly.
+        </p>
+        <div>
+          {TOPUP_FAQS.map((faq, i) => (
+            <TopupFaqItem key={i} question={faq.question} answer={faq.answer} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 const TopupDetailView = ({
   selectedOperator,
   currentCountry,
@@ -126,6 +268,7 @@ const TopupDetailView = ({
       description: `Mobile top-up — ${selectedOperator.name}`,
       amount: Number(amount),
       currency: currency.toLowerCase(),
+      image: sanitizeImageUrl(selectedOperator.logoUrls?.[0]),
       metadata: {
         service: "mobile-topup",
         operatorId: selectedOperator.operatorId,
@@ -632,39 +775,99 @@ const Index = () => {
         </div>
       </section>
 
-      {/* ── How It Works ── */}
-      <section className="py-14 px-4 md:px-6 lg:px-8 bg-muted/40">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold text-foreground mb-8 text-center">How refills work</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              {
-                icon: "1",
-                title: "Enter phone & amount",
-                desc: "Type in the phone number and the amount you want us to refill.",
-              },
-              {
-                icon: "2",
-                title: "Pay with crypto",
-                desc: "Pay with Bitcoin, USDT, or any supported cryptocurrency.",
-              },
-              {
-                icon: "3",
-                title: "Instant delivery",
-                desc: "Your refill is sent out the moment your payment is confirmed.",
-              },
-            ].map((step) => (
-              <div key={step.icon} className="bg-card border border-border rounded-3xl p-6 text-center">
-                <div className="w-10 h-10 bg-primary/10 text-primary font-bold text-lg rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  {step.icon}
+      {/* ── How Refills Work ── */}
+      <section className="py-16 px-4 md:px-6 lg:px-8">
+        <div className="max-w-2xl mx-auto">
+          <h2 className="text-3xl font-black text-foreground mb-2">How refills work</h2>
+          <p className="text-muted-foreground mb-10 text-sm">Three simple steps — takes less than a minute.</p>
+
+          <div className="space-y-8">
+            {/* Step 1 */}
+            <div>
+              <div className="bg-card border border-border rounded-3xl p-8 flex items-center justify-center min-h-[140px] mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center bg-background border-2 border-border rounded-xl px-4 py-2.5 shadow-sm">
+                    <span className="font-mono text-foreground text-lg tracking-widest">342934</span>
+                    <span className="w-0.5 h-5 bg-primary ml-0.5 animate-pulse" />
+                  </div>
+                  <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shadow-md shrink-0">
+                    <ArrowRight className="w-5 h-5 text-primary-foreground" />
+                  </div>
                 </div>
-                <h3 className="font-bold text-foreground mb-2">{step.title}</h3>
-                <p className="text-sm text-muted-foreground">{step.desc}</p>
               </div>
-            ))}
+              <h3 className="font-bold text-foreground text-base mb-1">Enter a phone number &amp; amount</h3>
+              <p className="text-sm text-muted-foreground">Type in the phone number and the amount you want us to refill.</p>
+            </div>
+
+            {/* Step 2 */}
+            <div>
+              <div className="bg-card border border-border rounded-3xl p-8 flex items-center justify-center min-h-[140px] mb-4">
+                <div className="flex items-center gap-5">
+                  {/* Bitcoin coin */}
+                  <div className="w-14 h-14 rounded-full bg-[#F7931A] flex items-center justify-center shadow-lg shrink-0">
+                    <span className="text-white font-black text-xl">₿</span>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-muted-foreground" />
+                  {/* QR code */}
+                  <div className="w-14 h-14 bg-background border border-border rounded-xl p-1.5 flex items-center justify-center shrink-0">
+                    <svg viewBox="0 0 21 21" className="w-full h-full" fill="currentColor">
+                      <rect x="0" y="0" width="9" height="9" rx="1" className="text-foreground" />
+                      <rect x="2" y="2" width="5" height="5" className="text-background" />
+                      <rect x="3" y="3" width="3" height="3" className="text-foreground" />
+                      <rect x="12" y="0" width="9" height="9" rx="1" className="text-foreground" />
+                      <rect x="14" y="2" width="5" height="5" className="text-background" />
+                      <rect x="15" y="3" width="3" height="3" className="text-foreground" />
+                      <rect x="0" y="12" width="9" height="9" rx="1" className="text-foreground" />
+                      <rect x="2" y="14" width="5" height="5" className="text-background" />
+                      <rect x="3" y="15" width="3" height="3" className="text-foreground" />
+                      <rect x="12" y="12" width="3" height="3" className="text-foreground" />
+                      <rect x="16" y="12" width="5" height="3" className="text-foreground" />
+                      <rect x="12" y="16" width="5" height="2" className="text-foreground" />
+                      <rect x="18" y="16" width="3" height="5" className="text-foreground" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <h3 className="font-bold text-foreground text-base mb-1">Pay with any payment method</h3>
+              <p className="text-sm text-muted-foreground">Your payment is confirmed the same minute in most cases.</p>
+            </div>
+
+            {/* Step 3 */}
+            <div>
+              <div className="bg-card border border-border rounded-3xl p-8 flex items-center justify-center min-h-[140px] mb-4">
+                <div className="relative w-16 h-16">
+                  {/* Back paper */}
+                  <div className="absolute inset-0 translate-x-2 -translate-y-1 bg-muted border border-border rounded-xl" />
+                  {/* Front paper */}
+                  <div className="absolute inset-0 bg-background border border-border rounded-xl flex items-center justify-center">
+                    <div className="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center shadow">
+                      <svg viewBox="0 0 12 12" className="w-4 h-4" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 6l3 3 5-5" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <h3 className="font-bold text-foreground text-base mb-1">That's it, here is your refill</h3>
+              <p className="text-sm text-muted-foreground">Once your payment is confirmed you will get your refill sent out.</p>
+            </div>
           </div>
         </div>
       </section>
+
+      {/* ── Related Operators ── */}
+      <RelatedOperators
+        operators={operators}
+        selectedOperator={selectedOperator}
+        currentCountry={currentCountry}
+        onSelect={(op) => {
+          handleProviderClick(op);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+      />
+
+      {/* ── FAQ ── */}
+      <TopupFaq />
 
       <PexlyFooter />
     </div>
