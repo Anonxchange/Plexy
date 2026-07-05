@@ -3,6 +3,51 @@ import { toast } from "sonner";
 import { createNowPayment, getNowPaymentsEstimate, getNowPaymentStatus } from "@/hooks/use-nowpayments";
 import { Copy, RefreshCw, Loader2 } from "@/lib/icons";
 import { QRCodeSVG } from "qrcode.react";
+import { SYMBOL_ICON_MAP } from "@/lib/crypto-icons";
+
+// Extract the base token symbol from a NOWPayments currency code
+function extractTokenSymbol(code: string): string {
+  const c = code.toLowerCase();
+  if (c.startsWith("usdt")) return "USDT";
+  if (c.startsWith("usdc")) return "USDC";
+  if (c.startsWith("bnb")) return "BNB";
+  if (c.startsWith("btc") || c === "btcln") return "BTC";
+  if (c.startsWith("eth")) return "ETH";
+  if (c.startsWith("sol")) return "SOL";
+  if (c.startsWith("trx")) return "TRX";
+  if (c.startsWith("ton")) return "TON";
+  if (c.startsWith("ltc")) return "LTC";
+  if (c.startsWith("xrp")) return "XRP";
+  if (c.startsWith("doge")) return "DOGE";
+  if (c.startsWith("ada")) return "ADA";
+  if (c.startsWith("matic") || c.startsWith("pol")) return "MATIC";
+  if (c.startsWith("avax")) return "AVAX";
+  if (c.startsWith("dot")) return "DOT";
+  if (c.startsWith("near")) return "NEAR";
+  if (c.startsWith("xlm")) return "XLM";
+  if (c.startsWith("algo")) return "ALGO";
+  if (c.startsWith("ftm")) return "FTM";
+  if (c.startsWith("bch")) return "BCH";
+  return c.replace(/[^a-z]/g, "").slice(0, 5).toUpperCase();
+}
+
+function MethodIcon({ symbol, size = "h-9 w-9" }: { symbol: string; size?: string }) {
+  const [failed, setFailed] = useState(false);
+  const tokenSymbol = extractTokenSymbol(symbol);
+  const src = SYMBOL_ICON_MAP[tokenSymbol];
+  if (!src || failed) {
+    return (
+      <div className={`${size} rounded-full bg-muted border border-border flex items-center justify-center shrink-0`}>
+        <span className="text-[10px] font-bold text-muted-foreground">{tokenSymbol.slice(0, 3)}</span>
+      </div>
+    );
+  }
+  return (
+    <div className={`${size} rounded-full bg-card border border-border flex items-center justify-center overflow-hidden shrink-0 p-1.5`}>
+      <img src={src} alt={tokenSymbol} className="w-full h-full object-contain" onError={() => setFailed(true)} />
+    </div>
+  );
+}
 
 interface NowPaymentsCheckoutProps {
   amount: number;
@@ -219,12 +264,7 @@ const NowPaymentsCheckout = ({
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center gap-3 px-1">
-        <div
-          className="h-9 w-9 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
-          style={{ backgroundColor: methodBg }}
-        >
-          {methodSymbol}
-        </div>
+        <MethodIcon symbol={payCurrency ?? "btc"} />
         <h2 className="text-xl font-extrabold text-foreground">
           Pay with {displayMethodLabel}{displayNetwork ? ` on ${displayNetwork}` : ""}
         </h2>
