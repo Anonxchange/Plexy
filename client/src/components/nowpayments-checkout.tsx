@@ -1,111 +1,129 @@
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { createNowPayment, getNowPaymentsEstimate, getNowPaymentStatus } from "@/hooks/use-nowpayments";
-import { Loader2, Bitcoin, Copy, RefreshCw, ArrowLeft } from '@/lib/icons';
+import { Copy, RefreshCw, Loader2 } from "@/lib/icons";
+import { QRCodeSVG } from "qrcode.react";
 
 interface NowPaymentsCheckoutProps {
   amount: number;
-  currency?: string;
+  currency?: string;         // fiat currency of the price (e.g. "usd", "ngn")
+  payCurrency?: string;      // crypto to pay with (e.g. "usdttrc20", "btc")
   description: string;
   onPaymentSuccess?: (paymentData: any) => void;
   onPaymentClose?: () => void;
+  onChangeMethod?: () => void;
+  onChangeEmail?: () => void;
   disabled?: boolean;
   metadata?: Record<string, unknown>;
+  // Order details for the accordion
+  methodLabel?: string;      // e.g. "USDT TRC20"
+  methodBg?: string;
+  methodSymbol?: string;
+  networkName?: string;      // e.g. "Tron"
+  email?: string;
+  orderTitle?: string;
+  orderSubline?: string;
+  orderCurrency?: string;
+  orderAmount?: number;
+  orderImage?: string;
+  invoiceId?: string;
 }
 
-const POPULAR_CRYPTOS = [
-  { value: "btc", label: "Bitcoin (BTC)" },
-  { value: "eth", label: "Ethereum (ETH)" },
-  { value: "usdttrc20", label: "USDT (TRC20)" },
-  { value: "usdterc20", label: "USDT (ERC20)" },
-  { value: "ltc", label: "Litecoin (LTC)" },
-  { value: "trx", label: "TRON (TRX)" },
-  { value: "bnbbsc", label: "BNB (BSC)" },
-  { value: "sol", label: "Solana (SOL)" },
-  { value: "doge", label: "Dogecoin (DOGE)" },
-  { value: "xrp", label: "XRP" },
-];
+const EXPIRE_SECONDS = 60 * 60; // 60 minutes
+
+function useCountdown(startSeconds: number) {
+  const [remaining, setRemaining] = useState(startSeconds);
+  useEffect(() => {
+    const t = setInterval(() => setRemaining(s => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const m = Math.floor(remaining / 60);
+  const s = remaining % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function CopyRow({ label, value }: { label: string; value: string }) {
+  const copy = () => {
+    navigator.clipboard.writeText(value);
+    toast.success("Copied!");
+  };
+  return (
+    <div className="space-y-1">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <div className="flex items-start gap-3">
+        <p className="text-lg font-bold text-foreground break-all leading-snug flex-1">{value}</p>
+        <button
+          onClick={copy}
+          className="shrink-0 mt-0.5 p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+        >
+          <Copy className="h-5 w-5" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const NowPaymentsCheckout = ({
   amount,
   currency = "usd",
+  payCurrency,
   description,
   onPaymentSuccess,
   onPaymentClose,
+  onChangeMethod,
+  onChangeEmail,
   disabled,
   metadata,
+  methodLabel,
+  methodBg = "#26A17B",
+  methodSymbol = "₮",
+  networkName,
+  email,
+  orderTitle,
+  orderSubline,
+  orderCurrency,
+  orderAmount,
+  orderImage,
+  invoiceId,
 }: NowPaymentsCheckoutProps) => {
   const numericAmount = typeof amount === "number" ? amount : parseFloat(String(amount) || "0");
-  const [showForm, setShowForm] = useState(false);
-  const [selectedCrypto, setSelectedCrypto] = useState("btc");
-  const [estimatedAmount, setEstimatedAmount] = useState<number | null>(null);
-  const [estimating, setEstimating] = useState(false);
-  const [estimateError, setEstimateError] = useState<string | null>(null);
-  const [processing, setProcessing] = useState(false);
+  const cryptoCurrency = payCurrency ?? "btc";
+
   const [paymentData, setPaymentData] = useState<any>(null);
-  const [checkingStatus, setCheckingStatus] = useState(false);
-  const [prevEstimatedAmount, setPrevEstimatedAmount] = useState<number | null>(null);
+  const [estimatedAmount, setEstimatedAmount] = useState<number | null>(null);
+  const [processing, setProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [checkingStatus, setCheckingStatus] = useState(false);
+  const [orderOpen, setOrderOpen] = useState(true);
+  const [showQr, setShowQr] = useState(false);
+  const countdown = useCountdown(EXPIRE_SECONDS);
+  const didCreate = useRef(false);
 
+  // Fetch estimate
   useEffect(() => {
-    if (!showForm || paymentData) return;
-    if (!numericAmount || numericAmount <= 0) {
-      setEstimateError("Invalid amount");
-      setEstimatedAmount(null);
-      return;
-    }
+    if (!numericAmount || numericAmount <= 0) return;
     let cancelled = false;
-
-    const fetchEstimate = async () => {
-      setEstimating(true);
-      setEstimateError(null);
-      try {
-        const data = await getNowPaymentsEstimate(numericAmount, currency, selectedCrypto);
-        if (!cancelled) {
-          if (data.error) {
-            setEstimateError(typeof data.error === "string" ? data.error : JSON.stringify(data.error));
-            setEstimatedAmount(null);
-          } else {
-            const raw = data.estimated_amount;
-            const newAmount = typeof raw === "number" ? raw : Number(raw);
-            if (!isNaN(newAmount) && newAmount > 0) {
-              setEstimatedAmount(newAmount);
-              setPrevEstimatedAmount(newAmount);
-              setEstimateError(null);
-            } else {
-              setEstimatedAmount(null);
-              setEstimateError("Amount too small or unsupported pair");
-            }
-          }
+    getNowPaymentsEstimate(numericAmount, currency, cryptoCurrency)
+      .then((data) => {
+        if (cancelled) return;
+        if (!data.error) {
+          const v = typeof data.estimated_amount === "number" ? data.estimated_amount : Number(data.estimated_amount);
+          if (!isNaN(v) && v > 0) setEstimatedAmount(v);
         }
-      } catch (err: any) {
-        console.error("Estimate error:", err);
-        if (!cancelled) {
-          setEstimateError(err.message || "Failed to fetch price estimate");
-          setEstimatedAmount(null);
-        }
-      } finally {
-        if (!cancelled) setEstimating(false);
-      }
-    };
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [numericAmount, currency, cryptoCurrency]);
 
-    const timer = setTimeout(fetchEstimate, 300);
-    return () => { 
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [showForm, selectedCrypto, numericAmount, currency, paymentData]);
+  // Auto-create payment once we have an estimate
+  useEffect(() => {
+    if (didCreate.current || !estimatedAmount || paymentData || processing) return;
+    didCreate.current = true;
+    handleCreatePayment();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estimatedAmount]);
 
   const handleCreatePayment = async () => {
-    if (!estimatedAmount && !prevEstimatedAmount) {
-      toast.error("Price not loaded", { description: "Please wait for price estimation to complete" });
-      return;
-    }
-
     setProcessing(true);
     setPaymentError(null);
     try {
@@ -122,25 +140,19 @@ const NowPaymentsCheckout = ({
       const data = await createNowPayment({
         priceAmount: numericAmount,
         priceCurrency: currency,
-        payCurrency: selectedCrypto,
+        payCurrency: cryptoCurrency,
         orderId: structuredOrderId,
         orderDescription: description,
         ipnCallbackUrl,
       });
 
-      console.log("Payment response:", data);
-
-      if (!data || !data.pay_address) {
-        throw new Error(data?.message || data?.error || "Payment creation failed - no address returned");
-      }
-
+      if (!data?.pay_address) throw new Error(data?.message || data?.error || "No payment address returned");
       setPaymentData(data);
-      toast.success("Payment created!", { description: "Send the exact amount to the address below" });
     } catch (err: any) {
-      console.error("Payment creation error:", err);
       const msg = err.message || "Failed to create payment";
       setPaymentError(msg);
       toast.error("Payment error", { description: msg });
+      didCreate.current = false; // allow retry
     } finally {
       setProcessing(false);
     }
@@ -152,226 +164,269 @@ const NowPaymentsCheckout = ({
     try {
       const status = await getNowPaymentStatus(paymentData.payment_id);
       if (["finished", "confirmed"].includes(status.payment_status)) {
-        toast.success("Payment confirmed!", { description: `Status: ${status.payment_status}` });
         onPaymentSuccess?.(status);
-      } else if (["waiting", "confirming", "sending"].includes(status.payment_status)) {
-        toast.info("Payment pending", { description: `Status: ${status.payment_status}` });
       } else {
-        toast.warning("Payment status", { description: `Status: ${status.payment_status}` });
+        toast.info("Payment pending", { description: `Status: ${status.payment_status}` });
       }
     } catch (err: any) {
-      console.error("Status check error:", err);
       toast.error("Status check failed", { description: err.message });
     } finally {
       setCheckingStatus(false);
     }
   };
 
-  const copyToClipboard = (text: string, label: string = "text") => {
-    navigator.clipboard.writeText(text);
-    toast.success("Copied!", { description: `${label} copied to clipboard` });
-  };
+  // Build wallet deep link
+  const walletUri = paymentData
+    ? buildWalletUri(cryptoCurrency, paymentData.pay_address, paymentData.pay_amount, paymentData.payin_extra_id)
+    : null;
 
-  const safeFixed = (val: number | null, digits: number) => {
-    if (val === null || val === undefined || isNaN(val)) return "—";
-    return Number(val).toFixed(digits);
-  };
+  const displayMethodLabel = methodLabel ?? cryptoCurrency.toUpperCase();
+  const displayNetwork = networkName ?? "";
+  const payAmountDisplay = paymentData?.pay_amount ?? estimatedAmount;
+  const cryptoLabel = (paymentData?.pay_currency ?? cryptoCurrency).toUpperCase();
 
-  // Initial state
-  if (!showForm && !paymentData) {
+  // ── Loading / creating ──────────────────────────────────────────────
+  if (processing || (!paymentData && !paymentError)) {
     return (
-      <div>
-        <p className="text-sm text-muted-foreground mb-3">
-          Pay with Bitcoin, Ethereum, USDT, TRON, and 6+ more cryptocurrencies instantly. Secure and fast.
+      <div className="flex flex-col items-center justify-center gap-4 py-12">
+        <div className="h-12 w-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+        <p className="text-sm text-muted-foreground">
+          {estimatedAmount ? "Creating payment…" : "Fetching price…"}
         </p>
-        <Button
-          variant="outline"
-          className="w-full border-primary/30 hover:bg-primary/5"
-          size="lg"
-          onClick={() => setShowForm(true)}
-          disabled={disabled}
-        >
-          <Bitcoin className="mr-2 h-4 w-4" />
-          Continue to Crypto
-        </Button>
       </div>
     );
   }
 
-  // Payment created state
-  if (paymentData) {
+  // ── Error ────────────────────────────────────────────────────────────
+  if (paymentError && !paymentData) {
     return (
-      <Card className="border-primary/20">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Bitcoin className="h-4 w-4 text-primary" />
-              Send {paymentData.pay_currency?.toUpperCase()} Payment
-            </CardTitle>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => { 
-                setPaymentData(null); 
-                setShowForm(false); 
-                setEstimatedAmount(null);
-                onPaymentClose?.(); 
-              }}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Amount to send</span>
-              <span className="font-mono font-semibold">{paymentData.pay_amount} {paymentData.pay_currency?.toUpperCase()}</span>
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Original: {currency.toUpperCase()} {safeFixed(numericAmount, 2)}
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <span className="text-xs text-muted-foreground">Send to this address</span>
-            <div className="flex items-center gap-2">
-              <code className="text-xs bg-background p-2 rounded flex-1 break-all border border-border">
-                {paymentData.pay_address}
-              </code>
-              <Button variant="ghost" size="icon" className="shrink-0" onClick={() => copyToClipboard(paymentData.pay_address, "Address")}>
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          {paymentData.payin_extra_id && (
-            <div className="space-y-1">
-              <span className="text-xs text-muted-foreground">Memo / Payment ID</span>
-              <div className="flex items-center gap-2">
-                <code className="text-xs bg-background p-2 rounded flex-1 break-all border border-border">
-                  {paymentData.payin_extra_id}
-                </code>
-                <Button variant="ghost" size="icon" className="shrink-0" onClick={() => copyToClipboard(paymentData.payin_extra_id, "Memo")}>
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">Include this memo with your payment</p>
-            </div>
-          )}
-
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Payment Status</span>
-            <Badge variant="outline" className="text-xs">
-              {paymentData.payment_status || "waiting"}
-            </Badge>
-          </div>
-
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={() => { 
-              setPaymentData(null); 
-              setShowForm(false); 
-              setEstimatedAmount(null);
-              onPaymentClose?.(); 
-            }}>
-              Cancel
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleCheckStatus} disabled={checkingStatus} className="flex-1">
-              {checkingStatus ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-              Check Status
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-4 py-4">
+        <div className="rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive">
+          {paymentError}
+        </div>
+        <button
+          onClick={() => { didCreate.current = false; handleCreatePayment(); }}
+          className="w-full py-3 rounded-full border border-border text-sm font-semibold hover:bg-muted transition-all"
+        >
+          Try again
+        </button>
+      </div>
     );
   }
 
-  // Crypto selection form
+  // ── Payment created ──────────────────────────────────────────────────
   return (
-    <Card className="border-primary/20">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Bitcoin className="h-4 w-4 text-primary" />
-            Select Cryptocurrency
-          </CardTitle>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowForm(false)}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-1">
+        <div
+          className="h-9 w-9 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
+          style={{ backgroundColor: methodBg }}
+        >
+          {methodSymbol}
         </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Choose crypto to pay with</label>
-          <Select value={selectedCrypto} onValueChange={(v) => { setSelectedCrypto(v); setPaymentError(null); }}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {POPULAR_CRYPTOS.map((c) => (
-                <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <h2 className="text-xl font-extrabold text-foreground">
+          Pay with {displayMethodLabel}{displayNetwork ? ` on ${displayNetwork}` : ""}
+        </h2>
+      </div>
 
-        <div className="bg-muted/50 rounded-lg p-3 space-y-1">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Fiat Amount</span>
-            <span>{currency.toUpperCase()} {safeFixed(numericAmount, 2)}</span>
-          </div>
-          <div className="flex justify-between text-sm font-semibold border-t border-border pt-1">
-            <span>You'll send</span>
-            <span>
-              {estimating ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin inline mr-1" />
-                  {prevEstimatedAmount ? (
-                    <>≈ {safeFixed(prevEstimatedAmount, 8)} {selectedCrypto.toUpperCase()}</>
-                  ) : (
-                    <>Calculating...</>
-                  )}
-                </>
-              ) : estimateError ? (
-                <span className="text-destructive text-xs">{estimateError}</span>
-              ) : estimatedAmount ? (
-                <>≈ {safeFixed(estimatedAmount, 8)} {selectedCrypto.toUpperCase()}</>
-              ) : (
-                <>—</>
-              )}
-            </span>
-          </div>
-        </div>
+      {/* Warning banner */}
+      <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl px-4 py-3">
+        <span className="text-amber-500 text-base shrink-0 mt-0.5">⚠</span>
+        <p className="text-sm text-amber-200/90 leading-relaxed">
+          Send only <strong>{displayMethodLabel}</strong>
+          {displayNetwork ? ` on ${displayNetwork}` : ""}. Sending other tokens may result in loss of funds.
+        </p>
+      </div>
 
-        {paymentError && (
-          <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
-            {paymentError}
-          </div>
+      {/* Address + amount */}
+      <div className="rounded-2xl border border-border bg-card p-5 space-y-5">
+        <CopyRow label="Payment unique address" value={paymentData.pay_address} />
+
+        {paymentData.payin_extra_id && (
+          <CopyRow label="Memo / Tag (required)" value={paymentData.payin_extra_id} />
         )}
 
-        <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={() => setShowForm(false)} disabled={processing}>
-            Cancel
-          </Button>
-          <Button className="flex-1" onClick={handleCreatePayment} disabled={processing || (!estimatedAmount && !prevEstimatedAmount) || !!estimateError}>
-            {processing ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</>
-            ) : estimateError ? (
-              <>Failed to load price</>
-            ) : (
-              <><Bitcoin className="mr-2 h-4 w-4" /> Get Payment Address</>
-            )}
-          </Button>
+        <div className="border-t border-border" />
+
+        {payAmountDisplay && (
+          <CopyRow
+            label="Amount to pay"
+            value={`${payAmountDisplay} ${cryptoLabel}`}
+          />
+        )}
+      </div>
+
+      {/* QR toggle */}
+      {showQr && paymentData.pay_address && (
+        <div className="flex justify-center rounded-2xl border border-border bg-card p-6">
+          <QRCodeSVG
+            value={walletUri || paymentData.pay_address}
+            size={200}
+            bgColor="transparent"
+            fgColor="currentColor"
+            className="text-foreground"
+          />
         </div>
-      </CardContent>
-    </Card>
+      )}
+
+      {/* Action buttons */}
+      <button
+        onClick={() => setShowQr(v => !v)}
+        className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-full bg-muted hover:bg-muted/70 border border-border text-foreground font-semibold text-sm transition-all active:scale-[0.98]"
+      >
+        <span className="text-base">⊞</span>
+        {showQr ? "Hide QR code" : "Scan QR with another device"}
+      </button>
+
+      {walletUri && (
+        <a
+          href={walletUri}
+          className="w-full flex items-center justify-center gap-2 py-4 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-base transition-all active:scale-[0.98] shadow-md"
+        >
+          Open your wallet
+        </a>
+      )}
+
+      {/* Countdown */}
+      <div className="flex items-center gap-2 px-1">
+        <div className="flex items-center gap-2 bg-muted border border-border rounded-full px-4 py-2 text-sm font-semibold text-foreground">
+          <span>Expires in</span>
+          <span className="font-mono tabular-nums">{countdown}</span>
+          <div className="h-4 w-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        </div>
+        <button
+          onClick={handleCheckStatus}
+          disabled={checkingStatus}
+          className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${checkingStatus ? "animate-spin" : ""}`} />
+          Check status
+        </button>
+      </div>
+
+      {/* Order details accordion */}
+      <div className="rounded-2xl border border-border bg-card overflow-hidden">
+        <button
+          onClick={() => setOrderOpen(v => !v)}
+          className="w-full flex items-center justify-between px-5 py-4"
+        >
+          <span className="font-semibold text-foreground">Order details</span>
+          <span className="text-muted-foreground text-lg">{orderOpen ? "∧" : "∨"}</span>
+        </button>
+
+        {orderOpen && (
+          <div className="px-5 pb-5 space-y-4 border-t border-border pt-4">
+            {/* Email */}
+            {email && (
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-xs text-muted-foreground">Email address</p>
+                  <p className="text-sm font-medium text-foreground mt-0.5">{email}</p>
+                </div>
+                {onChangeEmail && (
+                  <button onClick={onChangeEmail} className="text-xs text-primary underline underline-offset-2 shrink-0 mt-1">
+                    Change
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Payment method */}
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-xs text-muted-foreground">Payment method</p>
+                <p className="text-sm font-medium text-foreground mt-0.5">
+                  {displayMethodLabel}{displayNetwork ? ` ${displayNetwork.toUpperCase()}` : ""}
+                </p>
+              </div>
+              {onChangeMethod && (
+                <button onClick={onChangeMethod} className="text-xs text-primary underline underline-offset-2 shrink-0 mt-1">
+                  Change
+                </button>
+              )}
+            </div>
+
+            {/* Invoice id */}
+            {(invoiceId ?? paymentData?.payment_id) && (
+              <div>
+                <p className="text-xs text-muted-foreground">Invoice id</p>
+                <p className="text-xs font-mono text-foreground mt-0.5 break-all">
+                  {invoiceId ?? paymentData.payment_id}
+                </p>
+              </div>
+            )}
+
+            <div className="border-t border-border" />
+
+            {/* Product row */}
+            {orderTitle && (
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                  {orderImage
+                    ? <img src={orderImage} alt={orderTitle} className="w-full h-full object-contain p-1.5" />
+                    : <span className="text-xl">⚡</span>
+                  }
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground">{orderTitle}</p>
+                  {orderSubline && <p className="text-xs text-muted-foreground mt-0.5">{orderSubline}</p>}
+                  {orderAmount != null && orderCurrency && (
+                    <p className="text-xs text-muted-foreground">
+                      {orderAmount.toFixed(2)} {orderCurrency.toUpperCase()} value
+                    </p>
+                  )}
+                </div>
+                {payAmountDisplay && (
+                  <p className="text-sm font-bold text-foreground shrink-0">
+                    {payAmountDisplay} {cryptoLabel}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="border-t border-border" />
+
+            {/* Total */}
+            <div className="flex items-baseline justify-between">
+              <span className="text-base font-bold text-foreground">Total</span>
+              <span className="text-base font-extrabold text-foreground">
+                {payAmountDisplay ? `${payAmountDisplay} ${cryptoLabel}` : "—"}
+              </span>
+            </div>
+
+            {/* Conversion note */}
+            {orderCurrency && orderCurrency.toUpperCase() !== "USD" && payAmountDisplay && orderAmount && (
+              <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+                <span>↻</span>
+                <span>
+                  We've converted this price from {orderCurrency.toUpperCase()} to {cryptoLabel} at our
+                  rate of approximately 1 {cryptoLabel} ={" "}
+                  {(orderAmount / Number(payAmountDisplay)).toFixed(2)} {orderCurrency.toUpperCase()}
+                </span>
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
+
+// Build a wallet deep-link URI based on the crypto
+function buildWalletUri(currency: string, address: string, amount: number | null, memo?: string): string | null {
+  if (!address) return null;
+  const c = currency.toLowerCase();
+  const amt = amount ? String(amount) : "";
+  if (c.startsWith("btc")) return `bitcoin:${address}${amt ? `?amount=${amt}` : ""}`;
+  if (c.startsWith("eth") || c.startsWith("usdc") || c.startsWith("usdt") && !c.includes("trc") && !c.includes("matic"))
+    return `ethereum:${address}${amt ? `?value=${amt}` : ""}`;
+  if (c.startsWith("ltc")) return `litecoin:${address}${amt ? `?amount=${amt}` : ""}`;
+  if (c.startsWith("sol")) return `solana:${address}${amt ? `?amount=${amt}` : ""}`;
+  if (c.startsWith("ton")) return `ton://transfer/${address}${amt ? `?amount=${Math.round(Number(amt) * 1e9)}` : ""}`;
+  // For TRC20 / USDT Tron etc. — use tron: scheme
+  if (c.includes("trc") || c.startsWith("trx")) return `tron:${address}${amt ? `?amount=${amt}` : ""}${memo ? `&memo=${memo}` : ""}`;
+  return null;
+}
 
 export default NowPaymentsCheckout;
