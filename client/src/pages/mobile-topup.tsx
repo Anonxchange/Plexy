@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { sanitizeImageUrl } from "@/lib/sanitize";
 import { devLog } from "@/lib/dev-logger";
-import { useProxiedImage } from "@/lib/image-proxy";
 import { SYMBOL_ICON_MAP } from "@/lib/crypto-icons";
 
 const ProviderCard = ({
@@ -24,16 +23,15 @@ const ProviderCard = ({
   onClick?: () => void;
 }) => {
   const safeLogo = sanitizeImageUrl(logo);
-  const proxiedLogo = useProxiedImage(safeLogo);
   return (
     <div
       className="group cursor-pointer"
       onClick={onClick}
     >
       <div className="relative bg-card rounded-3xl aspect-[4/3] flex items-center justify-center transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lg overflow-hidden border border-border p-4">
-        {proxiedLogo ? (
+        {safeLogo ? (
           <img
-            src={proxiedLogo}
+            src={safeLogo}
             alt={name}
             className="w-full h-full object-contain"
             onError={(e) => {
@@ -374,9 +372,7 @@ const Index = () => {
     countries.find(c => (c as any).isoName === selectedCountry),
     [countries, selectedCountry]);
 
-  const proxiedOperatorLogo = useProxiedImage(
-    sanitizeImageUrl(selectedOperator?.logoUrls?.[0])
-  );
+  const proxiedOperatorLogo = sanitizeImageUrl(selectedOperator?.logoUrls?.[0]);
 
   const suggestedAmounts = useMemo(() => {
     if (!selectedOperator) return [];

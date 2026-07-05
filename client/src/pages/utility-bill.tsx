@@ -114,7 +114,7 @@ const UtilityDetailView = ({
     window.open(`${langBase}/checkout`, "_blank");
   };
 
-  const safeLogo = sanitizeImageUrl((selectedProvider as any).logoUrls?.[0] || (selectedProvider as any).logo);
+  const safeLogo = sanitizeImageUrl(selectedProvider.logoUrls?.[0]);
 
   return (
     <div className="animate-fade-in max-w-xl mx-auto">
@@ -153,7 +153,6 @@ const UtilityDetailView = ({
               src={safeLogo}
               alt={selectedProvider.name}
               className="w-full h-full object-contain"
-              crossOrigin="anonymous"
               onError={(e) => {
                 (e.currentTarget as HTMLImageElement).style.display = "none";
                 (e.currentTarget.nextSibling as HTMLElement)!.style.display = "flex";
@@ -341,7 +340,6 @@ const ProviderCard = ({
             src={safeLogo}
             alt={name}
             className="w-full h-full object-contain"
-            crossOrigin="anonymous"
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).style.display = "none";
               (e.currentTarget.nextSibling as HTMLElement).style.display = "flex";
