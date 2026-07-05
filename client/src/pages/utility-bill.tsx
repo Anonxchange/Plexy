@@ -144,7 +144,7 @@ const UtilityDetailView = ({
             className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center transition-colors shadow-sm hover:bg-muted"
             aria-label="Save"
           >
-            <Heart className={`w-4 h-4 transition-colors ${liked ? "fill-destructive text-destructive" : "text-foreground"}`} />
+            <Heart className={`w-4 h-4 transition-colors ${liked ? "fill-red-500 text-red-500" : "text-foreground"}`} />
           </button>
         </div>
         <div className="w-28 h-28 bg-card rounded-2xl border border-border flex items-center justify-center p-3 shadow-sm overflow-hidden">
@@ -462,8 +462,8 @@ const UtilityBill = () => {
   return (
     <div className="min-h-screen bg-background">
 
-      {/* ── Hero ── */}
-      <section className="relative bg-primary pt-8 pb-16 px-4">
+      {/* ── Hero (hidden when a provider is selected) ── */}
+      {view !== "pay" && <section className="relative bg-primary pt-8 pb-16 px-4">
         <div className="absolute inset-0 overflow-hidden opacity-10 pointer-events-none">
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-white rounded-full blur-3xl" />
           <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-white rounded-full blur-2xl" />
@@ -507,7 +507,7 @@ const UtilityBill = () => {
                 className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground text-base py-4 px-4 min-w-0"
               />
               <button
-                className="bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-4 font-bold text-sm shrink-0 transition-all active:scale-95"
+                className="bg-red-500 hover:bg-red-600 text-white px-5 py-4 font-bold text-sm shrink-0 transition-all active:scale-95"
                 onClick={() => { if (selectedCountry) setView("providers"); else setView("countries"); }}
               >
                 <ArrowRight className="w-5 h-5" />
@@ -515,10 +515,10 @@ const UtilityBill = () => {
             </div>
           </div>
         </div>
-      </section>
+      </section>}
 
       {/* ── Main Content ── */}
-      <section className="pt-16 pb-10 px-4 md:px-6 lg:px-8">
+      <section className={`${view !== "pay" ? "pt-16" : "pt-6"} pb-10 px-4 md:px-6 lg:px-8`}>
         <div className="max-w-7xl mx-auto">
 
           {/* Countries view */}

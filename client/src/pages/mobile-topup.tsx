@@ -179,7 +179,7 @@ const TopupDetailView = ({
             className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center transition-colors shadow-sm hover:bg-muted"
             aria-label="Save"
           >
-            <Heart className={`w-4 h-4 transition-colors ${liked ? "fill-destructive text-destructive" : "text-foreground"}`} />
+            <Heart className={`w-4 h-4 transition-colors ${liked ? "fill-red-500 text-red-500" : "text-foreground"}`} />
           </button>
         </div>
         <div className="w-28 h-28 bg-card rounded-2xl border border-border flex items-center justify-center p-3 shadow-sm overflow-hidden">
@@ -497,7 +497,7 @@ const Index = () => {
                     className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground text-base py-4 px-4 min-w-0"
                   />
                   <button
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-4 font-bold text-sm shrink-0 transition-all active:scale-95"
+                    className="bg-red-500 hover:bg-red-600 text-white px-5 py-4 font-bold text-sm shrink-0 transition-all active:scale-95"
                     onClick={() => { if (selectedCountry) setView("operators"); else setView("countries"); }}
                   >
                     <ArrowRight className="w-5 h-5" />

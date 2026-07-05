@@ -43,16 +43,15 @@ type PaymentMethodDef = {
   kind: "crypto" | "paypal" | "card" | "gift";
 };
 
-// Fallback shown while the live list is loading or on error
+// Fallback shown only while the live list is loading or on API error.
+// Keep this tight — the real list always comes from getNowPaymentsCurrencies().
 const PAYMENT_METHODS_FALLBACK: PaymentMethodDef[] = [
-  { id: "btc",        label: "Bitcoin",           symbol: "BTC",  kind: "crypto" },
-  { id: "eth",        label: "Ethereum",           symbol: "ETH",  networkBadge: "ERC20", kind: "crypto" },
-  { id: "usdttrc20",  label: "USDT",               symbol: "USDT", networkBadge: "TRC20", kind: "crypto" },
-  { id: "usdterc20",  label: "USDT",               symbol: "USDT", networkBadge: "ERC20", kind: "crypto" },
-  { id: "usdcmatic",  label: "USDC",               symbol: "USDC", networkBadge: "Polygon", kind: "crypto" },
-  { id: "sol",        label: "Solana",             symbol: "SOL",  kind: "crypto" },
-  { id: "ltc",        label: "Litecoin",           symbol: "LTC",  kind: "crypto" },
-  { id: "ton",        label: "TON",                symbol: "TON",  kind: "crypto" },
+  { id: "btc",       label: "Bitcoin",      symbol: "BTC",  kind: "crypto" },
+  { id: "eth",       label: "Ethereum ERC20", symbol: "ETH",  networkBadge: "ERC20", kind: "crypto" },
+  { id: "usdttrc20", label: "USDT TRC20",   symbol: "USDT", networkBadge: "TRC20", kind: "crypto" },
+  { id: "usdterc20", label: "USDT ERC20",   symbol: "USDT", networkBadge: "ERC20", kind: "crypto" },
+  { id: "usdc",      label: "USDC",         symbol: "USDC", kind: "crypto" },
+  { id: "bnbbsc",    label: "BNB BEP20",    symbol: "BNB",  networkBadge: "BEP20", kind: "crypto" },
 ];
 
 // Parse a NOWPayments currency code into display info.
