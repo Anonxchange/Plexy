@@ -775,6 +775,19 @@ const Index = () => {
         </div>
       </section>
 
+      {/* ── Related Operators (topup view only) ── */}
+      {view === "topup" && (
+        <RelatedOperators
+          operators={operators}
+          selectedOperator={selectedOperator}
+          currentCountry={currentCountry}
+          onSelect={(op) => {
+            handleProviderClick(op);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        />
+      )}
+
       {/* ── How Refills Work ── */}
       <section className="py-16 px-4 md:px-6 lg:px-8">
         <div className="max-w-2xl mx-auto">
@@ -854,17 +867,6 @@ const Index = () => {
           </div>
         </div>
       </section>
-
-      {/* ── Related Operators ── */}
-      <RelatedOperators
-        operators={operators}
-        selectedOperator={selectedOperator}
-        currentCountry={currentCountry}
-        onSelect={(op) => {
-          handleProviderClick(op);
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        }}
-      />
 
       {/* ── FAQ ── */}
       <TopupFaq />
