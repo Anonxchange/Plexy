@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { sanitizeImageUrl } from "@/lib/sanitize";
 import { devLog } from "@/lib/dev-logger";
 import { useProxiedImage } from "@/lib/image-proxy";
+import { SYMBOL_ICON_MAP } from "@/lib/crypto-icons";
 
 const ProviderCard = ({
   name,
@@ -53,15 +54,32 @@ const ProviderCard = ({
   );
 };
 
-// ── Crypto payment icons (inline SVG circles matching Bitrefill style) ──
+// ── Crypto payment icons (using real coin logos from local registry) ──
 const CRYPTO_ICONS = [
-  { label: "Bitcoin",   bg: "#F7931A", icon: "₿" },
-  { label: "Lightning", bg: "#F4BC00", icon: "⚡" },
-  { label: "Ethereum",  bg: "#627EEA", icon: "Ξ" },
-  { label: "USDC",      bg: "#2775CA", icon: "$" },
-  { label: "USDT",      bg: "#26A17B", icon: "₮" },
-  { label: "Solana",    bg: "#9945FF", icon: "◎" },
+  { label: "Bitcoin",   symbol: "BTC" },
+  { label: "Litecoin",  symbol: "LTC" },
+  { label: "Ethereum",  symbol: "ETH" },
+  { label: "USDC",      symbol: "USDC" },
+  { label: "USDT",      symbol: "USDT" },
+  { label: "Solana",    symbol: "SOL" },
 ];
+
+function CryptoIconImg({ symbol, label }: { symbol: string; label: string }) {
+  const [failed, setFailed] = useState(false);
+  const src = SYMBOL_ICON_MAP[symbol];
+  if (!src || failed) {
+    return (
+      <div className="w-9 h-9 rounded-full bg-muted border border-border flex items-center justify-center shadow-sm">
+        <span className="text-[10px] font-bold text-muted-foreground">{symbol.slice(0, 3)}</span>
+      </div>
+    );
+  }
+  return (
+    <div className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center overflow-hidden shadow-sm p-1.5">
+      <img src={src} alt={label} className="w-full h-full object-contain" onError={() => setFailed(true)} />
+    </div>
+  );
+}
 
 const FEATURES = [
   { icon: UserCheck, label: "No Account Required" },
@@ -161,7 +179,7 @@ const TopupDetailView = ({
             className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center transition-colors shadow-sm hover:bg-muted"
             aria-label="Save"
           >
-            <Heart className={`w-4 h-4 transition-colors ${liked ? "fill-red-500 text-red-500" : "text-foreground"}`} />
+            <Heart className={`w-4 h-4 transition-colors ${liked ? "fill-destructive text-destructive" : "text-foreground"}`} />
           </button>
         </div>
         <div className="w-28 h-28 bg-card rounded-2xl border border-border flex items-center justify-center p-3 shadow-sm overflow-hidden">
@@ -280,14 +298,7 @@ const TopupDetailView = ({
       {/* Crypto payment icons */}
       <div className="flex items-center gap-2 flex-wrap mb-6">
         {CRYPTO_ICONS.map((c) => (
-          <div
-            key={c.label}
-            title={c.label}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-sm select-none"
-            style={{ backgroundColor: c.bg }}
-          >
-            {c.icon}
-          </div>
+          <CryptoIconImg key={c.label} symbol={c.symbol} label={c.label} />
         ))}
       </div>
 
@@ -486,7 +497,7 @@ const Index = () => {
                     className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground text-base py-4 px-4 min-w-0"
                   />
                   <button
-                    className="bg-red-500 hover:bg-red-600 text-white px-5 py-4 font-bold text-sm shrink-0 transition-all active:scale-95"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-4 font-bold text-sm shrink-0 transition-all active:scale-95"
                     onClick={() => { if (selectedCountry) setView("operators"); else setView("countries"); }}
                   >
                     <ArrowRight className="w-5 h-5" />

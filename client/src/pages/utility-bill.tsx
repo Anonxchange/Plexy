@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
-import { ChevronDown, ArrowRight, Search, Zap, Bot, Check, Receipt, Filter } from '@/lib/icons';
+import { ChevronDown, ArrowRight, Search, Zap, Bot, Check, Receipt, Filter, ShoppingCart, Gift, Star, Shield, Mail, UserCheck, ChevronUp, Share2, Heart } from '@/lib/icons';
 import { PexlyFooter } from "@/components/pexly-footer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,297 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { sanitizeImageUrl } from "@/lib/sanitize";
 import { devLog } from "@/lib/dev-logger";
+import { SYMBOL_ICON_MAP } from "@/lib/crypto-icons";
+
+// ── Crypto icons for the detail view ──────────────────────────────────────
+const UTILITY_CRYPTO_ICONS = [
+  { label: "Bitcoin", symbol: "BTC" },
+  { label: "USDT",    symbol: "USDT" },
+  { label: "USDC",    symbol: "USDC" },
+  { label: "Ethereum",symbol: "ETH" },
+  { label: "Solana",  symbol: "SOL" },
+  { label: "Tron",    symbol: "TRX" },
+];
+
+function CryptoIconImg({ symbol, label }: { symbol: string; label: string }) {
+  const [failed, setFailed] = useState(false);
+  const src = SYMBOL_ICON_MAP[symbol];
+  if (!src || failed) {
+    return (
+      <div className="w-9 h-9 rounded-full bg-muted border border-border flex items-center justify-center shadow-sm">
+        <span className="text-[10px] font-bold text-muted-foreground">{symbol.slice(0, 3)}</span>
+      </div>
+    );
+  }
+  return (
+    <div className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center overflow-hidden shadow-sm p-1.5">
+      <img src={src} alt={label} className="w-full h-full object-contain" onError={() => setFailed(true)} />
+    </div>
+  );
+}
+
+const UTIL_FEATURES = [
+  { icon: UserCheck, label: "No Account Required" },
+  { icon: Mail,      label: "Instant Processing" },
+  { icon: Shield,    label: "Private and Secure" },
+];
+
+const UtilityDetailView = ({
+  selectedProvider,
+  currentCountry,
+  accountNumber,
+  setAccountNumber,
+  amount,
+  setAmount,
+  selectedCountry,
+  onBack,
+}: {
+  selectedProvider: Biller;
+  currentCountry: { isoName: string; name: string } | undefined;
+  accountNumber: string;
+  setAccountNumber: (v: string) => void;
+  amount: string;
+  setAmount: (v: string) => void;
+  selectedCountry: string;
+  onBack: () => void;
+}) => {
+  const [descOpen, setDescOpen] = useState(true);
+  const [liked, setLiked] = useState(false);
+
+  const currency = selectedProvider.localTransactionCurrencyCode || "USD";
+  const isFixed = selectedProvider.denominationType === "FIXED";
+  const fixedAmounts = selectedProvider.fixedAmounts || [];
+  const minAmt = selectedProvider.minLocalTransactionAmount ?? "";
+  const maxAmt = selectedProvider.maxLocalTransactionAmount ?? "";
+  const rangePlaceholder = minAmt && maxAmt ? `${minAmt} – ${maxAmt}` : "Enter amount";
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      await navigator.share({ title: selectedProvider.name, url }).catch(() => {});
+    } else {
+      await navigator.clipboard.writeText(url).catch(() => {});
+    }
+  };
+
+  const handleCheckout = () => {
+    if (!amount || !accountNumber) {
+      toast.error("Please enter account number and amount");
+      return;
+    }
+    localStorage.setItem("pexly_pending_order", JSON.stringify({
+      type: "utility",
+      title: `${selectedProvider.name} Bill Payment`,
+      description: `Utility bill — ${selectedProvider.name}`,
+      amount: Number(amount),
+      currency: currency.toLowerCase(),
+      metadata: {
+        service: "utility-bill",
+        billerId: selectedProvider.id,
+        accountNumber,
+        countryCode: selectedProvider.countryCode,
+        providerName: selectedProvider.name,
+      },
+    }));
+    devLog.info("Redirecting to checkout for utility bill");
+    const seg = window.location.pathname.split("/")[1];
+    const langBase = seg && seg.length === 2 ? `/${seg}` : "/en";
+    window.open(`${langBase}/checkout`, "_blank");
+  };
+
+  const safeLogo = sanitizeImageUrl((selectedProvider as any).logoUrls?.[0] || (selectedProvider as any).logo);
+
+  return (
+    <div className="animate-fade-in max-w-xl mx-auto">
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-5">
+        <button onClick={onBack} className="hover:text-foreground underline underline-offset-2 transition-colors">
+          {currentCountry?.name || selectedCountry}
+        </button>
+        <span>›</span>
+        <span className="text-foreground font-medium">
+          {selectedProvider.serviceType?.replace(/_/g, " ") || "Utility"}
+        </span>
+      </nav>
+
+      {/* Provider logo + action icons */}
+      <div className="relative flex justify-center mb-5">
+        <div className="absolute right-0 top-0 flex items-center gap-2">
+          <button
+            onClick={handleShare}
+            className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center text-foreground hover:bg-muted transition-colors shadow-sm"
+            aria-label="Share"
+          >
+            <Share2 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setLiked(v => !v)}
+            className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center transition-colors shadow-sm hover:bg-muted"
+            aria-label="Save"
+          >
+            <Heart className={`w-4 h-4 transition-colors ${liked ? "fill-destructive text-destructive" : "text-foreground"}`} />
+          </button>
+        </div>
+        <div className="w-28 h-28 bg-card rounded-2xl border border-border flex items-center justify-center p-3 shadow-sm overflow-hidden">
+          {safeLogo ? (
+            <img
+              src={safeLogo}
+              alt={selectedProvider.name}
+              className="w-full h-full object-contain"
+              crossOrigin="anonymous"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+                (e.currentTarget.nextSibling as HTMLElement)!.style.display = "flex";
+              }}
+            />
+          ) : null}
+          <div className={`w-full h-full items-center justify-center ${safeLogo ? "hidden" : "flex"}`}>
+            <Zap className="w-12 h-12 text-muted-foreground" />
+          </div>
+        </div>
+      </div>
+
+      {/* Title + rating */}
+      <h2 className="text-2xl font-bold text-foreground text-center mb-1">{selectedProvider.name}</h2>
+      <div className="flex items-center justify-center gap-1.5 mb-4">
+        {[1,2,3,4,5].map(i => (
+          <Star key={i} className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+        ))}
+        <span className="text-sm text-muted-foreground ml-1">4.8 (182)</span>
+      </div>
+
+      {/* Description blurb */}
+      <p className="text-sm text-muted-foreground text-center mb-8 leading-relaxed px-2">
+        Pay your {selectedProvider.name} bill instantly using Bitcoin, USDT, and other cryptocurrencies.
+        Accepted in {currentCountry?.name || selectedCountry} with instant confirmation.
+      </p>
+
+      {/* Account number input */}
+      <div className="mb-5">
+        <p className="text-base font-semibold text-foreground mb-2">Account or meter number</p>
+        <input
+          type="text"
+          value={accountNumber}
+          onChange={(e) => setAccountNumber(e.target.value)}
+          placeholder="e.g. 1234567890"
+          className="w-full border border-border rounded-xl bg-card text-foreground placeholder:text-muted-foreground text-base py-4 px-4 outline-none focus:ring-2 focus:ring-primary/40 transition-all"
+        />
+      </div>
+
+      {/* Amount input — shown for RANGE or FIXED with no pre-set amounts */}
+      {(!isFixed || fixedAmounts.length === 0) && (
+        <div className="mb-5">
+          <p className="text-base font-semibold text-foreground mb-2">Enter amount</p>
+          <div className="flex items-stretch border border-border rounded-xl overflow-hidden bg-card focus-within:ring-2 focus-within:ring-primary/40 transition-all">
+            <div className="flex items-center px-4 border-r border-border bg-muted/40">
+              <span className="text-sm font-semibold text-foreground whitespace-nowrap">{currency}</span>
+            </div>
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder={rangePlaceholder}
+              min={selectedProvider.minLocalTransactionAmount ?? undefined}
+              max={selectedProvider.maxLocalTransactionAmount ?? undefined}
+              className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground text-base py-4 px-4 outline-none min-w-0"
+            />
+          </div>
+          {minAmt && maxAmt && (
+            <p className="text-xs text-muted-foreground mt-1.5 px-1">
+              Range: {currency} {minAmt} – {maxAmt}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Fixed amount quick-select (when pre-set amounts exist) */}
+      {fixedAmounts.length > 0 && (
+        <div className="mb-5">
+          <p className="text-base font-semibold text-foreground mb-2">Select amount</p>
+          <div className="grid grid-cols-3 gap-2">
+            {fixedAmounts.slice(0, 9).map((amt) => (
+              <button
+                key={amt}
+                onClick={() => setAmount(amt.toString())}
+                className={`py-2.5 px-2 rounded-xl border transition-all flex flex-col items-center gap-0.5 text-sm font-semibold ${
+                  amount === amt.toString()
+                    ? "border-primary bg-primary text-primary-foreground ring-2 ring-primary/20"
+                    : "border-border bg-card hover:border-primary/50 text-foreground hover:bg-muted/30"
+                }`}
+              >
+                {currency} {amt}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* CTA buttons */}
+      <div className="space-y-3 mb-8">
+        <button
+          disabled={!amount || !accountNumber}
+          onClick={handleCheckout}
+          className="w-full flex items-center justify-center gap-2.5 py-4 px-6 rounded-full bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground font-bold text-base transition-all active:scale-[0.98] shadow-md"
+        >
+          <ShoppingCart className="w-5 h-5" />
+          Proceed to checkout
+        </button>
+        <button
+          disabled={!amount || !accountNumber}
+          onClick={handleCheckout}
+          className="w-full flex items-center justify-center gap-2.5 py-4 px-6 rounded-full bg-muted hover:bg-muted/70 disabled:opacity-50 disabled:cursor-not-allowed text-foreground font-semibold text-base transition-all active:scale-[0.98] border border-border"
+        >
+          <Gift className="w-5 h-5" />
+          Send as gift
+        </button>
+      </div>
+
+      {/* Crypto payment icons */}
+      <div className="flex items-center gap-2 flex-wrap mb-6">
+        {UTILITY_CRYPTO_ICONS.map((c) => (
+          <CryptoIconImg key={c.label} symbol={c.symbol} label={c.label} />
+        ))}
+      </div>
+
+      <div className="border-t border-border mb-6" />
+
+      {/* Feature list */}
+      <ul className="space-y-4 mb-6">
+        {UTIL_FEATURES.map(({ icon: Icon, label }) => (
+          <li key={label} className="flex items-center gap-3">
+            <Icon className="w-5 h-5 text-primary shrink-0" />
+            <span className="text-sm font-medium text-foreground">{label}</span>
+          </li>
+        ))}
+      </ul>
+
+      <div className="border-t border-border mb-5" />
+
+      {/* Description accordion */}
+      <div>
+        <button
+          onClick={() => setDescOpen(o => !o)}
+          className="w-full flex items-center justify-between py-2 text-left"
+        >
+          <span className="font-semibold text-foreground">Description</span>
+          {descOpen ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
+        </button>
+        {descOpen && (
+          <div className="mt-3 space-y-3 text-sm text-muted-foreground leading-relaxed pb-2">
+            <p>
+              {selectedProvider.name} allows you to pay your utility bills instantly with cryptocurrency.
+            </p>
+            <p>
+              Pay {selectedProvider.name} bills with crypto such as Bitcoin, Ethereum, USDT, USDC, Solana, and many more.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="h-10" />
+    </div>
+  );
+};
 
 const FALLBACK_COUNTRIES = [
   { isoName: "NG", name: "Nigeria" },
@@ -216,7 +507,7 @@ const UtilityBill = () => {
                 className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground text-base py-4 px-4 min-w-0"
               />
               <button
-                className="bg-red-500 hover:bg-red-600 text-white px-5 py-4 font-bold text-sm shrink-0 transition-all active:scale-95"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-4 font-bold text-sm shrink-0 transition-all active:scale-95"
                 onClick={() => { if (selectedCountry) setView("providers"); else setView("countries"); }}
               >
                 <ArrowRight className="w-5 h-5" />
@@ -361,136 +652,18 @@ const UtilityBill = () => {
             </div>
           )}
 
-          {/* Pay view */}
+          {/* Pay view — Bitrefill-style detail */}
           {view === "pay" && selectedProvider && (
-            <div className="animate-fade-in max-w-2xl mx-auto space-y-4">
-
-              {/* Back */}
-              <Button
-                variant="ghost"
-                onClick={() => setView("providers")}
-                className="gap-2 text-muted-foreground hover:text-foreground -ml-2"
-              >
-                <ArrowRight className="w-4 h-4 rotate-180" />
-                Back to providers
-              </Button>
-
-              {/* Provider header */}
-              <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
-                <div className="flex items-center gap-5">
-                  <div className="w-16 h-16 bg-background rounded-2xl flex items-center justify-center p-2.5 border border-border shrink-0">
-                    <Zap className="w-8 h-8 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h2 className="text-xl font-bold text-foreground truncate">{selectedProvider.name}</h2>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                      {currentCountry?.name} · {selectedProvider.serviceType.replace(/_/g, " ")} · {selectedProvider.localTransactionCurrencyCode}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Account number */}
-              <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 bg-primary/10 rounded-xl flex items-center justify-center">
-                    <Receipt className="w-4 h-4 text-primary" />
-                  </div>
-                  <h3 className="font-bold text-foreground">Account Information</h3>
-                </div>
-                <Input
-                  value={accountNumber}
-                  onChange={(e) => setAccountNumber(e.target.value)}
-                  placeholder="Enter account or meter number"
-                  className="h-14 text-lg px-5 bg-background border-border focus-visible:ring-primary rounded-2xl"
-                />
-              </div>
-
-              {/* Amount */}
-              <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 bg-primary/10 rounded-xl flex items-center justify-center">
-                    <Bot className="w-4 h-4 text-primary" />
-                  </div>
-                  <h3 className="font-bold text-foreground">
-                    Payment Amount
-                    <span className="ml-1.5 text-muted-foreground font-normal text-sm">({selectedProvider.localTransactionCurrencyCode})</span>
-                  </h3>
-                </div>
-
-                {selectedProvider.denominationType !== "FIXED" && (
-                  <>
-                    <Input
-                      type="number"
-                      placeholder="Enter amount"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      className="h-14 text-lg px-5 bg-background border-border focus-visible:ring-primary rounded-2xl mb-2"
-                    />
-                    {(selectedProvider.minLocalTransactionAmount || selectedProvider.maxLocalTransactionAmount) && (
-                      <p className="text-xs text-muted-foreground px-1 mb-4">
-                        Range: {selectedProvider.localTransactionCurrencyCode} {selectedProvider.minLocalTransactionAmount ?? 0} – {selectedProvider.maxLocalTransactionAmount ?? "Any"}
-                      </p>
-                    )}
-                  </>
-                )}
-
-                {selectedProvider.fixedAmounts && selectedProvider.fixedAmounts.length > 0 && (
-                  <div className="grid grid-cols-3 gap-2.5">
-                    {selectedProvider.fixedAmounts.map((amt) => (
-                      <button
-                        key={amt}
-                        onClick={() => setAmount(amt.toString())}
-                        className={`py-3 px-2 rounded-2xl border transition-all flex flex-col items-center justify-center gap-0.5 ${
-                          amount === amt.toString()
-                            ? "border-primary bg-primary text-primary-foreground ring-2 ring-primary/30"
-                            : "border-border bg-background hover:border-primary/50 text-foreground hover:bg-muted/50"
-                        }`}
-                      >
-                        <span className="text-base font-bold">
-                          {selectedProvider.localTransactionCurrencyCode} {amt}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Proceed to Checkout */}
-              <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
-                <Button
-                  className="w-full h-13 text-base font-bold rounded-2xl gap-2"
-                  disabled={!amount || !accountNumber}
-                  onClick={() => {
-                    if (!amount || !accountNumber) {
-                      toast.error("Please enter account number and amount");
-                      return;
-                    }
-                    localStorage.setItem("pexly_pending_order", JSON.stringify({
-                      type: "utility",
-                      title: `${selectedProvider.name} Bill Payment`,
-                      description: `Utility bill — ${selectedProvider.name}`,
-                      amount: Number(amount),
-                      currency: selectedProvider.localTransactionCurrencyCode?.toLowerCase() || "usd",
-                      metadata: {
-                        service: "utility-bill",
-                        billerId: selectedProvider.id,
-                        accountNumber,
-                        countryCode: selectedProvider.countryCode,
-                        providerName: selectedProvider.name,
-                      },
-                    }));
-                    devLog.info("Redirecting to checkout for utility bill");
-                    const seg = window.location.pathname.split("/")[1];
-                    const langBase = seg && seg.length === 2 ? `/${seg}` : "/en";
-                    window.open(`${langBase}/checkout`, "_blank");
-                  }}
-                >
-                  Proceed to Checkout →
-                </Button>
-              </div>
-
-            </div>
+            <UtilityDetailView
+              selectedProvider={selectedProvider}
+              currentCountry={currentCountry}
+              accountNumber={accountNumber}
+              setAccountNumber={setAccountNumber}
+              amount={amount}
+              setAmount={setAmount}
+              selectedCountry={selectedCountry}
+              onBack={() => setView("providers")}
+            />
           )}
         </div>
       </section>
