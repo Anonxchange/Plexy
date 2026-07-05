@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
-import { ChevronDown, ArrowRight, Search, Bot, Smartphone, ShoppingCart, Gift, Star, Shield, Mail, UserCheck, ChevronUp } from '@/lib/icons';
+import { ChevronDown, ArrowRight, Search, Smartphone, ShoppingCart, Gift, Star, Shield, Mail, UserCheck, ChevronUp, Share2, Heart } from '@/lib/icons';
 import { PexlyFooter } from "@/components/pexly-footer";
 import { useAirtime } from "@/hooks/user-airtime";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -124,6 +124,17 @@ const TopupDetailView = ({
     window.open(`${langBase}/checkout`, "_blank");
   };
 
+  const [liked, setLiked] = useState(false);
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      await navigator.share({ title: selectedOperator.name, url }).catch(() => {});
+    } else {
+      await navigator.clipboard.writeText(url).catch(() => {});
+    }
+  };
+
   return (
     <div className="animate-fade-in max-w-xl mx-auto">
       {/* Breadcrumb */}
@@ -135,8 +146,24 @@ const TopupDetailView = ({
         <span className="text-foreground font-medium">Prepaid phones</span>
       </nav>
 
-      {/* Operator logo */}
-      <div className="flex justify-center mb-5">
+      {/* Operator logo + action icons */}
+      <div className="relative flex justify-center mb-5">
+        <div className="absolute right-0 top-0 flex items-center gap-2">
+          <button
+            onClick={handleShare}
+            className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center text-foreground hover:bg-muted transition-colors shadow-sm"
+            aria-label="Share"
+          >
+            <Share2 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setLiked(v => !v)}
+            className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center transition-colors shadow-sm hover:bg-muted"
+            aria-label="Save"
+          >
+            <Heart className={`w-4 h-4 transition-colors ${liked ? "fill-red-500 text-red-500" : "text-foreground"}`} />
+          </button>
+        </div>
         <div className="w-28 h-28 bg-card rounded-2xl border border-border flex items-center justify-center p-3 shadow-sm overflow-hidden">
           {proxiedOperatorLogo ? (
             <img
@@ -412,79 +439,31 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
 
-      {/* ── Hero ── */}
-      <section className="relative bg-primary pt-8 pb-16 px-4">
-        <div className="absolute inset-0 overflow-hidden opacity-10 pointer-events-none">
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-white rounded-full blur-3xl" />
-          <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-white rounded-full blur-2xl" />
-        </div>
-        <div className="relative max-w-2xl mx-auto text-center">
-          <h1 className="text-3xl md:text-4xl font-bold text-primary-foreground leading-tight mb-3">
-            Mobile Top-Up with Crypto
-          </h1>
-          <p className="text-primary-foreground/70 text-base mb-6">
-            Refill any prepaid phone in 140+ countries using Bitcoin, USDT, and more.
-          </p>
-        </div>
-
-        {/* Floating phone input */}
-        <div className="absolute left-4 right-4 -bottom-6 z-20">
-          <div className="max-w-lg mx-auto">
-            <div className="flex items-center bg-card border border-border rounded-2xl shadow-xl overflow-hidden">
-              <button
-                className="flex items-center gap-2 px-4 py-4 border-r border-border text-foreground font-semibold text-sm shrink-0 hover:bg-muted transition-colors"
-                onClick={() => { setSelectedCountry(""); setView("countries"); }}
-              >
-                {selectedCountry ? (
-                  <>
-                    <img
-                      src={`https://flagcdn.com/w40/${selectedCountry.toLowerCase()}.png`}
-                      alt=""
-                      className="w-5 h-3.5 object-cover rounded-sm"
-                    />
-                    <span>{selectedCountry}</span>
-                  </>
-                ) : (
-                  <span className="text-muted-foreground">Country</span>
-                )}
-                <ChevronDown className="w-4 h-4 text-muted-foreground" />
-              </button>
-              <input
-                type="tel"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                placeholder="Enter phone number"
-                className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground text-base py-4 px-4 min-w-0"
-              />
-              <button
-                className="bg-red-500 hover:bg-red-600 text-white px-5 py-4 font-bold text-sm shrink-0 transition-all active:scale-95"
-                onClick={() => { if (selectedCountry) setView("operators"); else setView("countries"); }}
-              >
-                <ArrowRight className="w-5 h-5" />
-              </button>
-            </div>
+      {/* ── Search header ── */}
+      <section className="px-4 pt-6 pb-4 md:px-6 lg:px-8 border-b border-border/60 bg-background sticky top-0 z-20">
+        <div className="max-w-2xl mx-auto">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={view === "operators" ? "Search operators…" : "Search countries…"}
+              className="w-full h-12 pl-11 pr-4 bg-card border border-border rounded-2xl text-foreground placeholder:text-muted-foreground text-base outline-none focus:ring-2 focus:ring-primary/40 transition-all shadow-sm"
+            />
           </div>
         </div>
       </section>
 
       {/* ── Main Content ── */}
-      <section className="pt-16 pb-10 px-4 md:px-6 lg:px-8">
+      <section className="pt-6 pb-10 px-4 md:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
 
           {/* Countries view */}
           {view === "countries" && (
             <div className="animate-fade-in">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div className="mb-6">
                 <h2 className="text-xl font-bold text-foreground">Select Country</h2>
-                <div className="relative w-full sm:w-72">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search countries..."
-                    className="pl-10 h-11 rounded-2xl bg-card border-border"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -527,33 +506,20 @@ const Index = () => {
           {/* Operators view */}
           {view === "operators" && (
             <div className="animate-fade-in">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <div className="flex items-center gap-3">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => { setSelectedCountry(""); setSelectedOperator(null); setSearchQuery(""); setView("countries"); }}
-                    className="rounded-full hover:bg-muted shrink-0"
-                  >
-                    <ArrowRight className="w-5 h-5 rotate-180" />
-                  </Button>
-                  <div>
-                    <h2 className="text-xl font-bold text-foreground">
-                      {isLoadingCountries
-                        ? <Skeleton className="h-7 w-52" />
-                        : `Operators in ${currentCountry?.name || "Selected Country"}`}
-                    </h2>
-                  </div>
-                </div>
-                <div className="relative w-full sm:w-72">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search operators..."
-                    className="pl-10 h-11 rounded-2xl bg-card border-border"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
+              <div className="flex items-center gap-3 mb-6">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => { setSelectedCountry(""); setSelectedOperator(null); setSearchQuery(""); setView("countries"); }}
+                  className="rounded-full hover:bg-muted shrink-0"
+                >
+                  <ArrowRight className="w-5 h-5 rotate-180" />
+                </Button>
+                <h2 className="text-xl font-bold text-foreground">
+                  {isLoadingCountries
+                    ? <Skeleton className="h-7 w-52" />
+                    : `Operators in ${currentCountry?.name || "Selected Country"}`}
+                </h2>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-5">

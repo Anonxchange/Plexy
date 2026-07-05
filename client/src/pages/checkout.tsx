@@ -25,9 +25,8 @@ import {
 } from '@/lib/icons';
 import { getExchangeRates } from "@/lib/crypto-prices";
 import NowPaymentsCheckout from "@/components/nowpayments-checkout";
-
 type DeliveryTarget = "self" | "gift";
-type PaymentMethod = "card" | "paypal" | "crypto";
+type PaymentMethod = "card" | "crypto";
 type CheckoutStep = "contact" | "payment" | "paying";
 
 // ── Payment method catalogue — swap these 8 when the user provides them ──
@@ -182,8 +181,6 @@ export function Checkout() {
   const [pendingGiftRecipientEmail, setPendingGiftRecipientEmail] = useState("");
   const [pendingGiftRecipientName, setPendingGiftRecipientName] = useState("");
   const [pendingGiftMessageText, setPendingGiftMessageText] = useState("");
-  const { checkout: paypalCheckout, loading: paypalLoading } = usePayPal();
-
   const [recipientEmail, setRecipientEmail] = useState("");
   const [recipientName, setRecipientName] = useState("");
   const [giftMessage, setGiftMessage] = useState("");
@@ -253,13 +250,6 @@ export function Checkout() {
       } catch {}
       toast({ title: "Payment confirmed!", description: "Your order has been placed successfully." });
       setLocation("/account-settings?section=shop-history");
-    };
-
-    const getPayPalPayload = () => {
-      if (pendingOrder.type === "topup") {
-        return { productType: "airtime" as const, operatorId: Number(pendingOrder.metadata.operatorId), amount: pendingOrder.amount };
-      }
-      return { productType: "total" as const, amount: pendingTotalUsd, currency: "USD" };
     };
 
     // Display label for amount
@@ -732,25 +722,6 @@ export function Checkout() {
                   />
                 )}
 
-                {method.kind === "paypal" && (
-                  <div className="rounded-2xl border border-border bg-card p-6 text-center space-y-4">
-                    <p className="text-sm text-muted-foreground">You will be redirected to PayPal to complete your payment securely.</p>
-                    <Button
-                      className="w-full h-12 bg-[#0070BA] text-white hover:bg-[#005ea6] font-bold rounded-2xl gap-2"
-                      disabled={paypalLoading}
-                      onClick={async () => {
-                        const result = await paypalCheckout(getPayPalPayload());
-                        if (result) handleOrderSuccess();
-                      }}
-                    >
-                      {paypalLoading
-                        ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Processing...</>
-                        : <><img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" className="h-4" alt="" /> Continue to PayPal</>
-                      }
-                    </Button>
-                  </div>
-                )}
-
                 <p className="text-center text-xs text-muted-foreground pb-4">
                   By placing your order you agree to our{" "}
                   <a href="/terms" className="underline hover:text-foreground">Terms of service</a>{" "}
@@ -787,49 +758,6 @@ export function Checkout() {
 
   const deliveryEmail = deliveryTarget === "gift" ? recipientEmail : buyerEmail;
   const recipientValid = deliveryTarget === "self" || /^\S+@\S+\.\S+$/.test(recipientEmail);
-
-  const handlePaypalCheckout = async () => {
-    const result = await paypalCheckout({ productType: "total", amount: total, currency: "USD" });
-    if (!result) return;
-    setFulfilling(true);
-    try {
-      await Promise.all(
-        items.map((item) =>
-          placeReloadlyOrder({
-            productId: Number(item.productId),
-            quantity: item.quantity,
-            unitPrice: item.price,
-            recipientEmail: deliveryEmail || undefined,
-          })
-        )
-      );
-      clearCart();
-      try {
-        const saved = JSON.parse(localStorage.getItem("pexly_digital_orders") || "[]");
-        saved.unshift({
-          id: `gc_${Date.now()}`,
-          type: "giftcard",
-          title: items.length === 1 ? items[0].title : `${items.length} gift card${items.length > 1 ? "s" : ""}`,
-          amount: total,
-          currency: "USD",
-          recipientEmail: deliveryEmail || undefined,
-          placedAt: new Date().toISOString(),
-          status: "fulfilled",
-        });
-        localStorage.setItem("pexly_digital_orders", JSON.stringify(saved.slice(0, 100)));
-      } catch {}
-      toast({ title: "Order placed!", description: "Your gift cards will be emailed to you shortly." });
-      setLocation("/account-settings?section=shop-history");
-    } catch (e: any) {
-      toast({
-        title: "Delivery error",
-        description: e.message ?? "Payment captured but gift card delivery failed. Please contact support.",
-        variant: "destructive",
-      });
-    } finally {
-      setFulfilling(false);
-    }
-  };
 
   return (
     <BrandShell>
@@ -1032,12 +960,6 @@ export function Checkout() {
                         sub: "Visa, Mastercard",
                       },
                       {
-                        id: "paypal" as PaymentMethod,
-                        logo: <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" className="h-4" alt="PayPal" />,
-                        label: "PayPal",
-                        sub: "Wallet & balance",
-                      },
-                      {
                         id: "crypto" as PaymentMethod,
                         logo: <span className="text-xl">₿</span>,
                         label: "Crypto",
@@ -1084,28 +1006,6 @@ export function Checkout() {
                         <FieldLabel>Name on card</FieldLabel>
                         <Input placeholder="Full name" className="h-11" />
                       </div>
-                    </div>
-                  )}
-
-                  {activePayment === "paypal" && (
-                    <div className="text-center py-4 space-y-3">
-                      <p className="text-sm text-muted-foreground">
-                        You'll be redirected to PayPal to complete your purchase securely.
-                      </p>
-                      <Button
-                        className="w-full h-12 bg-[#0070BA] text-white hover:bg-[#005ea6] font-bold rounded-xl gap-2"
-                        disabled={paypalLoading || fulfilling}
-                        onClick={handlePaypalCheckout}
-                      >
-                        {paypalLoading || fulfilling ? (
-                          <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <>
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" className="h-5" alt="" />
-                            Continue with PayPal
-                          </>
-                        )}
-                      </Button>
                     </div>
                   )}
 
