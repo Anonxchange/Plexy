@@ -28,7 +28,6 @@ import {
 } from '@/lib/icons';
 import { getExchangeRates } from "@/lib/crypto-prices";
 import NowPaymentsCheckout from "@/components/nowpayments-checkout";
-import { getNowPaymentsCurrencies } from "@/hooks/use-nowpayments";
 import { SYMBOL_ICON_MAP } from "@/lib/crypto-icons";
 type DeliveryTarget = "self" | "gift";
 type PaymentMethod = "card" | "crypto";
@@ -38,21 +37,48 @@ type CheckoutStep = "contact" | "payment" | "paying";
 type PaymentMethodDef = {
   id: string;
   label: string;
-  symbol: string;       // base token symbol for icon lookup (e.g. "BTC", "USDT")
-  networkBadge?: string; // short network label shown as badge (e.g. "TRC20", "ERC20")
+  symbol: string;
+  networkBadge?: string;
   kind: "crypto" | "paypal" | "card" | "gift";
 };
 
-// Fallback shown only while the live list is loading or on API error.
-// Keep this tight — the real list always comes from getNowPaymentsCurrencies().
-const PAYMENT_METHODS_FALLBACK: PaymentMethodDef[] = [
-  { id: "btc",       label: "Bitcoin",      symbol: "BTC",  kind: "crypto" },
-  { id: "eth",       label: "Ethereum ERC20", symbol: "ETH",  networkBadge: "ERC20", kind: "crypto" },
-  { id: "usdttrc20", label: "USDT TRC20",   symbol: "USDT", networkBadge: "TRC20", kind: "crypto" },
-  { id: "usdterc20", label: "USDT ERC20",   symbol: "USDT", networkBadge: "ERC20", kind: "crypto" },
-  { id: "usdc",      label: "USDC",         symbol: "USDC", kind: "crypto" },
-  { id: "bnbbsc",    label: "BNB BEP20",    symbol: "BNB",  networkBadge: "BEP20", kind: "crypto" },
+// ── Stablecoin network option ──────────────────────────────────────────────
+type StablecoinNetwork = {
+  id: string;        // NOWPayments currency code (e.g. "usdttrc20")
+  label: string;     // Display name (e.g. "TRC20")
+  badge: string;     // Short badge (e.g. "TRC20")
+};
+
+// ── Primary coins — always shown, always the main list ────────────────────
+const PRIMARY_PAYMENT_METHODS: PaymentMethodDef[] = [
+  { id: "btc",    label: "Bitcoin",          symbol: "BTC", kind: "crypto" },
+  { id: "eth",    label: "Ethereum",         symbol: "ETH", networkBadge: "ERC20", kind: "crypto" },
+  { id: "trx",    label: "Tron",             symbol: "TRX", kind: "crypto" },
+  { id: "bnbbsc", label: "Binance Coin",     symbol: "BNB", networkBadge: "BSC",  kind: "crypto" },
+  { id: "sol",    label: "Solana",           symbol: "SOL", kind: "crypto" },
 ];
+
+// ── Stablecoin groups — each has a network sub-dropdown ───────────────────
+const USDT_NETWORKS: StablecoinNetwork[] = [
+  { id: "usdterc20",  label: "ERC20",        badge: "ERC20" },
+  { id: "usdttrc20",  label: "TRC20",        badge: "TRC20" },
+  { id: "usdtbsc",    label: "BSC (BEP20)",  badge: "BSC" },
+  { id: "usdtarb",    label: "Arbitrum One", badge: "ARB" },
+  { id: "usdtop",     label: "Optimism",     badge: "OP" },
+  { id: "usdtmatic",  label: "Polygon",      badge: "POL" },
+];
+
+const USDC_NETWORKS: StablecoinNetwork[] = [
+  { id: "usdcerc20",  label: "ERC20",        badge: "ERC20" },
+  { id: "usdctrc20",  label: "TRC20",        badge: "TRC20" },
+  { id: "usdcbsc",    label: "BSC (BEP20)",  badge: "BSC" },
+  { id: "usdcarb",    label: "Arbitrum One", badge: "ARB" },
+  { id: "usdcop",     label: "Optimism",     badge: "OP" },
+  { id: "usdcmatic",  label: "Polygon",      badge: "POL" },
+];
+
+// Keep for legacy lookup in the "paying" step
+const PAYMENT_METHODS_FALLBACK: PaymentMethodDef[] = PRIMARY_PAYMENT_METHODS;
 
 // Parse a NOWPayments currency code into display info.
 // Each code from the API already encodes a specific coin+network (e.g. usdttrc20 = USDT on Tron).
@@ -201,9 +227,11 @@ export function Checkout() {
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("contact");
   const [sendAsGift, setSendAsGift] = useState(false);
   const [promoToggle, setPromoToggle] = useState(false);
-  const [selectedMethodId, setSelectedMethodId] = useState<string>(PAYMENT_METHODS[0].id);
-  const [dynamicMethods, setDynamicMethods] = useState<PaymentMethodDef[]>([]);
-  const [methodsLoading, setMethodsLoading] = useState(true);
+  const [selectedMethodId, setSelectedMethodId] = useState<string>(PRIMARY_PAYMENT_METHODS[0].id);
+  const [usdtExpanded, setUsdtExpanded] = useState(false);
+  const [usdcExpanded, setUsdcExpanded] = useState(false);
+  const [selectedUsdtNetwork, setSelectedUsdtNetwork] = useState<StablecoinNetwork>(USDT_NETWORKS[0]);
+  const [selectedUsdcNetwork, setSelectedUsdcNetwork] = useState<StablecoinNetwork>(USDC_NETWORKS[0]);
   const [rates, setRates] = useState<Record<string, number>>({ USD: 1 });
   const [pendingOrder] = useState<PendingOrder | null>(() => {
     try {
@@ -232,38 +260,6 @@ export function Checkout() {
     return () => { cancelled = true; };
   }, []);
 
-  // Fetch live NOWPayments currencies and build the payment method list
-  useEffect(() => {
-    let cancelled = false;
-    setMethodsLoading(true);
-    getNowPaymentsCurrencies()
-      .then((data: any) => {
-        if (cancelled) return;
-        const codes: string[] = Array.isArray(data)
-          ? data
-          : Array.isArray(data?.currencies)
-          ? data.currencies
-          : [];
-        if (codes.length > 0) {
-          // Each NOWPayments code is already a specific coin+network (e.g. usdttrc20 = USDT on Tron).
-          // Show every code returned by the API as its own row — no network-selection layer needed.
-          // Only deduplicate exact duplicate codes (API shouldn't send them but guard anyway).
-          const seen = new Set<string>();
-          const methods: PaymentMethodDef[] = [];
-          for (const code of codes) {
-            if (!seen.has(code)) {
-              seen.add(code);
-              methods.push(parseCurrencyCode(code));
-            }
-          }
-          setDynamicMethods(methods);
-          setSelectedMethodId(methods[0]?.id ?? PAYMENT_METHODS[0].id);
-        }
-      })
-      .catch(() => { /* keep fallback */ })
-      .finally(() => { if (!cancelled) setMethodsLoading(false); });
-    return () => { cancelled = true; };
-  }, []);
 
   const buyerEmail = user?.email || "";
 
@@ -579,44 +575,30 @@ export function Checkout() {
                   Choose a payment method
                 </p>
 
-                {methodsLoading && dynamicMethods.length === 0 ? (
-                  <div className="space-y-2">
-                    {Array(5).fill(0).map((_, i) => (
-                      <div key={i} className="w-full flex items-center gap-4 rounded-2xl border border-border bg-card px-5 py-4 animate-pulse">
-                        <div className="h-5 w-5 rounded-full bg-muted shrink-0" />
-                        <div className="h-9 w-9 rounded-full bg-muted shrink-0" />
-                        <div className="flex-1 space-y-1.5">
-                          <div className="h-4 w-24 bg-muted rounded" />
-                          <div className="h-3 w-16 bg-muted rounded" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {(dynamicMethods.length > 0 ? dynamicMethods : PAYMENT_METHODS).map((method) => {
+                <div className="space-y-2">
+                    {/* ── Primary coins ── */}
+                    {PRIMARY_PAYMENT_METHODS.map((method) => {
                       const selected = selectedMethodId === method.id;
                       return (
                         <button
                           key={method.id}
-                          onClick={() => setSelectedMethodId(method.id)}
+                          onClick={() => {
+                            setSelectedMethodId(method.id);
+                            setUsdtExpanded(false);
+                            setUsdcExpanded(false);
+                          }}
                           className={`w-full flex items-center gap-4 rounded-2xl border px-5 py-4 transition-all text-left ${
                             selected
                               ? "border-primary bg-primary/5"
                               : "border-border bg-card hover:border-border/80 hover:bg-muted/30"
                           }`}
                         >
-                          {/* Radio indicator */}
                           <div className={`h-5 w-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors ${
                             selected ? "border-primary" : "border-muted-foreground/40"
                           }`}>
                             {selected && <div className="h-2.5 w-2.5 rounded-full bg-primary" />}
                           </div>
-
-                          {/* Real coin icon */}
                           <CryptoMethodIcon symbol={method.symbol} />
-
-                          {/* Label + network badge */}
                           <div className="flex-1 min-w-0">
                             <span className="text-base font-semibold text-foreground">{method.label}</span>
                             {method.networkBadge && (
@@ -626,8 +608,115 @@ export function Checkout() {
                         </button>
                       );
                     })}
+
+                    {/* ── USDT with network dropdown ── */}
+                    {(() => {
+                      const usdtSelected = USDT_NETWORKS.some(n => n.id === selectedMethodId);
+                      return (
+                        <div className={`rounded-2xl border transition-all ${
+                          usdtSelected ? "border-primary bg-primary/5" : "border-border bg-card"
+                        }`}>
+                          <button
+                            onClick={() => {
+                              setUsdtExpanded(v => !v);
+                              setUsdcExpanded(false);
+                              if (!usdtSelected) setSelectedMethodId(selectedUsdtNetwork.id);
+                            }}
+                            className="w-full flex items-center gap-4 px-5 py-4 text-left"
+                          >
+                            <div className={`h-5 w-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors ${
+                              usdtSelected ? "border-primary" : "border-muted-foreground/40"
+                            }`}>
+                              {usdtSelected && <div className="h-2.5 w-2.5 rounded-full bg-primary" />}
+                            </div>
+                            <CryptoMethodIcon symbol="USDT" />
+                            <div className="flex-1 min-w-0">
+                              <span className="text-base font-semibold text-foreground">USDT</span>
+                              {usdtSelected && (
+                                <span className="ml-2 text-xs bg-muted text-muted-foreground font-medium px-1.5 py-0.5 rounded-md">{selectedUsdtNetwork.badge}</span>
+                              )}
+                            </div>
+                            <ChevronDown className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${usdtExpanded ? "rotate-180" : ""}`} />
+                          </button>
+                          {usdtExpanded && (
+                            <div className="px-5 pb-4 grid grid-cols-2 gap-2">
+                              {USDT_NETWORKS.map((net) => {
+                                const active = selectedMethodId === net.id;
+                                return (
+                                  <button
+                                    key={net.id}
+                                    onClick={() => { setSelectedMethodId(net.id); setSelectedUsdtNetwork(net); }}
+                                    className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition-all ${
+                                      active ? "border-primary bg-primary/10 text-foreground font-semibold" : "border-border bg-background text-muted-foreground hover:border-border/80 hover:text-foreground"
+                                    }`}
+                                  >
+                                    <div className={`h-3.5 w-3.5 rounded-full border-2 shrink-0 flex items-center justify-center ${active ? "border-primary" : "border-muted-foreground/40"}`}>
+                                      {active && <div className="h-1.5 w-1.5 rounded-full bg-primary" />}
+                                    </div>
+                                    {net.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* ── USDC with network dropdown ── */}
+                    {(() => {
+                      const usdcSelected = USDC_NETWORKS.some(n => n.id === selectedMethodId);
+                      return (
+                        <div className={`rounded-2xl border transition-all ${
+                          usdcSelected ? "border-primary bg-primary/5" : "border-border bg-card"
+                        }`}>
+                          <button
+                            onClick={() => {
+                              setUsdcExpanded(v => !v);
+                              setUsdtExpanded(false);
+                              if (!usdcSelected) setSelectedMethodId(selectedUsdcNetwork.id);
+                            }}
+                            className="w-full flex items-center gap-4 px-5 py-4 text-left"
+                          >
+                            <div className={`h-5 w-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors ${
+                              usdcSelected ? "border-primary" : "border-muted-foreground/40"
+                            }`}>
+                              {usdcSelected && <div className="h-2.5 w-2.5 rounded-full bg-primary" />}
+                            </div>
+                            <CryptoMethodIcon symbol="USDC" />
+                            <div className="flex-1 min-w-0">
+                              <span className="text-base font-semibold text-foreground">USDC</span>
+                              {usdcSelected && (
+                                <span className="ml-2 text-xs bg-muted text-muted-foreground font-medium px-1.5 py-0.5 rounded-md">{selectedUsdcNetwork.badge}</span>
+                              )}
+                            </div>
+                            <ChevronDown className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${usdcExpanded ? "rotate-180" : ""}`} />
+                          </button>
+                          {usdcExpanded && (
+                            <div className="px-5 pb-4 grid grid-cols-2 gap-2">
+                              {USDC_NETWORKS.map((net) => {
+                                const active = selectedMethodId === net.id;
+                                return (
+                                  <button
+                                    key={net.id}
+                                    onClick={() => { setSelectedMethodId(net.id); setSelectedUsdcNetwork(net); }}
+                                    className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition-all ${
+                                      active ? "border-primary bg-primary/10 text-foreground font-semibold" : "border-border bg-background text-muted-foreground hover:border-border/80 hover:text-foreground"
+                                    }`}
+                                  >
+                                    <div className={`h-3.5 w-3.5 rounded-full border-2 shrink-0 flex items-center justify-center ${active ? "border-primary" : "border-muted-foreground/40"}`}>
+                                      {active && <div className="h-1.5 w-1.5 rounded-full bg-primary" />}
+                                    </div>
+                                    {net.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
-                )}
               </div>
 
               {/* Summary accordion */}
@@ -741,8 +830,17 @@ export function Checkout() {
 
           {/* ── Step: Actual payment widget ── */}
           {checkoutStep === "paying" && (() => {
-            const allMethods = dynamicMethods.length > 0 ? dynamicMethods : PAYMENT_METHODS;
-            const method = allMethods.find(m => m.id === selectedMethodId) ?? allMethods[0];
+            const allStableNetworks = [...USDT_NETWORKS, ...USDC_NETWORKS];
+            const stableNet = allStableNetworks.find(n => n.id === selectedMethodId);
+            const method: PaymentMethodDef = stableNet
+              ? {
+                  id: stableNet.id,
+                  label: `${stableNet.id.startsWith("usdt") ? "USDT" : "USDC"} ${stableNet.label}`,
+                  symbol: stableNet.id.startsWith("usdt") ? "USDT" : "USDC",
+                  networkBadge: stableNet.badge,
+                  kind: "crypto",
+                }
+              : (PRIMARY_PAYMENT_METHODS.find(m => m.id === selectedMethodId) ?? PRIMARY_PAYMENT_METHODS[0]);
             return (
               <>
                 <div className="flex items-center gap-3 mb-2">
