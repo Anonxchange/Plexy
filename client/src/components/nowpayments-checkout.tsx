@@ -271,53 +271,90 @@ const NowPaymentsCheckout = ({
       </div>
 
       {/* Warning banner */}
-      <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl px-4 py-3">
-        <span className="text-amber-500 text-base shrink-0 mt-0.5">⚠</span>
-        <p className="text-sm text-amber-200/90 leading-relaxed">
+      <div className="flex items-start gap-3 bg-amber-50 dark:bg-amber-950 border border-amber-400 dark:border-amber-600 rounded-2xl px-4 py-3.5">
+        <span className="text-amber-600 dark:text-amber-400 text-base shrink-0 mt-0.5">⚠</span>
+        <p className="text-sm text-amber-900 dark:text-amber-200 font-medium leading-relaxed">
           Send only <strong>{displayMethodLabel}</strong>
           {displayNetwork ? ` on ${displayNetwork}` : ""}. Sending other tokens may result in loss of funds.
         </p>
       </div>
 
-      {/* Address + amount */}
-      <div className="rounded-2xl border border-border bg-card p-5 space-y-5">
-        <CopyRow label="Payment unique address" value={paymentData.pay_address} />
+      {/* ── QR mode: large QR at top, address below ── */}
+      {showQr && paymentData.pay_address ? (
+        <>
+          <div className="rounded-2xl border border-border bg-card p-6 flex flex-col items-center gap-5">
+            {/* Large QR */}
+            <QRCodeSVG
+              value={walletUri || paymentData.pay_address}
+              size={260}
+              bgColor="white"
+              fgColor="#111111"
+              className="rounded-xl"
+              imageSettings={{
+                src: "",
+                x: undefined,
+                y: undefined,
+                height: 0,
+                width: 0,
+                excavate: false,
+              }}
+            />
+            {/* Address below QR */}
+            <div className="w-full border-t border-border pt-4">
+              <CopyRow label="Payment unique address" value={paymentData.pay_address} />
+              {paymentData.payin_extra_id && (
+                <div className="mt-4">
+                  <CopyRow label="Memo / Tag (required)" value={paymentData.payin_extra_id} />
+                </div>
+              )}
+            </div>
+          </div>
 
-        {paymentData.payin_extra_id && (
-          <CopyRow label="Memo / Tag (required)" value={paymentData.payin_extra_id} />
-        )}
+          {/* Hide QR button */}
+          <button
+            onClick={() => setShowQr(false)}
+            className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-full bg-muted hover:bg-muted/70 border border-border text-foreground font-semibold text-sm transition-all active:scale-[0.98]"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+              <path d="M14 14h3v3m0 4h4v-4m-7 4h3"/>
+            </svg>
+            Hide QR code
+          </button>
+        </>
+      ) : (
+        <>
+          {/* ── Normal mode: address + amount copy rows ── */}
+          <div className="rounded-2xl border border-border bg-card p-5 space-y-5">
+            <CopyRow label="Payment unique address" value={paymentData.pay_address} />
 
-        <div className="border-t border-border" />
+            {paymentData.payin_extra_id && (
+              <CopyRow label="Memo / Tag (required)" value={paymentData.payin_extra_id} />
+            )}
 
-        {payAmountDisplay && (
-          <CopyRow
-            label="Amount to pay"
-            value={`${payAmountDisplay} ${cryptoLabel}`}
-          />
-        )}
-      </div>
+            <div className="border-t border-border" />
 
-      {/* QR toggle */}
-      {showQr && paymentData.pay_address && (
-        <div className="flex justify-center rounded-2xl border border-border bg-card p-6">
-          <QRCodeSVG
-            value={walletUri || paymentData.pay_address}
-            size={200}
-            bgColor="transparent"
-            fgColor="currentColor"
-            className="text-foreground"
-          />
-        </div>
+            {payAmountDisplay && (
+              <CopyRow
+                label="Amount to pay"
+                value={`${payAmountDisplay} ${cryptoLabel}`}
+              />
+            )}
+          </div>
+
+          {/* Show QR button */}
+          <button
+            onClick={() => setShowQr(true)}
+            className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-full bg-muted hover:bg-muted/70 border border-border text-foreground font-semibold text-sm transition-all active:scale-[0.98]"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+              <path d="M14 14h3v3m0 4h4v-4m-7 4h3"/>
+            </svg>
+            Scan QR with another device
+          </button>
+        </>
       )}
-
-      {/* Action buttons */}
-      <button
-        onClick={() => setShowQr(v => !v)}
-        className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-full bg-muted hover:bg-muted/70 border border-border text-foreground font-semibold text-sm transition-all active:scale-[0.98]"
-      >
-        <span className="text-base">⊞</span>
-        {showQr ? "Hide QR code" : "Scan QR with another device"}
-      </button>
 
       {walletUri && (
         <a
