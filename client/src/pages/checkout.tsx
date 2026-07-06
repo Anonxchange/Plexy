@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
@@ -1320,6 +1321,97 @@ function BrandShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+/* ── Quantity dropdown for cart items ─────────────────────────────── */
+function CartItemRow({
+  item,
+  updateQuantity,
+  removeItem,
+}: {
+  item: any;
+  updateQuantity: (id: string, qty: number) => void;
+  removeItem: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const lineUsd = Number(item._lineUsd ?? Number(item.price) * Number(item.quantity || 0));
+
+  return (
+    <div className="flex gap-3 items-start">
+      {/* Thumbnail with qty badge */}
+      <div className="relative flex-shrink-0">
+        <div className="h-14 w-14 rounded-xl bg-muted overflow-hidden flex items-center justify-center p-1.5">
+          <img src={item.image} alt={item.title} className="max-w-full max-h-full object-contain" />
+        </div>
+        <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-foreground text-background text-[10px] font-bold flex items-center justify-center">
+          {item.quantity}
+        </span>
+      </div>
+
+      {/* Info + qty control */}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium leading-snug">{item.title}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Qty: {item.quantity}
+        </p>
+
+        {/* Qty dropdown + delete */}
+        <div className="flex items-center gap-2 mt-2" ref={ref}>
+          <div className="relative">
+            <button
+              onClick={() => setOpen(v => !v)}
+              className="flex items-center gap-1.5 h-8 px-3 rounded-full border border-border bg-background hover:bg-muted text-sm font-medium transition-colors"
+            >
+              {item.quantity}
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
+
+            {open && (
+              <div className="absolute left-0 top-10 z-50 w-28 max-h-64 overflow-y-auto rounded-2xl border border-border bg-popover shadow-xl">
+                {Array.from({ length: 20 }, (_, i) => i + 1).map((qty) => (
+                  <button
+                    key={qty}
+                    onClick={() => { updateQuantity(item.id, qty); setOpen(false); }}
+                    className={cn(
+                      "w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors flex items-center gap-2",
+                      qty === item.quantity ? "font-bold text-foreground" : "text-foreground/80"
+                    )}
+                  >
+                    {qty === item.quantity && <span className="text-primary text-xs">✓</span>}
+                    {qty !== item.quantity && <span className="w-3" />}
+                    {qty}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={() => removeItem(item.id)}
+            className="text-muted-foreground hover:text-destructive transition-colors p-1"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Line total */}
+      <p className="text-sm font-bold flex-shrink-0 pt-1">
+        ${lineUsd.toFixed(2)}
+      </p>
+    </div>
+  );
+}
+
 /* ── Order summary items + totals ─────────────────────────────────── */
 function OrderSummaryItems({
   items,
@@ -1342,43 +1434,12 @@ function OrderSummaryItems({
     <div className="space-y-4">
       <div className="space-y-4">
         {items.map((item) => (
-          <div key={item.id} className="flex gap-3">
-            <div className="relative flex-shrink-0">
-              <div className="h-14 w-14 rounded-xl bg-muted overflow-hidden flex items-center justify-center p-1.5">
-                <img src={item.image} alt={item.title} className="max-w-full max-h-full object-contain" />
-              </div>
-              <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-foreground text-background text-[10px] font-bold flex items-center justify-center">
-                {item.quantity}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium leading-snug truncate">{item.title}</p>
-              <div className="flex items-center gap-2 mt-1.5">
-                <button
-                  onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
-                  className="h-5 w-5 rounded-md border border-border flex items-center justify-center hover:bg-secondary transition-colors"
-                >
-                  <Minus className="h-2.5 w-2.5" />
-                </button>
-                <span className="text-xs font-medium w-4 text-center">{item.quantity}</span>
-                <button
-                  onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                  className="h-5 w-5 rounded-md border border-border flex items-center justify-center hover:bg-secondary transition-colors"
-                >
-                  <Plus className="h-2.5 w-2.5" />
-                </button>
-                <button
-                  onClick={() => removeItem(item.id)}
-                  className="ml-1 text-muted-foreground hover:text-destructive transition-colors"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-            <p className="text-sm font-bold flex-shrink-0">
-              ${Number(item._lineUsd ?? Number(item.price) * Number(item.quantity || 0)).toFixed(2)}
-            </p>
-          </div>
+          <CartItemRow
+            key={item.id}
+            item={item}
+            updateQuantity={updateQuantity}
+            removeItem={removeItem}
+          />
         ))}
       </div>
 
