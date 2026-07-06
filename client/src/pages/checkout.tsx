@@ -283,16 +283,22 @@ export function Checkout() {
   }
 
   if (pendingOrder) {
-    const processingFee = pendingOrder.type === "giftcard" ? 0.55 : 0;
-    const pendingTotal = pendingOrder.amount + processingFee;
     const pendingAmountUsd = pendingOrder.currency.toUpperCase() === "USD"
       ? pendingOrder.amount
       : rates[pendingOrder.currency.toUpperCase()]
         ? pendingOrder.amount / rates[pendingOrder.currency.toUpperCase()]
         : null;
-    const pendingTotalUsd = pendingOrder.type === "giftcard"
-      ? (pendingAmountUsd !== null ? pendingAmountUsd : pendingOrder.amount) + processingFee
-      : pendingTotal;
+    // Service fee by product type (applied on the USD-equivalent amount)
+    const feeBase = pendingAmountUsd ?? pendingOrder.amount;
+    const processingFee = pendingOrder.type === "giftcard"
+      ? feeBase * 0.01 + 0.55
+      : pendingOrder.type === "topup"
+      ? feeBase * 0.015
+      : pendingOrder.type === "utility"
+      ? feeBase * 0.01
+      : 0;
+    const pendingTotal = pendingOrder.amount + processingFee;
+    const pendingTotalUsd = (pendingAmountUsd ?? pendingOrder.amount) + processingFee;
 
     const contactEmail = pendingDeliveryEmail || buyerEmail;
 
@@ -319,9 +325,7 @@ export function Checkout() {
     // Display label for amount
     const displayCurrency = pendingOrder.currency.toUpperCase();
     const displayAmount = pendingOrder.amount;
-    const displayTotal = pendingAmountUsd !== null
-      ? (pendingAmountUsd + processingFee)
-      : pendingTotal;
+    const displayTotal = pendingTotalUsd;
 
     // Sub-line shown under product name in summary (phone / account / qty)
     const orderSubline = pendingOrder.metadata?.recipientPhone
@@ -538,7 +542,14 @@ export function Checkout() {
 
                     <Separator />
 
-                    {/* Total */}
+                    {/* Fee + Total */}
+                    <div className="space-y-1.5 text-sm">
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Service fee</span>
+                        <span>+${processingFee.toFixed(2)}</span>
+                      </div>
+                    </div>
+
                     <div className="flex items-baseline justify-between">
                       <span className="text-base font-bold text-foreground">Total</span>
                       <span className="text-xl font-extrabold text-foreground">
@@ -858,10 +869,17 @@ export function Checkout() {
                   <span>Sending to <strong className="text-foreground">{contactEmail || "your email"}</strong></span>
                 </div>
 
-                {method.kind === "crypto" && (
+                {method.kind === "crypto" && pendingOrder.currency.toUpperCase() !== "USD" && pendingAmountUsd === null && (
+                  <div className="flex flex-col items-center justify-center gap-3 py-12">
+                    <div className="h-10 w-10 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+                    <p className="text-sm text-muted-foreground">Loading exchange rate for {pendingOrder.currency.toUpperCase()}…</p>
+                  </div>
+                )}
+
+                {method.kind === "crypto" && (pendingOrder.currency.toUpperCase() === "USD" || pendingAmountUsd !== null) && (
                   <NowPaymentsCheckout
-                    amount={pendingOrder.type === "giftcard" ? pendingTotalUsd : pendingTotal}
-                    currency={pendingOrder.type === "giftcard" ? "usd" : pendingOrder.currency}
+                    amount={pendingTotalUsd}
+                    currency="usd"
                     payCurrency={method.id}
                     description={pendingOrder.description}
                     metadata={pendingOrder.metadata}
@@ -908,7 +926,7 @@ export function Checkout() {
   });
 
   const subtotal = itemsUsd.reduce((acc, i) => acc + i._lineUsd, 0);
-  const processingFee = 0.55;
+  const processingFee = subtotal * 0.01 + 0.55;
   const discount = promoApplied ? Math.min(subtotal * 0.05, 10) : 0;
   const total = Math.max(0, subtotal + processingFee - discount);
   const totalItems = items.reduce((acc, i) => acc + (i.quantity || 0), 0);
@@ -1372,7 +1390,7 @@ function OrderSummaryItems({
           <span>${subtotal.toFixed(2)}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Processing fee</span>
+          <span className="text-muted-foreground">Service fee</span>
           <span>${processingFee.toFixed(2)}</span>
         </div>
         {discount > 0 && (
