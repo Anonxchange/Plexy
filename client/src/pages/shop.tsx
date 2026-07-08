@@ -469,7 +469,7 @@ export function Shop() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
-  const [sortBy, setSortBy] = useState("newest");
+  const [sortBy, setSortBy] = useState("shuffle");
   const [shuffleSeed, setShuffleSeed] = useState(0);
   const [listings, setListings] = useState<Listing[]>([]);
   const [shopifyProducts, setShopifyProducts] = useState<Listing[]>([]);
