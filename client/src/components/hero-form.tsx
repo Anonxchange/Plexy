@@ -197,7 +197,7 @@ export function HeroForm() {
       {/* Live price display */}
       <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-border/60 bg-muted/20">
         <div>
-          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-1">
+          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1">
             {crypto}/{currency} Market Price
           </div>
           {currentPrice > 0 ? (

@@ -92,11 +92,11 @@ export function GiftCardMarquee() {
       >
         <div className="flex items-center gap-2">
           <span className="w-1.5 h-3.5 rounded-full bg-gradient-to-b from-amber-400 to-orange-500 inline-block" />
-          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
             Gift Cards
           </span>
         </div>
-        <span className="flex items-center gap-0.5 text-[11px] font-semibold text-primary">
+        <span className="flex items-center gap-0.5 text-xs font-semibold text-primary">
           Shop Now <ChevronRight className="w-3 h-3" />
         </span>
       </div>

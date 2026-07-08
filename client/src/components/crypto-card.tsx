@@ -101,7 +101,7 @@ export const CryptoCard = ({ title, value, image, variant = "default", className
           <div className="flex items-end justify-between">
             <div>
               <div className={cn(
-                "text-[10px] md:text-xs uppercase tracking-wide opacity-50 mb-1",
+                "text-xs md:text-xs uppercase tracking-wide opacity-50 mb-1",
                 isLemon ? "text-white" : isBlack ? "text-white" : "text-black"
               )}>
                 Balance
@@ -116,7 +116,7 @@ export const CryptoCard = ({ title, value, image, variant = "default", className
 
             {/* Card Network Logo (Generic) */}
             <div className={cn(
-              "text-[10px] md:text-xs font-bold tracking-widest",
+              "text-xs md:text-xs font-bold tracking-widest",
               isLemon ? "text-white/40" : isBlack ? "text-white/40" : "text-black/40"
             )}>
               DEBIT

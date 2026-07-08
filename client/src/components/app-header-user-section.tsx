@@ -58,7 +58,7 @@ function NotificationIcon({ count = 0, onClick }: NotificationIconProps) {
     >
       <Bell className="w-5 h-5 text-foreground" strokeWidth={2} />
       {showBadge && (
-        <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full animate-badge-pop">
+        <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-xs font-bold rounded-full animate-badge-pop">
           {displayCount}
         </span>
       )}
@@ -307,7 +307,7 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
                   <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                   <div className="mt-1 flex items-center gap-1.5">
                     <span
-                      className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                      className="inline-flex items-center gap-1 text-xs font-semibold px-1.5 py-0.5 rounded-full"
                       style={{
                         backgroundColor:
                           securityInfo.color === "green" ? "#22c55e20" : securityInfo.color === "yellow" ? "#eab30820" : "#ef444420",
@@ -334,7 +334,7 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
                 </div>
                 <div className="flex flex-col min-w-0">
                   <span className="text-sm font-medium text-foreground">{t("nav.dashboard")}</span>
-                  <span className="text-[10px] text-muted-foreground">{t("user_menu.overview_activity")}</span>
+                  <span className="text-xs text-muted-foreground">{t("user_menu.overview_activity")}</span>
                 </div>
               </DropdownMenuItem>
 
@@ -344,7 +344,7 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
                 </div>
                 <div className="flex flex-col min-w-0">
                   <span className="text-sm font-medium text-foreground">{t("user_menu.profile")}</span>
-                  <span className="text-[10px] text-muted-foreground">{t("user_menu.public_profile")}</span>
+                  <span className="text-xs text-muted-foreground">{t("user_menu.public_profile")}</span>
                 </div>
               </DropdownMenuItem>
 
@@ -354,7 +354,7 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
                 </div>
                 <div className="flex flex-col min-w-0">
                   <span className="text-sm font-medium text-foreground">{t("user_menu.account_settings")}</span>
-                  <span className="text-[10px] text-muted-foreground">{t("user_menu.preferences_security")}</span>
+                  <span className="text-xs text-muted-foreground">{t("user_menu.preferences_security")}</span>
                 </div>
               </DropdownMenuItem>
 
@@ -364,7 +364,7 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
                 </div>
                 <div className="flex flex-col min-w-0">
                   <span className="text-sm font-medium text-foreground">{t("user_menu.submit_idea")}</span>
-                  <span className="text-[10px] text-muted-foreground">{t("user_menu.share_feedback")}</span>
+                  <span className="text-xs text-muted-foreground">{t("user_menu.share_feedback")}</span>
                 </div>
               </DropdownMenuItem>
             </div>
@@ -382,11 +382,11 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
                 }}
               >
                 <div className="flex items-center justify-between mb-2.5">
-                  <span className="text-[10px] font-semibold text-foreground/60 uppercase tracking-widest">
+                  <span className="text-xs font-semibold text-foreground/60 uppercase tracking-widest">
                     {t("security.account_security")}
                   </span>
                   <span
-                    className="text-[11px] font-bold tracking-wide"
+                    className="text-xs font-bold tracking-wide"
                     style={{
                       color:
                         securityInfo.color === "green" ? "#16a34a" : securityInfo.color === "yellow" ? "#ca8a04" : "#dc2626",
@@ -437,7 +437,7 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
                         { label: t("security.two_fa_enabled"), ok: hasMfa },
                       ].map(({ label, ok }) => (
                         <div key={label} className="flex items-center justify-between">
-                          <span className="text-[10px] text-foreground/65 leading-none">{label}</span>
+                          <span className="text-xs text-foreground/65 leading-none">{label}</span>
                           {ok ? (
                             <CheckCircle2 className="w-3 h-3 text-green-500 flex-shrink-0" />
                           ) : (
@@ -452,7 +452,7 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
                 {securityInfo.level !== "high" && (
                   <button
                     onClick={() => navigate("/account-settings")}
-                    className="mt-2.5 w-full text-[10px] font-semibold py-1.5 rounded-lg transition-all duration-150 hover:opacity-90 active:scale-[0.98] text-white"
+                    className="mt-2.5 w-full text-xs font-semibold py-1.5 rounded-lg transition-all duration-150 hover:opacity-90 active:scale-[0.98] text-white"
                     style={{ backgroundColor: securityInfo.color === "yellow" ? "#ca8a04" : "#dc2626" }}
                   >
                     {t("security.improve_security")}

@@ -43,7 +43,7 @@ export function PageNavigation() {
               variant={activeTab === id ? "default" : "outline"}
               size="sm"
               onClick={() => handleTabClick(id)}
-              className="h-8 sm:h-9 px-2 sm:px-3 text-[10px] xs:text-xs sm:text-sm font-medium whitespace-nowrap uppercase"
+              className="h-8 sm:h-9 px-2 sm:px-3 text-xs xs:text-xs sm:text-sm font-medium whitespace-nowrap uppercase"
             >
               {t(labelKey)}
             </Button>

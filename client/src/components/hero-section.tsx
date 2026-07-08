@@ -46,7 +46,7 @@ function NotifCard({ logo, logoBg, title, subtitle, amount, amountColor }: Notif
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-[12px] font-bold text-white leading-tight truncate">{title}</p>
-        <p className="text-[10px] text-white/60 mt-0.5">{subtitle}</p>
+        <p className="text-xs text-white/60 mt-0.5">{subtitle}</p>
       </div>
       <span className="text-[12px] font-bold flex-shrink-0" style={{ color: amountColor }}>
         {amount}
@@ -112,10 +112,10 @@ export function HeroSection() {
           className="inline-flex items-center gap-1 rounded-full px-1 py-1 mb-7 lg:mb-4
                      border border-foreground/15 bg-background"
         >
-          <span className="text-[11px] font-medium text-foreground px-2.5">
+          <span className="text-xs font-medium text-foreground px-2.5">
             {t('hero.trust_badge')}
           </span>
-          <span className="rounded-full bg-foreground/[0.07] px-2.5 py-0.5 text-[11px] font-medium text-foreground/90 whitespace-nowrap">
+          <span className="rounded-full bg-foreground/[0.07] px-2.5 py-0.5 text-xs font-medium text-foreground/90 whitespace-nowrap">
             {t('hero.trust_since')}
           </span>
         </div>
@@ -158,7 +158,7 @@ export function HeroSection() {
 
         {/* Brand logos strip */}
         <div className="flex flex-col items-center gap-3 lg:items-start">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
             {t('hero.brands_label')}
           </p>
           <div className="grid grid-cols-7 gap-3">

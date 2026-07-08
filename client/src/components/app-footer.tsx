@@ -119,7 +119,7 @@ export function AppFooter() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-6 gap-y-12 mb-16">
           {footerColumns.map((col) => (
             <div key={col.heading}>
-              <h3 className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35 mb-6">
+              <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-white/35 mb-6">
                 {col.heading}
               </h3>
               <ul className="space-y-4">
@@ -167,7 +167,7 @@ export function AppFooter() {
         </div>
 
         {/* Legal disclaimer */}
-        <p className="text-[11px] text-white/20 leading-relaxed text-center max-w-3xl mx-auto mb-8">
+        <p className="text-xs text-white/20 leading-relaxed text-center max-w-3xl mx-auto mb-8">
           {t('footer.disclaimer')}
         </p>
 

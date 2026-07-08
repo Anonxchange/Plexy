@@ -119,7 +119,7 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar, onPreloadSide
                 className="w-[620px] p-4"
                 onPointerEnter={() => setActiveDropdown("trade")}
               >
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground pb-3">Trade</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground pb-3">Trade</p>
                 <Suspense fallback={null}>
                   <TradeMegaMenu onNavigate={navigate} onClose={() => setActiveDropdown(null)} />
                 </Suspense>
@@ -168,7 +168,7 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar, onPreloadSide
                 className="w-[620px] p-4"
                 onPointerEnter={() => setActiveDropdown("wallet")}
               >
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground pb-3">Wallet</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground pb-3">Wallet</p>
                 <Suspense fallback={null}>
                   <WalletMegaMenu onNavigate={navigate} onClose={() => setActiveDropdown(null)} />
                 </Suspense>
@@ -199,7 +199,7 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar, onPreloadSide
                   className="gap-1 group text-sm font-medium px-2 xl:px-3"
                 >
                   {t("nav.shop")}
-                  <Badge variant="secondary" className="text-[10px] px-1">BETA</Badge>
+                  <Badge variant="secondary" className="text-xs px-1">BETA</Badge>
                   <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
                 </Button>
               </DropdownMenuTrigger>
@@ -208,7 +208,7 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar, onPreloadSide
                 className="w-[480px] p-4"
                 onPointerEnter={() => setActiveDropdown("shop")}
               >
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground pb-3">Shop</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground pb-3">Shop</p>
                 <Suspense fallback={null}>
                   <ShopMegaMenu onNavigate={navigate} onClose={() => setActiveDropdown(null)} />
                 </Suspense>
@@ -237,7 +237,7 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar, onPreloadSide
                 className="w-[520px] p-4"
                 onPointerEnter={() => setActiveDropdown("earn")}
               >
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground pb-3">Earn</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground pb-3">Earn</p>
                 <Suspense fallback={null}>
                   <EarnMegaMenu onNavigate={navigate} onClose={() => setActiveDropdown(null)} />
                 </Suspense>
@@ -266,7 +266,7 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar, onPreloadSide
                 className="w-[480px] p-4"
                 onPointerEnter={() => setActiveDropdown("support")}
               >
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground pb-3">Support</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground pb-3">Support</p>
                 <Suspense fallback={null}>
                   <SupportMegaMenu onNavigate={(href) => { if (href.startsWith('http')) window.open(href, '_blank'); else navigate(href); setActiveDropdown(null); }} onClose={() => setActiveDropdown(null)} />
                 </Suspense>
