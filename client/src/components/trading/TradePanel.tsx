@@ -26,7 +26,7 @@ interface TradePanelProps {
 
 const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
   const [side, setSide] = useState<"buy" | "sell">("buy");
-  const [orderType, setOrderType] = useState("Limit");
+  const [orderType, setOrderType] = useState("Market");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [price, setPrice] = useState("");

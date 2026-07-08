@@ -27,7 +27,7 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
   const [marginMode, setMarginMode] = useState<"cross" | "isolated">("cross");
   const [leverage, setLeverage] = useState("20");
   const [leverageOpen, setLeverageOpen] = useState(false);
-  const [orderType, setOrderType] = useState("Limit");
+  const [orderType, setOrderType] = useState("Market");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [size, setSize] = useState("");
   const [price, setPrice] = useState("");
