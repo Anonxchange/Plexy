@@ -453,12 +453,12 @@ function FlashDealsSection({ listings, onViewDetails }: { listings: Listing[]; o
 
 export function Shop() {
   useHead({
-    title: "Crypto Shop | Pexly",
+    title: "Shop | Pexly",
     meta: [
-      { name: "description", content: "Discover products and services from sellers worldwide. Pay directly with Bitcoin, Ethereum, USDT, and more cryptocurrencies." },
+      { name: "description", content: "Online shopping for electronics, fashion, home & garden, beauty, sports & more. Millions of products from verified global sellers — unbeatable prices, flash deals, and buyer protection on every order." },
       { property: "og:type", content: "website" },
-      { property: "og:title", content: "Crypto Shop | Pexly" },
-      { property: "og:description", content: "Discover products and services from sellers worldwide. Pay directly with Bitcoin, Ethereum, USDT, and more." },
+      { property: "og:title", content: "Shop | Pexly" },
+      { property: "og:description", content: "Online shopping for electronics, fashion, home & garden, beauty, sports & more. Millions of products, unbeatable prices, buyer protection guaranteed." },
       { property: "og:url", content: "https://www.pexly.app/shop" },
     ],
     link: [{ rel: "canonical", href: "https://www.pexly.app/shop" }],
@@ -686,7 +686,7 @@ export function Shop() {
   const currentListings = activeTab === "marketplace" ? listings : shopifyProducts;
 
   const filteredProducts = useMemo(() => {
-    return currentListings
+    const filtered = currentListings
       .filter(p => {
         const q = searchQuery.toLowerCase();
         const matchesSearch = !q || p.title.toLowerCase().includes(q) || p.description.toLowerCase().includes(q);
