@@ -201,6 +201,26 @@ function shuffleArray<T>(items: T[]): T[] {
   return shuffled;
 }
 
+/** Deterministic integer hash of a string — same input always gives same output. */
+function stableHash(str: string): number {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+/**
+ * Pick `count` products for a section using a stable sort derived from product IDs,
+ * so the selection never changes between renders for the same product pool.
+ * `offset` skips the first N products so different sections don't overlap.
+ */
+function pickStableProducts(pool: Listing[], count: number, offset = 0): Listing[] {
+  if (pool.length === 0) return [];
+  const sorted = [...pool].sort((a, b) => stableHash(a.id + "section") - stableHash(b.id + "section"));
+  return sorted.slice(offset, offset + count);
+}
+
 interface Listing {
   id: string;
   handle?: string;
@@ -270,16 +290,13 @@ function buildCategoryTree(categories: string[]): CategoryNode[] {
 
 // ── Trending Now ──────────────────────────────────────────────────────────────
 function TrendingNowSection({
-  listings,
+  products,
   onViewDetails,
 }: {
-  listings: Listing[];
+  products: Listing[];
   onViewDetails: (p: Listing) => void;
 }) {
-  const trending = [...listings]
-    .filter((p) => p.soldCount !== undefined)
-    .sort((a, b) => (b.soldCount ?? 0) - (a.soldCount ?? 0))
-    .slice(0, 12);
+  const trending = products;
 
   return (
     <div className="mb-6">
@@ -377,8 +394,8 @@ function useCountdown(targetMs: number) {
   return { h, m, s };
 }
 
-function FlashDealsSection({ listings, onViewDetails }: { listings: Listing[]; onViewDetails: (p: Listing) => void }) {
-  const deals = listings.filter(p => p.badge === "Flash Deal" || (p.originalPrice && p.originalPrice > p.price && ((p.originalPrice - p.price) / p.originalPrice) >= 0.2));
+function FlashDealsSection({ products, onViewDetails }: { products: Listing[]; onViewDetails: (p: Listing) => void }) {
+  const deals = products;
 
   // Hook must always run — call unconditionally
   const endOfDay = new Date();
@@ -685,9 +702,45 @@ export function Shop() {
 
   const currentListings = activeTab === "marketplace" ? listings : shopifyProducts;
 
+  // ── Trending Now + Flash Deals — stable random picks from the Shopify pool ──
+  // Products are chosen once per pool change using a deterministic hash so they
+  // never shuffle on re-render. soldCount and originalPrice are synthesised from
+  // the product ID so they're stable too. Both sections draw from non-overlapping
+  // slices of the sorted pool, and those IDs are excluded from the main grid.
+  const { trendingProducts, flashDealProducts, sectionIds } = useMemo(() => {
+    const pool = shopifyProducts.filter(p => p.images[0]); // only products with images
+    if (pool.length === 0) return { trendingProducts: [], flashDealProducts: [], sectionIds: new Set<string>() };
+
+    const trendingCount = Math.min(12, Math.floor(pool.length * 0.15) || 6);
+    const flashCount    = Math.min(10, Math.floor(pool.length * 0.12) || 5);
+
+    const rawTrending = pickStableProducts(pool, trendingCount, 0).map(p => ({
+      ...p,
+      soldCount: 500 + (stableHash(p.id + "sold") % 9500),
+    }));
+
+    const rawFlash = pickStableProducts(pool, flashCount, trendingCount).map(p => {
+      const discountPct  = 20 + (stableHash(p.id + "disc") % 41); // 20–60 %
+      const originalPrice = parseFloat((p.price * (100 / (100 - discountPct))).toFixed(2));
+      return { ...p, originalPrice };
+    });
+
+    const ids = new Set<string>([...rawTrending.map(p => p.id), ...rawFlash.map(p => p.id)]);
+    return { trendingProducts: rawTrending, flashDealProducts: rawFlash, sectionIds: ids };
+  }, [shopifyProducts]);
+
   const filteredProducts = useMemo(() => {
     const filtered = currentListings
       .filter(p => {
+        // Exclude products already shown in Trending / Flash Deals sections
+        // (only when on the shopify tab and no search/category filter is active)
+        if (
+          activeTab === "shopify" &&
+          selectedCategory === "All" &&
+          !searchQuery &&
+          sectionIds.has(p.id)
+        ) return false;
+
         const q = searchQuery.toLowerCase();
         const matchesSearch = !q || p.title.toLowerCase().includes(q) || p.description.toLowerCase().includes(q);
 
@@ -725,7 +778,7 @@ export function Shop() {
     }
 
     return filtered;
-  }, [currentListings, searchQuery, selectedCategory, sortBy, shuffleSeed]);
+  }, [currentListings, searchQuery, selectedCategory, sortBy, shuffleSeed, activeTab, sectionIds]);
 
   const visibleProducts = activeTab === "shopify" ? filteredProducts.slice(0, visibleCount) : filteredProducts;
   const hasMoreToShow = activeTab === "shopify" && visibleCount < filteredProducts.length;
@@ -822,12 +875,15 @@ export function Shop() {
 
         {/* Trending Now */}
         <TrendingNowSection
-          listings={activeTab === "marketplace" ? listings : shopifyProducts}
+          products={activeTab === "marketplace" ? listings.slice(0, 12) : trendingProducts}
           onViewDetails={handleViewDetails}
         />
 
         {/* Flash Deals section */}
-        <FlashDealsSection listings={activeTab === "marketplace" ? listings : shopifyProducts} onViewDetails={handleViewDetails} />
+        <FlashDealsSection
+          products={activeTab === "marketplace" ? listings.slice(12, 22) : flashDealProducts}
+          onViewDetails={handleViewDetails}
+        />
 
         {/* Search + Sort + Tabs row */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
