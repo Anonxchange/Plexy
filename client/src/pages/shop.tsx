@@ -171,6 +171,7 @@ function ShopBanner() {
 
 const SHOPIFY_FETCH_SIZE = 250;
 const SHOPIFY_DISPLAY_PAGE_SIZE = 60;
+
 const CAT_SEPARATOR = " > ";
 
 const SHOP_CACHE_KEY = "pexly_shop_cache";
@@ -986,7 +987,7 @@ export function Shop() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-0.5">
                   <Suspense fallback={<ShopSkeleton />}>
                     {visibleProducts.map(product => (
                       <ShopItemCard
