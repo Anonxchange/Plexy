@@ -987,7 +987,7 @@ export function Shop() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-0.5">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-0.5 -mx-4 lg:mx-0">
                   <Suspense fallback={<ShopSkeleton />}>
                     {visibleProducts.map(product => (
                       <ShopItemCard
