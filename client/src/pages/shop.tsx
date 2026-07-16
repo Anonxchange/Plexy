@@ -987,16 +987,37 @@ export function Shop() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-0.5 -mx-4 lg:mx-0">
+                {/* Pinterest masonry — two independent columns so heights stagger naturally */}
+                <div className="flex gap-0.5 -mx-4 lg:mx-0">
                   <Suspense fallback={<ShopSkeleton />}>
-                    {visibleProducts.map(product => (
-                      <ShopItemCard
-                        key={product.id}
-                        product={product}
-                        onViewDetails={handleViewDetails}
-                        onAddToCart={handleAddToCart}
-                      />
-                    ))}
+                    {/* Left column — starts tall */}
+                    <div className="flex flex-col gap-0.5 flex-1">
+                      {visibleProducts
+                        .filter((_, i) => i % 2 === 0)
+                        .map((product, colIdx) => (
+                          <ShopItemCard
+                            key={product.id}
+                            product={product}
+                            onViewDetails={handleViewDetails}
+                            onAddToCart={handleAddToCart}
+                            tall={colIdx % 2 === 0}
+                          />
+                        ))}
+                    </div>
+                    {/* Right column — starts short, opposite phase */}
+                    <div className="flex flex-col gap-0.5 flex-1">
+                      {visibleProducts
+                        .filter((_, i) => i % 2 === 1)
+                        .map((product, colIdx) => (
+                          <ShopItemCard
+                            key={product.id}
+                            product={product}
+                            onViewDetails={handleViewDetails}
+                            onAddToCart={handleAddToCart}
+                            tall={colIdx % 2 === 1}
+                          />
+                        ))}
+                    </div>
                   </Suspense>
                 </div>
 
