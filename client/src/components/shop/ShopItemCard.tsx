@@ -43,12 +43,12 @@ export const ShopItemCard = ({ product, onViewDetails, onAddToCart }: ShopItemCa
       onClick={() => onViewDetails(product)}
     >
       {/* Full-bleed image — no border-radius, no margin */}
-      <div className="aspect-[3/4] bg-muted overflow-hidden relative w-full">
+      <div className="aspect-[5/6] bg-white overflow-hidden relative w-full">
         {product.images && product.images.length > 0 ? (
           <img
             src={sanitizeImageUrl(product.images[0])}
             alt={product.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
           />
         ) : (
