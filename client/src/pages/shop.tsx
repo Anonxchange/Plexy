@@ -17,7 +17,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { Search, Package, Plus, Store, LayoutGrid, ChevronRight, Shuffle, SlidersHorizontal, Check, Zap, Timer } from '@/lib/icons';
+import { Search, Package, Plus, Store, LayoutGrid, ChevronRight, Shuffle, SlidersHorizontal, Check } from '@/lib/icons';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -309,14 +309,14 @@ function TrendingNowSection({
           </span>
         </div>
       </div>
-      {/* Mobile: horizontal scroll  |  Desktop: 6-column grid */}
-      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1 lg:grid lg:grid-cols-6 lg:gap-x-4 lg:gap-y-5 lg:overflow-x-visible lg:mx-0 lg:px-0 lg:pb-0">
+      {/* Mobile: horizontal scroll  |  Desktop: 5-column grid */}
+      <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1 lg:grid lg:grid-cols-5 lg:gap-x-5 lg:gap-y-6 lg:overflow-x-visible lg:mx-0 lg:px-0 lg:pb-0">
         {trending.length === 0
-          ? Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="flex-shrink-0 w-36 lg:w-auto">
-                <div className="w-36 h-36 lg:w-full lg:h-44 rounded-xl bg-muted animate-pulse mb-2" />
-                <div className="h-3 bg-muted animate-pulse rounded mb-1 w-4/5" />
-                <div className="h-3 bg-muted animate-pulse rounded w-2/5" />
+          ? Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex-shrink-0 w-44 lg:w-auto">
+                <div className="w-44 h-52 lg:w-full lg:h-60 rounded-2xl bg-muted animate-pulse mb-2.5" />
+                <div className="h-3.5 bg-muted animate-pulse rounded mb-1.5 w-4/5" />
+                <div className="h-3.5 bg-muted animate-pulse rounded w-2/5" />
               </div>
             ))
           : trending.map((product) => {
@@ -332,9 +332,9 @@ function TrendingNowSection({
                 <div
                   key={product.id}
                   onClick={() => onViewDetails(product)}
-                  className="flex-shrink-0 w-36 lg:w-auto cursor-pointer group"
+                  className="flex-shrink-0 w-44 lg:w-auto cursor-pointer group"
                 >
-                  <div className="w-36 h-36 lg:w-full lg:h-44 rounded-xl bg-muted overflow-hidden relative mb-2">
+                  <div className="w-44 h-52 lg:w-full lg:h-60 rounded-2xl bg-muted overflow-hidden relative mb-2.5">
                     {product.images[0] ? (
                       <img
                         src={product.images[0]}
@@ -344,15 +344,15 @@ function TrendingNowSection({
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <Package className="h-8 w-8 text-muted-foreground/30" />
+                        <Package className="h-10 w-10 text-muted-foreground/30" />
                       </div>
                     )}
                     {disc && (
-                      <div className="absolute top-1.5 left-1.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                      <div className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                         -{disc}%
                       </div>
                     )}
-                    <div className="absolute bottom-1.5 left-1.5 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                    <div className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full">
                       🔥{" "}
                       {product.soldCount && product.soldCount >= 1000
                         ? `${(product.soldCount / 1000).toFixed(0)}K`
@@ -360,15 +360,15 @@ function TrendingNowSection({
                       + sold
                     </div>
                   </div>
-                  <p className="text-xs font-medium line-clamp-2 leading-tight text-foreground group-hover:text-primary transition-colors">
+                  <p className="text-sm font-medium line-clamp-2 leading-tight text-foreground group-hover:text-primary transition-colors">
                     {product.title}
                   </p>
-                  <div className="flex items-baseline gap-1 mt-0.5">
+                  <div className="flex items-baseline gap-1 mt-1">
                     <span className="text-sm font-bold">
                       {product.currency} {product.price.toLocaleString()}
                     </span>
                     {product.originalPrice && (
-                      <span className="text-[11px] text-muted-foreground line-through">
+                      <span className="text-xs text-muted-foreground line-through">
                         {product.originalPrice.toLocaleString()}
                       </span>
                     )}
@@ -381,92 +381,6 @@ function TrendingNowSection({
   );
 }
 
-// ── Flash Deals countdown + horizontal scroll ─────────────────────────────────
-function useCountdown(targetMs: number) {
-  const [remaining, setRemaining] = useState(() => Math.max(0, targetMs - Date.now()));
-  useEffect(() => {
-    const id = setInterval(() => setRemaining(r => Math.max(0, r - 1000)), 1000);
-    return () => clearInterval(id);
-  }, [targetMs]);
-  const h = Math.floor(remaining / 3_600_000);
-  const m = Math.floor((remaining % 3_600_000) / 60_000);
-  const s = Math.floor((remaining % 60_000) / 1_000);
-  return { h, m, s };
-}
-
-function FlashDealsSection({ products, onViewDetails }: { products: Listing[]; onViewDetails: (p: Listing) => void }) {
-  const deals = products;
-
-  // Hook must always run — call unconditionally
-  const endOfDay = new Date();
-  endOfDay.setHours(23, 59, 59, 999);
-  const { h, m, s } = useCountdown(endOfDay.getTime());
-  const pad = (n: number) => String(n).padStart(2, "0");
-
-  return (
-    <div className="mb-6">
-      <div className="flex items-center gap-3 mb-3">
-        <div className="flex items-center gap-1.5 bg-red-500 text-white px-3 py-1 rounded-lg">
-          <Zap className="h-3.5 w-3.5 fill-white" />
-          <span className="text-sm font-bold tracking-wide">Flash Deals</span>
-        </div>
-        <div className="flex items-center gap-1 text-sm font-mono font-semibold text-muted-foreground">
-          <Timer className="h-3.5 w-3.5" />
-          <span>Ends in</span>
-          <span className="bg-foreground text-background px-1.5 py-0.5 rounded text-xs">{pad(h)}</span>
-          <span>:</span>
-          <span className="bg-foreground text-background px-1.5 py-0.5 rounded text-xs">{pad(m)}</span>
-          <span>:</span>
-          <span className="bg-foreground text-background px-1.5 py-0.5 rounded text-xs">{pad(s)}</span>
-        </div>
-      </div>
-      {/* Mobile: horizontal scroll  |  Desktop: 5-column grid */}
-      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1 lg:grid lg:grid-cols-5 lg:gap-x-4 lg:gap-y-5 lg:overflow-x-visible lg:mx-0 lg:px-0 lg:pb-0">
-        {deals.length === 0
-          ? Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex-shrink-0 w-36 lg:w-auto">
-                <div className="w-36 h-36 lg:w-full lg:h-44 rounded-xl bg-muted animate-pulse mb-2" />
-                <div className="h-3 bg-muted animate-pulse rounded mb-1 w-4/5" />
-                <div className="h-3 bg-muted animate-pulse rounded w-2/5" />
-              </div>
-            ))
-          : deals.slice(0, 10).map((product) => {
-              const disc =
-                product.originalPrice && product.originalPrice > product.price
-                  ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
-                  : null;
-              return (
-                <div
-                  key={product.id}
-                  onClick={() => onViewDetails(product)}
-                  className="flex-shrink-0 w-36 lg:w-auto cursor-pointer group"
-                >
-                  <div className="w-36 h-36 lg:w-full lg:h-44 rounded-xl bg-muted overflow-hidden relative mb-2">
-                    {product.images[0] ? (
-                      <img src={product.images[0]} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Package className="h-8 w-8 text-muted-foreground/30" />
-                      </div>
-                    )}
-                    {disc && (
-                      <div className="absolute top-1.5 left-1.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                        -{disc}%
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-xs font-medium line-clamp-2 leading-tight text-foreground group-hover:text-primary transition-colors">{product.title}</p>
-                  <div className="flex items-baseline gap-1 mt-0.5">
-                    <span className="text-sm font-bold">{product.currency} {product.price.toLocaleString()}</span>
-                    {product.originalPrice && <span className="text-[11px] text-muted-foreground line-through">{product.originalPrice.toLocaleString()}</span>}
-                  </div>
-                </div>
-              );
-            })}
-      </div>
-    </div>
-  );
-}
 
 export function Shop() {
   useHead({
@@ -703,30 +617,19 @@ export function Shop() {
   const currentListings = activeTab === "marketplace" ? listings : shopifyProducts;
 
   // ── Trending Now + Flash Deals — stable random picks from the Shopify pool ──
-  // Products are chosen once per pool change using a deterministic hash so they
-  // never shuffle on re-render. soldCount and originalPrice are synthesised from
-  // the product ID so they're stable too. Both sections draw from non-overlapping
-  // slices of the sorted pool, and those IDs are excluded from the main grid.
-  const { trendingProducts, flashDealProducts, sectionIds } = useMemo(() => {
-    const pool = shopifyProducts.filter(p => p.images[0]); // only products with images
-    if (pool.length === 0) return { trendingProducts: [], flashDealProducts: [], sectionIds: new Set<string>() };
+  // Trending products — deterministic per pool change, excluded from main grid.
+  const { trendingProducts, sectionIds } = useMemo(() => {
+    const pool = shopifyProducts.filter(p => p.images[0]);
+    if (pool.length === 0) return { trendingProducts: [], sectionIds: new Set<string>() };
 
     const trendingCount = Math.min(12, Math.floor(pool.length * 0.15) || 6);
-    const flashCount    = Math.min(10, Math.floor(pool.length * 0.12) || 5);
-
     const rawTrending = pickStableProducts(pool, trendingCount, 0).map(p => ({
       ...p,
       soldCount: 500 + (stableHash(p.id + "sold") % 9500),
     }));
 
-    const rawFlash = pickStableProducts(pool, flashCount, trendingCount).map(p => {
-      const discountPct  = 20 + (stableHash(p.id + "disc") % 41); // 20–60 %
-      const originalPrice = parseFloat((p.price * (100 / (100 - discountPct))).toFixed(2));
-      return { ...p, originalPrice };
-    });
-
-    const ids = new Set<string>([...rawTrending.map(p => p.id), ...rawFlash.map(p => p.id)]);
-    return { trendingProducts: rawTrending, flashDealProducts: rawFlash, sectionIds: ids };
+    const ids = new Set<string>(rawTrending.map(p => p.id));
+    return { trendingProducts: rawTrending, sectionIds: ids };
   }, [shopifyProducts]);
 
   const filteredProducts = useMemo(() => {
@@ -879,11 +782,6 @@ export function Shop() {
           onViewDetails={handleViewDetails}
         />
 
-        {/* Flash Deals section */}
-        <FlashDealsSection
-          products={activeTab === "marketplace" ? listings.slice(12, 22) : flashDealProducts}
-          onViewDetails={handleViewDetails}
-        />
 
         {/* Search + Sort + Tabs row */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -1088,7 +986,7 @@ export function Shop() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-5">
                   <Suspense fallback={<ShopSkeleton />}>
                     {visibleProducts.map(product => (
                       <ShopItemCard
