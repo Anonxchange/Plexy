@@ -48,7 +48,7 @@ export const ShopItemCard = ({ product, onViewDetails, onAddToCart }: ShopItemCa
           <img
             src={sanitizeImageUrl(product.images[0])}
             alt={product.title}
-            className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
+     muted  className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
           />
         ) : (
