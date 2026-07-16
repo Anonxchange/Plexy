@@ -314,7 +314,7 @@ function TrendingNowSection({
         {trending.length === 0
           ? Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="flex-shrink-0 w-44 lg:w-auto">
-                <div className="w-44 h-52 lg:w-full lg:h-60 rounded-2xl bg-muted animate-pulse mb-2.5" />
+                <div className="w-44 h-52 lg:w-full lg:h-60 bg-muted animate-pulse mb-2.5" />
                 <div className="h-3.5 bg-muted animate-pulse rounded mb-1.5 w-4/5" />
                 <div className="h-3.5 bg-muted animate-pulse rounded w-2/5" />
               </div>
@@ -334,7 +334,7 @@ function TrendingNowSection({
                   onClick={() => onViewDetails(product)}
                   className="flex-shrink-0 w-44 lg:w-auto cursor-pointer group"
                 >
-                  <div className="w-44 h-52 lg:w-full lg:h-60 rounded-2xl bg-muted overflow-hidden relative mb-2.5">
+                  <div className="w-44 h-52 lg:w-full lg:h-60 bg-muted overflow-hidden relative mb-2.5">
                     {product.images[0] ? (
                       <img
                         src={product.images[0]}
@@ -986,7 +986,7 @@ export function Shop() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-5">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                   <Suspense fallback={<ShopSkeleton />}>
                     {visibleProducts.map(product => (
                       <ShopItemCard
