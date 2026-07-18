@@ -26,7 +26,20 @@ import {
   Smartphone,
   CheckCircle2,
   HeartHandshake,
+  Loader2,
 } from '@/lib/icons';
+
+// ── Nigeria region detection (timezone-based, client-side, no API call) ──────
+function detectNigeriaRegion(): boolean {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz === "Africa/Lagos") return true;
+    if (navigator.language === "en-NG") return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
 import { getExchangeRates } from "@/lib/crypto-prices";
 import NowPaymentsCheckout from "@/components/nowpayments-checkout";
 import { SYMBOL_ICON_MAP } from "@/lib/crypto-icons";
@@ -208,7 +221,7 @@ function SectionTitle({ step, title, sub }: { step: number; title: string; sub?:
 }
 
 type PendingOrder = {
-  type: "topup" | "utility" | "giftcard";
+  type: "topup" | "utility" | "giftcard" | "virtual-number";
   title: string;
   description: string;
   amount: number;
@@ -216,6 +229,79 @@ type PendingOrder = {
   image?: string;
   metadata: Record<string, any>;
 };
+
+// ── KoraPay inline script loader ──────────────────────────────────────────────
+function loadKoraPayScript(): Promise<void> {
+  return new Promise((resolve) => {
+    if ((window as any).Korapay) return resolve();
+    const script = document.createElement("script");
+    script.src =
+      "https://korahq.github.io/kora-inline-checkout/dist/kora-inline.min.js";
+    script.onload = () => resolve();
+    document.head.appendChild(script);
+  });
+}
+
+// KoraPay logo badge
+function KoraPayBadge({ size = "h-9 w-9" }: { size?: string }) {
+  return (
+    <div className={`${size} rounded-full bg-[#0B6AFA]/15 border border-[#0B6AFA]/30 flex items-center justify-center shrink-0 font-black text-[#0B6AFA] text-xs`}>
+      K
+    </div>
+  );
+}
+
+// KoraPay inline payment trigger button
+function KoraPayTrigger({
+  amountKobo,
+  email,
+  onSuccess,
+}: {
+  amountKobo: number;
+  email: string;
+  onSuccess: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+
+  const handlePay = async () => {
+    const pk = import.meta.env.VITE_KORAPAY_PUBLIC_KEY as string;
+    if (!pk) {
+      alert("KoraPay is not configured yet. Please use crypto payment or contact support.");
+      return;
+    }
+    setLoading(true);
+    try {
+      await loadKoraPayScript();
+      const Korapay = (window as any).Korapay;
+      if (!Korapay) throw new Error("KoraPay script failed to load");
+      const reference = `pexly_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      Korapay.initialize({
+        key: pk,
+        reference,
+        amount: amountKobo,
+        currency: "NGN",
+        customer: { email, name: email },
+        onSuccess: () => { setLoading(false); onSuccess(); },
+        onFailed: () => { setLoading(false); },
+        onClose: () => { setLoading(false); },
+      });
+    } catch {
+      setLoading(false);
+    }
+  };
+
+  const displayNgn = (amountKobo / 100).toLocaleString("en-NG");
+
+  return (
+    <button
+      onClick={handlePay}
+      disabled={loading}
+      className="w-full flex items-center justify-center gap-2.5 py-4 rounded-full bg-[#0B6AFA] hover:bg-[#0B6AFA]/90 disabled:opacity-60 text-white font-bold text-base transition-all active:scale-[0.98] shadow-md mb-3"
+    >
+      {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : `Pay ₦${displayNgn} with KoraPay`}
+    </button>
+  );
+}
 
 export function Checkout() {
   const { user, loading } = useAuth();
@@ -303,7 +389,54 @@ export function Checkout() {
 
     const contactEmail = pendingDeliveryEmail || buyerEmail;
 
-    const handleOrderSuccess = () => {
+    // KoraPay only for virtual-number orders AND Nigeria/Lagos timezone
+    const showKoraPay = pendingOrder.type === "virtual-number" && detectNigeriaRegion();
+
+    const handleOrderSuccess = async () => {
+      // ── Virtual number: call Fleexa to assign a number after payment ──
+      if (pendingOrder.type === "virtual-number") {
+        const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+        const EDGE = `${SUPABASE_URL}/functions/v1/fleexa`;
+        const { getSupabase } = await import("@/lib/supabase");
+        try {
+          const sb = await getSupabase();
+          const { data } = await sb.auth.getSession();
+          const token = data.session?.access_token ?? "";
+          const meta = pendingOrder.metadata;
+          const server = meta.server ?? "2";
+          const res = await fetch(`${EDGE}?action=buy&server=${server}`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              countryName: meta.countryName,
+              appName: meta.service,
+              countryId: meta.countryId,
+              projectId: meta.projectId ?? meta.service?.toLowerCase().slice(0, 5),
+            }),
+          });
+          const result = await res.json();
+          if (result.success && result.data) {
+            localStorage.removeItem("pexly_pending_order");
+            const { number, requestId, service, country } = result.data;
+            const params = new URLSearchParams({ number, requestId, service: service ?? meta.service, country: country ?? meta.countryName });
+            toast({ title: "Payment confirmed!", description: "Your virtual number is ready." });
+            setLocation(`/wallet/virtual-numbers?${params}`);
+            return;
+          } else {
+            throw new Error(result.message ?? "Failed to assign number");
+          }
+        } catch (e: any) {
+          toast({ title: "Payment confirmed, but number assignment failed", description: e.message ?? "Please contact support." });
+          localStorage.removeItem("pexly_pending_order");
+          setLocation("/account-settings?section=shop-history");
+          return;
+        }
+      }
+
+      // ── Standard order success ─────────────────────────────────────────────
       localStorage.removeItem("pexly_pending_order");
       try {
         const saved = JSON.parse(localStorage.getItem("pexly_digital_orders") || "[]");
@@ -729,6 +862,40 @@ export function Checkout() {
                       );
                     })()}
                   </div>
+
+                    {/* ── KoraPay — virtual numbers + Nigeria only ── */}
+                    {showKoraPay && (
+                    <div className="mt-2">
+                      <div className="relative flex items-center gap-3 my-3">
+                        <div className="flex-1 border-t border-border" />
+                        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest shrink-0">or pay with</span>
+                        <div className="flex-1 border-t border-border" />
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSelectedMethodId("korapay");
+                          setUsdtExpanded(false);
+                          setUsdcExpanded(false);
+                        }}
+                        className={`w-full flex items-center gap-4 rounded-2xl border px-5 py-4 transition-all text-left ${
+                          selectedMethodId === "korapay"
+                            ? "border-[#0B6AFA] bg-[#0B6AFA]/5"
+                            : "border-border bg-card hover:border-border/80 hover:bg-muted/30"
+                        }`}
+                      >
+                        <div className={`h-5 w-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors ${
+                          selectedMethodId === "korapay" ? "border-[#0B6AFA]" : "border-muted-foreground/40"
+                        }`}>
+                          {selectedMethodId === "korapay" && <div className="h-2.5 w-2.5 rounded-full bg-[#0B6AFA]" />}
+                        </div>
+                        <KoraPayBadge />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-base font-semibold text-foreground">KoraPay</span>
+                          <span className="ml-2 text-xs bg-muted text-muted-foreground font-medium px-1.5 py-0.5 rounded-md">Card / Bank Transfer</span>
+                        </div>
+                      </button>
+                    </div>
+                    )}
               </div>
 
               {/* Summary accordion */}
@@ -842,6 +1009,54 @@ export function Checkout() {
 
           {/* ── Step: Actual payment widget ── */}
           {checkoutStep === "paying" && (() => {
+            // ── KoraPay path ───────────────────────────────────────────────
+            if (selectedMethodId === "korapay") {
+              const ngnAmount = pendingOrder.metadata?.price_ngn
+                ? Number(pendingOrder.metadata.price_ngn)
+                : Math.round(pendingTotalUsd * 1600);
+              return (
+                <>
+                  <div className="flex items-center gap-3 mb-2">
+                    <button onClick={() => setCheckoutStep("payment")} className="text-muted-foreground hover:text-foreground transition-colors">
+                      <ChevronDown className="h-5 w-5 rotate-90" />
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <KoraPayBadge size="h-7 w-7" />
+                      <h1 className="text-xl font-extrabold text-foreground">Pay with KoraPay</h1>
+                    </div>
+                  </div>
+
+                  <div className="bg-card border border-border rounded-2xl p-5 space-y-3 mb-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Order</span>
+                      <span className="font-semibold text-foreground truncate max-w-[55%]">{pendingOrder.title}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Amount</span>
+                      <span className="font-bold text-foreground">₦{ngnAmount.toLocaleString("en-NG")}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Method</span>
+                      <span className="font-medium text-foreground">Card / Bank Transfer</span>
+                    </div>
+                  </div>
+
+                  <KoraPayTrigger
+                    amountKobo={Math.round(ngnAmount * 100)}
+                    email={contactEmail}
+                    onSuccess={handleOrderSuccess}
+                  />
+
+                  <p className="text-center text-xs text-muted-foreground pb-4">
+                    By placing your order you agree to our{" "}
+                    <a href="/terms" className="underline hover:text-foreground">Terms of service</a>{" "}
+                    and <a href="/privacy" className="underline hover:text-foreground">Privacy policy</a>
+                  </p>
+                </>
+              );
+            }
+
+            // ── Crypto path ────────────────────────────────────────────────
             const allStableNetworks = [...USDT_NETWORKS, ...USDC_NETWORKS];
             const stableNet = allStableNetworks.find(n => n.id === selectedMethodId);
             const method: PaymentMethodDef = stableNet

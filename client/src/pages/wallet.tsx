@@ -203,12 +203,12 @@ export default function WalletPage() {
                       Wallet
                     </TabsTrigger>
                     <TabsTrigger
-                      value="visa"
-                      onClick={() => setLocation("/wallet/visa-card")}
+                      value="virtual-numbers"
+                      onClick={() => setLocation("/wallet/virtual-numbers")}
                       className="rounded-lg px-6 py-2 font-semibold border border-border bg-white dark:bg-muted text-foreground/80 hover:text-foreground hover:bg-muted/80 transition-colors"
                     >
                       <Landmark className="h-4 w-4 mr-2" />
-                      Visa card
+                      Virtual Numbers
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
