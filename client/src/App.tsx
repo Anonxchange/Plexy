@@ -51,7 +51,7 @@ const GiftCardBrowse = lazy(() => import("@/pages/gift-card-browse").then(m => (
 const GiftCardDetail = lazy(() => import("@/pages/gift-card-detail").then(m => ({ default: m.GiftCardDetail })));
 const Checkout = lazy(() => import("@/pages/checkout").then(m => ({ default: m.Checkout })));
 const CheckoutPayCrypto = lazy(() => import("@/pages/checkout-pay-crypto").then(m => ({ default: m.CheckoutPayCrypto })));
-const VisaCard = lazy(() => import("@/pages/visa-card"));
+const VirtualNumbers = lazy(() => import("@/pages/virtual-numbers"));
 const MobileTopup = lazy(() => import("@/pages/mobile-topup"));
 const UtilityBill = lazy(() => import("@/pages/utility-bill"));
 const Stake = lazy(() => import("@/pages/stake"));
@@ -284,7 +284,8 @@ function AppRoutes() {
       {/* ── Protected pages (require a valid session) ── */}
       <Route path="/dashboard">{() => <ProtectedRoute component={Dashboard} />}</Route>
       <Route path="/wallet">{() => <ProtectedRoute component={Wallet} skeleton={<WalletPageSkeleton />} />}</Route>
-      <Route path="/wallet/visa-card">{() => <LazyRoute component={VisaCard} />}</Route>
+      <Route path="/wallet/visa-card">{() => <Redirect to="/wallet/virtual-numbers" />}</Route>
+      <Route path="/wallet/virtual-numbers">{() => <ProtectedRoute component={VirtualNumbers} />}</Route>
       <Route path="/wallet/mobile-topup">{() => <LazyRoute component={MobileTopup} />}</Route>
       <Route path="/utility">{() => <LazyRoute component={UtilityBill} />}</Route>
       <Route path="/wallet/utility-bill">{() => <LazyRoute component={UtilityBill} />}</Route>
@@ -318,7 +319,7 @@ function AppRoutes() {
 function AppContent() {
   const { user, walletImportState, setWalletImportState } = useAuth();
   const [location] = useLocation();
-  const hideAppFooter = ["/", "/about", "/spot", "/perpetual", "/swap", "/prediction", "/wallet", "/analysis", "/wallet/visa-card", "/wallet/visa-card/details", "/wallet/mobile-topup", "/wallet/utility-bill", "/utility", "/wallet/stake", "/wallet/lightning", "/wallet/buy-crypto", "/gift-cards", "/dashboard", "/profile", "/shop", "/shop/post", "/account-settings", "/verification", "/admin", "/admin/verifications", "/admin/blog", "/admin/gift-cards", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/support", "/contact", "/referral", "/rewards", "/terms", "/privacy", "/cookie-policy", "/restricted-countries", "/rewards-program", "/risk-disclosure", "/refund-policy", "/submit-idea", "/explorer", "/shop/product", "/buy-crypto", "/bitcoin-calculator", "/checkout"].some(path => location === path || location.startsWith(path + "/")) || location.startsWith("/explorer/") || location.startsWith("/blog/") || location.startsWith("/gift-cards/");
+  const hideAppFooter = ["/", "/about", "/spot", "/perpetual", "/swap", "/prediction", "/wallet", "/analysis", "/wallet/virtual-numbers", "/wallet/mobile-topup", "/wallet/utility-bill", "/utility", "/wallet/stake", "/wallet/lightning", "/wallet/buy-crypto", "/gift-cards", "/dashboard", "/profile", "/shop", "/shop/post", "/account-settings", "/verification", "/admin", "/admin/verifications", "/admin/blog", "/admin/gift-cards", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/support", "/contact", "/referral", "/rewards", "/terms", "/privacy", "/cookie-policy", "/restricted-countries", "/rewards-program", "/risk-disclosure", "/refund-policy", "/submit-idea", "/explorer", "/shop/product", "/buy-crypto", "/bitcoin-calculator", "/checkout"].some(path => location === path || location.startsWith(path + "/")) || location.startsWith("/explorer/") || location.startsWith("/blog/") || location.startsWith("/gift-cards/");
   const hideHeaderAndNav = ["/signin", "/signup", "/verify-email", "/support", "/contact", "/explorer", "/checkout"].includes(location) || location.startsWith("/explorer/") || location.startsWith("/support/") || location.startsWith("/checkout/");
   const hidePageNav = ["/terms", "/refund-policy", "/explorer"].includes(location) || location.startsWith("/explorer/");
 
