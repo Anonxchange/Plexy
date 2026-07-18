@@ -278,7 +278,7 @@ export const DashboardMoreModal = ({ isOpen, onClose }: MoreModalProps) => {
     { icon: "wallet",     label: "Wallet",           color: "#A855F7",  href: "/wallet" },
     { icon: "buy",        label: "Buy Crypto",        color: "#F59E0B",  href: "/wallet/buy-crypto" },
     { icon: "swap",       label: "Swap",              color: "#4FACFE",  href: "/swap" },
-    { icon: "card",       label: "Visa Card",   badge: "NEW", color: "#3B82F6", href: "/visa-card" },
+    { icon: "card",       label: "Virtual Numbers", color: "#3B82F6", href: "/wallet/virtual-numbers" },
     { icon: "mobile",     label: "Mobile Top-up",     color: "#10B981",  href: "/wallet/mobile-topup" },
     { icon: "shop",       label: "Shop",              color: "#FF6B6B",  href: "/shop" },
     { icon: "giftcard",   label: "Gift Cards",        color: "#FFA500",  href: "/gift-cards" },

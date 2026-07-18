@@ -224,7 +224,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
           defaultOpen={location.startsWith("/wallet")}
         >
           <SubItem label={t("wallet.assets")} href="/wallet" active={location === "/wallet"} onClick={onNavigate} />
-          <SubItem label={t("wallet.visa_card")} href="/wallet/visa-card" active={location === "/wallet/visa-card"} onClick={onNavigate} />
+          <SubItem label={t("wallet.visa_card")} href="/wallet/virtual-numbers" active={location === "/wallet/virtual-numbers" || location === "/wallet/visa-card"} onClick={onNavigate} />
           <SubItem label={t("wallet.lightning")} href="/wallet/lightning" active={location === "/wallet/lightning"} onClick={onNavigate} />
           <SubItem label={t("wallet.mobile_topup")} href="/wallet/mobile-topup" active={location === "/wallet/mobile-topup"} onClick={onNavigate} />
           <SubItem label={t("wallet.utility")} href="/utility" active={location === "/utility"} onClick={onNavigate} />
