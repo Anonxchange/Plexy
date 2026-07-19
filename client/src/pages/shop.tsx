@@ -502,8 +502,8 @@ export function Shop() {
           page++;
         }
       } else {
-        // Step 2: per collection, fetch products and build Collection > ProductType > Tag paths
-        for (const colEdge of collections) {
+        // Step 2: fetch all collections in parallel
+        await Promise.all(collections.map(async (colEdge) => {
           if (fetchId !== shopifyFetchIdRef.current) return;
           const colHandle = colEdge.node.handle;
           const colTitle = colEdge.node.title;
@@ -545,6 +545,7 @@ export function Shop() {
 
             allFetched.push(...fetched);
 
+            // Show results as soon as any collection's first page lands
             if (!firstPageDone && !isBackground && allFetched.length > 0) {
               setShopifyProducts(shuffleArray([...allFetched]));
               setShopifyCategories(["All", ...Array.from(catPathSet).sort()]);
@@ -557,7 +558,7 @@ export function Shop() {
             after = result.pageInfo?.endCursor;
             page++;
           }
-        }
+        }));
       }
 
       if (fetchId === shopifyFetchIdRef.current && allFetched.length > 0) {
