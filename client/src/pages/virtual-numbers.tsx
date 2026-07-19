@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PexlyFooter } from "@/components/pexly-footer";
 import {
-  useVNServices,
+  useVNApps,
   useVNCountries,
   useBuyVirtualNumber,
   useCheckSMS,
@@ -214,13 +214,15 @@ function ServerView({ onSelect }: { onSelect: (server: string) => void }) {
   );
 }
 
-// ── Step 2: Service / App Selection ──────────────────────────────────────────
+// ── Step 3: Service / App Selection (after country is chosen) ────────────────
 function ServicesView({
   server,
+  country,
   onSelect,
   onBack,
 }: {
   server: string;
+  country: VNCountry;
   onSelect: (service: VNApp) => void;
   onBack: () => void;
 }) {
@@ -233,20 +235,21 @@ function ServicesView({
     return () => clearTimeout(t);
   }, [search]);
 
-  const { data, isLoading, isFetching } = useVNServices({
+  const { data, isLoading, isFetching } = useVNApps({
+    countryId: String(country.id),
     server,
     page: String(page),
     limit: "50",
     search: debouncedSearch,
   });
 
-  const services = data?.services ?? [];
+  const services = data?.apps ?? [];
   const pagination = data?.pagination;
   const serverLabel = SERVERS.find((s) => s.id === server)?.label ?? `OTP ${server}`;
 
   return (
     <>
-      <PageHeader title={`${serverLabel} — Select a service`} onBack={onBack} />
+      <PageHeader title={`${serverLabel} · ${country.title} — Select a service`} onBack={onBack} />
       <NotConfiguredBanner />
 
       <div className="relative mb-5">
@@ -355,15 +358,13 @@ function ServicesView({
   );
 }
 
-// ── Step 3: Country Selection ─────────────────────────────────────────────────
+// ── Step 2: Country Selection ─────────────────────────────────────────────────
 function CountriesView({
   server,
-  service,
   onSelect,
   onBack,
 }: {
   server: string;
-  service: VNApp;
   onSelect: (country: VNCountry) => void;
   onBack: () => void;
 }) {
@@ -382,7 +383,7 @@ function CountriesView({
   return (
     <>
       <PageHeader
-        title={`${service.name} — Select country`}
+        title="Select a country"
         onBack={onBack}
       />
       <NotConfiguredBanner />
@@ -778,16 +779,16 @@ export default function VirtualNumbers() {
 
   const handleServerSelect = (server: string) => {
     setSelectedServer(server);
-    setView("services");
-  };
-
-  const handleServiceSelect = (svc: VNApp) => {
-    setSelectedService(svc);
     setView("countries");
   };
 
   const handleCountrySelect = (c: VNCountry) => {
     setSelectedCountry(c);
+    setView("services");
+  };
+
+  const handleServiceSelect = (svc: VNApp) => {
+    setSelectedService(svc);
     setView("confirm");
   };
 
@@ -954,22 +955,22 @@ export default function VirtualNumbers() {
           </>
         )}
 
-        {/* Step 2 — Services */}
-        {view === "services" && (
-          <ServicesView
+        {/* Step 2 — Countries */}
+        {view === "countries" && (
+          <CountriesView
             server={selectedServer}
-            onSelect={handleServiceSelect}
+            onSelect={handleCountrySelect}
             onBack={() => setView("server")}
           />
         )}
 
-        {/* Step 3 — Countries */}
-        {view === "countries" && selectedService && (
-          <CountriesView
+        {/* Step 3 — Services (country-specific) */}
+        {view === "services" && selectedCountry && (
+          <ServicesView
             server={selectedServer}
-            service={selectedService}
-            onSelect={handleCountrySelect}
-            onBack={() => setView("services")}
+            country={selectedCountry}
+            onSelect={handleServiceSelect}
+            onBack={() => setView("countries")}
           />
         )}
 
@@ -979,7 +980,7 @@ export default function VirtualNumbers() {
             server={selectedServer}
             country={selectedCountry}
             app={selectedService}
-            onBack={() => setView("countries")}
+            onBack={() => setView("services")}
             onBuyKoraPay={handleBuyKoraPay}
             onBuyCrypto={handleBuyCrypto}
             purchasing={false}
