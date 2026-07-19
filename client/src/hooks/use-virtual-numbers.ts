@@ -100,7 +100,7 @@ export function useVNServices({
   return useQuery<{ services: VNApp[]; pagination: any }>({
     queryKey: ["vn-services", server, page, limit, search],
     queryFn: async () => {
-      const params: Record<string, string> = { action: "services", server, page, limit };
+      const params: Record<string, string> = { action: "apps", server, page, limit };
       if (search) params.search = search;
       const data = await fleexaGet(params);
       return { services: data.data ?? [], pagination: data.pagination };
