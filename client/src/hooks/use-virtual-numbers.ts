@@ -86,6 +86,29 @@ export function countryFlag(code: string): string {
 
 // ── Hooks ──────────────────────────────────────────────────────────────────────
 
+export function useVNServices({
+  server = "2",
+  page = "1",
+  limit = "50",
+  search = "",
+}: {
+  server?: string;
+  page?: string;
+  limit?: string;
+  search?: string;
+} = {}) {
+  return useQuery<{ services: VNApp[]; pagination: any }>({
+    queryKey: ["vn-services", server, page, limit, search],
+    queryFn: async () => {
+      const params: Record<string, string> = { action: "services", server, page, limit };
+      if (search) params.search = search;
+      const data = await fleexaGet(params);
+      return { services: data.data ?? [], pagination: data.pagination };
+    },
+    staleTime: 3 * 60 * 1000,
+  });
+}
+
 export function useVNCountries(server = "2") {
   return useQuery<Record<string, VNCountry>>({
     queryKey: ["vn-countries", server],
@@ -115,17 +138,18 @@ export function useVNApps({
   return useQuery<{ apps: VNApp[]; pagination: any; exchange_rate?: number }>({
     queryKey: ["vn-apps", countryId, server, page, limit, search],
     queryFn: async () => {
-      const params: Record<string, string> = { action: "apps", countryId, server, page, limit };
+      const params: Record<string, string> = { action: "apps", server, page, limit };
+      if (countryId) params.countryId = countryId;
       if (search) params.search = search;
       const data = await fleexaGet(params);
       return {
         apps: data.data ?? [],
         pagination: data.pagination,
-        exchange_rate: data.exchange_rate, // available on sms3
+        exchange_rate: data.exchange_rate,
       };
     },
     enabled: !!countryId && enabled,
-    staleTime: 2 * 60 * 1000, // 2 min
+    staleTime: 2 * 60 * 1000,
   });
 }
 
