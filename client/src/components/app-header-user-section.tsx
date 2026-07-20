@@ -489,7 +489,7 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
         onClick={onOpenSidebar}
         data-testid="button-sidebar-toggle"
         aria-label="Open navigation menu"
-        className="border-border lg:hidden"
+        className="border-border md:hidden"
       >
         <Menu className="h-5 w-5" />
       </Button>
