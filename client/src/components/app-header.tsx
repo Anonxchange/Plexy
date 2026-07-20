@@ -300,9 +300,9 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar, onPreloadSide
           <Suspense fallback={
             // Mirrors the unauthenticated render at every breakpoint so no layout
             // shift occurs when the lazy chunk loads:
-            //   mobile (<sm)  → hamburger button only  (h-9 w-9, lg:hidden)
+            //   mobile (<sm)  → hamburger button only  (h-9 w-9, md:hidden)
             //   sm–lg         → hamburger + Sign In + Get Started
-            //   lg+           → Sign In + Get Started  (hamburger is lg:hidden)
+            //   lg+           → Sign In + Get Started  (hamburger is md:hidden)
             <div className="flex items-center gap-2 pointer-events-none select-none" aria-hidden>
               <div className="h-9 w-9 rounded-md border border-border md:hidden flex-shrink-0" />
               <div className="hidden sm:block h-8 w-16 rounded-md bg-muted/40" />
@@ -360,7 +360,7 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar, onPreloadSide
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <div className="hidden lg:block">
+          <div className="hidden md:block">
             <ThemeToggle />
           </div>
         </div>
