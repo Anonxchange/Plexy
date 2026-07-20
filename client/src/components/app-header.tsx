@@ -82,7 +82,7 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar, onPreloadSide
               onPointerEnter={onPreloadSidebar}
               data-testid="button-sidebar-toggle"
               aria-label="Open navigation menu"
-              className="border-border lg:hidden"
+              className="border-border md:hidden"
             >
               <Menu className="h-5 w-5" />
             </Button>
@@ -97,7 +97,7 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar, onPreloadSide
           </Link>
         </div>
 
-        <nav className="hidden lg:flex items-center gap-0 ml-4 xl:ml-6">
+        <nav className="hidden md:flex items-center gap-0 ml-4 xl:ml-6">
           <DropdownMenu open={activeDropdown === "trade"} onOpenChange={(open) => !open && setActiveDropdown(null)}>
             <div
               className="relative flex items-center h-full"
@@ -304,7 +304,7 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar, onPreloadSide
             //   sm–lg         → hamburger + Sign In + Get Started
             //   lg+           → Sign In + Get Started  (hamburger is lg:hidden)
             <div className="flex items-center gap-2 pointer-events-none select-none" aria-hidden>
-              <div className="h-9 w-9 rounded-md border border-border lg:hidden flex-shrink-0" />
+              <div className="h-9 w-9 rounded-md border border-border md:hidden flex-shrink-0" />
               <div className="hidden sm:block h-8 w-16 rounded-md bg-muted/40" />
               <div className="hidden sm:block h-8 w-[6.5rem] rounded-md bg-primary/20" />
             </div>
@@ -317,7 +317,7 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar, onPreloadSide
               <Button
                 variant="ghost"
                 size="icon"
-                className="hidden lg:flex h-9 w-9 text-muted-foreground hover:text-foreground"
+                className="hidden md:flex h-9 w-9 text-muted-foreground hover:text-foreground"
                 title={t("header.language")}
               >
                 <Globe className="h-4 w-4" />

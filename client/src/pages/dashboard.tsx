@@ -200,8 +200,8 @@ export const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background pb-8">
       <div className="max-w-7xl mx-auto">
-        <div className="lg:grid lg:grid-cols-12 lg:gap-8 lg:p-6">
-          <div className="lg:col-span-7 xl:col-span-8">
+        <div className="md:grid md:grid-cols-12 md:gap-8 md:p-6">
+          <div className="md:col-span-7 xl:col-span-8">
             <Suspense fallback={<AssetCardSkeleton />}>
               <AssetCard
                 showBalance={showBalance}
@@ -214,7 +214,7 @@ export const Dashboard = () => {
               />
             </Suspense>
 
-            <div className="px-4 lg:px-0 mt-6 animate-fade-in" style={{ animationDelay: "0.1s" }}>
+            <div className="px-4 md:px-0 mt-6 animate-fade-in" style={{ animationDelay: "0.1s" }}>
               <div className="grid grid-cols-4 gap-3">
                 {actions.map((action) => (
                   <button
@@ -252,19 +252,19 @@ export const Dashboard = () => {
               </div>
             </div>
 
-            <div className="px-4 lg:px-0 mt-6 animate-fade-in" style={{ animationDelay: "0.15s" }}>
+            <div className="px-4 md:px-0 mt-6 animate-fade-in" style={{ animationDelay: "0.15s" }}>
               <PredictionEventSlider markets={predictionMarkets || []} />
             </div>
 
-            <div className="mt-6 animate-fade-in lg:hidden" style={{ animationDelay: "0.2s" }}>
+            <div className="mt-6 animate-fade-in md:hidden" style={{ animationDelay: "0.2s" }}>
               <Suspense fallback={<MarketsSectionSkeleton />}>
                 <MarketsSection className="px-4" />
               </Suspense>
             </div>
 
-            <div className="h-3 bg-muted mt-6 lg:hidden"></div>
+            <div className="h-3 bg-muted mt-6 md:hidden"></div>
 
-            <div className="px-4 lg:px-0 py-6 animate-fade-in" style={{ animationDelay: "0.25s" }}>
+            <div className="px-4 md:px-0 py-6 animate-fade-in" style={{ animationDelay: "0.25s" }}>
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-xl font-bold text-foreground">My Rewards</h2>
                 <button className="flex items-center gap-1 px-4 py-2 bg-muted rounded-full text-sm font-medium text-foreground hover:bg-muted/80 transition-colors">

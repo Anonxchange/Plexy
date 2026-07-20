@@ -59,13 +59,13 @@ export function HeroSection() {
   const { t } = useTranslation();
   return (
     <section
-      className="relative overflow-hidden bg-background flex flex-col lg:flex-row lg:items-stretch min-h-screen lg:min-h-0"
+      className="relative overflow-hidden bg-background flex flex-col md:flex-row md:items-stretch min-h-screen md:min-h-0"
     >
 
       {/* ══════════════════════════════════════════
           DESKTOP ONLY — ambient background decorators
           ══════════════════════════════════════════ */}
-      <div className="hidden lg:block absolute inset-0 pointer-events-none z-0">
+      <div className="hidden md:block absolute inset-0 pointer-events-none z-0">
         <div
           className="absolute rounded-full blur-3xl"
           style={{
@@ -88,7 +88,7 @@ export function HeroSection() {
           MOBILE ONLY — subtle lime glow
           ══════════════════════════════════════════ */}
       <div
-        className="lg:hidden absolute pointer-events-none"
+        className="md:hidden absolute pointer-events-none"
         style={{
           top: "5%", left: "50%", transform: "translateX(-50%)",
           width: "60%", height: "40%",
@@ -103,13 +103,13 @@ export function HeroSection() {
         className={[
           "relative z-10",
           "flex flex-col items-center text-center px-5 pt-6 pb-10",
-          "lg:flex-none lg:w-[52%] lg:flex lg:flex-col",
-          "lg:items-start lg:text-left lg:px-20 lg:pt-10 lg:pb-10 lg:justify-center",
+          "md:flex-none md:w-[52%] md:flex md:flex-col",
+          "md:items-start md:text-left md:px-20 md:pt-10 md:pb-10 md:justify-center",
         ].join(" ")}
       >
         {/* Trust badge */}
         <div
-          className="inline-flex items-center gap-1 rounded-full px-1 py-1 mb-7 lg:mb-4
+          className="inline-flex items-center gap-1 rounded-full px-1 py-1 mb-7 md:mb-4
                      border border-foreground/15 bg-background"
         >
           <span className="text-xs font-medium text-foreground px-2.5">
@@ -122,7 +122,7 @@ export function HeroSection() {
 
         {/* Headline */}
         <h1
-          className="font-black uppercase tracking-tight leading-[0.9] text-foreground mb-5 lg:mb-3 max-w-3xl lg:max-w-xl break-words"
+          className="font-black uppercase tracking-tight leading-[0.9] text-foreground mb-5 md:mb-3 max-w-3xl md:max-w-xl break-words"
           style={{ fontSize: "clamp(2.4rem, 6.4vw, 5rem)" }}
         >
           <span className="block">{t('hero.headline_line1')}</span>
@@ -141,14 +141,14 @@ export function HeroSection() {
         </h1>
 
         {/* Subtitle */}
-        <p className="text-muted-foreground text-base lg:text-lg leading-relaxed max-w-md mb-9 lg:mb-5 font-medium">
+        <p className="text-muted-foreground text-base md:text-lg leading-relaxed max-w-md mb-9 md:mb-5 font-medium">
           {t('hero.subtitle')}
         </p>
 
         {/* CTA */}
         <Link href="/signup">
           <button
-            className="inline-flex items-center gap-2.5 font-black uppercase tracking-wide text-black rounded-full px-9 py-4 text-sm transition-all hover:scale-[1.03] active:scale-[0.97] mb-10 lg:mb-6"
+            className="inline-flex items-center gap-2.5 font-black uppercase tracking-wide text-black rounded-full px-9 py-4 text-sm transition-all hover:scale-[1.03] active:scale-[0.97] mb-10 md:mb-6"
             style={{ background: "#B4F22E", boxShadow: "0 4px 36px rgba(180,242,46,0.42)" }}
           >
             {t('hero.cta')}
@@ -157,7 +157,7 @@ export function HeroSection() {
         </Link>
 
         {/* Brand logos strip */}
-        <div className="flex flex-col items-center gap-3 lg:items-start">
+        <div className="flex flex-col items-center gap-3 md:items-start">
           <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
             {t('hero.brands_label')}
           </p>
@@ -182,7 +182,7 @@ export function HeroSection() {
       {/* ══════════════════════════════════════════
           MOBILE ONLY — photo sits below the content
           ══════════════════════════════════════════ */}
-      <div className="lg:hidden relative flex-1 min-h-[280px]">
+      <div className="md:hidden relative flex-1 min-h-[280px]">
         <div
           className="absolute top-0 left-0 right-0 z-10 pointer-events-none"
           style={{

@@ -84,7 +84,7 @@ export default function AccountSettings() {
           <h1 className="text-3xl font-bold">Account</h1>
           <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
             <SheetTrigger asChild>
-              <Button variant="outline" size="icon" className="lg:hidden">
+              <Button variant="outline" size="icon" className="md:hidden">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -97,14 +97,14 @@ export default function AccountSettings() {
           </Sheet>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="hidden lg:block">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="hidden md:block">
             <Card className="sticky top-20">
               <SettingsSidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
             </Card>
           </div>
 
-          <div className="lg:col-span-3">
+          <div className="md:col-span-3">
             <Card>
               <CardContent className="p-6">
                 <div className="mb-6">
