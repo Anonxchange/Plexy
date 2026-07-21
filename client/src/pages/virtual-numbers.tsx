@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { PexlyFooter } from "@/components/pexly-footer";
 import {
   useVNApps,
+  useVNServices,
   useVNCountries,
   useBuyVirtualNumber,
   useCheckSMS,
@@ -426,6 +427,9 @@ function CountriesView({
 }
 
 // ── Step 4: Confirm ───────────────────────────────────────────────────────────
+// Uses the app price already fetched in the global apps list (step 2).
+// No extra country-specific re-fetch — action=apps without countryId already
+// returns the correct price per the Fleexa edge function.
 function ConfirmView({
   server,
   country,
@@ -447,6 +451,7 @@ function ConfirmView({
 }) {
   const priceNgn = parseFloat(app.price_ngn);
   const priceUsd = ngnToUsd(priceNgn);
+  const inStock = app.quantity > 0;
   const serverInfo = SERVERS.find((s) => s.id === server);
 
   return (
@@ -458,12 +463,21 @@ function ConfirmView({
           <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
             <span className="text-xl font-bold text-primary">{app.name.charAt(0)}</span>
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <p className="font-bold text-foreground text-lg">{app.name}</p>
             <p className="text-sm text-muted-foreground">
               {countryFlag(country.code)} {country.title}
             </p>
           </div>
+          {inStock ? (
+            <span className="text-[11px] font-bold uppercase tracking-wide text-green-600 bg-green-500/10 px-2 py-1 rounded-lg shrink-0">
+              {app.quantity} available
+            </span>
+          ) : (
+            <span className="text-[11px] font-bold uppercase tracking-wide text-destructive bg-destructive/10 px-2 py-1 rounded-lg shrink-0">
+              Sold out
+            </span>
+          )}
         </div>
 
         <div className="space-y-2 text-sm">
@@ -501,6 +515,15 @@ function ConfirmView({
         </div>
       </div>
 
+      {!inStock && (
+        <div className="mb-4 flex items-start gap-3 bg-destructive/10 border border-destructive/30 rounded-2xl px-4 py-3">
+          <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+          <p className="text-sm text-destructive">
+            No numbers available for <strong>{app.name}</strong> right now. Go back and try a different app or country.
+          </p>
+        </div>
+      )}
+
       <div className="flex items-center gap-4 flex-wrap mb-6">
         {[
           { Icon: ShieldCheck, label: "Auth required" },
@@ -518,7 +541,7 @@ function ConfirmView({
         {showKoraPay && (
           <button
             onClick={onBuyKoraPay}
-            disabled={purchasing}
+            disabled={purchasing || !inStock}
             className="w-full flex items-center justify-center gap-2.5 py-4 px-6 rounded-full bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-bold text-base transition-all active:scale-[0.98] shadow-md"
           >
             {purchasing ? (
@@ -533,7 +556,7 @@ function ConfirmView({
         )}
         <button
           onClick={onBuyCrypto}
-          disabled={purchasing}
+          disabled={purchasing || !inStock}
           className={cn(
             "w-full flex items-center justify-center gap-2.5 py-4 px-6 rounded-full disabled:opacity-50 font-semibold text-base transition-all active:scale-[0.98]",
             showKoraPay
