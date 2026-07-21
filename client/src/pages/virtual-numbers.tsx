@@ -8,6 +8,7 @@ import {
   useVNApps,
   useVNServices,
   useVNCountries,
+  useVNServiceInCountry,
   useBuyVirtualNumber,
   useCheckSMS,
   useCancelVirtualNumber,
@@ -215,6 +216,41 @@ function ServerView({ onSelect }: { onSelect: (server: string) => void }) {
   );
 }
 
+// ── Service icon map ──────────────────────────────────────────────────────────
+const SERVICE_ICONS: Record<string, { bg: string; emoji: string }> = {
+  telegram:    { bg: "bg-[#2AABEE]",    emoji: "✈️" },
+  whatsapp:    { bg: "bg-[#25D366]",    emoji: "💬" },
+  instagram:   { bg: "bg-[#E1306C]",    emoji: "📷" },
+  facebook:    { bg: "bg-[#1877F2]",    emoji: "👤" },
+  tiktok:      { bg: "bg-[#010101]",    emoji: "🎵" },
+  douyin:      { bg: "bg-[#010101]",    emoji: "🎵" },
+  viber:       { bg: "bg-[#7360F2]",    emoji: "📞" },
+  paypal:      { bg: "bg-[#003087]",    emoji: "💳" },
+  twitter:     { bg: "bg-[#1DA1F2]",    emoji: "🐦" },
+  x:           { bg: "bg-[#000000]",    emoji: "✕" },
+  uber:        { bg: "bg-[#000000]",    emoji: "🚗" },
+  amazon:      { bg: "bg-[#FF9900]",    emoji: "📦" },
+  google:      { bg: "bg-[#4285F4]",    emoji: "G" },
+  apple:       { bg: "bg-[#000000]",    emoji: "🍎" },
+  snapchat:    { bg: "bg-[#FFFC00]",    emoji: "👻" },
+  discord:     { bg: "bg-[#5865F2]",    emoji: "🎮" },
+  linkedin:    { bg: "bg-[#0A66C2]",    emoji: "💼" },
+  netflix:     { bg: "bg-[#E50914]",    emoji: "🎬" },
+  spotify:     { bg: "bg-[#1DB954]",    emoji: "🎵" },
+  microsoft:   { bg: "bg-[#00A4EF]",    emoji: "🪟" },
+  airbnb:      { bg: "bg-[#FF5A5F]",    emoji: "🏠" },
+  affirm:      { bg: "bg-[#3B4CB8]",    emoji: "💬" },
+  coinbase:    { bg: "bg-[#0052FF]",    emoji: "₿" },
+  binance:     { bg: "bg-[#F0B90B]",    emoji: "₿" },
+};
+
+function serviceIcon(name: string) {
+  const key = Object.keys(SERVICE_ICONS).find((k) =>
+    name.toLowerCase().includes(k)
+  );
+  return key ? SERVICE_ICONS[key] : null;
+}
+
 // ── Step 2: App / Service Selection (global, no country needed) ──────────────
 function AllAppsView({
   server,
@@ -243,18 +279,18 @@ function AllAppsView({
 
   const services = data?.services ?? [];
   const pagination = data?.pagination;
-  const serverLabel = SERVERS.find((s) => s.id === server)?.label ?? `OTP ${server}`;
 
   return (
     <>
-      <PageHeader title={`${serverLabel} — Select a service`} onBack={onBack} />
+      <PageHeader title="Select Service" onBack={onBack} />
+      <p className="text-sm text-muted-foreground -mt-4 mb-5">Choose a service to receive verification</p>
       <NotConfiguredBanner />
 
       <div className="relative mb-5">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <input
           type="text"
-          placeholder="Search: Telegram, WhatsApp, Instagram…"
+          placeholder="Search services…"
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           className="w-full pl-11 pr-4 py-3.5 bg-card border border-border rounded-2xl text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/40 transition-all"
@@ -262,38 +298,55 @@ function AllAppsView({
       </div>
 
       {isLoading ? (
-        <div className="space-y-3">
+        <div className="space-y-0 divide-y divide-border">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="h-20 bg-muted animate-pulse rounded-2xl" />
+            <div key={i} className="flex items-center gap-4 py-4 px-1">
+              <div className="h-11 w-11 bg-muted animate-pulse rounded-xl shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <div className="h-4 w-28 bg-muted animate-pulse rounded" />
+              </div>
+              <div className="h-4 w-4 bg-muted animate-pulse rounded" />
+            </div>
           ))}
         </div>
       ) : (
         <>
-          <div className="space-y-2">
+          <div className="divide-y divide-border">
             {services.map((svc) => {
-              const priceNgn = parseFloat(svc.price_ngn);
-              const priceUsd = ngnToUsd(priceNgn);
               const inStock = svc.quantity > 0;
+              const icon = serviceIcon(svc.name);
               return (
                 <button
                   key={svc.id}
                   onClick={() => inStock && onSelect(svc)}
                   disabled={!inStock}
                   className={cn(
-                    "w-full flex items-center gap-4 px-5 py-4 bg-card border rounded-2xl text-left transition-all",
+                    "w-full flex items-center gap-4 py-4 px-1 text-left transition-colors",
                     inStock
-                      ? "border-border hover:border-primary/50 hover:shadow-sm active:scale-[0.99] cursor-pointer"
-                      : "border-border/40 opacity-50 cursor-not-allowed"
+                      ? "hover:bg-muted/30 cursor-pointer"
+                      : "opacity-40 cursor-not-allowed"
                   )}
                 >
-                  <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                    <span className="text-base font-bold text-primary">
-                      {svc.name.charAt(0)}
-                    </span>
+                  {/* Icon */}
+                  <div
+                    className={cn(
+                      "h-11 w-11 rounded-xl flex items-center justify-center shrink-0 text-lg",
+                      icon ? icon.bg : "bg-primary/10"
+                    )}
+                  >
+                    {icon ? (
+                      <span className="leading-none">{icon.emoji}</span>
+                    ) : (
+                      <span className="text-sm font-black text-white">
+                        {svc.name.charAt(0)}
+                      </span>
+                    )}
                   </div>
+
+                  {/* Name + badges */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="font-semibold text-foreground text-sm">{svc.name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-foreground text-[15px]">{svc.name}</span>
                       {!inStock && (
                         <span className="text-[10px] font-bold uppercase tracking-wide text-destructive bg-destructive/10 px-1.5 py-0.5 rounded-md">
                           Sold out
@@ -305,25 +358,23 @@ function AllAppsView({
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {svc.quantity} numbers available
-                    </p>
                   </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-base font-bold text-foreground">{formatNgn(priceNgn)}</p>
-                    <p className="text-xs text-muted-foreground">≈ ${priceUsd}</p>
-                  </div>
+
+                  <ChevronLeft className="h-5 w-5 text-muted-foreground rotate-180 shrink-0" />
                 </button>
               );
             })}
 
             {!isLoading && services.length === 0 && (
-              <div className="text-center py-12">
-                <p className="text-sm text-muted-foreground">No services found.</p>
-                {!import.meta.env.VITE_SUPABASE_URL && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Configure your Supabase secrets to load live data.
+              <div className="text-center py-16">
+                <Phone className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-sm font-semibold text-foreground">No services found</p>
+                {!import.meta.env.VITE_SUPABASE_URL ? (
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    Add your Supabase secrets to load live services.
                   </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground mt-1.5">Try a different search term.</p>
                 )}
               </div>
             )}
@@ -356,20 +407,90 @@ function AllAppsView({
   );
 }
 
+// ── Step 3a: Single country row with lazy per-country price ──────────────────
+function CountryRow({
+  country,
+  app,
+  server,
+  onSelect,
+}: {
+  country: VNCountry;
+  app: VNApp;
+  server: string;
+  onSelect: (country: VNCountry, resolvedApp: VNApp) => void;
+}) {
+  const { data: countryApp, isLoading } = useVNServiceInCountry({
+    countryId: country.id,
+    server,
+    serviceName: app.name,
+  });
+
+  // Fall back to global price/qty while country-specific data loads
+  const resolvedApp = countryApp ?? app;
+  const priceNgn = parseFloat(resolvedApp.price_ngn);
+  const qty = countryApp?.quantity ?? app.quantity;
+  const inStock = qty > 0;
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-3 py-4 border-b border-border last:border-0",
+        !inStock && "opacity-40"
+      )}
+    >
+      <span className="text-2xl leading-none shrink-0">{countryFlag(country.code)}</span>
+
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-foreground text-[15px] leading-tight">{country.title}</p>
+        {isLoading ? (
+          <div className="h-3 w-14 bg-muted animate-pulse rounded mt-1" />
+        ) : (
+          <p className="text-xs font-bold text-primary mt-0.5">
+            {inStock ? `${qty.toLocaleString()} PCS` : "Out of stock"}
+          </p>
+        )}
+      </div>
+
+      <div className="text-right shrink-0 mr-2">
+        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+          FROM
+        </p>
+        {isLoading ? (
+          <div className="h-4 w-20 bg-muted animate-pulse rounded mt-0.5" />
+        ) : (
+          <p className="text-sm font-bold text-foreground">{formatNgn(priceNgn)}</p>
+        )}
+      </div>
+
+      <button
+        onClick={() => inStock && onSelect(country, resolvedApp)}
+        disabled={!inStock}
+        className="px-4 py-2 rounded-xl bg-muted hover:bg-primary hover:text-primary-foreground disabled:opacity-30 disabled:cursor-not-allowed text-foreground text-sm font-bold transition-all active:scale-95 shrink-0"
+      >
+        BUY
+      </button>
+    </div>
+  );
+}
+
 // ── Step 3: Country Selection ─────────────────────────────────────────────────
 function CountriesView({
   server,
+  app,
   onSelect,
   onBack,
 }: {
   server: string;
-  onSelect: (country: VNCountry) => void;
+  app: VNApp;
+  onSelect: (country: VNCountry, resolvedApp: VNApp) => void;
   onBack: () => void;
 }) {
   const { data: raw, isLoading } = useVNCountries(server);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
 
-  const countries: VNCountry[] = useMemo(() => {
+  const allCountries: VNCountry[] = useMemo(() => {
     const list = Object.values(raw ?? {});
     if (!search) return list;
     const q = search.toLowerCase();
@@ -378,49 +499,82 @@ function CountriesView({
     );
   }, [raw, search]);
 
+  // Paginate to avoid firing too many API calls at once
+  const totalPages = Math.ceil(allCountries.length / PAGE_SIZE);
+  const countries = allCountries.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   return (
     <>
-      <PageHeader
-        title="Select a country"
-        onBack={onBack}
-      />
+      <PageHeader title={app.name} onBack={onBack} />
+      <p className="text-sm text-muted-foreground -mt-4 mb-5">
+        Select a country for {app.name}
+      </p>
       <NotConfiguredBanner />
 
       <div className="relative mb-5">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <input
           type="text"
-          placeholder="Search country…"
+          placeholder={`Search for countries offering ${app.name}…`}
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           className="w-full pl-11 pr-4 py-3.5 bg-card border border-border rounded-2xl text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/40 transition-all"
         />
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {Array.from({ length: 12 }).map((_, i) => (
-            <div key={i} className="h-16 bg-muted animate-pulse rounded-2xl" />
+        <div className="divide-y divide-border">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 py-4">
+              <div className="h-8 w-8 bg-muted animate-pulse rounded-full shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <div className="h-4 w-24 bg-muted animate-pulse rounded" />
+                <div className="h-3 w-16 bg-muted animate-pulse rounded" />
+              </div>
+              <div className="h-4 w-20 bg-muted animate-pulse rounded" />
+              <div className="h-8 w-14 bg-muted animate-pulse rounded-xl" />
+            </div>
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {countries.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => onSelect(c)}
-              className="flex items-center gap-3 px-4 py-3 bg-card hover:bg-muted/40 border border-border hover:border-primary/40 rounded-2xl transition-all text-left"
-            >
-              <span className="text-2xl leading-none">{countryFlag(c.code)}</span>
-              <span className="text-sm font-medium text-foreground truncate">{c.title}</span>
-            </button>
-          ))}
-          {countries.length === 0 && !isLoading && (
-            <p className="col-span-3 text-center text-sm text-muted-foreground py-8">
-              No countries found.
-            </p>
+        <>
+          <div>
+            {countries.map((c) => (
+              <CountryRow
+                key={c.id}
+                country={c}
+                app={app}
+                server={server}
+                onSelect={onSelect}
+              />
+            ))}
+            {countries.length === 0 && (
+              <p className="text-center text-sm text-muted-foreground py-10">
+                No countries found.
+              </p>
+            )}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-3 mt-6">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="px-4 py-2 rounded-xl border border-border text-sm font-medium disabled:opacity-40 hover:bg-muted transition-colors"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-muted-foreground">{page} / {totalPages}</span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="px-4 py-2 rounded-xl border border-border text-sm font-medium disabled:opacity-40 hover:bg-muted transition-colors"
+              >
+                Next
+              </button>
+            </div>
           )}
-        </div>
+        </>
       )}
     </>
   );
@@ -807,8 +961,10 @@ export default function VirtualNumbers() {
     setView("countries");
   };
 
-  const handleCountrySelect = (c: VNCountry) => {
+  const handleCountrySelect = (c: VNCountry, resolvedApp: VNApp) => {
     setSelectedCountry(c);
+    // Use country-specific resolved price (may differ from global)
+    setSelectedService(resolvedApp);
     setView("confirm");
   };
 
@@ -988,6 +1144,7 @@ export default function VirtualNumbers() {
         {view === "countries" && selectedService && (
           <CountriesView
             server={selectedServer}
+            app={selectedService}
             onSelect={handleCountrySelect}
             onBack={() => setView("apps")}
           />
