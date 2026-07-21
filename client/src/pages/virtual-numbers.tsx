@@ -214,15 +214,13 @@ function ServerView({ onSelect }: { onSelect: (server: string) => void }) {
   );
 }
 
-// ── Step 3: Service / App Selection (after country is chosen) ────────────────
-function ServicesView({
+// ── Step 2: App / Service Selection (global, no country needed) ──────────────
+function AllAppsView({
   server,
-  country,
   onSelect,
   onBack,
 }: {
   server: string;
-  country: VNCountry;
   onSelect: (service: VNApp) => void;
   onBack: () => void;
 }) {
@@ -235,21 +233,20 @@ function ServicesView({
     return () => clearTimeout(t);
   }, [search]);
 
-  const { data, isLoading, isFetching } = useVNApps({
-    countryId: String(country.id),
+  const { data, isLoading, isFetching } = useVNServices({
     server,
     page: String(page),
     limit: "50",
     search: debouncedSearch,
   });
 
-  const services = data?.apps ?? [];
+  const services = data?.services ?? [];
   const pagination = data?.pagination;
   const serverLabel = SERVERS.find((s) => s.id === server)?.label ?? `OTP ${server}`;
 
   return (
     <>
-      <PageHeader title={`${serverLabel} · ${country.title} — Select a service`} onBack={onBack} />
+      <PageHeader title={`${serverLabel} — Select a service`} onBack={onBack} />
       <NotConfiguredBanner />
 
       <div className="relative mb-5">
@@ -358,7 +355,7 @@ function ServicesView({
   );
 }
 
-// ── Step 2: Country Selection ─────────────────────────────────────────────────
+// ── Step 3: Country Selection ─────────────────────────────────────────────────
 function CountriesView({
   server,
   onSelect,
@@ -739,7 +736,7 @@ function loadKoraPayScript(): Promise<void> {
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
-type View = "server" | "services" | "countries" | "confirm" | "purchasing" | "active";
+type View = "server" | "apps" | "countries" | "confirm" | "purchasing" | "active";
 
 export default function VirtualNumbers() {
   const { user, loading: authLoading } = useAuth();
@@ -779,16 +776,16 @@ export default function VirtualNumbers() {
 
   const handleServerSelect = (server: string) => {
     setSelectedServer(server);
+    setView("apps");
+  };
+
+  const handleServiceSelect = (svc: VNApp) => {
+    setSelectedService(svc);
     setView("countries");
   };
 
   const handleCountrySelect = (c: VNCountry) => {
     setSelectedCountry(c);
-    setView("services");
-  };
-
-  const handleServiceSelect = (svc: VNApp) => {
-    setSelectedService(svc);
     setView("confirm");
   };
 
@@ -955,22 +952,21 @@ export default function VirtualNumbers() {
           </>
         )}
 
-        {/* Step 2 — Countries */}
-        {view === "countries" && (
-          <CountriesView
+        {/* Step 2 — Apps / Services (global) */}
+        {view === "apps" && (
+          <AllAppsView
             server={selectedServer}
-            onSelect={handleCountrySelect}
+            onSelect={handleServiceSelect}
             onBack={() => setView("server")}
           />
         )}
 
-        {/* Step 3 — Services (country-specific) */}
-        {view === "services" && selectedCountry && (
-          <ServicesView
+        {/* Step 3 — Countries */}
+        {view === "countries" && selectedService && (
+          <CountriesView
             server={selectedServer}
-            country={selectedCountry}
-            onSelect={handleServiceSelect}
-            onBack={() => setView("countries")}
+            onSelect={handleCountrySelect}
+            onBack={() => setView("apps")}
           />
         )}
 
@@ -980,7 +976,7 @@ export default function VirtualNumbers() {
             server={selectedServer}
             country={selectedCountry}
             app={selectedService}
-            onBack={() => setView("services")}
+            onBack={() => setView("countries")}
             onBuyKoraPay={handleBuyKoraPay}
             onBuyCrypto={handleBuyCrypto}
             purchasing={false}
