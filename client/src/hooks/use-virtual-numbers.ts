@@ -36,6 +36,27 @@ async function fleexaPost(action: string, body: Record<string, unknown>, server 
   return data;
 }
 
+// ── Response shape helpers ────────────────────────────────────────────────────
+// The edge function passes Fleexa JSON through verbatim.
+// Server 1 wraps responses: { success: true, data: {...}, pagination?: {...} }
+// Servers 2 & 3 may return data at the top level: { code: "WAITING", ... }
+// or { requestId: "...", number: "...", ... }
+// Always unwrap safely: prefer data.data, fall back to the root object.
+
+function unwrapData(raw: any): any {
+  // If it has a `data` key that is an object/array, unwrap it.
+  if (raw && raw.data !== undefined && raw.data !== null) return raw.data;
+  return raw;
+}
+
+function unwrapArray(raw: any): any[] {
+  const inner = unwrapData(raw);
+  if (Array.isArray(inner)) return inner;
+  // Some responses wrap in {data: {apps: [...]}} or similar
+  if (inner && Array.isArray(inner.apps)) return inner.apps;
+  return [];
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface VNCountry {
@@ -105,13 +126,22 @@ export function countryFlag(code: string): string {
 /**
  * Get the full list of countries for the selected server.
  * Edge function: action=countries&server=X → GET /{seg}/countries
+ *
+ * Server 1  → { success, data: { [key]: {id, title, code} } }
+ * Servers 2/3 → may return { [key]: {id, title, code} } directly
  */
 export function useVNCountries(server = "2") {
   return useQuery<Record<string, VNCountry>>({
     queryKey: ["vn-countries", server],
     queryFn: async () => {
-      const data = await fleexaGet({ action: "countries", server });
-      return data.data ?? {};
+      const raw = await fleexaGet({ action: "countries", server });
+      // Unwrap {success, data: {...}} → {...}, or use root if no data wrapper
+      const countries = unwrapData(raw);
+      // The result should be a plain object (dict keyed by country id/code)
+      if (countries && typeof countries === "object" && !Array.isArray(countries)) {
+        return countries as Record<string, VNCountry>;
+      }
+      return {};
     },
     staleTime: 10 * 60 * 1000,
   });
@@ -119,7 +149,11 @@ export function useVNCountries(server = "2") {
 
 /**
  * Get apps (services) for a specific country.
- * Edge function: action=apps&server=X&countryId=Y → GET /{seg}/apps?countryId=Y
+ * Edge function: action=apps&server=X&countryId=Y&page=P&limit=L
+ *
+ * Server 1  → { success, data: [{id, name, qty, price_ngn}] }
+ * Servers 2/3 → { success, data: [...], pagination: {...} }  (quantity field)
+ * Servers 2/3 → may also return data at root level
  *
  * countryId is REQUIRED by all 3 servers. Never call without it.
  */
@@ -149,11 +183,12 @@ export function useVNApps({
         limit,
       };
       if (search) params.search = search;
-      const data = await fleexaGet(params);
+      const raw = await fleexaGet(params);
       return {
-        apps: (data.data ?? []).map(normalizeApp),
-        pagination: data.pagination,
-        exchange_rate: data.exchange_rate,
+        apps: unwrapArray(raw).map(normalizeApp),
+        // pagination lives at root level (not inside data)
+        pagination: raw.pagination ?? null,
+        exchange_rate: raw.exchange_rate,
       };
     },
     enabled: !!countryId && enabled,
@@ -182,10 +217,10 @@ export function useVNAllApps({
     queryFn: async () => {
       const params: Record<string, string> = { action: "apps", server, page, limit };
       if (search) params.search = search;
-      const data = await fleexaGet(params);
+      const raw = await fleexaGet(params);
       return {
-        apps: (data.data ?? []).map(normalizeApp),
-        pagination: data.pagination,
+        apps: unwrapArray(raw).map(normalizeApp),
+        pagination: raw.pagination ?? null,
       };
     },
     staleTime: 2 * 60 * 1000,
@@ -219,8 +254,8 @@ export function useVNServiceInCountry({
         search: serviceName,
         limit: "20",
       };
-      const data = await fleexaGet(params);
-      const apps: VNApp[] = (data.data ?? []).map(normalizeApp);
+      const raw = await fleexaGet(params);
+      const apps: VNApp[] = unwrapArray(raw).map(normalizeApp);
       return (
         apps.find((a) => a.name.toLowerCase() === serviceName.toLowerCase()) ?? null
       );
@@ -236,8 +271,12 @@ export function useVNServiceInCountry({
  * Server differences:
  *   SMS 1 → POST /sms/buy   { countryName, appName, countryId, projectId }
  *   SMS 2 → POST /sms2/buy  { countryName, appName, countryId, projectId }
- *   SMS 3 → POST /sms3/buy  { countryName, appName, countryId, operator?, maxPrice? }
- *                              (no projectId — SMS 3 uses app.id as string like "tg" internally)
+ *   SMS 3 → POST /sms3/buy  { countryName, appName, countryId }
+ *                              (no projectId — SMS 3 uses internal app id)
+ *
+ * Response shapes:
+ *   Server 1  → { success, data: { requestId, number, service, country, ... } }
+ *   Servers 2/3 → may return { requestId, number, ... } at root, or wrapped
  */
 export function useBuyVirtualNumber(server = "2") {
   return useMutation<
@@ -268,9 +307,22 @@ export function useBuyVirtualNumber(server = "2") {
         if (params.projectId !== undefined) body.projectId = params.projectId;
       }
 
-      const data = await fleexaPost("buy", body, server);
-      if (!data.success) throw new Error(data.message ?? data.error ?? "Purchase failed");
-      return data.data as VNPurchase;
+      const raw = await fleexaPost("buy", body, server);
+
+      // Explicit failure — success field is present and false
+      if (raw.success === false) {
+        throw new Error(raw.message ?? raw.error ?? "Purchase failed");
+      }
+
+      // Unwrap {success, data: {...}} or use root if data key is missing
+      const payload = unwrapData(raw);
+
+      // Validate the purchase has a requestId (essential for polling)
+      if (!payload?.requestId) {
+        throw new Error(raw.message ?? "Purchase failed — no requestId returned");
+      }
+
+      return payload as VNPurchase;
     },
   });
 }
@@ -279,8 +331,11 @@ export function useBuyVirtualNumber(server = "2") {
  * Poll SMS check status.
  * Edge function: action=check&requestId=X&server=Y → GET /{seg}/check/:requestId
  *
- * All 3 servers return: { code: "WAITING"|"RECEIVED"|"CANCELED"|"EXPIRED", sms?, message? }
- * Polls every 20 s while WAITING; stops on terminal codes.
+ * All servers return a status object with a `code` field:
+ *   Server 1  → { success, data: { code, sms?, message? } }
+ *   Servers 2/3 → { code, sms?, message? }  (may be at root level)
+ *
+ * Polls every 20s while WAITING; stops on terminal codes.
  */
 export function useCheckSMS({
   requestId,
@@ -294,15 +349,22 @@ export function useCheckSMS({
   return useQuery<SMSCheckResult>({
     queryKey: ["vn-check", requestId, server],
     queryFn: async () => {
-      const data = await fleexaGet({ action: "check", requestId, server });
-      if (!data.success) throw new Error(data.message ?? "Check failed");
-      return data.data as SMSCheckResult;
+      const raw = await fleexaGet({ action: "check", requestId, server });
+
+      // Unwrap {success, data: {code}} or use root {code} directly
+      const payload = unwrapData(raw);
+
+      if (!payload?.code) {
+        throw new Error(raw.message ?? payload?.message ?? "Check failed — no status code returned");
+      }
+
+      return payload as SMSCheckResult;
     },
     enabled: !!requestId && enabled,
     refetchInterval: (query) => {
       const code = query.state.data?.code;
       if (code === "RECEIVED" || code === "CANCELED" || code === "EXPIRED") return false;
-      return 20_000; // poll every 20 s while WAITING
+      return 20_000; // poll every 20s while WAITING
     },
     refetchIntervalInBackground: true,
   });
@@ -317,17 +379,18 @@ export function useCheckSMS({
  *   SMS 2 → 18 minutes
  *   SMS 3 → 2 minutes
  *
- * SMS 2/3 return { success: true, message: "..." } (no data.data).
- * SMS 1 returns { success: true, data: { success: true } }.
- * We only check data.success — not data.data.
+ * All servers return { success: true, message?: "..." } on success.
+ * We check success === false explicitly (not !success) since the field
+ * may be absent on servers 2/3 for successful responses.
  */
 export function useCancelVirtualNumber(server = "2") {
   const qc = useQueryClient();
   return useMutation<void, Error, { requestId: string }>({
     mutationFn: async ({ requestId }) => {
-      const data = await fleexaPost("cancel", { requestId }, server);
-      if (data.success === false)
-        throw new Error(data.message ?? data.error ?? "Cancel failed");
+      const raw = await fleexaPost("cancel", { requestId }, server);
+      if (raw.success === false) {
+        throw new Error(raw.message ?? raw.error ?? "Cancel failed");
+      }
     },
     onSuccess: (_data, { requestId }) => {
       qc.invalidateQueries({ queryKey: ["vn-check", requestId] });
