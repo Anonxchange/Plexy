@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PexlyFooter } from "@/components/pexly-footer";
 import {
-  useVNApps,
   useVNAllApps,
   useVNCountries,
   useVNServiceInCountry,
@@ -270,20 +269,12 @@ function AllAppsView({
     return () => clearTimeout(t);
   }, [search]);
 
-  // countryId is required by the Fleexa API — fetch countries first, use the
-  // first one as a default so AllAppsView can list services. The user will pick
-  // their exact country in the next step (CountriesView).
-  const { data: countriesData } = useVNCountries(server);
-  const firstCountryId = countriesData
-    ? String(Object.values(countriesData)[0]?.id ?? "")
-    : "";
-
-  const { data, isLoading, isFetching, error } = useVNApps({
-    countryId: firstCountryId,
+  // Fetch the full platform-wide service list directly from the API.
+  // No countryId needed here — the user picks their country in the next step.
+  const { data, isLoading, isFetching, error } = useVNAllApps({
     server,
     page: String(page),
     search: debouncedSearch,
-    enabled: !!firstCountryId,
   });
 
   const services = data?.apps ?? [];
@@ -998,6 +989,7 @@ export default function VirtualNumbers() {
         currency: "usd",
         metadata: {
           service: selectedService.name,
+          appName: selectedService.name,
           countryId: String(selectedCountry.id),
           countryName: selectedCountry.title,
           projectId: selectedService.id,
