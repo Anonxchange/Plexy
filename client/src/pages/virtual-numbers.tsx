@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { PexlyFooter } from "@/components/pexly-footer";
 import {
   useVNApps,
+  useVNAllApps,
   useVNCountries,
   useVNServiceInCountry,
   useBuyVirtualNumber,
@@ -269,15 +270,10 @@ function AllAppsView({
     return () => clearTimeout(t);
   }, [search]);
 
-  const { data: countriesData } = useVNCountries(server);
-  const firstCountryId = countriesData ? Object.values(countriesData)[0]?.id : undefined;
-
-  const { data, isLoading, isFetching } = useVNApps({
-    countryId: firstCountryId ?? "",
+  const { data, isLoading, isFetching } = useVNAllApps({
     server,
     page: String(page),
     search: debouncedSearch,
-    enabled: !!firstCountryId,
   });
 
   const services = data?.apps ?? [];
