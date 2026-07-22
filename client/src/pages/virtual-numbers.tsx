@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 import { PexlyFooter } from "@/components/pexly-footer";
 import {
   useVNApps,
-  useVNServices,
   useVNCountries,
   useVNServiceInCountry,
   useBuyVirtualNumber,
@@ -42,7 +41,7 @@ const NGN_USD_RATE = 1600;
 const SERVERS = [
   {
     id: "1",
-    label: "OTP 1",
+    label: "SMS 1",
     badge: null,
     cancelWindow: "30 seconds",
     description: "Fast delivery. Short cancel window.",
@@ -50,7 +49,7 @@ const SERVERS = [
   },
   {
     id: "2",
-    label: "OTP 2",
+    label: "SMS 2",
     badge: "Recommended",
     cancelWindow: "18 minutes",
     description: "Balanced speed with a generous 18-minute cancel window.",
@@ -58,7 +57,7 @@ const SERVERS = [
   },
   {
     id: "3",
-    label: "OTP 3",
+    label: "SMS 3",
     badge: null,
     cancelWindow: "2 minutes",
     description: "Premium network. Higher success rate.",
@@ -270,14 +269,18 @@ function AllAppsView({
     return () => clearTimeout(t);
   }, [search]);
 
-  const { data, isLoading, isFetching } = useVNServices({
+  const { data: countriesData } = useVNCountries(server);
+  const firstCountryId = countriesData ? Object.values(countriesData)[0]?.id : undefined;
+
+  const { data, isLoading, isFetching } = useVNApps({
+    countryId: firstCountryId ?? "",
     server,
     page: String(page),
-    limit: "50",
     search: debouncedSearch,
+    enabled: !!firstCountryId,
   });
 
-  const services = data?.services ?? [];
+  const services = data?.apps ?? [];
   const pagination = data?.pagination;
 
   return (
