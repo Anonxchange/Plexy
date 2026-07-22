@@ -272,18 +272,21 @@ function AllAppsView({
   // The Fleexa API requires a countryId even for the service list — fetch
   // countries first and use the first one as a representative sample.
   // The user picks their exact country in the next step (CountriesView).
-  const { data: countriesData } = useVNCountries(server);
+  const { data: countriesData, isLoading: countriesLoading } = useVNCountries(server);
   const firstCountryId = countriesData
     ? String(Object.values(countriesData)[0]?.id ?? "")
     : "";
 
-  const { data, isLoading, isFetching, error } = useVNApps({
+  const { data, isLoading: appsLoading, isFetching, error } = useVNApps({
     countryId: firstCountryId,
     server,
     page: String(page),
     search: debouncedSearch,
     enabled: !!firstCountryId,
   });
+
+  // Show skeleton while countries are resolving OR apps are loading
+  const isLoading = countriesLoading || appsLoading;
 
   const services = data?.apps ?? [];
   const pagination = data?.pagination;
