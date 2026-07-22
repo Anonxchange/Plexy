@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PexlyFooter } from "@/components/pexly-footer";
 import {
-  useVNAllApps,
+  useVNApps,
   useVNCountries,
   useVNServiceInCountry,
   useBuyVirtualNumber,
@@ -269,12 +269,20 @@ function AllAppsView({
     return () => clearTimeout(t);
   }, [search]);
 
-  // Fetch the full platform-wide service list directly from the API.
-  // No countryId needed here — the user picks their country in the next step.
-  const { data, isLoading, isFetching, error } = useVNAllApps({
+  // The Fleexa API requires a countryId even for the service list — fetch
+  // countries first and use the first one as a representative sample.
+  // The user picks their exact country in the next step (CountriesView).
+  const { data: countriesData } = useVNCountries(server);
+  const firstCountryId = countriesData
+    ? String(Object.values(countriesData)[0]?.id ?? "")
+    : "";
+
+  const { data, isLoading, isFetching, error } = useVNApps({
+    countryId: firstCountryId,
     server,
     page: String(page),
     search: debouncedSearch,
+    enabled: !!firstCountryId,
   });
 
   const services = data?.apps ?? [];
