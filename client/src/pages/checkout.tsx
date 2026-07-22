@@ -404,30 +404,51 @@ export function Checkout() {
           const token = data.session?.access_token ?? "";
           const meta = pendingOrder.metadata;
           const server = meta.server ?? "2";
+
+          // Build buy body — server 3 must NOT include projectId
+          const buyBody: Record<string, unknown> = {
+            countryName: meta.countryName,
+            appName: meta.service,
+            countryId: meta.countryId,
+          };
+          if (server !== "3") {
+            buyBody.projectId = meta.projectId ?? meta.service?.toLowerCase().slice(0, 5);
+          }
+
           const res = await fetch(`${EDGE}?action=buy&server=${server}`, {
             method: "POST",
             headers: {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({
-              countryName: meta.countryName,
-              appName: meta.service,
-              countryId: meta.countryId,
-              projectId: meta.projectId ?? meta.service?.toLowerCase().slice(0, 5),
-            }),
+            body: JSON.stringify(buyBody),
           });
           const result = await res.json();
-          if (result.success && result.data) {
-            localStorage.removeItem("pexly_pending_order");
-            const { number, requestId, service, country } = result.data;
-            const params = new URLSearchParams({ number, requestId, service: service ?? meta.service, country: country ?? meta.countryName });
-            toast({ title: "Payment confirmed!", description: "Your virtual number is ready." });
-            setLocation(`/wallet/virtual-numbers?${params}`);
-            return;
-          } else {
-            throw new Error(result.message ?? "Failed to assign number");
+
+          // Explicit failure
+          if (result.success === false) {
+            throw new Error(result.message ?? result.error ?? "Failed to assign number");
           }
+
+          // Server 1 wraps in { success, data: {...} }; servers 2/3 return flat root
+          const payload = (result.data && typeof result.data === "object") ? result.data : result;
+          const { number, requestId } = payload;
+
+          if (!number || !requestId) {
+            throw new Error(result.message ?? "Failed to assign number — no requestId returned");
+          }
+
+          localStorage.removeItem("pexly_pending_order");
+          const params = new URLSearchParams({
+            number,
+            requestId,
+            service: payload.service ?? meta.service,
+            country: payload.country ?? meta.countryName,
+            server,
+          });
+          toast({ title: "Payment confirmed!", description: "Your virtual number is ready." });
+          setLocation(`/wallet/virtual-numbers?${params}`);
+          return;
         } catch (e: any) {
           toast({ title: "Payment confirmed, but number assignment failed", description: e.message ?? "Please contact support." });
           localStorage.removeItem("pexly_pending_order");
