@@ -244,9 +244,12 @@ const SERVICE_ICONS: Record<string, { bg: string; emoji: string }> = {
 };
 
 function serviceIcon(name: string) {
-  const key = Object.keys(SERVICE_ICONS).find((k) =>
-    name.toLowerCase().includes(k)
-  );
+  const lower = name.toLowerCase();
+  // 1. Exact match
+  if (SERVICE_ICONS[lower]) return SERVICE_ICONS[lower];
+  // 2. Word-boundary match — split on spaces, dots, dashes, underscores
+  const words = lower.split(/[\s.\-_]+/);
+  const key = Object.keys(SERVICE_ICONS).find((k) => words.includes(k));
   return key ? SERVICE_ICONS[key] : null;
 }
 
@@ -324,19 +327,12 @@ function AllAppsView({
         <>
           <div className="divide-y divide-border">
             {services.map((svc) => {
-              const inStock = svc.quantity > 0;
               const icon = serviceIcon(svc.name);
               return (
                 <button
                   key={svc.id}
-                  onClick={() => inStock && onSelect(svc)}
-                  disabled={!inStock}
-                  className={cn(
-                    "w-full flex items-center gap-4 py-4 px-1 text-left transition-colors",
-                    inStock
-                      ? "hover:bg-muted/30 cursor-pointer"
-                      : "opacity-40 cursor-not-allowed"
-                  )}
+                  onClick={() => onSelect(svc)}
+                  className="w-full flex items-center gap-4 py-4 px-1 text-left transition-colors hover:bg-muted/30 cursor-pointer"
                 >
                   {/* Icon */}
                   <div
@@ -354,21 +350,9 @@ function AllAppsView({
                     )}
                   </div>
 
-                  {/* Name + badges */}
+                  {/* Name */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-foreground text-[15px]">{svc.name}</span>
-                      {!inStock && (
-                        <span className="text-[10px] font-bold uppercase tracking-wide text-destructive bg-destructive/10 px-1.5 py-0.5 rounded-md">
-                          Sold out
-                        </span>
-                      )}
-                      {inStock && svc.quantity < 20 && (
-                        <span className="text-[10px] font-bold uppercase tracking-wide text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded-md">
-                          Low stock
-                        </span>
-                      )}
-                    </div>
+                    <span className="font-semibold text-foreground text-[15px]">{svc.name}</span>
                   </div>
 
                   <ChevronLeft className="h-5 w-5 text-muted-foreground rotate-180 shrink-0" />
