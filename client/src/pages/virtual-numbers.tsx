@@ -270,10 +270,20 @@ function AllAppsView({
     return () => clearTimeout(t);
   }, [search]);
 
-  const { data, isLoading, isFetching } = useVNAllApps({
+  // countryId is required by the Fleexa API — fetch countries first, use the
+  // first one as a default so AllAppsView can list services. The user will pick
+  // their exact country in the next step (CountriesView).
+  const { data: countriesData } = useVNCountries(server);
+  const firstCountryId = countriesData
+    ? String(Object.values(countriesData)[0]?.id ?? "")
+    : "";
+
+  const { data, isLoading, isFetching, error } = useVNApps({
+    countryId: firstCountryId,
     server,
     page: String(page),
     search: debouncedSearch,
+    enabled: !!firstCountryId,
   });
 
   const services = data?.apps ?? [];
@@ -367,8 +377,14 @@ function AllAppsView({
             {!isLoading && services.length === 0 && (
               <div className="text-center py-16">
                 <Phone className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-                <p className="text-sm font-semibold text-foreground">No services found</p>
-                {!import.meta.env.VITE_SUPABASE_URL ? (
+                <p className="text-sm font-semibold text-foreground">
+                  {error ? "Failed to load services" : "No services found"}
+                </p>
+                {error ? (
+                  <p className="text-xs text-destructive mt-1.5 max-w-xs mx-auto break-words">
+                    {(error as Error).message}
+                  </p>
+                ) : !import.meta.env.VITE_SUPABASE_URL ? (
                   <p className="text-xs text-muted-foreground mt-1.5">
                     Add your Supabase secrets to load live services.
                   </p>
