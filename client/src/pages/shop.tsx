@@ -268,11 +268,11 @@ function TrendingNowSection({
         </div>
       </div>
       {/* Mobile: horizontal scroll  |  Desktop: 5-column grid */}
-      <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1 lg:grid lg:grid-cols-5 lg:gap-x-5 lg:gap-y-6 lg:overflow-x-visible lg:mx-0 lg:px-0 lg:pb-0">
+      <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1 md:grid md:grid-cols-3 md:gap-x-4 md:gap-y-5 md:overflow-x-visible md:mx-0 md:px-0 md:pb-0 lg:grid-cols-5 lg:gap-x-5 lg:gap-y-6">
         {trending.length === 0
           ? Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex-shrink-0 w-44 lg:w-auto">
-                <div className="w-44 h-52 lg:w-full lg:h-60 bg-muted lg:bg-white dark:lg:bg-neutral-900 animate-pulse mb-2.5" />
+              <div key={i} className="flex-shrink-0 w-44 md:w-auto">
+                <div className="w-44 h-52 md:w-full md:aspect-square md:h-auto lg:aspect-square bg-muted md:bg-white dark:md:bg-neutral-900 animate-pulse mb-2.5" />
                 <div className="h-3.5 bg-muted animate-pulse rounded mb-1.5 w-4/5" />
                 <div className="h-3.5 bg-muted animate-pulse rounded w-2/5" />
               </div>
@@ -290,14 +290,14 @@ function TrendingNowSection({
                 <div
                   key={product.id}
                   onClick={() => onViewDetails(product)}
-                  className="flex-shrink-0 w-44 lg:w-auto cursor-pointer group"
+                  className="flex-shrink-0 w-44 md:w-auto cursor-pointer group"
                 >
-                  <div className="w-44 h-52 lg:w-full lg:h-60 bg-muted lg:bg-white dark:lg:bg-neutral-900 overflow-hidden relative mb-2.5">
+                  <div className="w-44 h-52 md:w-full md:h-auto md:aspect-square bg-muted md:bg-white dark:md:bg-neutral-900 overflow-hidden relative mb-2.5">
                     {product.images[0] ? (
                       <img
                         src={product.images[0]}
                         alt={product.title}
-                        className="w-full h-full object-cover lg:object-contain lg:p-2 group-hover:scale-105 lg:group-hover:scale-100 transition-transform duration-300"
+                        className="w-full h-full object-cover md:object-contain md:p-2 group-hover:scale-105 md:group-hover:scale-100 transition-transform duration-300"
                         loading="lazy"
                       />
                     ) : (
