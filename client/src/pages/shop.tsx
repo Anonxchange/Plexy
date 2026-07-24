@@ -41,31 +41,19 @@ const ShopItemCard = lazy(() => import("@/components/shop/ShopItemCard").then(m 
 // ── Mobile-only shop banner carousel ─────────────────────────────────────────
 const BANNER_SLIDES = [
   {
-    id: 'sale',
-    bg: 'linear-gradient(110deg,#7c6fdf 0%,#a78bfa 40%,#c4b5fd 75%,#dde9ff 100%)',
-    eyebrow: 'SALE ENDS:',
-    headline: 'Shop popular\nitems now',
-    sub: 'Millions of products. Best prices.',
-    badge: { top: 'UP TO', num: '60%', bot: 'OFF', g: 'linear-gradient(135deg,#16a34a 0%,#4ade80 100%)' },
-    img: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=300&h=340&fit=crop&crop=center&q=85',
+    id: 'home',
+    src: '/assets/banners/mobile/banner-home.webp',
+    alt: 'Make Your Home Smarter — Tchot Home Essentials',
   },
   {
-    id: 'flash',
-    bg: 'linear-gradient(110deg,#ea580c 0%,#f97316 45%,#fb923c 75%,#fde68a 100%)',
-    eyebrow: 'FLASH SALE:',
-    headline: 'New arrivals\njust dropped',
-    sub: 'Fresh stock added every day.',
-    badge: { top: 'SAVE', num: '40%', bot: 'TODAY', g: 'linear-gradient(135deg,#1d4ed8 0%,#60a5fa 100%)' },
-    img: 'https://images.unsplash.com/photo-1468495244123-6c6c332eeece?w=300&h=340&fit=crop&crop=center&q=85',
+    id: 'fashion',
+    src: '/assets/banners/mobile/banner-fashion.webp',
+    alt: 'Style That Speaks — Tchot Fashion',
   },
   {
-    id: 'season',
-    bg: 'linear-gradient(110deg,#0369a1 0%,#0ea5e9 45%,#38bdf8 75%,#bae6fd 100%)',
-    eyebrow: 'BEST DEALS:',
-    headline: 'Top picks\nthis season',
-    sub: 'Curated for you. Ships fast.',
-    badge: { top: 'UP TO', num: '50%', bot: 'OFF', g: 'linear-gradient(135deg,#b45309 0%,#f59e0b 100%)' },
-    img: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300&h=340&fit=crop&crop=center&q=85',
+    id: 'tech',
+    src: '/assets/banners/mobile/banner-tech.webp',
+    alt: 'Power Up Your Everyday — Tchot Tech',
   },
 ] as const;
 
@@ -87,14 +75,12 @@ function ShopBanner() {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, []);
 
-  const slide = BANNER_SLIDES[idx];
-
   return (
     <div
       role="region"
       aria-label="Promotional banners"
       className="relative overflow-hidden mb-2 select-none"
-      style={{ background: slide.bg, minHeight: 118, transition: 'background 0.5s ease' }}
+      style={{ aspectRatio: '16 / 7' }}
       onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
       onTouchEnd={e => {
         if (touchStartX.current === null) return;
@@ -105,49 +91,20 @@ function ShopBanner() {
         resetTimer();
       }}
     >
-      {/* Ambient glow */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-24px] left-[12%] w-32 h-32 rounded-full bg-white/10 blur-3xl" />
-        <div className="absolute bottom-[-14px] left-[45%] w-20 h-20 rounded-full bg-white/5 blur-2xl" />
-      </div>
-
-      {/* Human photo — right side, gradient-masked so it blends into the background */}
-      <div
-        className="absolute right-0 bottom-0 h-full w-[44%] pointer-events-none overflow-hidden"
-        style={{
-          maskImage: 'linear-gradient(to right,transparent 0%,black 36%)',
-          WebkitMaskImage: 'linear-gradient(to right,transparent 0%,black 36%)',
-        }}
-      >
+      {/* Slides — crossfade */}
+      {BANNER_SLIDES.map((slide, i) => (
         <img
           key={slide.id}
-          src={slide.img}
-          alt=""
-          aria-hidden
-          className="absolute bottom-0 right-0 h-[118%] w-full object-cover object-top"
-          loading="eager"
-          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          src={slide.src}
+          alt={slide.alt}
+          width={800}
+          height={350}
+          fetchPriority={i === 0 ? 'high' : 'low'}
+          decoding="async"
+          className="absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-500"
+          style={{ opacity: i === idx ? 1 : 0, pointerEvents: 'none' }}
         />
-      </div>
-
-      {/* Text + discount badge */}
-      <div className="relative z-10 flex items-center px-4 py-5 gap-3" style={{ minHeight: 118 }}>
-        <div className="flex-1 min-w-0 pr-[40%]">
-          <p className="text-white/60 text-[9px] font-bold tracking-[0.18em] uppercase mb-1">{slide.eyebrow}</p>
-          <h2 className="text-white font-black text-[19px] leading-[1.15] whitespace-pre-line mb-1">
-            {slide.headline}
-          </h2>
-          <p className="text-white/60 text-[11px] leading-snug">{slide.sub}</p>
-        </div>
-        <div
-          className="flex-shrink-0 rounded-full flex flex-col items-center justify-center w-[56px] h-[56px] shadow-xl"
-          style={{ background: slide.badge.g }}
-        >
-          <span className="text-[7px] font-black text-white/90 uppercase leading-none tracking-wider">{slide.badge.top}</span>
-          <span className="text-[20px] font-black text-white leading-none">{slide.badge.num}</span>
-          <span className="text-[7px] font-black text-white/90 uppercase leading-none tracking-wider">{slide.badge.bot}</span>
-        </div>
-      </div>
+      ))}
 
       {/* Slide dots */}
       <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
