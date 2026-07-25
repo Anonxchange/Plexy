@@ -282,7 +282,7 @@ function TrendingNowSection({
                 <div className="h-3.5 bg-muted animate-pulse rounded w-2/5" />
               </div>
             ))
-          : trending.map((product) => {
+          : trending.map((product, idx) => {
               const disc =
                 product.originalPrice && product.originalPrice > product.price
                   ? Math.round(
@@ -295,7 +295,7 @@ function TrendingNowSection({
                 <div
                   key={product.id}
                   onClick={() => onViewDetails(product)}
-                  className="flex-shrink-0 w-44 md:w-auto cursor-pointer group"
+                  className={`flex-shrink-0 w-44 md:w-auto cursor-pointer group${idx >= 5 ? ' lg:hidden' : ''}`}
                 >
                   <div className="w-44 h-52 md:w-full md:h-auto md:aspect-square bg-muted md:bg-transparent overflow-hidden relative mb-2.5">
                     {product.images[0] ? (
