@@ -42,17 +42,17 @@ export const ShopItemCard = ({ product, onViewDetails, onAddToCart }: ShopItemCa
       className="group cursor-pointer flex flex-col bg-background"
       onClick={() => onViewDetails(product)}
     >
-      {/* Natural-height image — no forced aspect ratio, true Pinterest masonry */}
-      <div className="bg-muted overflow-hidden relative w-full">
+      {/* Mobile: natural-height masonry | Desktop: fixed aspect-ratio, object-contain, no bg box */}
+      <div className="bg-muted lg:bg-transparent overflow-hidden relative w-full lg:aspect-[3/4]">
         {product.images && product.images.length > 0 ? (
           <img
             src={sanitizeImageUrl(product.images[0])}
             alt={product.title}
-            className="w-full h-auto block transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-auto block lg:absolute lg:inset-0 lg:h-full lg:object-contain transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-muted">
+          <div className="w-full h-40 lg:absolute lg:inset-0 lg:h-full flex items-center justify-center">
             <Package className="h-12 w-12 text-muted-foreground/20" />
           </div>
         )}
