@@ -215,6 +215,39 @@ function Sidebar({ activeCategory, onSelect }: { activeCategory: string; onSelec
   );
 }
 
+// ── Desktop hero right-panel: live popular gift card tiles ───────────────────
+function DesktopHeroGrid({ countryCode, onCardClick }: { countryCode?: string; onCardClick: (id: string) => void }) {
+  const { data, isLoading } = useGiftCardProducts({ page: 1, size: 12, countryCode });
+  const cards = mapProducts(dedupeByBrand(filterByCountry(data?.content || [], countryCode), countryCode)).slice(0, 6);
+
+  if (isLoading) return (
+    <div className="grid grid-cols-2 gap-2">
+      {[...Array(6)].map((_, i) => <Skeleton key={i} className="w-full aspect-[3/2] rounded-xl" />)}
+    </div>
+  );
+
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {cards.map(card => (
+        <button key={card.id} onClick={() => onCardClick(card.id)} className="group text-left">
+          <div className="w-full aspect-[3/2] rounded-xl overflow-hidden bg-secondary border border-border group-hover:border-primary/30 transition-colors relative">
+            {card.discount > 0 && (
+              <span className="absolute top-1.5 left-1.5 z-10 text-[10px] font-bold bg-yellow-400 text-black px-1.5 py-0.5 rounded">
+                -{card.discount}%
+              </span>
+            )}
+            {card.image
+              ? <img src={card.image} alt={card.name} loading="lazy" className="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-200" />
+              : <div className="w-full h-full flex items-center justify-center"><Gift className="h-8 w-8 text-muted-foreground" /></div>
+            }
+          </div>
+          <p className="text-xs font-semibold text-foreground mt-1 line-clamp-1">{card.name}</p>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ── Desktop main grid section ─────────────────────────────────────────────────
 function DesktopCategoryGrid({
   categoryName,
@@ -485,105 +518,117 @@ export function GiftCards() {
       )}
 
       {/* ════════════════════════════════════════════════════════
-          DESKTOP layout (lg+) — sidebar + grid
+          DESKTOP layout (lg+) — Bitrefill-style
           ════════════════════════════════════════════════════════ */}
       <div className="hidden lg:block max-w-7xl mx-auto px-6">
 
-        {/* Desktop hero strip */}
-        <div className="py-8 border-b border-border mb-6">
-          <div className="flex items-center gap-6 mb-5">
-            <div className="flex-1">
-              <h1 className="text-4xl font-black leading-[1.08] tracking-tight mb-1">
-                <span className="text-foreground">Turn </span>
-                <span className="text-primary">Crypto</span>
-                <span className="text-foreground"> Into<br />Everyday Purchases</span>
-              </h1>
-              <p className="text-muted-foreground text-sm">8,000+ gift cards in 180+ countries — pay with any crypto.</p>
+        {/* ── Hero: headline + search LEFT │ live popular grid RIGHT ── */}
+        <div className="flex items-start gap-10 py-10 border-b border-border">
+
+          {/* Left */}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-4xl font-black leading-[1.08] tracking-tight mb-2">
+              <span className="text-foreground">Turn </span>
+              <span className="text-primary">Crypto</span>
+              <span className="text-foreground"> Into<br />Everyday Purchases</span>
+            </h1>
+            <p className="text-muted-foreground text-sm mb-4">8,000+ gift cards in 180+ countries — pay with any crypto.</p>
+            <button
+              onClick={() => document.getElementById("desktop-catalog")?.scrollIntoView({ behavior: "smooth" })}
+              className="inline-flex items-center px-5 py-2.5 rounded-full font-bold text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors mb-6"
+            >
+              Take a Look
+            </button>
+
+            {/* Search + country */}
+            <div className="flex gap-2 max-w-[400px] mb-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  placeholder="Search for products or brands…"
+                  value={searchInput}
+                  onChange={e => setSearchInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") handleSearch(); }}
+                  className="pl-9 h-10 rounded-xl text-sm"
+                />
+              </div>
               <button
-                onClick={() => document.getElementById("desktop-catalog")?.scrollIntoView({ behavior: "smooth" })}
-                className="mt-3 inline-flex items-center px-5 py-2.5 rounded-full font-bold text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                onClick={handleSearch}
+                className="h-10 px-4 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors flex-shrink-0"
               >
-                Take a Look
+                Search
               </button>
             </div>
-            {/* Hero product tiles */}
-            <div className="flex gap-2.5 flex-shrink-0">
-              {/* Shoes */}
-              <div className="w-[80px] h-[80px] rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: "#F0C93A" }}>
-                <img src="/hero/shoes_nobg.png" alt="Shoes" loading="lazy" className="w-[88%] h-[88%] object-contain drop-shadow-md" />
-              </div>
-              {/* Gamepad */}
-              <div className="w-[80px] h-[80px] rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: "#1B4B3A" }}>
-                <img src="/hero/gamepad_nobg.png" alt="Gamepad" loading="lazy" className="w-[88%] h-[88%] object-contain drop-shadow-md" />
-              </div>
-              {/* Groceries */}
-              <div className="w-[80px] h-[80px] rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: "#C0392B" }}>
-                <img src="/hero/groceries_nobg.png" alt="Groceries" loading="lazy" className="w-[88%] h-[88%] object-contain drop-shadow-md" />
-              </div>
-              {/* Crypto grid */}
-              <div className="w-[80px] h-[80px] rounded-2xl bg-card border border-border flex-shrink-0 overflow-hidden grid grid-cols-2 grid-rows-2 place-items-center gap-0 p-2">
-                {["/logos/bitcoin-btc-logo.svg","/logos/ethereum-eth-logo.svg","/logos/solana-sol-logo.svg","/logos/tether-usdt-logo.svg"].map((src,i) => (
-                  <div key={i} style={{width:28,height:28,backgroundImage:`url(${src})`,backgroundSize:"contain",backgroundRepeat:"no-repeat",backgroundPosition:"center"}} />
-                ))}
-              </div>
-            </div>
-          </div>
-          {/* Desktop search */}
-          <div className="flex gap-2 w-[380px]">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-              <Input
-                placeholder="Search for products or brands…"
-                value={searchInput}
-                onChange={e => setSearchInput(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") handleSearch(); }}
-                className="pl-9 h-10 rounded-xl text-sm"
-              />
-            </div>
-            <button
-              onClick={handleSearch}
-              className="h-10 px-4 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors flex-shrink-0"
-            >
-              Search
-            </button>
-          </div>
-          {/* Country picker */}
-          <Popover open={openCountry} onOpenChange={setOpenCountry}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="h-10 px-3 rounded-xl text-sm flex-shrink-0">
-                <span className="max-w-[90px] truncate">
-                  {activeCountryObj ? `${activeCountryObj.flag} ${activeCountryObj.name}` : "🌍 All Countries"}
-                </span>
-                <ChevronsUpDown className="h-3 w-3 ml-1 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[280px] p-0" align="end">
-              <Command>
-                <CommandInput placeholder="Search country..." />
-                <CommandList>
-                  <CommandEmpty className="text-sm py-4 text-center text-muted-foreground">No country found.</CommandEmpty>
-                  <CommandGroup>
-                    <CommandItem value="all" onSelect={() => handleSelectCountry("")}>
-                      <Check className={cn("mr-2 h-4 w-4", !activeCountryCode ? "opacity-100" : "opacity-0")} />
-                      <span className="mr-2">🌍</span>All Countries
-                    </CommandItem>
-                    {(reloadlyCountries ?? []).map(c => (
-                      <CommandItem key={c.isoName} value={`${c.name} ${c.isoName}`} onSelect={() => handleSelectCountry(c.isoName)}>
-                        <Check className={cn("mr-2 h-4 w-4", activeCountryCode === c.isoName ? "opacity-100" : "opacity-0")} />
-                        <span className="mr-2">{c.flag}</span>
-                        <span>{c.name}</span>
+            <Popover open={openCountry} onOpenChange={setOpenCountry}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="h-9 px-3 rounded-xl text-sm flex-shrink-0">
+                  <span className="max-w-[90px] truncate">
+                    {activeCountryObj ? `${activeCountryObj.flag} ${activeCountryObj.name}` : "🌍 All Countries"}
+                  </span>
+                  <ChevronsUpDown className="h-3 w-3 ml-1 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[280px] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search country..." />
+                  <CommandList>
+                    <CommandEmpty className="text-sm py-4 text-center text-muted-foreground">No country found.</CommandEmpty>
+                    <CommandGroup>
+                      <CommandItem value="all" onSelect={() => handleSelectCountry("")}>
+                        <Check className={cn("mr-2 h-4 w-4", !activeCountryCode ? "opacity-100" : "opacity-0")} />
+                        <span className="mr-2">🌍</span>All Countries
                       </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+                      {(reloadlyCountries ?? []).map(c => (
+                        <CommandItem key={c.isoName} value={`${c.name} ${c.isoName}`} onSelect={() => handleSelectCountry(c.isoName)}>
+                          <Check className={cn("mr-2 h-4 w-4", activeCountryCode === c.isoName ? "opacity-100" : "opacity-0")} />
+                          <span className="mr-2">{c.flag}</span>
+                          <span>{c.name}</span>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Right — live popular gift card grid */}
+          <div className="flex-shrink-0 w-[320px]">
+            {activeCountryObj && (
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                Popular in {activeCountryObj.name} {activeCountryObj.flag}
+              </p>
+            )}
+            <DesktopHeroGrid
+              countryCode={activeCountryCode}
+              onCardClick={id => setLocation(`/gift-cards/${id}`)}
+            />
+          </div>
         </div>
 
-        {/* Desktop sidebar + grid */}
-        <div className="flex gap-8 pb-16">
-          <Sidebar activeCategory={desktopCategory} onSelect={handleSidebarSelect} />
+        {/* ── Category tabs ── */}
+        <div className="border-b border-border overflow-x-auto scrollbar-hide">
+          <div className="flex gap-0">
+            {mobileTabs.map(tab => (
+              <button
+                key={tab.name}
+                onClick={() => handleSidebarSelect(tab.name, tab.id)}
+                className={cn(
+                  "flex flex-col items-center gap-1 px-5 py-3.5 flex-shrink-0 border-b-2 transition-colors",
+                  desktopCategory === tab.name
+                    ? "border-primary text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <tab.Icon className="h-5 w-5" />
+                <span className="text-xs font-medium whitespace-nowrap">{tab.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Full-width product grid ── */}
+        <div id="desktop-catalog" className="py-8">
           <DesktopCategoryGrid
             categoryName={desktopCategory}
             categoryId={desktopCategoryId}
@@ -592,31 +637,42 @@ export function GiftCards() {
           />
         </div>
 
-        {/* Desktop: Shop on the Go */}
-        <div className="max-w-2xl mx-auto mb-10 rounded-2xl overflow-hidden" style={{ background: "hsl(168 40% 18%)" }}>
-          <div className="p-10 text-center">
-            <h2 className="text-4xl font-black text-white uppercase tracking-tight mb-3">Shop on the Go</h2>
-            <p className="text-white/80 text-sm leading-relaxed mb-6">
-              Download our app to manage the shopping from your phone.
-            </p>
-            <div className="flex flex-col items-center gap-3">
-              <a href="#" className="inline-flex items-center gap-3 bg-black text-white px-6 py-3 rounded-xl hover:bg-black/80 transition-colors">
-                <svg viewBox="0 0 24 24" className="h-6 w-6 fill-white flex-shrink-0" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-                </svg>
-                <span className="text-left">
-                  <span className="block text-[10px] leading-none text-white/70">Download on the</span>
-                  <span className="block text-base font-semibold leading-tight">App Store</span>
-                </span>
-              </a>
-              <a href="#" className="inline-flex items-center justify-center px-10 py-3 rounded-full bg-white text-black font-semibold text-sm hover:bg-white/90 transition-colors">
-                Get the app
-              </a>
+        {/* ── How it works — 3-col horizontal ── */}
+        <div className="border-t border-border py-12">
+          <h2 className="text-2xl font-black text-foreground mb-8">How it works</h2>
+          <div className="grid grid-cols-3 gap-8">
+            {/* Step 1 */}
+            <div>
+              <div className="rounded-xl bg-secondary p-4 grid grid-cols-6 gap-2 mb-4">
+                {HOW_IT_WORKS_BRANDS.map((logo, i) => (
+                  <div key={i} className="aspect-square rounded-full bg-background flex items-center justify-center p-1.5">
+                    <img src={logo} alt="" loading="lazy" className="w-full h-full object-contain" />
+                  </div>
+                ))}
+              </div>
+              <p className="font-bold text-foreground mb-1">1. Pick a product</p>
+              <p className="text-muted-foreground text-sm">Choose from 8,000+ Gift Cards, eSIMs, Payment Cards, and Phone Refills.</p>
+            </div>
+            {/* Step 2 */}
+            <div>
+              <div className="rounded-xl overflow-hidden mb-4 h-[160px]">
+                <img src={cryptoQrImg} alt="Pay with crypto" className="w-full h-full object-cover rounded-xl" />
+              </div>
+              <p className="font-bold text-foreground mb-1">2. Pay with crypto</p>
+              <p className="text-muted-foreground text-sm">Use any wallet. Choose BTC, ETH, USDT and many more.</p>
+            </div>
+            {/* Step 3 */}
+            <div>
+              <div className="rounded-xl overflow-hidden bg-secondary mb-4 h-[160px]">
+                <img src={orderCompleteImg} alt="Order completed" className="w-full h-full object-contain rounded-xl" />
+              </div>
+              <p className="font-bold text-foreground mb-1">3. Receive instantly</p>
+              <p className="text-muted-foreground text-sm">Your code arrives in seconds, ready to use.</p>
             </div>
           </div>
         </div>
 
-        {/* Desktop FAQ */}
+        {/* ── FAQ ── */}
         <div className="max-w-2xl mx-auto pb-16">
           <h2 className="text-2xl font-black text-foreground mb-1">Frequently asked questions</h2>
           <p className="text-muted-foreground text-sm mb-6">
