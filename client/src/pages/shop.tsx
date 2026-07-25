@@ -55,6 +55,11 @@ const BANNER_SLIDES = [
     src: '/assets/banners/mobile/banner-tech.webp',
     alt: 'Power Up Your Everyday — Tchot Tech',
   },
+  {
+    id: 'power',
+    src: '/assets/banners/mobile/banner-power.webp',
+    alt: 'Power Anywhere. Live Without Limits — Tchot Portable Power',
+  },
 ] as const;
 
 function ShopBanner() {
