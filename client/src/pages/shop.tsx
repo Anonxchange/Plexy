@@ -292,12 +292,12 @@ function TrendingNowSection({
                   onClick={() => onViewDetails(product)}
                   className="flex-shrink-0 w-44 md:w-auto cursor-pointer group"
                 >
-                  <div className="w-44 h-52 md:w-full md:h-auto md:aspect-square bg-muted md:bg-white dark:md:bg-neutral-900 overflow-hidden relative mb-2.5">
+                  <div className="w-44 h-52 md:w-full md:h-auto md:aspect-square bg-muted md:bg-transparent overflow-hidden relative mb-2.5">
                     {product.images[0] ? (
                       <img
                         src={product.images[0]}
                         alt={product.title}
-                        className="w-full h-full object-cover md:object-contain md:p-2 group-hover:scale-105 md:group-hover:scale-100 transition-transform duration-300"
+                        className="w-full h-full object-cover md:object-contain group-hover:scale-105 transition-transform duration-300"
                         loading="lazy"
                       />
                     ) : (
@@ -945,14 +945,14 @@ export function Shop() {
               </div>
             ) : (
               <>
-                {/* Pinterest masonry — two independent columns so heights stagger naturally */}
-                <div className="flex gap-0.5 -mx-4 lg:mx-0">
+                {/* Mobile: 2-col masonry | Desktop: 4/5-col grid via lg:contents */}
+                <div className="flex gap-0.5 -mx-4 lg:grid lg:grid-cols-4 xl:grid-cols-5 lg:gap-4 lg:mx-0">
                   <Suspense fallback={<ShopSkeleton />}>
-                    {/* Left column — starts tall */}
-                    <div className="flex flex-col gap-0.5 flex-1">
+                    {/* Left column (mobile) — lg:contents collapses it into the parent grid */}
+                    <div className="flex flex-col gap-0.5 flex-1 lg:contents">
                       {visibleProducts
                         .filter((_, i) => i % 2 === 0)
-                        .map((product, colIdx) => (
+                        .map((product) => (
                           <ShopItemCard
                             key={product.id}
                             product={product}
@@ -961,11 +961,11 @@ export function Shop() {
                           />
                         ))}
                     </div>
-                    {/* Right column — starts short, opposite phase */}
-                    <div className="flex flex-col gap-0.5 flex-1">
+                    {/* Right column (mobile) — lg:contents collapses it into the parent grid */}
+                    <div className="flex flex-col gap-0.5 flex-1 lg:contents">
                       {visibleProducts
                         .filter((_, i) => i % 2 === 1)
-                        .map((product, colIdx) => (
+                        .map((product) => (
                           <ShopItemCard
                             key={product.id}
                             product={product}
