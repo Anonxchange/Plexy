@@ -186,40 +186,16 @@ export async function signSolanaTransaction(
   }
 }
 
-const SOLANA_RPC = 'https://api.mainnet-beta.solana.com';
-const SOLANA_TIMEOUT_MS = 10_000;
-
-async function solRpc(method: string, params: any[]) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), SOLANA_TIMEOUT_MS);
-  try {
-    const res = await fetch(SOLANA_RPC, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
-      signal: controller.signal,
-    });
-    if (!res.ok) throw new Error(`Solana node HTTP ${res.status}`);
-    const json = await res.json();
-    if (json.error) throw new Error(`Solana RPC error: ${json.error.message}`);
-    return json.result;
-  } catch (err) {
-    if (err instanceof Error && err.name === 'AbortError') {
-      throw new Error('Network error — Solana node timed out. Check your connection and try again.');
-    }
-    throw err;
-  } finally {
-    clearTimeout(timer);
-  }
-}
+// All Solana RPC calls go through chain-gateway (Alchemy-backed).
+import { chainRpc, chainBroadcast } from './chain-gateway';
 
 export async function getLatestBlockhash(): Promise<string> {
-  const result = await solRpc('getLatestBlockhash', []);
+  const result = await chainRpc('SOL', 'getLatestBlockhash', []);
   return result.value.blockhash;
 }
 
 export async function getUserTokenAccount(walletAddress: string, mint: string): Promise<string | null> {
-  const result = await solRpc('getTokenAccountsByOwner', [
+  const result = await chainRpc('SOL', 'getTokenAccountsByOwner', [
     walletAddress,
     { mint },
     { encoding: 'jsonParsed' },
@@ -228,5 +204,7 @@ export async function getUserTokenAccount(walletAddress: string, mint: string): 
 }
 
 export async function broadcastSolanaTransaction(signedTx: string): Promise<string> {
-  return solRpc('sendTransaction', [signedTx, { encoding: 'base58' }]);
+  const result = await chainBroadcast('SOL', 'sendTransaction', [signedTx, { encoding: 'base58' }]);
+  // Alchemy/Solana returns the tx signature directly
+  return result?.result ?? result;
 }
