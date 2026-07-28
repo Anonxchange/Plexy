@@ -7,10 +7,8 @@ import { wipeBytes, wipeHDKey, withWipe } from './secureMemory';
 const SEGWIT_PATH = "m/84'/0'/0'/0/0";
 const NETWORK = btc.NETWORK;
 
-const BTC_APIS = [
-  'https://blockstream.info/api',
-  'https://mempool.space/api',
-];
+// All Bitcoin network calls go through the chain-gateway edge function.
+// No public nodes (blockstream.info, mempool.space) are called directly.
 
 export interface BitcoinUTXO {
   txid: string;
@@ -54,27 +52,13 @@ export async function getBitcoinAddress(mnemonic: string): Promise<string> {
   return p2wpkh.address;
 }
 
-async function btcFetch(path: string, init?: RequestInit): Promise<Response> {
-  let lastErr: unknown;
-  for (const base of BTC_APIS) {
-    try {
-      const res = await fetch(`${base}${path}`, init);
-      if (res.ok) return res;
-      lastErr = new Error(`HTTP ${res.status}`);
-    } catch (err) {
-      lastErr = err;
-    }
-  }
-  throw new Error(`Bitcoin node unreachable. Check your connection and try again. (${lastErr instanceof Error ? lastErr.message : lastErr})`);
-}
-
 export async function fetchUTXOs(address: string): Promise<BitcoinUTXO[]> {
-  const response = await btcFetch(`/address/${address}/utxo`);
-  const utxos = await response.json();
-  return utxos.map((utxo: any) => ({
-    txid: utxo.txid,
-    vout: utxo.vout,
-    value: utxo.value,
+  const { btcUtxos } = await import('./chain-gateway');
+  const result = await btcUtxos(address);
+  return result.utxos.map((u) => ({
+    txid: u.txid,
+    vout: u.vout,
+    value: u.value,
   }));
 }
 
@@ -130,14 +114,17 @@ export async function signBitcoinTransaction(
 }
 
 export async function broadcastBitcoinTransaction(signedTxHex: string): Promise<string> {
-  const response = await btcFetch('/tx', { method: 'POST', body: signedTxHex });
-  return response.text();
+  const { chainBroadcast } = await import('./chain-gateway');
+  const result = await chainBroadcast('BTC', 'sendrawtransaction', [signedTxHex]);
+  // Bitcoin Core returns the txid directly as the result field
+  return result?.result ?? result;
 }
 
 export async function getBitcoinBalance(address: string): Promise<number> {
-  const response = await btcFetch(`/address/${address}`);
-  const data = await response.json();
-  return data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum;
+  const { btcBalance } = await import('./chain-gateway');
+  const result = await btcBalance(address);
+  // raw is satoshis as a string
+  return Number(result.raw);
 }
 
 /* ---------------------------------------------------------------------------
