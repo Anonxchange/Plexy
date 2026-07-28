@@ -142,32 +142,17 @@ export async function signTRC20Transaction(
 }
 
 // ===== BROADCAST =====
-const TRON_FULL_NODES = [
-  'https://api.trongrid.io',
-  'https://api.shasta.trongrid.io',
-];
+// All Tron network calls go through chain-gateway (TronGrid proxy on the server).
+import { tronBroadcast } from './chain-gateway';
 
 /**
- * Broadcasts a signed Tron transaction to the network.
+ * Broadcasts a signed Tron transaction to the network via chain-gateway.
  * The signedTx must be the JSON-stringified transaction object produced by signTronTransaction().
+ * Requires the user to be authenticated (the gateway enforces RLS).
  */
 export async function broadcastTronTransaction(signedTx: string): Promise<string> {
   const tx = typeof signedTx === 'string' ? JSON.parse(signedTx) : signedTx;
-  let lastErr: unknown;
-  for (const node of TRON_FULL_NODES) {
-    try {
-      const res = await fetch(`${node}/wallet/broadcasttransaction`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(tx),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json: any = await res.json();
-      if (json.result === true) return json.txid ?? tx.txID ?? 'broadcast_ok';
-      throw new Error(json.message ?? 'Broadcast rejected');
-    } catch (err) {
-      lastErr = err;
-    }
-  }
-  throw new Error(`Tron broadcast failed: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`);
+  const json: any = await tronBroadcast(tx);
+  if (json?.result === true) return json.txid ?? tx.txID ?? 'broadcast_ok';
+  throw new Error(json?.message ?? 'Tron broadcast rejected by network');
 }
