@@ -227,7 +227,7 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
         to: toAddress,
         amount: Math.floor(cryptoAmountNum * 1e8),
         utxos: utxoResult.utxos.map(u => ({ txid: u.txid, vout: u.vout, value: u.value })),
-        feeRate: feesResult.fast || 10,
+        feeRate: feesResult.fast || feesResult.normal || 10,
         fromAddress,
       };
       // Vault-based: mnemonic decrypted + used + wiped entirely inside worker
