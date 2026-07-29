@@ -29,6 +29,7 @@ import { signEVMTransactionFromVault, signBitcoinTransactionFromVault, signSolan
 import { broadcastEVMTransaction } from "@/lib/evmSigner";
 import { getLatestBlockhash, broadcastSolanaTransaction } from "@/lib/solanaSigner";
 import { broadcastTronTransaction } from "@/lib/tronSigner";
+import { btcFees, btcUtxos, chainBroadcast } from "@/lib/chain-gateway";
 import { useAuth } from "@/lib/auth-context";
 import { CoinIcon } from "@/components/trading/CoinIcon";
 import { useSendFee } from "@/hooks/use-fees";
@@ -217,26 +218,22 @@ export function SendCryptoDialog({ open, onOpenChange, wallets, initialSymbol, o
     const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
 
     if (selectedNetwork.includes("Bitcoin")) {
-      const [feeResponse, utxoResponse] = await Promise.all([
-        fetch('https://blockstream.info/api/fee-estimates'),
-        fetch(`https://blockstream.info/api/address/${fromAddress}/utxo`),
+      // All BTC data fetched through chain-gateway — no direct public node calls.
+      const [feesResult, utxoResult] = await Promise.all([
+        btcFees(),
+        btcUtxos(fromAddress),
       ]);
-      const fees = await feeResponse.json();
-      const utxos = await utxoResponse.json();
       const btcTxData = {
         to: toAddress,
         amount: Math.floor(cryptoAmountNum * 1e8),
-        utxos,
-        feeRate: fees['1'] || 10,
+        utxos: utxoResult.utxos.map(u => ({ txid: u.txid, vout: u.vout, value: u.value })),
+        feeRate: feesResult.fast || 10,
         fromAddress,
       };
       // Vault-based: mnemonic decrypted + used + wiped entirely inside worker
       const result = await signBitcoinTransactionFromVault(vault, password, btcTxData) as any;
-      const broadcastRes = await fetch('https://blockstream.info/api/tx', {
-        method: 'POST',
-        body: result.signedTx,
-      });
-      if (!broadcastRes.ok) throw new Error('Bitcoin broadcast failed. Please check your balance and try again.');
+      // Broadcast through chain-gateway (authenticated)
+      await chainBroadcast('BTC', 'sendrawtransaction', [result.signedTx]);
 
     } else if (selectedNetwork.includes("Ethereum") || selectedNetwork.includes("Binance")) {
       const chainKey = selectedNetwork.includes("Binance") ? "BSC" : "ETH";
