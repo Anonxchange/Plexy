@@ -80,8 +80,14 @@ async function gatewayPost(body: Record<string, unknown>, withAuth = false): Pro
  * Read-only JSON-RPC call to an Alchemy-backed node.
  * Supported chains: ETH, ARB, POL, MATIC, OP, BASE, BNB, SOL, BTC.
  */
+/**
+ * Read-only JSON-RPC call to an Alchemy-backed node.
+ * Returns the JSON-RPC `.result` value directly (not the full {result,jsonrpc,id} envelope),
+ * so callers can use the return value as a hex string without extracting .result themselves.
+ */
 export function chainRpc(chain: string, method: string, params: unknown[] = []): Promise<any> {
-  return gatewayPost({ action: 'rpc', chain: chain.toUpperCase(), method, params });
+  return gatewayPost({ action: 'rpc', chain: chain.toUpperCase(), method, params })
+    .then((data) => data?.result ?? data);
 }
 
 /**
