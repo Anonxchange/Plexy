@@ -1,6 +1,6 @@
 
 import { createClient } from "./supabase";
-import { chainRpc, btcFees } from "./chain-gateway";
+import { chainRpc, btcFees, xrpFees } from "./chain-gateway";
 
 // ── EVM chain resolution ──────────────────────────────────────────────────────
 // Maps a crypto symbol (as passed by the send dialog) to the chain key expected
@@ -9,9 +9,11 @@ import { chainRpc, btcFees } from "./chain-gateway";
 
 const EVM_CHAIN_BASE: Record<string, string> = {
   ETH: "ETH",
-  BNB: "BSC", BSC: "BSC",
+  BNB: "BNB", BSC: "BNB",   // edge function key is "BNB", not "BSC"
   POL: "POL", MATIC: "POL",
   ARB: "ARB",
+  OP: "OP",
+  BASE: "BASE",
 };
 
 function evmChainForSymbol(symbol: string): string | null {
@@ -103,7 +105,7 @@ export class FeeCalculator {
       let networkFeeLabel = `${cryptoSymbol} network fee`;
 
       if (!isInternal) {
-        // ── Bitcoin: gateway → mempool.space (fast tier, matches executeSend) ──
+        // ── Bitcoin: gateway → Alchemy estimatesmartfee (fast tier) ──────────
         if (cryptoSymbol === 'BTC') {
           try {
             const fees = await btcFees();
@@ -118,10 +120,11 @@ export class FeeCalculator {
             console.warn('calculateSendFee: could not fetch BTC fee from gateway:', e);
           }
 
-        // ── EVM chains: gateway → Alchemy eth_gasPrice (same source as signing) ──
+        // ── EVM + non-EVM chains ───────────────────────────────────────────────
         } else {
           const evmChain = evmChainForSymbol(cryptoSymbol);
           if (evmChain) {
+            // ── EVM: live gas price via Alchemy ───────────────────────────────
             try {
               const gasPriceHex = await chainRpc(evmChain, 'eth_gasPrice', []);
               if (gasPriceHex) {
@@ -133,10 +136,30 @@ export class FeeCalculator {
             } catch (e) {
               console.warn(`calculateSendFee: could not fetch ${evmChain} gas price:`, e);
             }
+          } else if (cryptoSymbol === 'XRP') {
+            // ── XRP: live fee in drops via chain-gateway xrp_fees ────────────
+            try {
+              const fees = await xrpFees();
+              // "normal" tier; drops → XRP (1 XRP = 1,000,000 drops)
+              networkFee      = fees.normal / 1_000_000;
+              networkFeeLabel = 'XRP network fee (live)';
+            } catch (e) {
+              console.warn('calculateSendFee: could not fetch XRP fee from gateway:', e);
+              networkFee      = 12 / 1_000_000; // fallback: 12 drops
+              networkFeeLabel = 'XRP network fee (estimate)';
+            }
+          } else if (cryptoSymbol === 'SOL') {
+            // ── Solana: base transaction fee = 5,000 lamports ────────────────
+            // 1 SOL = 1,000,000,000 lamports; simple transfer = 5,000 lamports
+            networkFee      = 5_000 / 1_000_000_000;
+            networkFeeLabel = 'SOL network fee';
+          } else if (cryptoSymbol === 'TRX') {
+            // ── Tron: simple TRX transfer uses bandwidth allowance ────────────
+            // Conservatively show 1 TRX so users aren't surprised by energy costs
+            networkFee      = 1;
+            networkFeeLabel = 'TRX network fee (estimated)';
           }
-          // Non-EVM chains (SOL, TRX, XRP, etc.) fall through with networkFee = 0;
-          // their fees come from the Supabase edge function below if available, or
-          // are negligible enough that 0 is an acceptable display default.
+          // Other non-EVM coins fall through with networkFee = 0.
         }
       }
 
