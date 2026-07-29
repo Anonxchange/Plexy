@@ -256,20 +256,20 @@ export interface PasskeyVault {
 
 // ─── Chain configs ────────────────────────────────────────────────────────────
 
+// rpcUrl / rpcFallbacks removed — all RPC calls now go through the Supabase
+// chain-gateway edge function via workerGatewayRpc(). No direct public-node calls.
 const CHAIN_CONFIGS: Record<string, {
-  rpcUrl: string;
-  rpcFallbacks: string[];
   chainId: number;
   symbol: string;
   /** true = EIP-1559 type-2 tx by default; false = legacy type-0 only */
   eip1559: boolean;
 }> = {
-  ETH:  { rpcUrl: "https://ethereum.publicnode.com",  rpcFallbacks: ["https://eth.drpc.org", "https://1rpc.io/eth"],                   chainId: 1,     symbol: "ETH", eip1559: true  },
-  BSC:  { rpcUrl: "https://bsc-dataseed.binance.org", rpcFallbacks: ["https://bsc-dataseed1.defibit.io", "https://bsc.drpc.org"],       chainId: 56,    symbol: "BNB", eip1559: false },
-  BNB:  { rpcUrl: "https://bsc-dataseed.binance.org", rpcFallbacks: ["https://bsc-dataseed1.defibit.io", "https://bsc.drpc.org"],       chainId: 56,    symbol: "BNB", eip1559: false },
-  ARB:  { rpcUrl: "https://arb1.arbitrum.io/rpc",     rpcFallbacks: ["https://arbitrum.drpc.org"],                                     chainId: 42161, symbol: "ETH", eip1559: true  },
-  POL:  { rpcUrl: "https://polygon.publicnode.com",   rpcFallbacks: ["https://polygon.drpc.org", "https://1rpc.io/matic"],             chainId: 137,   symbol: "POL", eip1559: true  },
-  MATIC:{ rpcUrl: "https://polygon.publicnode.com",   rpcFallbacks: ["https://polygon.drpc.org", "https://1rpc.io/matic"],             chainId: 137,   symbol: "POL", eip1559: true  },
+  ETH:  { chainId: 1,     symbol: "ETH", eip1559: true  },
+  BSC:  { chainId: 56,    symbol: "BNB", eip1559: false },
+  BNB:  { chainId: 56,    symbol: "BNB", eip1559: false },
+  ARB:  { chainId: 42161, symbol: "ETH", eip1559: true  },
+  POL:  { chainId: 137,   symbol: "POL", eip1559: true  },
+  MATIC:{ chainId: 137,   symbol: "POL", eip1559: true  },
 };
 
 const TOKEN_CONTRACTS: Record<string, { address: string; decimals: number }> = {
@@ -284,30 +284,49 @@ const TOKEN_CONTRACTS: Record<string, { address: string; decimals: number }> = {
   USDCE_ARB: { address: "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8", decimals: 6  },
 };
 
-// ─── RPC helpers ──────────────────────────────────────────────────────────────
+// ─── Gateway RPC helpers ───────────────────────────────────────────────────────
+// All blockchain reads are routed through the Supabase chain-gateway edge
+// function (Alchemy-backed) instead of calling public nodes directly.
+// This applies to nonce, gas price, gas estimation, and any other read-only
+// eth_* call made from within the signing worker.
 
-async function rpcCall(rpcUrl: string, method: string, params: unknown[], fallbacks: string[] = []): Promise<unknown> {
-  const urls = [rpcUrl, ...fallbacks];
-  let lastErr: unknown;
-  for (const url of urls) {
-    try {
-      const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), 10_000);
-      try {
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-          signal: ctrl.signal,
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json() as any;
-        if (json.error) throw new Error(json.error.message ?? "RPC error");
-        return json.result;
-      } finally { clearTimeout(t); }
-    } catch (err) { lastErr = err; }
+/** Maps local CHAIN_CONFIGS key → Alchemy chain identifier used by chain-gateway. */
+const WORKER_GATEWAY_CHAIN: Record<string, string> = { BSC: "BNB", BNB: "BNB", MATIC: "POL" };
+function workerGatewayChain(key: string): string {
+  return WORKER_GATEWAY_CHAIN[key] ?? key;
+}
+
+/**
+ * Routes a read-only JSON-RPC call through the Supabase chain-gateway edge
+ * function (Alchemy-backed). Returns the JSON-RPC `.result` value directly
+ * so callers can use it as a hex string without further unwrapping.
+ *
+ * Replaces the old `rpcCall()` helper that made direct calls to hardcoded
+ * public RPC endpoints (publicnode.com, drpc.org, etc.).
+ */
+async function workerGatewayRpc(chain: string, method: string, params: unknown[]): Promise<unknown> {
+  const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined) ?? "";
+  const anonKey    = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ?? "";
+  if (!supabaseUrl || !anonKey) {
+    throw new Error("chain-gateway: VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set.");
   }
-  throw new Error(`Network error — blockchain node unreachable. (${lastErr instanceof Error ? lastErr.message : String(lastErr)})`);
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 15_000);
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/chain-gateway`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: anonKey },
+      body: JSON.stringify({ action: "rpc", chain: chain.toUpperCase(), method, params }),
+      signal: ctrl.signal,
+    });
+    let data: any;
+    try { data = await res.json(); } catch { throw new Error(`Gateway returned non-JSON (HTTP ${res.status})`); }
+    if (!res.ok || data?.error) throw new Error(String(data?.error ?? `Gateway HTTP ${res.status}`));
+    // Extract the JSON-RPC result from the {result, jsonrpc, id} envelope
+    return data?.result ?? data;
+  } finally {
+    clearTimeout(t);
+  }
 }
 
 // ─── RPC response validators ──────────────────────────────────────────────────
@@ -907,6 +926,7 @@ async function _signEVMCore(
   privKey: Uint8Array,
   from: string,
   config: typeof CHAIN_CONFIGS[string],
+  gwChain: string,
   nonce: number,
   to: string,
   value: bigint,
@@ -919,13 +939,13 @@ async function _signEVMCore(
   if (useEip1559) {
     const rawPri = request.maxPriorityFeePerGas != null
       ? request.maxPriorityFeePerGas
-      : await rpcCall(config.rpcUrl, "eth_maxPriorityFeePerGas", [], config.rpcFallbacks);
+      : await workerGatewayRpc(gwChain, "eth_maxPriorityFeePerGas", []);
     const maxPriorityFeePerGas = validateRpcGasPrice(rawPri);
     let maxFeePerGas: bigint;
     if (request.maxFeePerGas != null) {
       maxFeePerGas = validateRpcGasPrice(request.maxFeePerGas);
     } else {
-      const gp = validateRpcGasPrice(await rpcCall(config.rpcUrl, "eth_gasPrice", [], config.rpcFallbacks));
+      const gp = validateRpcGasPrice(await workerGatewayRpc(gwChain, "eth_gasPrice", []));
       maxFeePerGas = gp * 2n;
       if (maxFeePerGas > RPC_GAS_PRICE_MAX) maxFeePerGas = RPC_GAS_PRICE_MAX;
     }
@@ -945,7 +965,7 @@ async function _signEVMCore(
 
   const gasPrice = request.gasPrice != null
     ? validateRpcGasPrice(request.gasPrice)
-    : validateRpcGasPrice(await rpcCall(config.rpcUrl, "eth_gasPrice", [], config.rpcFallbacks));
+    : validateRpcGasPrice(await workerGatewayRpc(gwChain, "eth_gasPrice", []));
   const tx       = [nonce, gasPrice, gasLimit, to, value, data, config.chainId, BigInt(0), BigInt(0)];
   const encoded  = RLP.encode(tx);
   const hash     = keccak_256(encoded);
@@ -964,11 +984,12 @@ async function handleSignEVMTransaction(mnemonic: string, request: any): Promise
     const pub  = secp.getPublicKey(privKey, false);
     const from = "0x" + bytesToHex(keccak_256(pub.slice(1)).slice(-20));
     const baseChain = (request.currency ?? "ETH").split("_")[0].toUpperCase();
-    const config = CHAIN_CONFIGS[baseChain] || CHAIN_CONFIGS.ETH;
+    const config  = CHAIN_CONFIGS[baseChain] || CHAIN_CONFIGS.ETH;
+    const gwChain = workerGatewayChain(baseChain);
 
     const nonce = request.nonce != null
       ? validateRpcNonce(request.nonce)
-      : validateRpcNonce(await rpcCall(config.rpcUrl, "eth_getTransactionCount", [from, "pending"], config.rpcFallbacks));
+      : validateRpcNonce(await workerGatewayRpc(gwChain, "eth_getTransactionCount", [from, "pending"]));
 
     let to = request.to;
     let value = BigInt(0);
@@ -986,7 +1007,7 @@ async function handleSignEVMTransaction(mnemonic: string, request: any): Promise
       gasLimit = request.gasLimit != null ? validateRpcGasLimit(request.gasLimit) : 21_000n;
     }
 
-    const core = await _signEVMCore(privKey, from, config, nonce, to, value, data, gasLimit, request);
+    const core = await _signEVMCore(privKey, from, config, gwChain, nonce, to, value, data, gasLimit, request);
     return { ...core, to: request.to, value: request.amount, currency: request.currency };
   } finally { wipeBytes(privKey); }
 }
@@ -994,13 +1015,15 @@ async function handleSignEVMTransaction(mnemonic: string, request: any): Promise
 async function handleSignEVMContractCall(mnemonic: string, request: any): Promise<unknown> {
   const privKey = await deriveEVMKey(mnemonic);
   try {
-    const pub    = secp.getPublicKey(privKey, false);
-    const from   = "0x" + bytesToHex(keccak_256(pub.slice(1)).slice(-20));
-    const config = CHAIN_CONFIGS[(request.chain ?? "ETH").toUpperCase()] || CHAIN_CONFIGS.ETH;
+    const pub     = secp.getPublicKey(privKey, false);
+    const from    = "0x" + bytesToHex(keccak_256(pub.slice(1)).slice(-20));
+    const baseChain = (request.chain ?? "ETH").toUpperCase();
+    const config  = CHAIN_CONFIGS[baseChain] || CHAIN_CONFIGS.ETH;
+    const gwChain = workerGatewayChain(baseChain);
 
     const nonce = request.nonce != null
       ? validateRpcNonce(request.nonce)
-      : validateRpcNonce(await rpcCall(config.rpcUrl, "eth_getTransactionCount", [from, "pending"], config.rpcFallbacks));
+      : validateRpcNonce(await workerGatewayRpc(gwChain, "eth_getTransactionCount", [from, "pending"]));
 
     const valueWei = BigInt(request.valueWei ?? "0");
 
@@ -1008,16 +1031,15 @@ async function handleSignEVMContractCall(mnemonic: string, request: any): Promis
     if (request.gasLimit != null) {
       gasLimit = validateRpcGasLimit(request.gasLimit, 21_000n);
     } else {
-      const raw = await rpcCall(config.rpcUrl, "eth_estimateGas",
-        [{ from, to: request.to, value: "0x" + valueWei.toString(16), data: request.data }],
-        config.rpcFallbacks);
+      const raw = await workerGatewayRpc(gwChain, "eth_estimateGas",
+        [{ from, to: request.to, value: "0x" + valueWei.toString(16), data: request.data }]);
       gasLimit = validateRpcGasLimit(raw, 21_000n);
       gasLimit = (gasLimit * 125n) / 100n;
       if (gasLimit < 60_000n) gasLimit = 60_000n;
       if (gasLimit > RPC_GAS_LIMIT_MAX) throw new Error("Estimated gas exceeds block limit — transaction would be invalid");
     }
 
-    return await _signEVMCore(privKey, from, config, nonce, request.to, valueWei, request.data, gasLimit, request);
+    return await _signEVMCore(privKey, from, config, gwChain, nonce, request.to, valueWei, request.data, gasLimit, request);
   } finally { wipeBytes(privKey); }
 }
 
