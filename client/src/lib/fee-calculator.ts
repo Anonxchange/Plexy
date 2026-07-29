@@ -1,6 +1,34 @@
 
 import { createClient } from "./supabase";
-import { getFeeEstimates, satoshiToBTC } from "./mempool-api";
+import { chainRpc, btcFees } from "./chain-gateway";
+
+// ── EVM chain resolution ──────────────────────────────────────────────────────
+// Maps a crypto symbol (as passed by the send dialog) to the chain key expected
+// by chain-gateway's chainRpc(). Handles both bare symbols (ETH, BNB) and
+// network-specific symbols (USDT_BSC, WETH_ARB, etc.).
+
+const EVM_CHAIN_BASE: Record<string, string> = {
+  ETH: "ETH",
+  BNB: "BSC", BSC: "BSC",
+  POL: "POL", MATIC: "POL",
+  ARB: "ARB",
+};
+
+function evmChainForSymbol(symbol: string): string | null {
+  if (symbol in EVM_CHAIN_BASE) return EVM_CHAIN_BASE[symbol];
+  // e.g. USDT_BSC, USDC_ETH, WBTC_ARB → take the last segment
+  const suffix = symbol.split("_").pop() ?? "";
+  if (suffix in EVM_CHAIN_BASE) return EVM_CHAIN_BASE[suffix];
+  return null;
+}
+
+// Standard EVM gas units for display-time estimation.
+// Native-token transfers cost 21 000; ERC-20 transfers cost ~65 000.
+const EVM_NATIVE_SYMBOLS = new Set(["ETH", "BNB", "POL", "MATIC"]);
+function evmGasUnits(symbol: string): bigint {
+  const base = symbol.split("_")[0];
+  return EVM_NATIVE_SYMBOLS.has(base) ? 21_000n : 65_000n;
+}
 
 export interface FeeConfiguration {
   id: string;
@@ -49,111 +77,85 @@ export class FeeCalculator {
     isInternal: boolean = false
   ): Promise<CalculatedFee> {
     const transactionType = isInternal ? 'internal_transfer' : 'withdrawal';
-    
+
     try {
-      // For Bitcoin external transfers, use real-time fees from mempool.space
-      if (cryptoSymbol === 'BTC' && !isInternal) {
-        try {
-          const estimates = await getFeeEstimates();
-          if (estimates) {
-            // Standard Bitcoin transaction is ~225 vBytes
-            const standardTxSize = 225;
-            const satPerByte = estimates['hourFee'] || estimates['halfHourFee'] || 10;
-            const networkFeeSats = standardTxSize * satPerByte;
-            const networkFee = satoshiToBTC(networkFeeSats);
-            
-            // Still call Supabase function for platform fee calculation if needed,
-            // or use a default logic if it fails
-            let platformFee = 0;
+      // ── Step 1: Platform fee (always from Supabase — business rule, server-side) ──
+      let platformFee = 0;
+      let feePercentage: number | undefined;
+      let feeConfigId: string | undefined;
+      try {
+        const { data: { session } } = await this.supabase.auth.getSession();
+        const response = await this.supabase.functions.invoke('calculate-fee', {
+          body: { transaction_type: transactionType, crypto_symbol: cryptoSymbol, amount },
+          headers: session ? { Authorization: `Bearer ${session.access_token}` } : {},
+        });
+        if (!response.error) {
+          platformFee    = response.data.platform_fee  ?? 0;
+          feePercentage  = response.data.fee_percentage;
+          feeConfigId    = response.data.fee_config?.id;
+        }
+      } catch (e) {
+        console.warn('calculateSendFee: could not fetch platform fee, using 0:', e);
+      }
+
+      // ── Step 2: Network fee — live source per chain type ──────────────────────
+      let networkFee = 0;
+      let networkFeeLabel = `${cryptoSymbol} network fee`;
+
+      if (!isInternal) {
+        // ── Bitcoin: gateway → mempool.space (fast tier, matches executeSend) ──
+        if (cryptoSymbol === 'BTC') {
+          try {
+            const fees = await btcFees();
+            // "fast" tier is what executeSend uses (feesResult.fast).
+            // Standard P2WPKH tx ~141 vBytes, legacy P2PKH ~225 vBytes — use 225
+            // to be conservative (over-estimates slightly for SegWit, safe).
+            const satPerByte = fees.fast || fees.normal || 10;
+            const networkFeeSats = 225 * satPerByte;
+            networkFee      = networkFeeSats / 1e8;
+            networkFeeLabel = `BTC network fee (${satPerByte} sat/vB, fast)`;
+          } catch (e) {
+            console.warn('calculateSendFee: could not fetch BTC fee from gateway:', e);
+          }
+
+        // ── EVM chains: gateway → Alchemy eth_gasPrice (same source as signing) ──
+        } else {
+          const evmChain = evmChainForSymbol(cryptoSymbol);
+          if (evmChain) {
             try {
-              const { data: { session } } = await this.supabase.auth.getSession();
-              const response = await this.supabase.functions.invoke('calculate-fee', {
-                body: {
-                  transaction_type: transactionType,
-                  crypto_symbol: cryptoSymbol,
-                  amount: amount,
-                },
-                headers: session ? {
-                  Authorization: `Bearer ${session.access_token}`
-                } : {}
-              });
-              
-              if (!response.error) {
-                platformFee = response.data.platform_fee;
+              const gasPriceHex = await chainRpc(evmChain, 'eth_gasPrice', []);
+              if (gasPriceHex) {
+                const gasPrice = BigInt(gasPriceHex);
+                const gasUnits = evmGasUnits(cryptoSymbol);
+                networkFee      = Number(gasPrice * gasUnits) / 1e18;
+                networkFeeLabel = `${cryptoSymbol} network fee (live gas price)`;
               }
             } catch (e) {
-              console.warn('Could not fetch platform fee, using 0:', e);
+              console.warn(`calculateSendFee: could not fetch ${evmChain} gas price:`, e);
             }
-
-            const totalFee = platformFee + networkFee;
-            const breakdown = [];
-            if (platformFee > 0) {
-              breakdown.push({
-                type: 'platform',
-                amount: platformFee,
-                description: `Pexly ${isInternal ? 'internal transfer' : 'withdrawal'} fee`
-              });
-            }
-            breakdown.push({
-              type: 'network',
-              amount: networkFee,
-              description: `${cryptoSymbol} network fee (Real-time)`
-            });
-
-            return {
-              platformFee,
-              networkFee,
-              totalFee,
-              breakdown,
-            };
           }
-        } catch (error) {
-          console.error('Error fetching real-time BTC fees:', error);
-          // Fallback to supabase function if real-time fails
+          // Non-EVM chains (SOL, TRX, XRP, etc.) fall through with networkFee = 0;
+          // their fees come from the Supabase edge function below if available, or
+          // are negligible enough that 0 is an acceptable display default.
         }
       }
 
-      const { data: { session } } = await this.supabase.auth.getSession();
-      
-      const response = await this.supabase.functions.invoke('calculate-fee', {
-        body: {
-          transaction_type: transactionType,
-          crypto_symbol: cryptoSymbol,
-          amount: amount,
-        },
-        headers: session ? {
-          Authorization: `Bearer ${session.access_token}`
-        } : {}
-      });
-
-      if (response.error) throw response.error;
-
-      const data = response.data;
-      
-      const breakdown = [];
-      if (data.platform_fee > 0) {
+      // ── Step 3: Assemble breakdown ─────────────────────────────────────────
+      const breakdown: { type: string; amount: number; description: string }[] = [];
+      if (platformFee > 0) {
         breakdown.push({
           type: 'platform',
-          amount: data.platform_fee,
-          description: `Pexly ${isInternal ? 'internal transfer' : 'withdrawal'} fee`
+          amount: platformFee,
+          description: `Pexly ${isInternal ? 'internal transfer' : 'withdrawal'} fee`,
         });
       }
-      if (data.network_fee > 0 && !isInternal) {
-        breakdown.push({
-          type: 'network',
-          amount: data.network_fee,
-          description: `${cryptoSymbol} network fee`
-        });
+      if (networkFee > 0 && !isInternal) {
+        breakdown.push({ type: 'network', amount: networkFee, description: networkFeeLabel });
       }
 
-      return {
-        platformFee: data.platform_fee,
-        networkFee: data.network_fee,
-        totalFee: data.total_fee,
-        feePercentage: data.fee_percentage,
-        breakdown,
-        feeConfigId: data.fee_config?.id
-      };
+      const totalFee = platformFee + networkFee;
+      return { platformFee, networkFee, totalFee, feePercentage, breakdown, feeConfigId };
+
     } catch (error) {
       console.error('Error calculating send fee:', error);
       throw error;
