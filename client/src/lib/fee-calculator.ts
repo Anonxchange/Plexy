@@ -18,10 +18,27 @@ const EVM_CHAIN_BASE: Record<string, string> = {
 
 function evmChainForSymbol(symbol: string): string | null {
   if (symbol in EVM_CHAIN_BASE) return EVM_CHAIN_BASE[symbol];
-  // e.g. USDT_BSC, USDC_ETH, WBTC_ARB → take the last segment
-  const suffix = symbol.split("_").pop() ?? "";
-  if (suffix in EVM_CHAIN_BASE) return EVM_CHAIN_BASE[suffix];
+  // Support both underscore (USDT_ETH, USDT_BSC) and hyphen (USDT-ERC20, USDT-BEP20) separators.
+  // After splitting, also map network-name suffixes (ERC20→ETH, BEP20→BNB) to chain keys.
+  const SUFFIX_ALIAS: Record<string, string> = {
+    ERC20: "ETH",
+    BEP20: "BNB",
+    BSC: "BNB",
+  };
+  const suffix = symbol.split(/[_-]/).pop() ?? "";
+  const resolved = SUFFIX_ALIAS[suffix] ?? suffix;
+  if (resolved in EVM_CHAIN_BASE) return EVM_CHAIN_BASE[resolved];
   return null;
+}
+
+/** Returns the native gas-token symbol for an EVM chain key. */
+function nativeSymbolForChain(chain: string): string {
+  const NATIVE: Record<string, string> = {
+    ETH: "ETH", ARB: "ETH", OP: "ETH", BASE: "ETH",
+    BNB: "BNB",
+    POL: "POL", MATIC: "POL",
+  };
+  return NATIVE[chain] ?? chain;
 }
 
 // Standard EVM gas units for display-time estimation.
@@ -62,6 +79,10 @@ export interface CalculatedFee {
   networkFee: number;
   totalFee: number;
   feePercentage?: number;
+  /** The token symbol the networkFee is denominated in.
+   *  Differs from the sent asset for ERC-20/BEP-20/TRC-20/SPL tokens
+   *  (e.g. ETH fee for USDT_ETH, BNB fee for USDT_BSC). */
+  networkFeeSymbol?: string;
   breakdown: {
     type: string;
     amount: number;
@@ -102,6 +123,7 @@ export class FeeCalculator {
 
       // ── Step 2: Network fee — live source per chain type ──────────────────────
       let networkFee = 0;
+      let networkFeeSymbol: string = cryptoSymbol; // default: fee in the same asset
       let networkFeeLabel = `${cryptoSymbol} network fee`;
 
       if (!isInternal) {
@@ -114,8 +136,9 @@ export class FeeCalculator {
             // to be conservative (over-estimates slightly for SegWit, safe).
             const satPerByte = fees.fast || fees.normal || 10;
             const networkFeeSats = 225 * satPerByte;
-            networkFee      = networkFeeSats / 1e8;
-            networkFeeLabel = `BTC network fee (${satPerByte} sat/vB, fast)`;
+            networkFee       = networkFeeSats / 1e8;
+            networkFeeSymbol = 'BTC';
+            networkFeeLabel  = `BTC network fee (${satPerByte} sat/vB, fast)`;
           } catch (e) {
             console.warn('calculateSendFee: could not fetch BTC fee from gateway:', e);
           }
@@ -125,13 +148,17 @@ export class FeeCalculator {
           const evmChain = evmChainForSymbol(cryptoSymbol);
           if (evmChain) {
             // ── EVM: live gas price via Alchemy ───────────────────────────────
+            // Gas is ALWAYS paid in the native token of the chain (ETH, BNB, etc.),
+            // NOT in the token being transferred (important for USDT/USDC).
+            const nativeSym = nativeSymbolForChain(evmChain);
             try {
               const gasPriceHex = await chainRpc(evmChain, 'eth_gasPrice', []);
               if (gasPriceHex) {
                 const gasPrice = BigInt(gasPriceHex);
                 const gasUnits = evmGasUnits(cryptoSymbol);
-                networkFee      = Number(gasPrice * gasUnits) / 1e18;
-                networkFeeLabel = `${cryptoSymbol} network fee (live gas price)`;
+                networkFee       = Number(gasPrice * gasUnits) / 1e18;
+                networkFeeSymbol = nativeSym;
+                networkFeeLabel  = `${nativeSym} gas fee (live)`;
               }
             } catch (e) {
               console.warn(`calculateSendFee: could not fetch ${evmChain} gas price:`, e);
@@ -141,23 +168,35 @@ export class FeeCalculator {
             try {
               const fees = await xrpFees();
               // "normal" tier; drops → XRP (1 XRP = 1,000,000 drops)
-              networkFee      = fees.normal / 1_000_000;
-              networkFeeLabel = 'XRP network fee (live)';
+              networkFee       = fees.normal / 1_000_000;
+              networkFeeSymbol = 'XRP';
+              networkFeeLabel  = 'XRP network fee (live)';
             } catch (e) {
               console.warn('calculateSendFee: could not fetch XRP fee from gateway:', e);
-              networkFee      = 12 / 1_000_000; // fallback: 12 drops
-              networkFeeLabel = 'XRP network fee (estimate)';
+              networkFee       = 12 / 1_000_000; // fallback: 12 drops
+              networkFeeSymbol = 'XRP';
+              networkFeeLabel  = 'XRP network fee (estimate)';
             }
           } else if (cryptoSymbol === 'SOL') {
             // ── Solana: base transaction fee = 5,000 lamports ────────────────
-            // 1 SOL = 1,000,000,000 lamports; simple transfer = 5,000 lamports
-            networkFee      = 5_000 / 1_000_000_000;
-            networkFeeLabel = 'SOL network fee';
+            networkFee       = 5_000 / 1_000_000_000;
+            networkFeeSymbol = 'SOL';
+            networkFeeLabel  = 'SOL network fee';
           } else if (cryptoSymbol === 'TRX') {
             // ── Tron: simple TRX transfer uses bandwidth allowance ────────────
-            // Conservatively show 1 TRX so users aren't surprised by energy costs
-            networkFee      = 1;
-            networkFeeLabel = 'TRX network fee (estimated)';
+            networkFee       = 1;
+            networkFeeSymbol = 'TRX';
+            networkFeeLabel  = 'TRX network fee (estimated)';
+          } else if (cryptoSymbol.endsWith('-TRC20') || cryptoSymbol.endsWith('_TRX')) {
+            // ── TRC-20 tokens (USDT-TRC20, USDC-TRC20) — fee paid in TRX ─────
+            networkFee       = 10; // ~10 TRX for energy; conservative estimate
+            networkFeeSymbol = 'TRX';
+            networkFeeLabel  = 'TRX energy fee (USDT/USDC transfer, estimated)';
+          } else if (cryptoSymbol.endsWith('-SOL') || cryptoSymbol.endsWith('_SOL')) {
+            // ── Solana SPL tokens (USDT-SOL, USDC-SOL) — fee paid in SOL ─────
+            networkFee       = 5_000 / 1_000_000_000;
+            networkFeeSymbol = 'SOL';
+            networkFeeLabel  = 'SOL network fee (SPL transfer)';
           }
           // Other non-EVM coins fall through with networkFee = 0.
         }
@@ -177,7 +216,7 @@ export class FeeCalculator {
       }
 
       const totalFee = platformFee + networkFee;
-      return { platformFee, networkFee, totalFee, feePercentage, breakdown, feeConfigId };
+      return { platformFee, networkFee, networkFeeSymbol, totalFee, feePercentage, breakdown, feeConfigId };
 
     } catch (error) {
       console.error('Error calculating send fee:', error);
