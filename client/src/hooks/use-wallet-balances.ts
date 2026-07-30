@@ -73,31 +73,61 @@ function writeSessionSnapshot(userId: string, wallets: Wallet[]): void {
 }
 
 /* =========================================
-   CHAIN RESOLVER
-   Maps DB chain_id values to edge function chain keys
+   PUSH REFRESH EVENT (replaces polling)
+
+   Alchemy's Address Activity webhook is the
+   trigger for a balance refresh. Whatever
+   receives that push (realtime channel, SSE,
+   deposit modal, manual "Refresh" button)
+   dispatches this event and the hook re-reads
+   the chain exactly once. No interval timer,
+   so idle tabs consume zero compute units.
 ========================================= */
 
-function resolveChain(chainId: string): { chain: string; isToken: boolean; tokenSymbol?: string } {
+export const WALLET_REFRESH_EVENT = 'pexly:wallet-refresh';
+
+export function requestWalletRefresh(): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event(WALLET_REFRESH_EVENT));
+}
+
+/* =========================================
+   CHAIN RESOLVER
+   Maps DB chain_id values to edge function chain keys.
+
+   `supported` is false for chains Alchemy does not
+   serve (XRP Ledger). Those are skipped instead of
+   firing a request that is guaranteed to 400.
+========================================= */
+
+function resolveChain(chainId: string): {
+  chain: string;
+  isToken: boolean;
+  tokenSymbol?: string;
+  supported: boolean;
+} {
   const id = chainId.toLowerCase();
 
   if (id.startsWith('usdt-') || id.startsWith('usdc-')) {
     const rest = id.replace(/^usdt-|^usdc-/, '');
     const tokenSymbol = id.startsWith('usdt-') ? 'USDT' : 'USDC';
     const baseChain = resolveChain(rest.charAt(0).toUpperCase() + rest.slice(1));
-    return { chain: baseChain.chain, isToken: true, tokenSymbol };
+    return { chain: baseChain.chain, isToken: true, tokenSymbol, supported: baseChain.supported };
   }
 
-  if (id.includes('bitcoin') || id.includes('segwit') || id === 'btc') return { chain: 'BTC', isToken: false };
-  if (id.includes('ethereum') || id.includes('erc-20') || id === 'eth') return { chain: 'ETH', isToken: false };
-  if (id.includes('binance') || id.includes('bep-20') || id === 'bsc' || id === 'bnb') return { chain: 'BSC', isToken: false };
-  if (id.includes('solana') || id === 'sol') return { chain: 'SOL', isToken: false };
-  if (id.includes('tron') || id.includes('trc-20') || id === 'trx') return { chain: 'TRX', isToken: false };
-  if (id.includes('polygon') || id === 'matic') return { chain: 'POLYGON', isToken: false };
-  if (id.includes('arbitrum') || id === 'arb') return { chain: 'ARBITRUM', isToken: false };
-  if (id.includes('optimism') || id === 'op') return { chain: 'OPTIMISM', isToken: false };
-  if (id.includes('xrp') || id.includes('ripple')) return { chain: 'XRP', isToken: false };
+  if (id.includes('bitcoin') || id.includes('segwit') || id === 'btc') return { chain: 'BTC', isToken: false, supported: true };
+  if (id.includes('ethereum') || id.includes('erc-20') || id === 'eth') return { chain: 'ETH', isToken: false, supported: true };
+  if (id.includes('binance') || id.includes('bep-20') || id === 'bsc' || id === 'bnb') return { chain: 'BSC', isToken: false, supported: true };
+  if (id.includes('solana') || id === 'sol') return { chain: 'SOL', isToken: false, supported: true };
+  if (id.includes('tron') || id.includes('trc-20') || id === 'trx') return { chain: 'TRX', isToken: false, supported: true };
+  if (id.includes('polygon') || id === 'matic' || id === 'pol') return { chain: 'POLYGON', isToken: false, supported: true };
+  if (id.includes('arbitrum') || id === 'arb') return { chain: 'ARBITRUM', isToken: false, supported: true };
+  if (id.includes('optimism') || id === 'op') return { chain: 'OPTIMISM', isToken: false, supported: true };
 
-  return { chain: chainId.toUpperCase(), isToken: false };
+  // Alchemy has no XRP Ledger endpoint — nothing to query.
+  if (id.includes('xrp') || id.includes('ripple')) return { chain: 'XRP', isToken: false, supported: false };
+
+  return { chain: chainId.toUpperCase(), isToken: false, supported: false };
 }
 
 /* =========================================
@@ -106,7 +136,11 @@ function resolveChain(chainId: string): { chain: string; isToken: boolean; token
    Reads wallet *addresses* from user_wallets
    (metadata only — never balances). Fetches live
    balances directly from each chain via the
-   monitor-deposits edge function.
+   monitor-deposits edge function in `balances`
+   mode, which returns:
+     { success, chain, address,
+       native: { symbol, balance, decimals },
+       tokens: [{ symbol, balance, contract, decimals }] }
 
    Resilience: if a chain RPC call fails, the
    previous known balance is kept so the UI never
@@ -123,7 +157,7 @@ export async function getUserWallets(
     .from('user_wallets')
     .select('id, address, chain_id, is_active')
     .eq('user_id', userId)
-    .eq('is_active', 'true');
+    .eq('is_active', true);
 
   if (dbError) {
     if (previous && previous.length) return previous;
@@ -138,11 +172,36 @@ export async function getUserWallets(
     prevBySymbol.set(w.crypto_symbol, w);
   });
 
+  const wallets: Wallet[] = [];
+  const now = new Date().toISOString();
+
+  /** Rebuild a wallet row from the last known snapshot (unsupported / failed chain). */
+  const carryOver = (id: string, symbol: string, address: string, chainId: string): Wallet => {
+    const prev = prevById.get(id) ?? prevBySymbol.get(symbol);
+    return {
+      id,
+      user_id: userId,
+      crypto_symbol: prev?.crypto_symbol ?? symbol,
+      balance: prev?.balance ?? 0,
+      locked_balance: prev?.locked_balance ?? 0,
+      deposit_address: address,
+      chain_id: chainId,
+      created_at: prev?.created_at ?? now,
+      updated_at: prev?.updated_at ?? now,
+    };
+  };
+
   const seen = new Map<string, { address: string; chain: string; walletIds: string[]; chainIds: string[] }>();
   const tokenWallets: { id: string; chainId: string; address: string; tokenSymbol: string; resolvedChain: string }[] = [];
 
   for (const w of dbWallets) {
     const resolved = resolveChain(w.chain_id);
+
+    if (!resolved.supported) {
+      wallets.push(carryOver(w.id, resolved.tokenSymbol ?? resolved.chain, w.address, w.chain_id));
+      continue;
+    }
+
     if (resolved.isToken) {
       tokenWallets.push({ id: w.id, chainId: w.chain_id, address: w.address, tokenSymbol: resolved.tokenSymbol!, resolvedChain: resolved.chain });
       const key = `${w.address}::${resolved.chain}`;
@@ -160,18 +219,18 @@ export async function getUserWallets(
     }
   }
 
-  const wallets: Wallet[] = [];
-  const now = new Date().toISOString();
-
+  // One request per (address, chain) pair — a native wallet and its USDT/USDC
+  // siblings on the same address share a single call.
   const fetchPromises = Array.from(seen.entries()).map(async ([_key, entry]) => {
     let data: any = null;
     let fetchFailed = false;
 
     try {
       const res = await client.functions.invoke('monitor-deposits', {
-        body: { address: entry.address, chain: entry.chain },
+        body: { address: entry.address, chain: entry.chain, mode: 'balances' },
       });
       if (res.error || !res.data?.success || !res.data?.native) {
+        console.warn('[getUserWallets] balance read failed:', entry.chain, res.error ?? res.data?.error);
         fetchFailed = true;
       } else {
         data = res.data;
@@ -204,12 +263,16 @@ export async function getUserWallets(
     for (const tw of tokenWallets) {
       if (tw.address !== entry.address || tw.resolvedChain !== entry.chain) continue;
       const prev = prevById.get(tw.id) ?? prevBySymbol.get(tw.tokenSymbol);
-      const match = tokens.find((t: any) => t.symbol === tw.tokenSymbol);
+      const match = tokens.find(
+        (t: any) => String(t.symbol).toUpperCase() === tw.tokenSymbol.toUpperCase(),
+      );
+      // A successful read with no matching token means the balance really is 0
+      // (Alchemy omits zero balances) — only a *failed* read falls back to prev.
       const tokenBalance = fetchFailed
         ? prev?.balance ?? 0
         : match
           ? parseFloat(match.balance) || 0
-          : prev?.balance ?? 0;
+          : 0;
 
       wallets.push({
         id: tw.id,
@@ -232,15 +295,18 @@ export async function getUserWallets(
 /* =========================================
    REACT QUERY HOOK
 
-   Chain-first, fully non-custodial:
+   Chain-first, fully non-custodial, POLL-FREE:
    1. Hydrate instantly from sessionStorage so
       the UI paints on reload with no flicker.
-   2. Fetch live balances from the chain in the
-      background and write the result back to
-      sessionStorage for the next reload.
-   3. Poll every 90 s as a safety net; window
-      focus and reconnect trigger a refetch too.
-   4. sessionStorage is wiped at logout so
+   2. Fetch live balances from the chain once on
+      mount, then only on a real signal:
+        • the Alchemy webhook push, relayed as
+          WALLET_REFRESH_EVENT
+        • window focus / network reconnect
+        • an explicit refetch()
+      There is no refetchInterval, so an open tab
+      costs nothing while nothing is happening.
+   3. sessionStorage is wiped at logout so
       balances never leak across sessions.
 ========================================= */
 
@@ -253,19 +319,26 @@ export function useWalletBalances() {
   // so any invalidation from elsewhere correctly targets the right entry.
   const queryKey = ['wallet-balances', userId ?? 'anon'] as const;
 
-  // Invalidate on window focus / reconnect is handled by React Query options
-  // below — no manual useEffect needed for that.
+  // Push-driven refresh: this is what replaces the old 90 s interval.
+  // Dispatch WALLET_REFRESH_EVENT from wherever the Alchemy webhook lands.
   useEffect(() => {
     if (!userId) return;
-    // Nothing to set up; cleanup clears the session cache on unmount
-    // only if the user has logged out (handled by the logout flow).
-  }, [userId]);
+    if (typeof window === 'undefined') return;
+
+    const onRefresh = () => {
+      queryClient.invalidateQueries({ queryKey: ['wallet-balances', userId] });
+    };
+
+    window.addEventListener(WALLET_REFRESH_EVENT, onRefresh);
+    return () => window.removeEventListener(WALLET_REFRESH_EVENT, onRefresh);
+  }, [userId, queryClient]);
 
   return useQuery<Wallet[]>({
     queryKey,
     enabled: !!userId,
     // Hydrate immediately from the client-side session cache so the
     // first render shows real numbers without waiting for the chain.
+    // updatedAt 0 marks it stale, so a live read still runs on mount.
     initialData: () => (userId ? readSessionSnapshot(userId) ?? undefined : undefined),
     initialDataUpdatedAt: 0,
     queryFn: async () => {
@@ -275,29 +348,20 @@ export function useWalletBalances() {
       const cached = inMem ?? readSessionSnapshot(userId) ?? undefined;
 
       // Fetch live balances from the chain (non-custodial, no server balance store).
-      const freshPromise = getUserWallets(userId, cached)
-        .then((fresh) => {
-          // Push fresh data into both the React Query cache and sessionStorage
-          // so the UI updates even when we returned early with cached data.
-          queryClient.setQueryData([...queryKey], fresh);
-          writeSessionSnapshot(userId, fresh);
-          return fresh;
-        })
-        .catch((err) => {
-          console.warn('[wallet-balances] chain refresh failed:', err);
-          return cached ?? [];
-        });
+      // Awaited: returning early with stale data made the query settle before the
+      // real numbers arrived, so a failed chain read looked like a successful one.
+      const fresh = await getUserWallets(userId, cached).catch((err) => {
+        console.warn('[wallet-balances] chain refresh failed:', err);
+        return cached ?? [];
+      });
 
-      // If we already have something cached, return it immediately so the UI
-      // paints instantly. The freshPromise above will push the live result
-      // into the cache once the chain responds.
-      if (cached) return cached;
-      return await freshPromise;
+      writeSessionSnapshot(userId, fresh);
+      return fresh;
     },
+    // Cached rows stay on screen while the live read is in flight.
     placeholderData: keepPreviousData,
     staleTime: 30_000,
-    refetchInterval: 90_000,
-    refetchIntervalInBackground: false,
+    refetchInterval: false,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     retry: 2,
