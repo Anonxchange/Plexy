@@ -82,6 +82,11 @@ function writeSessionSnapshot(userId: string, wallets: Wallet[]): void {
    dispatches this event and the hook re-reads
    the chain exactly once. No interval timer,
    so idle tabs consume zero compute units.
+
+   BTC (Tatum + public Esplora fallback) and XRP
+   (public rippled nodes) have no Alchemy Notify
+   push, so they are refreshed by the same manual
+   / focus / reconnect signals — still no polling.
 ========================================= */
 
 export const WALLET_REFRESH_EVENT = 'pexly:wallet-refresh';
@@ -95,9 +100,12 @@ export function requestWalletRefresh(): void {
    CHAIN RESOLVER
    Maps DB chain_id values to edge function chain keys.
 
-   `supported` is false for chains Alchemy does not
-   serve (XRP Ledger). Those are skipped instead of
-   firing a request that is guaranteed to 400.
+   `supported` means "monitor-deposits can read this
+   chain". BTC is served by Tatum with public Esplora
+   fallbacks, XRP by public rippled nodes, everything
+   else by Alchemy — so both are supported now.
+   Unsupported chains are skipped instead of firing a
+   request that is guaranteed to 400.
 ========================================= */
 
 function resolveChain(chainId: string): {
@@ -106,28 +114,67 @@ function resolveChain(chainId: string): {
   tokenSymbol?: string;
   supported: boolean;
 } {
-  const id = chainId.toLowerCase();
+  const id = String(chainId ?? '').trim().toLowerCase();
 
   if (id.startsWith('usdt-') || id.startsWith('usdc-')) {
     const rest = id.replace(/^usdt-|^usdc-/, '');
     const tokenSymbol = id.startsWith('usdt-') ? 'USDT' : 'USDC';
-    const baseChain = resolveChain(rest.charAt(0).toUpperCase() + rest.slice(1));
+    const baseChain = resolveChain(rest);
     return { chain: baseChain.chain, isToken: true, tokenSymbol, supported: baseChain.supported };
   }
 
-  if (id.includes('bitcoin') || id.includes('segwit') || id === 'btc') return { chain: 'BTC', isToken: false, supported: true };
-  if (id.includes('ethereum') || id.includes('erc-20') || id === 'eth') return { chain: 'ETH', isToken: false, supported: true };
-  if (id.includes('binance') || id.includes('bep-20') || id === 'bsc' || id === 'bnb') return { chain: 'BSC', isToken: false, supported: true };
-  if (id.includes('solana') || id === 'sol') return { chain: 'SOL', isToken: false, supported: true };
-  if (id.includes('tron') || id.includes('trc-20') || id === 'trx') return { chain: 'TRX', isToken: false, supported: true };
+  // Bitcoin — Tatum indexer + public Esplora fallbacks (no Alchemy UTXO plan needed).
+  // Covers legacy / segwit / native-segwit / taproot chain_id spellings.
+  if (
+    id.includes('bitcoin') ||
+    id.includes('segwit') ||
+    id.includes('taproot') ||
+    id.includes('bech32') ||
+    id === 'btc' ||
+    id === 'p2pkh' ||
+    id === 'p2sh' ||
+    id === 'p2wpkh' ||
+    id === 'p2tr'
+  ) {
+    return { chain: 'BTC', isToken: false, supported: true };
+  }
+
+  // XRP Ledger — public rippled JSON-RPC nodes (Tatum has no XRP support here).
+  if (id.includes('xrpl') || id.includes('xrp') || id.includes('ripple')) {
+    return { chain: 'XRP', isToken: false, supported: true };
+  }
+
+  if (id.includes('ethereum') || id.includes('erc-20') || id.includes('erc20') || id === 'eth') return { chain: 'ETH', isToken: false, supported: true };
+  if (id.includes('binance') || id.includes('bep-20') || id.includes('bep20') || id === 'bsc' || id === 'bnb') return { chain: 'BSC', isToken: false, supported: true };
+  if (id.includes('solana') || id.includes('spl') || id === 'sol') return { chain: 'SOL', isToken: false, supported: true };
+  if (id.includes('tron') || id.includes('trc-20') || id.includes('trc20') || id === 'trx') return { chain: 'TRX', isToken: false, supported: true };
   if (id.includes('polygon') || id === 'matic' || id === 'pol') return { chain: 'POLYGON', isToken: false, supported: true };
   if (id.includes('arbitrum') || id === 'arb') return { chain: 'ARBITRUM', isToken: false, supported: true };
   if (id.includes('optimism') || id === 'op') return { chain: 'OPTIMISM', isToken: false, supported: true };
 
-  // Alchemy has no XRP Ledger endpoint — nothing to query.
-  if (id.includes('xrp') || id.includes('ripple')) return { chain: 'XRP', isToken: false, supported: false };
+  return { chain: String(chainId ?? '').toUpperCase(), isToken: false, supported: false };
+}
 
-  return { chain: chainId.toUpperCase(), isToken: false, supported: false };
+/** Native symbol fallback when the edge function response is unusable. */
+const NATIVE_SYMBOL: Record<string, string> = {
+  BTC: 'BTC',
+  XRP: 'XRP',
+  ETH: 'ETH',
+  BSC: 'BNB',
+  POLYGON: 'POL',
+  ARBITRUM: 'ETH',
+  OPTIMISM: 'ETH',
+  SOL: 'SOL',
+  TRX: 'TRX',
+};
+
+/** Chains that never carry tokens in this app — skip token matching entirely. */
+const TOKENLESS_CHAINS = new Set(['BTC', 'XRP']);
+
+/** Safe numeric parse: the edge function returns decimal strings, never floats. */
+function toNumber(value: unknown, fallback = 0): number {
+  const n = typeof value === 'number' ? value : parseFloat(String(value ?? ''));
+  return Number.isFinite(n) ? n : fallback;
 }
 
 /* =========================================
@@ -140,7 +187,8 @@ function resolveChain(chainId: string): {
    mode, which returns:
      { success, chain, address,
        native: { symbol, balance, decimals },
-       tokens: [{ symbol, balance, contract, decimals }] }
+       tokens: [{ symbol, balance, contract, decimals }],
+       reserve?, accountFunded?, unconfirmed?, provider? }
 
    Resilience: if a chain RPC call fails, the
    previous known balance is kept so the UI never
@@ -176,7 +224,7 @@ export async function getUserWallets(
   const now = new Date().toISOString();
 
   /** Rebuild a wallet row from the last known snapshot (unsupported / failed chain). */
-  const carryOver = (id: string, symbol: string, address: string, chainId: string): Wallet => {
+  const carryOver = (id: string, symbol: string, address: string | null, chainId: string): Wallet => {
     const prev = prevById.get(id) ?? prevBySymbol.get(symbol);
     return {
       id,
@@ -184,7 +232,7 @@ export async function getUserWallets(
       crypto_symbol: prev?.crypto_symbol ?? symbol,
       balance: prev?.balance ?? 0,
       locked_balance: prev?.locked_balance ?? 0,
-      deposit_address: address,
+      deposit_address: address ?? prev?.deposit_address ?? null,
       chain_id: chainId,
       created_at: prev?.created_at ?? now,
       updated_at: prev?.updated_at ?? now,
@@ -196,22 +244,38 @@ export async function getUserWallets(
 
   for (const w of dbWallets) {
     const resolved = resolveChain(w.chain_id);
+    const address = String(w.address ?? '').trim();
 
-    if (!resolved.supported) {
-      wallets.push(carryOver(w.id, resolved.tokenSymbol ?? resolved.chain, w.address, w.chain_id));
+    // A row with no usable address can never be read on-chain.
+    if (!resolved.supported || !address) {
+      wallets.push(
+        carryOver(
+          w.id,
+          resolved.tokenSymbol ?? NATIVE_SYMBOL[resolved.chain] ?? resolved.chain,
+          address || null,
+          w.chain_id,
+        ),
+      );
       continue;
     }
 
+    // BTC/XRP have no token layer — a "USDT on Bitcoin" row is a data error,
+    // and asking the indexer for it would waste a request.
+    if (resolved.isToken && TOKENLESS_CHAINS.has(resolved.chain)) {
+      wallets.push(carryOver(w.id, resolved.tokenSymbol!, address, w.chain_id));
+      continue;
+    }
+
+    const key = `${address}::${resolved.chain}`;
+
     if (resolved.isToken) {
-      tokenWallets.push({ id: w.id, chainId: w.chain_id, address: w.address, tokenSymbol: resolved.tokenSymbol!, resolvedChain: resolved.chain });
-      const key = `${w.address}::${resolved.chain}`;
+      tokenWallets.push({ id: w.id, chainId: w.chain_id, address, tokenSymbol: resolved.tokenSymbol!, resolvedChain: resolved.chain });
       if (!seen.has(key)) {
-        seen.set(key, { address: w.address, chain: resolved.chain, walletIds: [], chainIds: [] });
+        seen.set(key, { address, chain: resolved.chain, walletIds: [], chainIds: [] });
       }
     } else {
-      const key = `${w.address}::${resolved.chain}`;
       if (!seen.has(key)) {
-        seen.set(key, { address: w.address, chain: resolved.chain, walletIds: [w.id], chainIds: [w.chain_id] });
+        seen.set(key, { address, chain: resolved.chain, walletIds: [w.id], chainIds: [w.chain_id] });
       } else {
         seen.get(key)!.walletIds.push(w.id);
         seen.get(key)!.chainIds.push(w.chain_id);
@@ -243,15 +307,23 @@ export async function getUserWallets(
     if (entry.walletIds.length > 0) {
       const id = entry.walletIds[0];
       const prev = prevById.get(id) ?? prevBySymbol.get(data?.native?.symbol ?? '');
-      const nativeSymbol = data?.native?.symbol ?? prev?.crypto_symbol ?? entry.chain;
-      const nativeBalance = fetchFailed ? prev?.balance ?? 0 : parseFloat(data.native.balance) || 0;
+      const nativeSymbol = data?.native?.symbol ?? prev?.crypto_symbol ?? NATIVE_SYMBOL[entry.chain] ?? entry.chain;
+      const nativeBalance = fetchFailed ? prev?.balance ?? 0 : toNumber(data.native.balance);
+
+      // XRP keeps a base reserve that cannot be spent — surface it as locked
+      // rather than pretending the full balance is withdrawable. An unfunded
+      // (never-deposited) XRP account has no reserve to lock yet.
+      let lockedBalance = prev?.locked_balance ?? 0;
+      if (!fetchFailed && entry.chain === 'XRP') {
+        lockedBalance = data?.accountFunded === false ? 0 : Math.min(toNumber(data?.reserve, 10), nativeBalance);
+      }
 
       wallets.push({
         id,
         user_id: userId,
         crypto_symbol: nativeSymbol,
         balance: nativeBalance,
-        locked_balance: prev?.locked_balance ?? 0,
+        locked_balance: lockedBalance,
         deposit_address: entry.address,
         chain_id: entry.chainIds[0],
         created_at: prev?.created_at ?? now,
@@ -259,7 +331,7 @@ export async function getUserWallets(
       });
     }
 
-    const tokens: any[] = data?.tokens ?? [];
+    const tokens: any[] = Array.isArray(data?.tokens) ? data.tokens : [];
     for (const tw of tokenWallets) {
       if (tw.address !== entry.address || tw.resolvedChain !== entry.chain) continue;
       const prev = prevById.get(tw.id) ?? prevBySymbol.get(tw.tokenSymbol);
@@ -267,11 +339,11 @@ export async function getUserWallets(
         (t: any) => String(t.symbol).toUpperCase() === tw.tokenSymbol.toUpperCase(),
       );
       // A successful read with no matching token means the balance really is 0
-      // (Alchemy omits zero balances) — only a *failed* read falls back to prev.
+      // (zero balances are omitted upstream) — only a *failed* read falls back to prev.
       const tokenBalance = fetchFailed
         ? prev?.balance ?? 0
         : match
-          ? parseFloat(match.balance) || 0
+          ? toNumber(match.balance)
           : 0;
 
       wallets.push({
@@ -306,6 +378,8 @@ export async function getUserWallets(
         • an explicit refetch()
       There is no refetchInterval, so an open tab
       costs nothing while nothing is happening.
+      BTC (Tatum) and XRP (public rippled) ride the
+      same signals — no interval, no quota burn.
    3. sessionStorage is wiped at logout so
       balances never leak across sessions.
 ========================================= */
