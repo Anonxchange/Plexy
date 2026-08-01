@@ -225,6 +225,87 @@ type PendingOrder = {
   metadata: Record<string, any>;
 };
 
+// Keep the metadata sent to NOWPayments explicit and consistent with the IPN
+// webhook. Gift cards need an email and product details, but do not need a
+// phone number or user ID. Top-ups and utility payments require an
+// authenticated user's UUID.
+function buildPaymentMetadata(
+  order: PendingOrder,
+  deliveryEmail: string,
+  authenticatedUserId?: string,
+): Record<string, unknown> {
+  const metadata = { ...(order.metadata || {}) };
+  const userId =
+    metadata.userId ??
+    metadata.user_id ??
+    authenticatedUserId ??
+    undefined;
+
+  if (order.type === "giftcard") {
+    const {
+      userId: _userId,
+      user_id: _user_id,
+      recipientPhone: _recipientPhone,
+      recipient_phone: _recipient_phone,
+      ...giftMetadata
+    } = metadata;
+
+    return {
+      ...giftMetadata,
+      service: "gift_card",
+      recipientEmail:
+        metadata.recipientEmail ??
+        metadata.recipient_email ??
+        deliveryEmail ??
+        undefined,
+    };
+  }
+
+  if (order.type === "topup") {
+    return {
+      ...metadata,
+      service: "mobile_topup",
+      operatorId: metadata.operatorId ?? metadata.operator_id,
+      operatorName: metadata.operatorName ?? metadata.operator_name,
+      phone:
+        metadata.phone ??
+        metadata.recipientPhone ??
+        metadata.recipient_phone,
+      countryCode: metadata.countryCode ?? metadata.country_code,
+      amount: metadata.amount ?? order.amount,
+      userId,
+    };
+  }
+
+  if (order.type === "utility") {
+    return {
+      ...metadata,
+      service: "utility_payment",
+      billerId: metadata.billerId ?? metadata.biller_id,
+      billerName: metadata.billerName ?? metadata.biller_name,
+      billerType: metadata.billerType ?? metadata.biller_type,
+      accountNumber:
+        metadata.accountNumber ??
+        metadata.account_number ??
+        metadata.subscriberAccountNumber ??
+        metadata.subscriber_account_number,
+      countryCode: metadata.countryCode ?? metadata.country_code,
+      amount: metadata.amount ?? order.amount,
+      userId,
+    };
+  }
+
+  if (order.type === "virtual-number") {
+    return {
+      ...metadata,
+      service: "virtual_number",
+      userId,
+    };
+  }
+
+  return metadata;
+}
+
 // ── KoraPay inline script loader ──────────────────────────────────────────────
 function loadKoraPayScript(): Promise<void> {
   return new Promise((resolve) => {
@@ -377,6 +458,11 @@ export function Checkout() {
     const pendingTotalUsd = (pendingAmountUsd ?? pendingOrder.amount) + processingFee;
 
     const contactEmail = pendingDeliveryEmail || buyerEmail;
+    const paymentMetadata = buildPaymentMetadata(
+      pendingOrder,
+      contactEmail,
+      user?.id,
+    );
 
     // KoraPay only for virtual-number orders AND Nigeria/Lagos timezone
     const showKoraPay = pendingOrder.type === "virtual-number" && detectNigeriaRegion();
@@ -1114,7 +1200,7 @@ export function Checkout() {
                     currency="usd"
                     payCurrency={method.id}
                     description={pendingOrder.description}
-                    metadata={pendingOrder.metadata}
+                    metadata={paymentMetadata}
                     onPaymentSuccess={handleOrderSuccess}
                     onChangeMethod={() => setCheckoutStep("payment")}
                     onChangeEmail={() => setCheckoutStep("contact")}
@@ -1166,6 +1252,27 @@ export function Checkout() {
 
   const deliveryEmail = deliveryTarget === "gift" ? recipientEmail : buyerEmail;
   const recipientValid = deliveryTarget === "self" || /^\S+@\S+\.\S+$/.test(recipientEmail);
+  const giftCardPaymentMetadata = {
+    service: "gift_card",
+    recipientEmail: deliveryEmail || undefined,
+    // Gift cards do not require a phone number or user ID.
+    items: items.map((item: any) => ({
+      // This must resolve to the numeric Reloadly product ID.
+      productId:
+        item.reloadlyProductId ??
+        item.reloadly_product_id ??
+        item.productId ??
+        item.product_id ??
+        item.id,
+      productName:
+        item.productName ??
+        item.product_name ??
+        item.name ??
+        item.title,
+      unitPrice: item.unitPrice ?? item.unit_price ?? item.price,
+      quantity: item.quantity || 1,
+    })),
+  };
 
   return (
     <BrandShell>
@@ -1422,7 +1529,7 @@ export function Checkout() {
                       amount={total}
                       currency="usd"
                       description={`Gift card purchase — ${items.length} item(s)`}
-                      metadata={{ recipientEmail: deliveryEmail || undefined }}
+                      metadata={giftCardPaymentMetadata}
                       onPaymentSuccess={() => {
                         clearCart();
                         toast({ title: "Order placed!", description: "Your gift cards will be emailed to you shortly." });
