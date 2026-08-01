@@ -43,6 +43,9 @@ function detectNigeriaRegion(): boolean {
 import { getExchangeRates } from "@/lib/crypto-prices";
 import NowPaymentsCheckout from "@/components/nowpayments-checkout";
 import { SYMBOL_ICON_MAP } from "@/lib/crypto-icons";
+// ── Fee config — all service fees defined in one place ────────────────────────
+import { calcServiceFee, calcGiftCardFee } from "@/lib/checkout-config";
+
 type DeliveryTarget = "self" | "gift";
 type PaymentMethod = "card" | "crypto";
 type CheckoutStep = "contact" | "payment" | "paying";
@@ -95,12 +98,9 @@ const USDC_NETWORKS: StablecoinNetwork[] = [
 const PAYMENT_METHODS_FALLBACK: PaymentMethodDef[] = PRIMARY_PAYMENT_METHODS;
 
 // Parse a NOWPayments currency code into display info.
-// Each code from the API already encodes a specific coin+network (e.g. usdttrc20 = USDT on Tron).
-// We produce a fully-qualified label like "USDT TRC20" so no separate network selection is needed.
 function parseCurrencyCode(code: string): PaymentMethodDef {
   const c = code.toLowerCase();
 
-  // Helper: returns network name from common NOWPayments suffixes
   const netFromSuffix = (s: string): string | undefined => {
     if (s.includes("trc20") || s.includes("trx")) return "TRC20";
     if (s.includes("erc20") || s.includes("mainnet") || s.endsWith("eth")) return "ERC20";
@@ -123,23 +123,19 @@ function parseCurrencyCode(code: string): PaymentMethodDef {
     kind: "crypto",
   });
 
-  // USDT variants — NOWPayments mainly supports TRC20 and ERC20
   if (c.startsWith("usdt")) {
     const net = netFromSuffix(c.slice(4));
     return mk("USDT", "USDT", net);
   }
-  // USDC variants
   if (c.startsWith("usdc")) {
     const net = netFromSuffix(c.slice(4));
     return mk("USDC", "USDC", net);
   }
-  // DAI variants
   if (c.startsWith("dai")) {
     const net = netFromSuffix(c.slice(3));
     return mk("DAI", "DAI", net);
   }
 
-  // Single-network / native coins
   const knownMap: Record<string, [string, string, string?]> = {
     btc:    ["BTC",  "Bitcoin"],
     btcln:  ["BTC",  "Bitcoin",     "Lightning"],
@@ -172,7 +168,6 @@ function parseCurrencyCode(code: string): PaymentMethodDef {
   const known = knownMap[c];
   if (known) return mk(known[0], known[1], known[2]);
 
-  // Generic fallback: uppercase code used as-is
   const sym = c.replace(/[^a-z]/g, "").slice(0, 6).toUpperCase();
   return { id: code, symbol: sym, label: sym, kind: "crypto" };
 }
@@ -375,15 +370,9 @@ export function Checkout() {
       : rates[pendingOrder.currency.toUpperCase()]
         ? pendingOrder.amount / rates[pendingOrder.currency.toUpperCase()]
         : null;
-    // Service fee by product type (applied on the USD-equivalent amount)
+    // ── Service fee — driven by checkout-config.ts ────────────────────────────
     const feeBase = pendingAmountUsd ?? pendingOrder.amount;
-    const processingFee = pendingOrder.type === "giftcard"
-      ? feeBase * 0.01 + 0.55
-      : pendingOrder.type === "topup"
-      ? feeBase * 0.015
-      : pendingOrder.type === "utility"
-      ? feeBase * 0.01
-      : 0;
+    const processingFee = calcServiceFee(feeBase, pendingOrder.type);
     const pendingTotal = pendingOrder.amount + processingFee;
     const pendingTotalUsd = (pendingAmountUsd ?? pendingOrder.amount) + processingFee;
 
@@ -628,7 +617,6 @@ export function Checkout() {
                           {displayCurrency} {displayAmount.toFixed(2)} value
                         </p>
                       </div>
-                      {/* Quantity pill — fixed at 1 for pending orders, not hardcoded */}
                       <div className="flex items-center gap-1.5 border border-border rounded-full px-3 py-1 text-sm font-medium text-foreground">
                         <span>1</span>
                         <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
@@ -1010,6 +998,13 @@ export function Checkout() {
 
                     <Separator />
 
+                    <div className="space-y-1.5 text-sm">
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Service fee</span>
+                        <span>+${processingFee.toFixed(2)}</span>
+                      </div>
+                    </div>
+
                     <div className="flex items-baseline justify-between">
                       <span className="text-base font-bold text-foreground">Total</span>
                       <span className="text-xl font-extrabold text-foreground">${displayTotal.toFixed(2)}</span>
@@ -1163,7 +1158,8 @@ export function Checkout() {
   });
 
   const subtotal = itemsUsd.reduce((acc, i) => acc + i._lineUsd, 0);
-  const processingFee = subtotal * 0.01 + 0.55;
+  // ── Cart service fee — driven by checkout-config.ts ───────────────────────
+  const processingFee = calcGiftCardFee(subtotal);
   const discount = promoApplied ? Math.min(subtotal * 0.05, 10) : 0;
   const total = Math.max(0, subtotal + processingFee - discount);
   const totalItems = items.reduce((acc, i) => acc + (i.quantity || 0), 0);
