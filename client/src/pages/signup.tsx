@@ -576,7 +576,7 @@ export function SignUp() {
               onClick={() => {
                 setStep("details");
                 setEmailOtp("");
-                setOtpCountdown(60);
+                setOtpCountdown(300);
               }}
               className="w-full py-3 rounded-xl text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
             >
