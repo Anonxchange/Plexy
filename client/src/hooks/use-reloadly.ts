@@ -1,5 +1,8 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import {
+  hasGiftCardDenominationRange,
+} from "@/lib/gift-card-denominations";
 
 export interface ReloadlyProduct {
   productId: number;
@@ -10,9 +13,9 @@ export interface ReloadlyProduct {
   recipientCurrencyCode: string;
   senderCurrencyCode: string;
   denominationType: string;
-  fixedRecipientDenominations: number[];
-  minRecipientDenomination: number;
-  maxRecipientDenomination: number;
+  fixedRecipientDenominations: number[] | null;
+  minRecipientDenomination: number | null;
+  maxRecipientDenomination: number | null;
   senderFee: number;
   senderFeePercentage: number;
   discountPercentage: number;
@@ -83,14 +86,16 @@ export function useGiftCardProduct(productId: string | undefined) {
       const extractProduct = (data: any): ReloadlyProduct | undefined => {
         if (!data) return undefined;
         if (Array.isArray(data)) {
-          return data.find((p) => String(p.productId) === String(productId)) ?? data[0];
+          return data.find((p) => String(p.productId) === String(productId));
         }
         if (Array.isArray(data.content)) {
-          return data.content.find((p: ReloadlyProduct) => String(p.productId) === String(productId)) ?? data.content[0];
+          return data.content.find((p: ReloadlyProduct) => String(p.productId) === String(productId));
         }
-        if (typeof data.productId !== "undefined") return data as ReloadlyProduct;
+        if (String(data.productId) === String(productId)) return data as ReloadlyProduct;
         return undefined;
       };
+
+      let directProduct: ReloadlyProduct | undefined;
 
       // 1. Try the direct productId query first (fast path, works if the
       //    edge function supports filtering a single product).
@@ -100,8 +105,10 @@ export function useGiftCardProduct(productId: string | undefined) {
           { headers }
         );
         if (res.ok) {
-          const product = extractProduct(await res.json());
-          if (product) return product;
+          directProduct = extractProduct(await res.json());
+          if (directProduct && hasGiftCardDenominationRange(directProduct)) {
+            return directProduct;
+          }
         }
       } catch { /* fall through to list search */ }
 
@@ -115,8 +122,9 @@ export function useGiftCardProduct(productId: string | undefined) {
       if (!listRes.ok) throw new Error("Failed to fetch product");
       const listData: ProductsResponse = await listRes.json();
       const product = (listData.content ?? []).find((p) => String(p.productId) === String(productId));
-      if (!product) throw new Error("Failed to fetch product");
-      return product;
+      if (product) return product;
+      if (directProduct) return directProduct;
+      throw new Error("Failed to fetch product");
     },
   });
 }
