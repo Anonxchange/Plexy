@@ -362,23 +362,38 @@ export function SignUp() {
         return;
       }
 
-      // Sign in the user
-      await signIn(email, password);
-      
+      // Sign in the user — capture result so we can use it directly
+      const { data: signInData } = await signIn(email, password);
+
       toast({
         title: "Success!",
         description: "Email verified! Account created successfully!",
       });
-      
-      const { data: userData } = await supabase.auth.getUser();
-      if (userData.user) {
+
+      // Prefer user from signIn result (already in memory).
+      // Fall back to getSession() which reads localStorage — no extra network
+      // call, and more reliable than getUser() which hits the server.
+      const signedInUserId =
+        signInData?.user?.id ??
+        (await supabase.auth.getSession()).data.session?.user?.id;
+
+      if (signedInUserId) {
         try {
-          await deviceFingerprint.registerDeviceAsTrusted(userData.user.id);
+          await deviceFingerprint.registerDeviceAsTrusted(signedInUserId);
         } catch (error) {
           console.error('Error auto-trusting device during signup:', error);
         }
-        setUserId(userData.user.id);
+        setUserId(signedInUserId);
         setStep("phone");
+      } else {
+        // Email was verified but sign-in couldn't produce a session
+        // (e.g. captcha required on sign-in). Account exists — send to /signin.
+        setSignupInProgress(false);
+        toast({
+          title: "Account Created!",
+          description: "Please sign in to continue.",
+        });
+        setLocation("/signin");
       }
     } catch (error) {
       console.error("Email OTP verify error:", error);
