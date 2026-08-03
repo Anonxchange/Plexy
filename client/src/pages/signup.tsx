@@ -171,6 +171,7 @@ export function SignUp() {
   const [otpCountdown, setOtpCountdown] = useState(300);
   const [resendCooldown, setResendCooldown] = useState(60);
   const [isResending, setIsResending] = useState(false);
+  const [signupInProgress, setSignupInProgress] = useState(false);
   const { signUp, signIn, user, loading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -202,10 +203,13 @@ export function SignUp() {
   };
 
   useEffect(() => {
+    // While a signup is running we deliberately hold the session open
+    // (email OTP -> phone step -> signOut -> /signin). Don't hijack it.
+    if (signupInProgress) return;
     if (!authLoading && user) {
       setLocation("/dashboard");
     }
-  }, [user, authLoading, setLocation]);
+  }, [user, authLoading, setLocation, signupInProgress]);
 
   // Countdown timer for OTP expiry and resend cooldown
   useEffect(() => {
@@ -255,6 +259,7 @@ export function SignUp() {
         return;
       }
 
+      setSignupInProgress(true);
       setLoading(true);
       
       // Basic AML screening before account creation
@@ -293,6 +298,7 @@ export function SignUp() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error("Send verification error:", response.status, errorData);
+        setSignupInProgress(false);
         toast({
           title: "Error",
           description: errorData.error || "Failed to send verification code. Please try again.",
@@ -319,6 +325,7 @@ export function SignUp() {
         return;
       }
 
+      setSignupInProgress(true);
       setUserId("pending");
       setLoading(false);
       setStep("phone");
@@ -413,6 +420,7 @@ export function SignUp() {
 
         // Sign out the user after successful signup
         await supabase.auth.signOut();
+        setSignupInProgress(false);
 
         toast({
           title: "Success!",
@@ -429,6 +437,7 @@ export function SignUp() {
 
       // Sign out the user after successful signup
       await supabase.auth.signOut();
+      setSignupInProgress(false);
 
       toast({
         title: "Success!",
@@ -441,6 +450,7 @@ export function SignUp() {
   const handleSkipPhone = async () => {
     // Sign out the user after successful signup
     await supabase.auth.signOut();
+    setSignupInProgress(false);
 
     toast({
       title: "Account Created!",
