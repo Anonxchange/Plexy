@@ -45,6 +45,7 @@ import { CartSheet } from "@/components/shop/CartSheet";
 import { ShippingEstimator } from "@/components/shop/ShippingEstimator";
 import { ReviewSection } from "@/components/shop/ReviewSection";
 import type { ShippingInfo } from "@/components/shop/shipping-types";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 /** Strip <img> tags and CJ "Product Image:" label from description HTML.
  *  Images are shown in the full-width showcase below, not inline. */
@@ -582,7 +583,7 @@ export function ProductDetail() {
         {/* Loading state */}
         {isLoading && (
           <div className="flex items-center justify-center min-h-[50vh]">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <LoadingSpinner size={40} color="hsl(var(--primary))" />
           </div>
         )}
 
