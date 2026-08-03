@@ -39,6 +39,7 @@ import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
 import { GiftCardCartSheet } from "@/components/gift-card-cart-sheet";
 import { getLocalizedCheckoutPath } from "@/lib/checkout-navigation";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { getGiftCardDenominationRange } from "@/lib/gift-card-denominations";
 
 const faqs = [
   {
@@ -197,6 +198,7 @@ export function GiftCardDetail() {
   }
 
   const discountPercentage = card?.discountPercentage || 0;
+  const denominationRange = getGiftCardDenominationRange(card);
   const qty = parseInt(numberOfCards) || 1;
   const value = parseFloat(cardValue) || 0;
   const discountAmount = value * (discountPercentage / 100);
@@ -205,8 +207,8 @@ export function GiftCardDetail() {
   const totalOriginalPrice = value * qty;
 
   // Card value must stay inside the product's allowed range.
-  const minValue = card?.minRecipientDenomination ?? 0;
-  const maxValue = card?.maxRecipientDenomination ?? Infinity;
+  const minValue = denominationRange.min ?? 0;
+  const maxValue = denominationRange.max ?? Infinity;
   const hasValue = cardValue.trim() !== "" && Number.isFinite(parseFloat(cardValue));
   const isValueValid = hasValue && value >= minValue && value <= maxValue;
   const valueError = !hasValue
@@ -391,14 +393,14 @@ export function GiftCardDetail() {
                   <Input
                     type="number"
                     inputMode="decimal"
-                    placeholder={`${card.minRecipientDenomination} – ${card.maxRecipientDenomination}`}
+                    placeholder={`${denominationRange.min ?? "?"} – ${denominationRange.max ?? "?"}`}
                     value={cardValue}
                     onChange={(e) => {
                       setValueTouched(true);
                       setCardValue(e.target.value);
                     }}
-                    min={card.minRecipientDenomination}
-                    max={card.maxRecipientDenomination}
+                    min={denominationRange.min ?? undefined}
+                    max={denominationRange.max ?? undefined}
                     aria-invalid={!!valueError}
                     className={`h-12 text-base font-semibold ${valueError ? "border-destructive focus-visible:ring-destructive/30" : ""}`}
                   />
@@ -406,7 +408,7 @@ export function GiftCardDetail() {
                     <p className="text-xs text-destructive">{valueError}</p>
                   ) : (
                     <p className="text-xs text-muted-foreground">
-                      Range: {card.minRecipientDenomination} – {card.maxRecipientDenomination} {card.recipientCurrencyCode}
+                      Range: {denominationRange.min ?? "?"} – {denominationRange.max ?? "?"} {card.recipientCurrencyCode}
                     </p>
                   )}
                 </div>
