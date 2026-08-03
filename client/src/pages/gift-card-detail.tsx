@@ -119,14 +119,16 @@ export function GiftCardDetail() {
   const cartCount = cartItems.reduce((acc, i) => acc + i.quantity, 0);
   const [cartOpen, setCartOpen] = useState(false);
 
+  const [valueTouched, setValueTouched] = useState(false);
+
   useEffect(() => {
-    if (card && !cardValue) {
+    if (card && !valueTouched && !cardValue) {
       setCardValue(String(card.minRecipientDenomination || 10));
     }
-  }, [card, cardValue]);
+  }, [card, cardValue, valueTouched]);
 
   const handleBuyCard = () => {
-    if (!card) return;
+    if (!card || !isValueValid) return;
     localStorage.setItem("pexly_pending_order", JSON.stringify({
       type: "giftcard",
       title: `${card.productName} Gift Card`,
@@ -202,8 +204,19 @@ export function GiftCardDetail() {
   const totalFinalPrice = unitFinalPrice * qty;
   const totalOriginalPrice = value * qty;
 
+  // Card value must stay inside the product's allowed range.
+  const minValue = card?.minRecipientDenomination ?? 0;
+  const maxValue = card?.maxRecipientDenomination ?? Infinity;
+  const hasValue = cardValue.trim() !== "" && Number.isFinite(parseFloat(cardValue));
+  const isValueValid = hasValue && value >= minValue && value <= maxValue;
+  const valueError = !hasValue
+    ? "Enter a card value"
+    : !isValueValid
+      ? `Value must be between ${minValue} and ${maxValue} ${card?.recipientCurrencyCode ?? ""}`
+      : null;
+
   const handleAddToCart = async () => {
-    if (!card) return;
+    if (!card || !isValueValid) return;
     addToCart({
       productId: String(card.productId),
       title: card.productName,
@@ -377,15 +390,25 @@ export function GiftCardDetail() {
                   </label>
                   <Input
                     type="number"
+                    inputMode="decimal"
+                    placeholder={`${card.minRecipientDenomination} – ${card.maxRecipientDenomination}`}
                     value={cardValue}
-                    onChange={(e) => setCardValue(e.target.value)}
+                    onChange={(e) => {
+                      setValueTouched(true);
+                      setCardValue(e.target.value);
+                    }}
                     min={card.minRecipientDenomination}
                     max={card.maxRecipientDenomination}
-                    className="h-12 text-base font-semibold"
+                    aria-invalid={!!valueError}
+                    className={`h-12 text-base font-semibold ${valueError ? "border-destructive focus-visible:ring-destructive/30" : ""}`}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Range: {card.minRecipientDenomination} – {card.maxRecipientDenomination} {card.recipientCurrencyCode}
-                  </p>
+                  {valueError ? (
+                    <p className="text-xs text-destructive">{valueError}</p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Range: {card.minRecipientDenomination} – {card.maxRecipientDenomination} {card.recipientCurrencyCode}
+                    </p>
+                  )}
                 </div>
 
                 {/* Quantity */}
@@ -447,7 +470,8 @@ export function GiftCardDetail() {
                 <div className="space-y-2.5 pt-1">
                   <Button
                     onClick={handleBuyCard}
-                    className="w-full h-12 text-base font-bold bg-[#B4F22E] text-black hover:opacity-90 rounded-xl shadow-lg shadow-[#B4F22E]/20"
+                    disabled={!isValueValid}
+                    className="w-full h-12 text-base font-bold bg-[#B4F22E] text-black hover:opacity-90 rounded-xl shadow-lg shadow-[#B4F22E]/20 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span role="img" aria-label="gift" className="mr-2">🎁</span>
                     Buy Now
@@ -455,7 +479,7 @@ export function GiftCardDetail() {
                   <Button
                     variant="outline"
                     onClick={handleAddToCart}
-                    disabled={isAddingToCart}
+                    disabled={isAddingToCart || !isValueValid}
                     className="w-full h-12 text-base font-semibold rounded-xl"
                   >
                     <ShoppingCart className="h-4 w-4 mr-2" />
