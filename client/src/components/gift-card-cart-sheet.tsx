@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, Minus, Plus, Trash2, Lock, Star, ShoppingBag } from '@/lib/icons';
 import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
-import { useLocation } from "wouter";
+import { openLocalizedCheckout } from "@/lib/checkout-navigation";
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: '$', EUR: '€', GBP: '£', JPY: '¥', CAD: 'CA$', AUD: 'A$',
@@ -19,7 +19,6 @@ function getCurrencySymbol(code: string) {
 
 export function GiftCardCartSheet({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) {
   const { items, updateQuantity, removeItem } = useGiftCardCart();
-  const [, setLocation] = useLocation();
 
   const currencies = [...new Set(items.map(i => i.currency))];
   const singleCurrency = currencies.length === 1 ? currencies[0] : null;
@@ -146,7 +145,7 @@ export function GiftCardCartSheet({ open, onOpenChange }: { open: boolean, onOpe
           <Button 
             onClick={() => {
               onOpenChange(false);
-              setLocation("/checkout");
+               openLocalizedCheckout();
             }}
             className="w-full h-14 bg-gradient-to-r from-orange-400 to-yellow-500 text-white font-bold text-lg rounded-xl shadow-lg shadow-orange-500/20 gap-2"
           >
