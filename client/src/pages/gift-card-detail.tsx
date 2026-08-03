@@ -37,6 +37,8 @@ import { useGiftCardProduct, useCreateGiftCardOrder } from "@/hooks/use-reloadly
 import { toast } from "sonner";
 import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
 import { GiftCardCartSheet } from "@/components/gift-card-cart-sheet";
+import { getLocalizedCheckoutPath } from "@/lib/checkout-navigation";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 const faqs = [
   {
@@ -145,9 +147,7 @@ export function GiftCardDetail() {
         cardValue: value,
       },
     }));
-    const seg = window.location.pathname.split("/")[1];
-    const langBase = seg && seg.length === 2 ? `/${seg}` : "/en";
-    window.open(`${langBase}/checkout`, "_blank");
+    window.open(getLocalizedCheckoutPath(), "_blank");
   };
 
   const handleContinueOrder = () => {
@@ -175,7 +175,7 @@ export function GiftCardDetail() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+          <LoadingSpinner size={40} color="hsl(var(--primary))" />
           <p className="text-muted-foreground text-sm">Loading gift card...</p>
         </div>
       </div>
