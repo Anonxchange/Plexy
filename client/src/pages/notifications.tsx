@@ -122,9 +122,10 @@ const TABS: { id: TabId; label: string }[] = [
 ];
 
 function formatAmount(amount: number, symbol: string) {
-  const formatted = amount < 0.0001
-    ? amount.toExponential(4)
-    : amount.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 8 });
+  const formatted = amount.toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 8,
+  });
   return `${formatted} ${symbol.toUpperCase()}`;
 }
 

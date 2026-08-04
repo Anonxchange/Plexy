@@ -1,5 +1,4 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { formatDistanceToNow } from "date-fns";
 import { useHead } from "@unhead/react";
 import {
   ChevronDown,
@@ -9,9 +8,6 @@ import {
   Minus,
   Loader2,
   ChevronRight,
-  Clock,
-  ArrowUpRight,
-  ArrowDownLeft,
   Star,
 } from '@/lib/icons';
 import { Button } from "@/components/ui/button";
@@ -29,7 +25,6 @@ import { SiApple, SiVisa, SiMastercard, SiPaypal, SiGooglepay, SiApplepay, SiAme
 import { useToast } from "@/hooks/use-toast";
 import { useCdpOnramp } from "@/hooks/use-cdp-onramp";
 import { useCdpOfframp } from "@/hooks/use-cdp-offramp";
-import { useWalletActivity } from "@/hooks/use-wallet-activity";
 import { safeExternalRedirect, COINBASE_PAY_ORIGINS } from "@/lib/sanitize";
 
 const QUICK_AMOUNTS = ["100", "250", "500", "1000"];
@@ -419,8 +414,6 @@ const BuyCryptoPage = () => {
   const cdpOnramp = useCdpOnramp();
   const cdpOfframp = useCdpOfframp();
 
-  const { data: recentTxs = [], isLoading: txLoading } = useWalletActivity();
-
   const cryptoName = crypto === "BTC" ? "Bitcoin" : crypto === "ETH" ? "Ethereum" : crypto === "SOL" ? "Solana" : crypto;
 
   const estimatedCrypto = useMemo(() => {
@@ -646,64 +639,6 @@ const BuyCryptoPage = () => {
             <div className="mt-10 lg:mt-0 lg:sticky lg:top-24 lg:max-w-[480px] lg:ml-auto w-full">
               {Widget}
 
-              {/* ── LOGGED IN: recent activity below widget ── */}
-              {user && (
-                <div className="mt-4 bg-card border border-border rounded-2xl overflow-hidden">
-                  <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-                    <span className="text-muted-foreground text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
-                      <Clock className="w-3 h-3" /> Recent activity
-                    </span>
-                    {recentTxs.length > 0 && (
-                      <Link href="/wallet?tab=activity">
-                        <span className="text-primary text-[11px] font-semibold hover:underline">View all</span>
-                      </Link>
-                    )}
-                  </div>
-
-                  {txLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : recentTxs.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
-                      <Clock className="w-7 h-7 text-muted-foreground/30 mb-2" />
-                      <p className="text-muted-foreground text-xs">No transactions yet</p>
-                      <p className="text-muted-foreground/60 text-[11px] mt-0.5">Your buy and sell activity will appear here</p>
-                    </div>
-                  ) : (
-                    recentTxs.map((tx) => {
-                      const isBuy = tx.type === "deposit";
-                      const isSell = tx.type === "withdrawal";
-                      const label = isBuy ? "Buy" : isSell ? "Sell" : tx.type.replace(/_/g, " ");
-                      const amountStr = `${Number(tx.amount).toFixed(
-                        Number(tx.amount) < 0.001 ? 8 : Number(tx.amount) < 1 ? 5 : 4
-                      )} ${tx.crypto_symbol}`;
-                      const dateStr = formatDistanceToNow(new Date(tx.created_at), { addSuffix: true });
-
-                      return (
-                        <div key={tx.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors border-b border-border last:border-0">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                            isSell ? "bg-red-500/15" : "bg-primary/15"
-                          }`}>
-                            <CoinIcon symbol={(tx.crypto_symbol || "").toUpperCase()} className="w-4 h-4" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-foreground text-xs font-semibold">
-                              {label} <span className="text-primary">{tx.crypto_symbol}</span>
-                            </p>
-                            <p className="text-muted-foreground text-[11px] capitalize">{tx.status} · {dateStr}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className={`text-xs font-bold ${isSell ? "text-red-400" : "text-primary"}`}>
-                              {isSell ? "-" : "+"}{amountStr}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              )}
             </div>
           </div>
         </div>
