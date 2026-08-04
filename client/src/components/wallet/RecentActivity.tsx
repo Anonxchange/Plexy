@@ -5,9 +5,8 @@ import {
   ArrowDownLeft, ArrowUpRight, RefreshCw,
   ArrowRight, ChevronDown, Check, X,
 } from '@/lib/icons';
-import { getOnChainTransactions, WalletTransaction } from "@/lib/wallet-api";
-import { useAuth } from "@/lib/auth-context";
-import { useQuery } from "@tanstack/react-query";
+import { WalletTransaction } from "@/lib/wallet-api";
+import { useWalletActivity } from "@/hooks/use-wallet-activity";
 import { format, subDays, subMonths, startOfDay, isAfter } from "date-fns";
 import { TransactionDetailSheet } from "@/components/wallet/TransactionDetailSheet";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -271,7 +270,6 @@ const ActivityTable = ({
 
 export function RecentActivity({ type, onDeposit }: RecentActivityProps) {
   const isOperations = type === "operations";
-  const { user } = useAuth();
   const [selectedTx, setSelectedTx] = useState<WalletTransaction | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -293,16 +291,7 @@ export function RecentActivity({ type, onDeposit }: RecentActivityProps) {
     data: allTransactions = [],
     isLoading,
     error,
-  } = useQuery<WalletTransaction[]>({
-    queryKey: ["wallet-on-chain-transactions", user?.id],
-    enabled: !!user?.id,
-    queryFn: () => getOnChainTransactions(user!.id, 200),
-    staleTime: 60_000,
-    gcTime: 5 * 60_000,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: true,
-    retry: 1,
-  });
+  } = useWalletActivity();
 
   const uniqueAssets = useMemo(() => {
     const symbols = [...new Set(allTransactions.map((t) => t.crypto_symbol))].filter(Boolean).sort();

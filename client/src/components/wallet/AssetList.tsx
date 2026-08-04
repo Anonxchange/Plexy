@@ -103,7 +103,11 @@ export function AssetList({
 }) {
   const { data: wallet, isLoading, isError, isRefetching } = useWalletData();
   const [hideZero, setHideZero] = useState(false);
-  const [activeTab, setActiveTab] = useState("assets");
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window === "undefined") return "assets";
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    return tab === "activity" || tab === "operations" ? tab : "assets";
+  });
 
   // Show skeleton while loading (includes live balance fetch) or converting currency.
   // Only fall back to skeleton on error when there's no cached data to show.
