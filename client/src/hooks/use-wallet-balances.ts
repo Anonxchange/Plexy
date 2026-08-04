@@ -118,6 +118,8 @@ const NATIVE_SYMBOL: Record<string, string> = {
   POLYGON: 'POL',
   ARBITRUM: 'ETH',
   OPTIMISM: 'ETH',
+  BASE: 'ETH',
+  AVAX: 'AVAX',
   SOL: 'SOL',
   TRX: 'TRX',
 };
