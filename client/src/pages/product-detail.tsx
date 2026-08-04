@@ -1028,14 +1028,31 @@ export function ProductDetail() {
         {relatedProducts.length > 0 && (
           <div className="mt-16 space-y-6">
             <h2 className="text-xl font-bold">You may also like</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-3 gap-y-5 md:gap-x-4">
-              {relatedProducts.map((related) => (
-                <ShopItemCard
-                  key={related.id}
-                  product={related}
-                  onViewDetails={() => navigate(`/shop/product/${encodeURIComponent(related.id)}`)}
-                />
-              ))}
+            {/* Match the shop's Pinterest-style flow:
+                natural-height images on mobile, regular grid on desktop. */}
+            <div className="flex gap-0.5 -mx-4 lg:grid lg:grid-cols-4 xl:grid-cols-5 lg:gap-4 lg:mx-0">
+              <div className="flex flex-col gap-0.5 flex-1 lg:contents">
+                {relatedProducts
+                  .filter((_, index) => index % 2 === 0)
+                  .map((related) => (
+                    <ShopItemCard
+                      key={related.id}
+                      product={related}
+                      onViewDetails={() => navigate(`/shop/product/${encodeURIComponent(related.id)}`)}
+                    />
+                  ))}
+              </div>
+              <div className="flex flex-col gap-0.5 flex-1 lg:contents">
+                {relatedProducts
+                  .filter((_, index) => index % 2 === 1)
+                  .map((related) => (
+                    <ShopItemCard
+                      key={related.id}
+                      product={related}
+                      onViewDetails={() => navigate(`/shop/product/${encodeURIComponent(related.id)}`)}
+                    />
+                  ))}
+              </div>
             </div>
           </div>
         )}
