@@ -257,10 +257,11 @@ export async function getOnChainTransactions(userId: string, limit: number = 200
           body: {
             address: target.address,
             chain: target.chain,
-            mode: "transactions",
+            mode: "deposits",
             limit,
           },
         });
+
         if (error) throw new Error(`${target.chain}: ${error.message}`);
 
         const rawTransactions = extractOnChainTransactions(data);
