@@ -608,8 +608,10 @@ export function Shop() {
           sectionIds.has(p.id)
         ) return false;
 
-        const q = searchQuery.toLowerCase();
-        const matchesSearch = !q || p.title.toLowerCase().includes(q) || p.description.toLowerCase().includes(q);
+        const q = searchQuery.trim().toLowerCase();
+        const title = typeof p.title === "string" ? p.title : "";
+        const description = typeof p.description === "string" ? p.description : "";
+        const matchesSearch = !q || title.toLowerCase().includes(q) || description.toLowerCase().includes(q);
 
         let matchesCategory = false;
         if (selectedCategory === "All") {
@@ -618,12 +620,14 @@ export function Shop() {
           const parts = selectedCategory.split(CAT_SEPARATOR);
           if (parts.length <= 2) {
             // Collection or Collection > ProductType — match by category prefix
-            matchesCategory = p.category === selectedCategory || p.category.startsWith(selectedCategory + CAT_SEPARATOR);
+            const category = typeof p.category === "string" ? p.category : "";
+            matchesCategory = category === selectedCategory || category.startsWith(selectedCategory + CAT_SEPARATOR);
           } else {
             // Collection > ProductType > Tag — match category prefix AND tag
             const catPath = parts.slice(0, 2).join(CAT_SEPARATOR);
             const tagFilter = parts[2];
-            matchesCategory = (p.category === catPath || p.category.startsWith(catPath + CAT_SEPARATOR))
+            const category = typeof p.category === "string" ? p.category : "";
+            matchesCategory = (category === catPath || category.startsWith(catPath + CAT_SEPARATOR))
               && Array.isArray(p.tags) && p.tags.includes(tagFilter);
           }
         }
