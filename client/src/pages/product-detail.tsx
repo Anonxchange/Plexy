@@ -44,6 +44,7 @@ import { PexlyFooter } from "@/components/pexly-footer";
 import { CartSheet } from "@/components/shop/CartSheet";
 import { ShippingEstimator } from "@/components/shop/ShippingEstimator";
 import { ReviewSection } from "@/components/shop/ReviewSection";
+import { ShopItemCard } from "@/components/shop/ShopItemCard";
 import type { ShippingInfo } from "@/components/shop/shipping-types";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
@@ -331,7 +332,7 @@ export function ProductDetail() {
             const related = shuffleArray(
               products.filter((edge: any) => edge.node.handle !== decodedId)
             )
-              .slice(0, 4)
+              .slice(0, 6)
               .map((edge: any) => {
                 const rp = edge.node;
                 return {
@@ -371,7 +372,7 @@ export function ProductDetail() {
           applyShopifyProduct(found.node);
 
           const related = shuffleArray(result.products.filter((edge: any) => edge.node.id !== decodedId))
-            .slice(0, 4)
+            .slice(0, 6)
             .map((edge: any) => {
               const rp = edge.node;
               return {
@@ -1027,30 +1028,13 @@ export function ProductDetail() {
         {relatedProducts.length > 0 && (
           <div className="mt-16 space-y-6">
             <h2 className="text-xl font-bold">You may also like</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-3 gap-y-5 md:gap-x-4">
               {relatedProducts.map((related) => (
-                <div
+                <ShopItemCard
                   key={related.id}
-                  className="cursor-pointer group"
-                  onClick={() => navigate(`/shop/product/${encodeURIComponent(related.id)}`)}
-                >
-                  <div className="relative aspect-square rounded-lg overflow-hidden bg-muted mb-2">
-                    <img
-                      src={related.images[0]}
-                      alt={related.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                    />
-                    {related.status === 'sold_out' && (
-                      <Badge variant="destructive" className="absolute top-2 left-2">
-                        Sold out
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-sm font-medium truncate">{related.title}</p>
-                  <p className="text-sm font-bold">
-                    {related.currency} {related.price.toLocaleString()}
-                  </p>
-                </div>
+                  product={related}
+                  onViewDetails={() => navigate(`/shop/product/${encodeURIComponent(related.id)}`)}
+                />
               ))}
             </div>
           </div>
