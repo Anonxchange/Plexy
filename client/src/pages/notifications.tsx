@@ -1,5 +1,5 @@
 import { useHead } from "@unhead/react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,13 +32,12 @@ import {
   markAsRead,
   markAllAsRead,
   getAnnouncements,
-  getDeposits,
-  getWithdrawals,
   subscribeToNotifications,
   type Notification,
   type Announcement,
-  type WalletTx,
 } from "@/lib/notifications-api";
+import type { WalletTransaction } from "@/lib/wallet-api";
+import { useWalletActivity } from "@/hooks/use-wallet-activity";
 import { TransactionDetailSheet, type TxForDetail } from "@/components/wallet/TransactionDetailSheet";
 import { useAuth } from "@/lib/auth-context";
 import { sanitizeImageUrl, sanitizeRichText } from "@/lib/sanitize";
@@ -129,7 +128,7 @@ function formatAmount(amount: number, symbol: string) {
   return `${formatted} ${symbol.toUpperCase()}`;
 }
 
-function TxStatusBadge({ status }: { status: WalletTx["status"] }) {
+function TxStatusBadge({ status }: { status: WalletTransaction["status"] }) {
   if (status === "completed") return (
     <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/15 px-1.5 py-0.5 rounded-full">
       <CheckCircle2 className="h-2.5 w-2.5" /> Completed
@@ -152,7 +151,7 @@ function TxStatusBadge({ status }: { status: WalletTx["status"] }) {
   );
 }
 
-function WalletTxItem({ tx, onNavigate }: { tx: WalletTx; onNavigate: (tx: WalletTx) => void }) {
+function WalletTxItem({ tx, onNavigate }: { tx: WalletTransaction; onNavigate: (tx: WalletTransaction) => void }) {
   const isDeposit = tx.type === "deposit";
   return (
     <button
@@ -384,8 +383,6 @@ export default function NotificationsPage() {
   const supabase = createClient();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [deposits, setDeposits] = useState<WalletTx[]>([]);
-  const [withdrawals, setWithdrawals] = useState<WalletTx[]>([]);
   const [selectedTx, setSelectedTx] = useState<TxForDetail | null>(null);
   const [txSheetOpen, setTxSheetOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("all");
@@ -402,6 +399,19 @@ export default function NotificationsPage() {
   const [randomRewardTasks] = useState<Task[]>(() => pickRandomTasks(4));
 
   const [loading, setLoading] = useState(true);
+  const {
+    data: walletActivity = [],
+    isLoading: walletActivityLoading,
+    error: walletActivityError,
+  } = useWalletActivity();
+  const deposits = useMemo(
+    () => walletActivity.filter((tx) => tx.type === "deposit"),
+    [walletActivity],
+  );
+  const withdrawals = useMemo(
+    () => walletActivity.filter((tx) => tx.type === "withdrawal"),
+    [walletActivity],
+  );
 
   const loadNotifications = useCallback(async () => {
     const data = await getNotifications();
@@ -414,22 +424,10 @@ export default function NotificationsPage() {
     setAnnouncements(data);
   }, []);
 
-  const loadDeposits = useCallback(async () => {
-    const data = await getDeposits();
-    setDeposits(data);
-  }, []);
-
-  const loadWithdrawals = useCallback(async () => {
-    const data = await getWithdrawals();
-    setWithdrawals(data);
-  }, []);
-
   useEffect(() => {
     if (!user) return;
     loadNotifications();
     loadAnnouncements();
-    loadDeposits();
-    loadWithdrawals();
 
     // Sync read announcement IDs from DB so state persists across devices
     supabase
@@ -451,7 +449,7 @@ export default function NotificationsPage() {
     });
 
     return () => unsubscribe();
-  }, [user, loadNotifications, loadAnnouncements, loadDeposits, loadWithdrawals]);
+  }, [user, loadNotifications, loadAnnouncements]);
 
   const handleNotificationClick = async (notification: Notification) => {
     if (!notification.read) {
@@ -474,6 +472,26 @@ export default function NotificationsPage() {
       }
       return;
     }
+
+    // Payment notifications can refer to the same on-chain transaction shown
+    // in Deposits/Withdrawals and Wallet activity. Resolve it from the shared
+    // activity cache so the notification opens the exact same detail sheet.
+    const metadata = notification.metadata as Record<string, unknown> | undefined;
+    const transactionId = typeof metadata?.transactionId === "string"
+      ? metadata.transactionId
+      : null;
+    const transactionHash = typeof metadata?.tx_hash === "string"
+      ? metadata.tx_hash.toLowerCase()
+      : null;
+    const linkedTransaction = walletActivity.find((tx) =>
+      (transactionId && (tx.id === transactionId || tx.reference_id === transactionId)) ||
+      (transactionHash && tx.tx_hash?.toLowerCase() === transactionHash)
+    );
+    if (linkedTransaction) {
+      handleTxClick(linkedTransaction);
+      return;
+    }
+
     if (notification.metadata?.url) {
       const dest = String(notification.metadata.url).trim();
       if (dest.startsWith("/")) navigate(dest);
@@ -497,7 +515,7 @@ export default function NotificationsPage() {
     navigate(`/blog/${announcement.id}`);
   };
 
-  const handleTxClick = (tx: WalletTx) => {
+  const handleTxClick = (tx: WalletTransaction) => {
     setSelectedTx(tx as TxForDetail);
     setTxSheetOpen(true);
   };
@@ -531,6 +549,9 @@ export default function NotificationsPage() {
   const unreadSystem = systemNotifications.filter((n) => !n.read).length + unreadAnnouncements;
   const unreadSecurity = securityNotifications.filter((n) => !n.read).length;
   const unreadAll = allTabNotifications.filter((n) => !n.read).length + unreadAnnouncements;
+  const activityNotifications = walletActivity.filter(
+    (tx) => tx.type === "deposit" || tx.type === "withdrawal",
+  );
 
   const badgeCounts: Record<TabId, number> = {
     all:         unreadAll,
@@ -554,14 +575,19 @@ export default function NotificationsPage() {
       const filteredAnnouncements = unreadOnly
         ? announcements.filter((a) => !readAnnouncementIds.has(a.id))
         : announcements;
+      const filteredActivity = unreadOnly ? [] : activityNotifications;
 
-      if (filteredNotifs.length === 0 && filteredAnnouncements.length === 0) {
+      if (filteredNotifs.length === 0 && filteredAnnouncements.length === 0 && filteredActivity.length === 0) {
         return <EmptyState icon={Bell} title={unreadOnly ? "No unread notifications" : "You're all caught up"} subtitle="New alerts will appear here" />;
       }
 
-      const combined: { type: "notif" | "announcement"; item: Notification | Announcement }[] = [
+      const combined: {
+        type: "notif" | "announcement" | "activity";
+        item: Notification | Announcement | WalletTransaction;
+      }[] = [
         ...filteredAnnouncements.map((a) => ({ type: "announcement" as const, item: a })),
         ...filteredNotifs.map((n) => ({ type: "notif" as const, item: n })),
+        ...filteredActivity.map((tx) => ({ type: "activity" as const, item: tx })),
       ].sort((a, b) => new Date(b.item.created_at).getTime() - new Date(a.item.created_at).getTime());
 
       return combined.map((entry) =>
@@ -571,6 +597,12 @@ export default function NotificationsPage() {
             announcement={entry.item as Announcement}
             isRead={readAnnouncementIds.has(entry.item.id)}
             onClick={handleAnnouncementClick}
+          />
+        ) : entry.type === "activity" ? (
+          <WalletTxItem
+            key={`activity-${entry.item.id}`}
+            tx={entry.item as WalletTransaction}
+            onNavigate={handleTxClick}
           />
         ) : (
           <NotificationItem
@@ -661,6 +693,10 @@ export default function NotificationsPage() {
     }
 
     if (activeTab === "deposits") {
+      if (walletActivityLoading) return <NotificationSkeletonList count={4} />;
+      if (walletActivityError) {
+        return <EmptyState icon={ArrowDownLeft} title="Deposits temporarily unavailable" subtitle="We could not read your on-chain deposit history. Please try again shortly." />;
+      }
       if (deposits.length === 0) {
         return <EmptyState icon={ArrowDownLeft} title="No deposits yet" subtitle="Your crypto deposits will appear here" />;
       }
@@ -670,6 +706,10 @@ export default function NotificationsPage() {
     }
 
     if (activeTab === "withdrawals") {
+      if (walletActivityLoading) return <NotificationSkeletonList count={4} />;
+      if (walletActivityError) {
+        return <EmptyState icon={ArrowUpRight} title="Withdrawals temporarily unavailable" subtitle="We could not read your on-chain wallet history. Please try again shortly." />;
+      }
       if (withdrawals.length === 0) {
         return <EmptyState icon={ArrowUpRight} title="No withdrawals yet" subtitle="Your crypto withdrawals will appear here" />;
       }

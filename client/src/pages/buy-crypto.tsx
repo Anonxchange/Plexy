@@ -1,7 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
-import { supabase } from "@/lib/supabase";
 import { useHead } from "@unhead/react";
 import {
   ChevronDown,
@@ -31,6 +29,7 @@ import { SiApple, SiVisa, SiMastercard, SiPaypal, SiGooglepay, SiApplepay, SiAme
 import { useToast } from "@/hooks/use-toast";
 import { useCdpOnramp } from "@/hooks/use-cdp-onramp";
 import { useCdpOfframp } from "@/hooks/use-cdp-offramp";
+import { useWalletActivity } from "@/hooks/use-wallet-activity";
 import { safeExternalRedirect, COINBASE_PAY_ORIGINS } from "@/lib/sanitize";
 
 const QUICK_AMOUNTS = ["100", "250", "500", "1000"];
@@ -420,22 +419,7 @@ const BuyCryptoPage = () => {
   const cdpOnramp = useCdpOnramp();
   const cdpOfframp = useCdpOfframp();
 
-  const { data: recentTxs = [], isLoading: txLoading } = useQuery<any[]>({
-    queryKey: ["onramp-transactions", user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("wallet_transactions")
-        .select("id, type, crypto_symbol, amount, status, created_at")
-        .eq("user_id", user!.id)
-        .in("type", ["deposit", "withdrawal", "swap"])
-        .order("created_at", { ascending: false })
-        .limit(10);
-      if (error) throw new Error(error.message);
-      return data ?? [];
-    },
-    enabled: !!user,
-    staleTime: 60_000,
-  });
+  const { data: recentTxs = [], isLoading: txLoading } = useWalletActivity();
 
   const cryptoName = crypto === "BTC" ? "Bitcoin" : crypto === "ETH" ? "Ethereum" : crypto === "SOL" ? "Solana" : crypto;
 
@@ -670,7 +654,7 @@ const BuyCryptoPage = () => {
                       <Clock className="w-3 h-3" /> Recent activity
                     </span>
                     {recentTxs.length > 0 && (
-                      <Link href="/wallet">
+                      <Link href="/wallet?tab=activity">
                         <span className="text-primary text-[11px] font-semibold hover:underline">View all</span>
                       </Link>
                     )}
