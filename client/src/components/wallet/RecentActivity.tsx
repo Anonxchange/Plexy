@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useQuery } from "@tanstack/react-query";
 import { format, subDays, subMonths, startOfDay, isAfter } from "date-fns";
 import { TransactionDetailSheet } from "@/components/wallet/TransactionDetailSheet";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface RecentActivityProps {
   type: "activity" | "operations";
@@ -131,12 +132,13 @@ const TransactionIcon = ({ type }: { type: WalletTransaction['type'] }) => {
 };
 
 const ActivityTable = ({
-  isOperations, onDeposit, transactions, isLoading, onRowClick, hasActiveFilters,
+  isOperations, onDeposit, transactions, isLoading, error, onRowClick, hasActiveFilters,
 }: {
   isOperations: boolean;
   onDeposit?: (symbol?: string) => void;
   transactions: WalletTransaction[];
   isLoading: boolean;
+  error?: Error | null;
   onRowClick: (tx: WalletTransaction) => void;
   hasActiveFilters: boolean;
 }) => (
@@ -160,8 +162,25 @@ const ActivityTable = ({
       <TableBody>
         {isLoading ? (
           <TableRow>
-            <TableCell colSpan={isOperations ? 4 : 5} className="py-10 text-center text-muted-foreground">
-              Loading…
+            <TableCell colSpan={isOperations ? 4 : 5} className="py-16 text-center">
+              <LoadingSpinner
+                size={32}
+                color="hsl(var(--primary))"
+                className="mx-auto"
+              />
+            </TableCell>
+          </TableRow>
+        ) : error ? (
+          <TableRow className="hover:bg-transparent border-none">
+            <TableCell colSpan={isOperations ? 4 : 5} className="py-16 text-center">
+              <div className="flex flex-col items-center justify-center gap-2">
+                <p className="text-base font-bold text-muted-foreground">
+                  Activity temporarily unavailable
+                </p>
+                <p className="text-xs text-muted-foreground/60 max-w-[320px] mx-auto">
+                  We could not read the on-chain history for this wallet. Your balance is not affected.
+                </p>
+              </div>
             </TableCell>
           </TableRow>
         ) : transactions.length > 0 ? (
@@ -230,7 +249,7 @@ const ActivityTable = ({
                       ? "No transactions match your current filters. Try adjusting them."
                       : isOperations
                         ? "No results match your current filters. Adjust the filters and try again."
-                        : "You currently have no assets deposited in your wallet"}
+                       : "No on-chain activity has been found for this wallet yet"}
                   </p>
                 </div>
                 {!isOperations && !hasActiveFilters && (
@@ -273,6 +292,7 @@ export function RecentActivity({ type, onDeposit }: RecentActivityProps) {
   const {
     data: allTransactions = [],
     isLoading,
+    error,
   } = useQuery<WalletTransaction[]>({
     queryKey: ["wallet-on-chain-transactions", user?.id],
     enabled: !!user?.id,
@@ -408,6 +428,7 @@ export function RecentActivity({ type, onDeposit }: RecentActivityProps) {
         onDeposit={onDeposit}
         transactions={filteredTransactions}
         isLoading={isLoading}
+        error={error as Error | null}
         onRowClick={handleRowClick}
         hasActiveFilters={hasActiveFilters}
       />
