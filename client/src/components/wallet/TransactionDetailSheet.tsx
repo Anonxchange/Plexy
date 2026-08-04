@@ -14,6 +14,7 @@ export interface TxForDetail {
   tx_hash: string | null;
   from_address: string | null;
   to_address: string | null;
+  confirmations: number | null;
   created_at: string;
 }
 
@@ -90,7 +91,10 @@ export function TransactionDetailSheet({
   const [, setLocation] = useLocation();
   if (!tx) return null;
 
-  const address = tx.type === "deposit" ? tx.to_address : tx.from_address;
+  // Notifications already receive the sender address for deposits. Use that
+  // same value here so the detail sheet does not show a blank address when
+  // the monitor omits the destination field.
+  const address = tx.from_address;
   const addressLabel = tx.type === "deposit" ? "Deposit Address" : "Withdrawal Address";
   const accountLabel = tx.type === "deposit" ? "Deposit Account" : "Withdrawal Account";
   const explorerPath = tx.tx_hash
@@ -127,6 +131,10 @@ export function TransactionDetailSheet({
           <TxDetailRow label="Chain Type" value={tx.crypto_symbol} />
           <TxDetailRow label="Time" value={format(new Date(tx.created_at), "yyyy-MM-dd HH:mm:ss")} />
           <TxDetailRow label={addressLabel} value={address ?? "—"} copiable={!!address} />
+          <TxDetailRow
+            label="Confirmations"
+            value={tx.confirmations == null ? "—" : String(tx.confirmations)}
+          />
           <TxDetailRow label="Transaction Hash" value={tx.tx_hash ?? "—"} copiable={!!tx.tx_hash} />
         </div>
 
