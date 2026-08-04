@@ -1,5 +1,6 @@
 import { nonCustodialWalletManager } from "./non-custodial-wallet";
 import { supabase } from "./supabase";
+import { getWalletMonitorTargets } from "./wallet-chain-monitor";
 
 export interface Wallet {
   id: string;
@@ -30,46 +31,6 @@ export interface WalletTransaction {
   confirmations: number | null;
   created_at: string;
   completed_at: string | null;
-}
-
-export async function recordTransaction(
-  userId: string,
-  walletId: string,
-  type: WalletTransaction['type'],
-  cryptoSymbol: string,
-  amount: number,
-  fee: number = 0,
-  status: WalletTransaction['status'] = 'completed',
-  txHash: string | null = null,
-  fromAddress: string | null = null,
-  toAddress: string | null = null,
-  notes: string | null = null
-): Promise<WalletTransaction> {
-  const { data, error } = await supabase
-    .from('wallet_transactions')
-    .insert({
-      user_id: userId,
-      wallet_id: walletId,
-      type,
-      crypto_symbol: cryptoSymbol,
-      amount,
-      fee,
-      status,
-      tx_hash: txHash,
-      from_address: fromAddress,
-      to_address: toAddress,
-      notes,
-      created_at: new Date().toISOString()
-    })
-    .select()
-    .single();
-
-  if (error) {
-    console.error("[recordTransaction] Error:", error);
-    throw new Error(error.message);
-  }
-
-  return data as WalletTransaction;
 }
 
 function mapChainIdToSymbol(chainId: string): string {
@@ -108,84 +69,125 @@ export async function getWalletBalance(userId: string, cryptoSymbol: string): Pr
   return wallets.find(w => w.crypto_symbol === cryptoSymbol) || null;
 }
 
-export async function getWalletTransactions(userId: string, limit: number = 29): Promise<WalletTransaction[]> {
-  // Resolve wallet addresses directly from Supabase so this works on any
-  // browser — even before the local IndexedDB cache has been populated.
-  const { data: walletRows } = await supabase
-    .from('user_wallets')
-    .select('address')
-    .eq('user_id', userId)
-    .eq('is_active', 'true');
-
-  const addresses = (walletRows ?? []).map((w: any) => w.address).filter(Boolean) as string[];
-
-  if (import.meta.env.DEV) console.log(`[getWalletTransactions] Fetching transactions, address count: ${addresses.length}`);
-
-  let query = supabase
-    .from('wallet_transactions')
-    .select('*');
-
-  if (addresses.length > 0) {
-    // PostgREST or() syntax: values are unquoted plain strings/UUIDs.
-    const addressFilter = addresses.map(addr => `from_address.eq.${addr},to_address.eq.${addr}`).join(',');
-    query = query.or(`user_id.eq.${userId},${addressFilter}`);
-  } else {
-    query = query.eq('user_id', userId);
+function readString(raw: any, ...keys: string[]): string | null {
+  for (const key of keys) {
+    const value = raw?.[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
   }
+  return null;
+}
 
-  const { data, error } = await query
-    .order('created_at', { ascending: false })
-    .limit(limit);
+function readAmount(raw: any): number {
+  const value = raw?.amount ?? raw?.tokenAmount ?? raw?.value_decimal ?? raw?.value;
+  const candidate = typeof value === "object" ? value?.amount ?? value?.value : value;
+  const amount = typeof candidate === "string" && candidate.startsWith("0x")
+    ? parseInt(candidate, 16)
+    : Number(candidate);
+  return Number.isFinite(amount) ? amount : 0;
+}
 
-  if (error) {
-    console.error("[getWalletTransactions] wallet_transactions error:", error);
-    // Throw so React Query callers can show a proper error state.
-    throw new Error(error.message);
+function readDate(raw: any): string {
+  const value = raw?.created_at ?? raw?.createdAt ?? raw?.timestamp ?? raw?.time ?? raw?.block_time;
+  if (typeof value === "number") {
+    return new Date(value < 1_000_000_000_000 ? value * 1000 : value).toISOString();
   }
+  const date = value ? new Date(value) : null;
+  return date && !Number.isNaN(date.getTime()) ? date.toISOString() : new Date().toISOString();
+}
 
-  // Also fetch from pexly_transactions for internal transfers
-  const { data: pexlyData, error: pexlyError } = await supabase
-    .from('pexly_transactions')
-    .select('*')
-    .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-    .order('created_at', { ascending: false })
-    .limit(limit);
+function normalizeOnChainTransaction(
+  raw: any,
+  userId: string,
+  target: { address: string; chain: string },
+): WalletTransaction | null {
+  const hash = readString(raw, "hash", "txHash", "transactionHash", "tx_hash", "signature", "id");
+  if (!hash) return null;
 
-  if (pexlyError) {
-    console.error("[getWalletTransactions] pexly_transactions error:", pexlyError);
-  }
+  const from = readString(raw, "from", "fromAddress", "from_address", "sender");
+  const to = readString(raw, "to", "toAddress", "to_address", "recipient");
+  const sameAddress = (left: string | null, right: string) =>
+    !!left && left.toLowerCase() === right.toLowerCase();
+  const isDeposit = sameAddress(to, target.address) && !sameAddress(from, target.address);
+  const type = isDeposit
+    ? "deposit"
+    : sameAddress(from, target.address)
+      ? "withdrawal"
+      : raw?.type === "swap" ? "swap" : "deposit";
 
-  let transactions = (data ?? []) as WalletTransaction[];
-  
-  if (!pexlyError && pexlyData) {
-    const internalTxs: WalletTransaction[] = pexlyData.map((tx: any) => ({
-      id: tx.id,
-      user_id: userId,
-      wallet_id: 'pexly-internal',
-      type: tx.sender_id === userId ? 'withdrawal' : 'deposit',
-      crypto_symbol: 'USDT', // Pexly internal usually USDT
-      amount: Number(tx.amount),
-      fee: Number(tx.fee),
-      status: tx.status as any,
-      tx_hash: null,
-      from_address: tx.sender_id,
-      to_address: tx.receiver_id,
-      reference_id: tx.id,
-      notes: tx.note,
-      confirmations: 1,
-      created_at: tx.created_at,
-      completed_at: tx.created_at
-    }));
-    transactions = [...transactions, ...internalTxs];
-  }
+  const rawStatus = String(raw?.status ?? "").toLowerCase();
+  const status: WalletTransaction["status"] =
+    rawStatus === "failed" || raw?.success === false
+      ? "failed"
+      : rawStatus === "pending" || raw?.confirmed === false
+        ? "pending"
+        : "completed";
 
-  // Deduplicate and sort
-  const uniqueTxs = Array.from(new Map(transactions.map(item => [item.id, item])).values())
+  const symbol = (
+    readString(raw, "crypto_symbol", "cryptoSymbol", "symbol", "tokenSymbol", "asset") ??
+    (target.chain === "BSC" ? "BNB" : target.chain === "POLYGON" ? "POL" : target.chain)
+  ).toUpperCase();
+
+  return {
+    id: `onchain:${target.chain}:${hash}:${symbol}`,
+    user_id: userId,
+    wallet_id: `onchain:${target.chain}:${target.address}`,
+    type,
+    crypto_symbol: symbol,
+    amount: readAmount(raw),
+    fee: Number(raw?.fee ?? 0) || 0,
+    status,
+    tx_hash: hash,
+    from_address: from,
+    to_address: to,
+    reference_id: hash,
+    notes: "On-chain transaction",
+    confirmations: Number(raw?.confirmations ?? 0) || null,
+    created_at: readDate(raw),
+    completed_at: status === "completed" ? readDate(raw) : null,
+  };
+}
+
+/**
+ * Read wallet activity from the same public-address monitor used for balances.
+ * This intentionally does not query wallet_transactions or pexly_transactions:
+ * in a non-custodial wallet, the chain is the source of truth.
+ */
+export async function getOnChainTransactions(userId: string, limit: number = 200): Promise<WalletTransaction[]> {
+  const targets = await getWalletMonitorTargets(userId);
+  if (targets.length === 0) return [];
+
+  const results = await Promise.all(
+    targets.map(async (target) => {
+      const { data, error } = await supabase.functions.invoke("monitor-deposits", {
+        body: {
+          address: target.address,
+          chain: target.chain,
+          mode: "transactions",
+          limit,
+        },
+      });
+      if (error) throw new Error(`${target.chain}: ${error.message}`);
+
+      const rawTransactions = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.transactions)
+          ? data.transactions
+          : Array.isArray(data?.data?.transactions)
+            ? data.data.transactions
+            : [];
+
+      return rawTransactions
+        .map((raw: any) => normalizeOnChainTransaction(raw, userId, target))
+        .filter((tx: WalletTransaction | null): tx is WalletTransaction => !!tx);
+    }),
+  );
+
+  const unique = new Map<string, WalletTransaction>();
+  results.flat().forEach((tx) => unique.set(tx.id, tx));
+
+  return Array.from(unique.values())
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, limit);
-
-  if (import.meta.env.DEV) console.log(`[getWalletTransactions] Found ${uniqueTxs.length} total transactions`);
-  return uniqueTxs;
 }
 
 export async function sendCrypto(
