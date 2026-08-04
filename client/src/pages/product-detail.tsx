@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import parse from "html-react-parser";
 import { 
-  ChevronLeft, 
+  ArrowLeft,
   ShoppingCart, 
   Star, 
   Package, 
@@ -554,9 +554,15 @@ export function ProductDetail() {
       <div className="container mx-auto pt-3 pb-8 md:py-8 max-w-6xl px-4">
         {/* Top bar — always visible */}
         <div className="flex items-center justify-between mb-6">
-          <Button variant="ghost" onClick={() => navigate("/shop")}>
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Back to Shop
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/shop")}
+            aria-label="Back to shop"
+            title="Back to shop"
+            className="group h-10 w-10 rounded-full border border-border/70 bg-background/90 shadow-sm transition-all hover:-translate-x-0.5 hover:border-primary/40 hover:bg-primary/10 hover:shadow-md"
+          >
+            <ArrowLeft className="h-5 w-5 transition-transform duration-200 group-hover:-translate-x-0.5" />
           </Button>
           <div className="flex items-center gap-1.5">
             <CartSheet />
