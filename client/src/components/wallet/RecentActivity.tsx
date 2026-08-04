@@ -1,12 +1,13 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import {
   ArrowDownLeft, ArrowUpRight, RefreshCw,
   ArrowRight, ChevronDown, Check, X,
 } from '@/lib/icons';
-import { getWalletTransactions, WalletTransaction } from "@/lib/wallet-api";
+import { getOnChainTransactions, WalletTransaction } from "@/lib/wallet-api";
 import { useAuth } from "@/lib/auth-context";
+import { useQuery } from "@tanstack/react-query";
 import { format, subDays, subMonths, startOfDay, isAfter } from "date-fns";
 import { TransactionDetailSheet } from "@/components/wallet/TransactionDetailSheet";
 
@@ -252,8 +253,6 @@ const ActivityTable = ({
 export function RecentActivity({ type, onDeposit }: RecentActivityProps) {
   const isOperations = type === "operations";
   const { user } = useAuth();
-  const [allTransactions, setAllTransactions] = useState<WalletTransaction[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedTx, setSelectedTx] = useState<WalletTransaction | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -262,21 +261,28 @@ export function RecentActivity({ type, onDeposit }: RecentActivityProps) {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDate, setFilterDate] = useState("all");
 
-  useEffect(() => {
-    async function loadTransactions() {
-      if (!user) return;
-      try {
-        setIsLoading(true);
-        const data = await getWalletTransactions(user.id, 200);
-        setAllTransactions(data);
-      } catch (error) {
-        console.error("Failed to load transactions:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    loadTransactions();
-  }, [user]);
+  /**
+   * Keep one shared on-chain history result for both activity tabs.
+   *
+   * This is intentionally stale-while-revalidate:
+   * - fresh for 60 seconds, so switching tabs does not hit the monitor again
+   * - retained for 5 minutes after unmount, so navigating away and back is cheap
+   * - no focus refetch, because wallet balance refreshes already handle the
+   *   explicit realtime/manual refresh path
+   */
+  const {
+    data: allTransactions = [],
+    isLoading,
+  } = useQuery<WalletTransaction[]>({
+    queryKey: ["wallet-on-chain-transactions", user?.id],
+    enabled: !!user?.id,
+    queryFn: () => getOnChainTransactions(user!.id, 200),
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
+    retry: 1,
+  });
 
   const uniqueAssets = useMemo(() => {
     const symbols = [...new Set(allTransactions.map((t) => t.crypto_symbol))].filter(Boolean).sort();
