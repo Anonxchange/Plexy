@@ -1,5 +1,5 @@
 import { nonCustodialWalletManager } from "./non-custodial-wallet";
-import { supabase } from "./supabase";
+import { getSupabase, supabase } from "./supabase";
 import { getWalletMonitorTargets } from "./wallet-chain-monitor";
 
 export interface Wallet {
@@ -87,7 +87,16 @@ function readAmount(raw: any): number {
 }
 
 function readDate(raw: any): string {
-  const value = raw?.created_at ?? raw?.createdAt ?? raw?.timestamp ?? raw?.time ?? raw?.block_time;
+  const value =
+    raw?.created_at ??
+    raw?.createdAt ??
+    raw?.timestamp ??
+    raw?.time ??
+    raw?.block_time ??
+    raw?.blockTime ??
+    raw?.date ??
+    raw?.metadata?.blockTimestamp ??
+    raw?.metadata?.timestamp;
   if (typeof value === "number") {
     return new Date(value < 1_000_000_000_000 ? value * 1000 : value).toISOString();
   }
@@ -95,12 +104,87 @@ function readDate(raw: any): string {
   return date && !Number.isNaN(date.getTime()) ? date.toISOString() : new Date().toISOString();
 }
 
+function extractOnChainTransactions(data: any): any[] {
+  if (Array.isArray(data)) return data;
+  if (!data || typeof data !== "object") return [];
+
+  const candidates = [
+    data.data,
+    data.result,
+    data.transactions,
+    data.activity,
+    data.activities,
+    data.operations,
+    data.history,
+    data.transfers,
+    data.items,
+    data.records,
+    data.results,
+    data.data?.transactions,
+    data.data?.activity,
+    data.data?.activities,
+    data.data?.operations,
+    data.data?.history,
+    data.data?.transfers,
+    data.data?.items,
+    data.data?.records,
+    data.data?.results,
+    data.result?.transactions,
+    data.result?.activity,
+    data.result?.activities,
+    data.result?.operations,
+    data.result?.history,
+    data.result?.transfers,
+    data.result?.items,
+    data.result?.records,
+    data.result?.results,
+  ];
+
+  const list = candidates.find(Array.isArray);
+  if (list) return list;
+
+  for (const key of ["data", "result", "payload", "response"]) {
+    const nested = data[key];
+    if (nested && nested !== data) {
+      const extracted = extractOnChainTransactions(nested);
+      if (extracted.length > 0) return extracted;
+    }
+  }
+
+  // Some monitor responses return one transaction directly rather than
+  // wrapping it in an array.
+  const hasTransactionIdentity = [
+    "hash",
+    "txid",
+    "txId",
+    "txHash",
+    "transactionHash",
+    "tx_hash",
+    "signature",
+    "transaction_id",
+    "transactionId",
+  ].some((key) => typeof data[key] === "string" && data[key].trim());
+  return hasTransactionIdentity ? [data] : [];
+}
+
 function normalizeOnChainTransaction(
   raw: any,
   userId: string,
   target: { address: string; chain: string },
 ): WalletTransaction | null {
-  const hash = readString(raw, "hash", "txHash", "transactionHash", "tx_hash", "signature", "id");
+  const hash = readString(
+    raw,
+    "hash",
+    "txid",
+    "txId",
+    "txHash",
+    "transactionHash",
+    "tx_hash",
+    "signature",
+    "transaction_id",
+    "transactionId",
+    "id",
+  );
   if (!hash) return null;
 
   const from = readString(raw, "from", "fromAddress", "from_address", "sender");
@@ -158,34 +242,45 @@ function normalizeOnChainTransaction(
  * in a non-custodial wallet, the chain is the source of truth.
  */
 export async function getOnChainTransactions(userId: string, limit: number = 200): Promise<WalletTransaction[]> {
+  // Use the same awaited client initialization as balance reads. The lazy
+  // `supabase` proxy can otherwise be hit before the browser client is ready,
+  // which makes activity silently look empty on a fresh/mobile load.
+  const client = await getSupabase();
   const targets = await getWalletMonitorTargets(userId);
   if (targets.length === 0) return [];
 
+  let failedTargets = 0;
   const results = await Promise.all(
     targets.map(async (target) => {
-      const { data, error } = await supabase.functions.invoke("monitor-deposits", {
-        body: {
-          address: target.address,
-          chain: target.chain,
-          mode: "transactions",
-          limit,
-        },
-      });
-      if (error) throw new Error(`${target.chain}: ${error.message}`);
+      try {
+        const { data, error } = await client.functions.invoke("monitor-deposits", {
+          body: {
+            address: target.address,
+            chain: target.chain,
+            mode: "transactions",
+            limit,
+          },
+        });
+        if (error) throw new Error(`${target.chain}: ${error.message}`);
 
-      const rawTransactions = Array.isArray(data)
-        ? data
-        : Array.isArray(data?.transactions)
-          ? data.transactions
-          : Array.isArray(data?.data?.transactions)
-            ? data.data.transactions
-            : [];
+        const rawTransactions = extractOnChainTransactions(data);
 
-      return rawTransactions
-        .map((raw: any) => normalizeOnChainTransaction(raw, userId, target))
-        .filter((tx: WalletTransaction | null): tx is WalletTransaction => !!tx);
+        return rawTransactions
+          .map((raw: any) => normalizeOnChainTransaction(raw, userId, target))
+          .filter((tx: WalletTransaction | null): tx is WalletTransaction => !!tx);
+      } catch (error) {
+        failedTargets += 1;
+        if (import.meta.env.DEV) {
+          console.warn("[wallet-activity] on-chain history read failed:", target.chain, error);
+        }
+        return [];
+      }
     }),
   );
+
+  if (failedTargets === targets.length) {
+    throw new Error("Unable to read on-chain wallet activity");
+  }
 
   const unique = new Map<string, WalletTransaction>();
   results.flat().forEach((tx) => unique.set(tx.id, tx));
