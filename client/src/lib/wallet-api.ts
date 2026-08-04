@@ -124,7 +124,12 @@ function normalizeOnChainTransaction(
 
   const symbol = (
     readString(raw, "crypto_symbol", "cryptoSymbol", "symbol", "tokenSymbol", "asset") ??
-    (target.chain === "BSC" ? "BNB" : target.chain === "POLYGON" ? "POL" : target.chain)
+    (
+      target.chain === "BSC" ? "BNB" :
+      target.chain === "POLYGON" ? "POL" :
+      target.chain === "BASE" || target.chain === "ARBITRUM" || target.chain === "OPTIMISM" ? "ETH" :
+      target.chain
+    )
   ).toUpperCase();
 
   return {
