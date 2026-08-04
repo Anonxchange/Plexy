@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
+import { resolveWalletChain } from '@/lib/wallet-chain-monitor';
 
 /* =========================================
    TYPES
@@ -108,53 +109,6 @@ export function requestWalletRefresh(): void {
    request that is guaranteed to 400.
 ========================================= */
 
-function resolveChain(chainId: string): {
-  chain: string;
-  isToken: boolean;
-  tokenSymbol?: string;
-  supported: boolean;
-} {
-  const id = String(chainId ?? '').trim().toLowerCase();
-
-  if (id.startsWith('usdt-') || id.startsWith('usdc-')) {
-    const rest = id.replace(/^usdt-|^usdc-/, '');
-    const tokenSymbol = id.startsWith('usdt-') ? 'USDT' : 'USDC';
-    const baseChain = resolveChain(rest);
-    return { chain: baseChain.chain, isToken: true, tokenSymbol, supported: baseChain.supported };
-  }
-
-  // Bitcoin — Tatum indexer + public Esplora fallbacks (no Alchemy UTXO plan needed).
-  // Covers legacy / segwit / native-segwit / taproot chain_id spellings.
-  if (
-    id.includes('bitcoin') ||
-    id.includes('segwit') ||
-    id.includes('taproot') ||
-    id.includes('bech32') ||
-    id === 'btc' ||
-    id === 'p2pkh' ||
-    id === 'p2sh' ||
-    id === 'p2wpkh' ||
-    id === 'p2tr'
-  ) {
-    return { chain: 'BTC', isToken: false, supported: true };
-  }
-
-  // XRP Ledger — public rippled JSON-RPC nodes (Tatum has no XRP support here).
-  if (id.includes('xrpl') || id.includes('xrp') || id.includes('ripple')) {
-    return { chain: 'XRP', isToken: false, supported: true };
-  }
-
-  if (id.includes('ethereum') || id.includes('erc-20') || id.includes('erc20') || id === 'eth') return { chain: 'ETH', isToken: false, supported: true };
-  if (id.includes('binance') || id.includes('bep-20') || id.includes('bep20') || id === 'bsc' || id === 'bnb') return { chain: 'BSC', isToken: false, supported: true };
-  if (id.includes('solana') || id.includes('spl') || id === 'sol') return { chain: 'SOL', isToken: false, supported: true };
-  if (id.includes('tron') || id.includes('trc-20') || id.includes('trc20') || id === 'trx') return { chain: 'TRX', isToken: false, supported: true };
-  if (id.includes('polygon') || id === 'matic' || id === 'pol') return { chain: 'POLYGON', isToken: false, supported: true };
-  if (id.includes('arbitrum') || id === 'arb') return { chain: 'ARBITRUM', isToken: false, supported: true };
-  if (id.includes('optimism') || id === 'op') return { chain: 'OPTIMISM', isToken: false, supported: true };
-
-  return { chain: String(chainId ?? '').toUpperCase(), isToken: false, supported: false };
-}
-
 /** Native symbol fallback when the edge function response is unusable. */
 const NATIVE_SYMBOL: Record<string, string> = {
   BTC: 'BTC',
@@ -243,7 +197,7 @@ export async function getUserWallets(
   const tokenWallets: { id: string; chainId: string; address: string; tokenSymbol: string; resolvedChain: string }[] = [];
 
   for (const w of dbWallets) {
-    const resolved = resolveChain(w.chain_id);
+    const resolved = resolveWalletChain(w.chain_id);
     const address = String(w.address ?? '').trim();
 
     // A row with no usable address can never be read on-chain.
