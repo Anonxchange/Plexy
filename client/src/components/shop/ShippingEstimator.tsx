@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { MapPin, Truck, Clock, CreditCard, ShoppingCart, Loader2, Package, AlertCircle } from '@/lib/icons';
+import { MapPin, Truck, Clock, CreditCard, ShoppingCart, Loader2, Package, AlertCircle, CheckCircle2 } from '@/lib/icons';
 import { formatPrice } from "@/lib/shopify-service";
 import { getCountryCode } from "@/lib/geo";
 import { useCart } from "@/hooks/use-shopify-cart";
@@ -275,13 +275,20 @@ export function ShippingEstimator({
   };
 
   return (
-    <div className="rounded-2xl border border-border/70 bg-card/60 overflow-hidden space-y-0">
+    <div className="rounded-2xl border border-border/70 bg-card overflow-hidden space-y-0 shadow-sm">
       {/* Header */}
-      <div className="px-4 pt-4 pb-3 flex items-center gap-2">
-        <Truck className="h-4 w-4 text-primary" />
-        <p className="text-sm font-semibold">Shipping Estimator</p>
+      <div className="px-4 pt-4 pb-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
+            <Truck className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold">Delivery &amp; shipping</p>
+            <p className="text-xs text-muted-foreground">Reliable delivery estimates for your order</p>
+          </div>
+        </div>
         {useLiveRates && (
-          <span className="ml-auto text-xs text-muted-foreground bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+          <span className="text-xs text-primary bg-primary/10 px-2 py-1 rounded-full font-medium whitespace-nowrap">
             Live rates
           </span>
         )}
@@ -289,16 +296,16 @@ export function ShippingEstimator({
 
       <Separator />
 
-      {/* Selectors */}
+      {/* Destination */}
       <div className="p-4 space-y-3">
         {/* Country */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-            <MapPin className="h-3.5 w-3.5" />
+        <div className="flex items-center justify-between gap-3">
+          <label className="text-sm font-semibold flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-primary" />
             Ship to
           </label>
           <Select value={selectedCountry} onValueChange={handleCountryChange}>
-            <SelectTrigger className="w-full h-10 text-sm">
+            <SelectTrigger className="w-[min(13rem,60%)] h-10 text-sm">
               <SelectValue placeholder="Select country" />
             </SelectTrigger>
             <SelectContent className="max-h-64">
@@ -313,17 +320,17 @@ export function ShippingEstimator({
 
         {/* Shipping Method */}
         {isLoadingRates ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground py-1">
+          <div className="flex items-center gap-2 rounded-xl bg-muted/50 px-3 py-2.5 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             Fetching shipping rates…
           </div>
         ) : ratesError && isValidCjVid(cjVid) ? (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground py-1">
+          <div className="flex items-center gap-2 rounded-xl bg-muted/50 px-3 py-2.5 text-xs text-muted-foreground">
             <AlertCircle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
             <span>Could not load live rates. Showing estimated data.</span>
           </div>
         ) : !isValidCjVid(cjVid) && parsed.methods.length === 1 && parsed.methods[0] === "Standard Shipping" && !parsed.fees[0] ? (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground py-1">
+          <div className="flex items-center gap-2 rounded-xl bg-muted/50 px-3 py-2.5 text-xs text-muted-foreground">
             <AlertCircle className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
             <span>Shipping estimate not available for this product.</span>
           </div>
@@ -362,36 +369,50 @@ export function ShippingEstimator({
 
       <Separator />
 
-      {/* Estimate breakdown */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border/60">
-        <div className="p-4 space-y-1">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-            <Package className="h-3.5 w-3.5" />
-            Ships from
+      {/* Delivery highlight — keep the complete estimate visible at a glance */}
+      <div className="mx-4 my-4 rounded-xl border border-emerald-200/70 bg-emerald-50/70 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/15">
+            <Truck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <p className="text-sm font-semibold">{parsed.shipsFrom}</p>
-        </div>
-        <div className="p-4 space-y-1">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-            <Clock className="h-3.5 w-3.5" />
-            Est. processing
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+              <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">Estimated delivery</p>
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            {isLoadingRates ? (
+              <div className="mt-2 h-7 w-32 rounded bg-emerald-200/70 animate-pulse dark:bg-emerald-900/60" />
+            ) : (
+              <p className="mt-1 text-xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100">
+                {deliveryTime}
+              </p>
+            )}
+            {selectedCountryName && (
+              <p className="mt-0.5 text-xs text-emerald-800/80 dark:text-emerald-300/80">
+                Delivered to {selectedCountryName}
+              </p>
+            )}
           </div>
-          <p className="text-sm font-semibold">{processingTime}</p>
         </div>
-        <div className="p-4 space-y-1">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-            <Truck className="h-3.5 w-3.5" />
-            Est. delivery
+        <div className="mt-4 grid grid-cols-1 gap-3 border-t border-emerald-200/70 pt-3 text-sm dark:border-emerald-900/60 sm:grid-cols-2">
+          <div className="flex items-start gap-2">
+            <Clock className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-400" />
+            <div>
+              <p className="text-xs text-emerald-800/70 dark:text-emerald-300/70">Est. processing</p>
+              <p className="font-semibold text-emerald-950 dark:text-emerald-100">{processingTime}</p>
+            </div>
           </div>
-          {isLoadingRates ? (
-            <div className="h-5 w-24 bg-muted animate-pulse rounded" />
-          ) : (
-            <p className="text-sm font-semibold">{deliveryTime}</p>
-          )}
-          {selectedCountryName && (
-            <p className="text-xs text-muted-foreground">to {selectedCountryName}</p>
-          )}
+          <div className="flex items-start gap-2">
+            <Package className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-400" />
+            <div>
+              <p className="text-xs text-emerald-800/70 dark:text-emerald-300/70">Ships from</p>
+              <p className="font-semibold text-emerald-950 dark:text-emerald-100">{parsed.shipsFrom}</p>
+            </div>
+          </div>
         </div>
+        <p className="mt-3 text-xs text-emerald-800/80 dark:text-emerald-300/80">
+          Delivery days are confirmed with the available shipping option at checkout.
+        </p>
       </div>
 
       <Separator />
