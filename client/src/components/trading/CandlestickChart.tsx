@@ -13,6 +13,7 @@ import {
 import { useTheme } from "@/components/theme-provider";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useQuery } from "@tanstack/react-query";
 import { asterMarket } from "@/lib/asterdex-service";
 import { useAuth } from "@/lib/auth-context";
@@ -948,11 +949,7 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
 
           {!loaded && view === "chart" && (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-background pointer-events-none">
-              <div className="animate-pulse">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
-                  <path d="M13 2L4.5 13.5H11.5L10 22L20 9.5H13.5L13 2Z" fill="hsl(var(--primary))" />
-                </svg>
-              </div>
+              <LoadingSpinner size={40} color="hsl(var(--primary))" />
             </div>
           )}
           {/* Orders overlay */}
