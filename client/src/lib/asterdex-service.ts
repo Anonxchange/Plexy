@@ -97,6 +97,15 @@ export interface DepositAddress {
   network: string;
 }
 
+// The edge function's public deposit-address branch returns ONLY these three
+// fields ({ address, coin, network }) — it never proxies Binance's richer
+// DepositAddress shape. Use this type for asterWallet.depositAddress results.
+export interface AsterDepositAddress {
+  address: string;
+  coin?: string;
+  network?: string;
+}
+
 export interface DepositRecord {
   amount: string;
   coin: string;
@@ -132,9 +141,9 @@ export interface CoinInfo {
   }[];
   // On-chain metadata returned by the chain-assets endpoint.
   // Present for coins fetched via asterGetChainAssets; absent for the fallback list.
-  contractAddress?: string;
-  decimals?: number;
-  isNative?: boolean;
+  contractAddress?: string | undefined;
+  decimals?: number | undefined;
+  isNative?: boolean | undefined;
 }
 
 // ── AsterDEX public REST API base URLs ─────────────────
@@ -185,28 +194,42 @@ async function futuresFetch(path: string, params: Record<string, string> = {}) {
 }
 
 // ── Supabase edge function proxy (authenticated trading only) ──
-async function invoke(action: string, params: Record<string, string | undefined> = {}, auth = false) {
-  const cleanParams = Object.fromEntries(
-    Object.entries(params).filter(([, v]) => v !== undefined && v !== null)
-  ) as Record<string, string>;
+// The edge function's toStringParams() accepts string | number | boolean and
+// THROWS on any other type, so keep the value union in sync with it.
+// Empty strings are stripped too: normalizeV3Params drops '' before signing,
+// so sending them would make our local payload differ from the signed one.
+type InvokeValue = string | number | boolean | undefined | null;
 
-  const options: any = { body: { action, ...cleanParams } };
+async function invoke(
+  action: string,
+  params: Record<string, InvokeValue> = {},
+  auth = false,
+) {
+  const cleanParams = Object.fromEntries(
+    Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== ''),
+  );
+
+  const options: Record<string, unknown> = { body: { action, ...cleanParams } };
 
   if (auth) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) throw new Error('Authentication required. Please sign in.');
-    options.headers = { Authorization: `Bearer ${session.access_token}` };
+    options['headers'] = { Authorization: `Bearer ${session.access_token}` };
   }
 
-  const { data, error } = await supabase.functions.invoke('asterdex', options);
+  const { data, error } = await supabase.functions.invoke('asterdex', options as never);
 
   if (error) {
     let message = error.message || 'AsterDEX request failed';
     try {
-      const body = await (error as any).context?.json?.();
+      // FunctionsHttpError carries the raw Response on `context`. Clone it so
+      // callers that inspect the error later still get a readable body.
+      const ctx = (error as unknown as { context?: Response }).context;
+      const body = ctx && typeof ctx.clone === 'function' ? await ctx.clone().json() : null;
       if (body?.error) message = body.error;
       else if (body?.msg) message = body.msg;
-    } catch {}
+      else if (body?.detail) message = body.detail;
+    } catch { /* upstream returned a non-JSON body */ }
     throw new Error(message);
   }
   if (data?.code && data.code < 0) throw new Error(data.msg || `AsterDEX error ${data.code}`);
@@ -261,16 +284,19 @@ export const asterMarket = {
 };
 
 // ── Authenticated Trading ──────────────────────────────
+// Every action name below exists in BOTH V3_ACTIONS and V1_ACTIONS in the edge
+// function, so these calls work whether the user has a V3 agent or legacy HMAC
+// keys. The edge picks the version — never send version-specific paths here.
 
 export const asterTrading = {
   // Spot
   spotAccount: () => invoke('spot_account', {}, true),
 
   spotOpenOrders: (symbol?: string) =>
-    invoke('spot_open_orders', symbol ? { symbol } : {}, true),
+    invoke('spot_open_orders', { symbol }, true),
 
-  spotAllOrders: (symbol: string) =>
-    invoke('spot_all_orders', { symbol }, true),
+  spotAllOrders: (symbol: string, limit?: string) =>
+    invoke('spot_all_orders', { symbol, limit }, true),
 
   spotPlaceOrder: (params: {
     symbol: string;
@@ -285,22 +311,30 @@ export const asterTrading = {
     return invoke('spot_order', {
       ...params,
       timeInForce: needsTimeInForce ? (params.timeInForce || 'GTC') : undefined,
-    } as any, true);
+    }, true);
   },
 
   spotCancelOrder: (symbol: string, orderId: string) =>
     invoke('spot_cancel_order', { symbol, orderId }, true),
 
+  // Edge maps this to /api/v{1,3}/userTrades — /api/v1/myTrades does not exist.
   spotMyTrades: (symbol: string) =>
     invoke('spot_my_trades', { symbol }, true),
 
   // Futures
+  // NOTE: on V3 the edge resolves futures_account to
+  // /fapi/v3/accountWithJoinMargin (there is no /fapi/v3/account), and on V1 to
+  // /fapi/v4/account. Response shapes differ slightly — read defensively.
   futuresAccount: () => invoke('futures_account', {}, true),
   futuresBalance: () => invoke('futures_balance', {}, true),
   futuresPositions: () => invoke('futures_positions', {}, true),
 
   futuresOpenOrders: (symbol?: string) =>
-    invoke('futures_open_orders', symbol ? { symbol } : {}, true),
+    invoke('futures_open_orders', { symbol }, true),
+
+  // Present in both endpoint maps but previously unused by the frontend.
+  futuresAllOrders: (symbol: string, limit?: string) =>
+    invoke('futures_all_orders', { symbol, limit }, true),
 
   futuresPlaceOrder: (params: {
     symbol: string;
@@ -318,7 +352,7 @@ export const asterTrading = {
       ...params,
       positionSide: params.positionSide || 'BOTH',
       timeInForce: needsTimeInForce ? (params.timeInForce || 'GTC') : undefined,
-    } as any, true);
+    }, true);
   },
 
   futuresCancelOrder: (symbol: string, orderId: string) =>
@@ -334,7 +368,7 @@ export const asterTrading = {
     invoke('futures_my_trades', { symbol }, true),
 
   futuresIncome: (params?: { symbol?: string; incomeType?: string; limit?: string }) =>
-    invoke('futures_income', params as any || {}, true),
+    invoke('futures_income', { ...(params ?? {}) }, true),
 };
 
 // ── Deposit & Withdraw ─────────────────────────────────
@@ -448,7 +482,7 @@ export async function asterGetNonce(address: string): Promise<string> {
   const text = await res.text();
   if (!res.ok) {
     let msg = 'Failed to get nonce';
-    try { msg = JSON.parse(text).msg ?? msg; } catch {}
+    try { msg = JSON.parse(text).msg ?? msg; } catch { /* plain-text error */ }
     throw new Error(msg);
   }
   return text.trim();
@@ -482,9 +516,13 @@ export async function asterCreateApiKey(
 // V3 uses EIP-712 signed requests instead of HMAC. Authentication requires:
 //   user       = the user's main EVM wallet address
 //   signer     = a dedicated API signer wallet address (registered with AsterDEX)
-//   signerKey  = the private key of the signer wallet (stored in Supabase user_metadata)
+//   signerKey  = the private key of the signer wallet
 //
-// The signer keypair is generated locally and registered by calling /api/v3/createApiKey.
+// IMPORTANT: the edge function loads these from the service-role-only
+// `aster_credentials` table (columns: user_id, aster_user, signer, signer_key,
+// api_key, api_secret) and treats auth user_metadata as a read-only legacy
+// fallback. After registering, persist credentials into that table — do NOT
+// write them with supabase.auth.updateUser().
 
 // Derive an EVM address from a secp256k1 private key (EIP-55 checksum).
 function deriveEvmAddress(privateKey: Uint8Array): string {
@@ -494,7 +532,7 @@ function deriveEvmAddress(privateKey: Uint8Array): string {
   // EIP-55 checksum
   const hash = keccak_256(new TextEncoder().encode(hexAddr));
   const checksum = hexAddr.split('').map((c, i) =>
-    (hash[Math.floor(i / 2)] >> (4 - (i % 2) * 4) & 0xf) >= 8 ? c.toUpperCase() : c
+    ((hash[Math.floor(i / 2)] ?? 0) >> (4 - (i % 2) * 4) & 0xf) >= 8 ? c.toUpperCase() : c
   ).join('');
   return '0x' + checksum;
 }
@@ -505,6 +543,30 @@ export function asterGenerateSignerWallet(): { address: string; privateKey: stri
   const address = deriveEvmAddress(privKey);
   const privateKey = '0x' + Array.from(privKey).map(b => b.toString(16).padStart(2, '0')).join('');
   return { address, privateKey };
+}
+
+/**
+ * Derive the user's MAIN wallet secp256k1 key from their mnemonic
+ * (BIP-44 EVM path m/44'/60'/0'/0/<index>).
+ *
+ * Needed because V3 withdrawals require a userSignature produced by the MAIN
+ * wallet — the agent/signer key only authorises the request envelope.
+ * CALLER must wipe the returned key (`key.fill(0)`) once finished.
+ */
+export async function asterDeriveMainKey(mnemonic: string, index = 0): Promise<Uint8Array> {
+  const seed = await mnemonicToSeed(mnemonic);
+  const node = HDKey.fromMasterSeed(seed).derive(`m/44'/60'/0'/0/${index}`);
+  if (!node.privateKey) throw new Error('Failed to derive main wallet key');
+  return node.privateKey;
+}
+
+/** Sign an EIP-712 digest with a raw secp256k1 key → 0x + r + s + v (65 bytes). */
+export async function asterSignHash(hash: Uint8Array, privKey: Uint8Array): Promise<string> {
+  const sigBytes = await secp.signAsync(hash, privKey, { lowS: true, format: 'recovered', prehash: false } as never);
+  return '0x'
+    + bytesToHex(sigBytes.slice(1, 33))
+    + bytesToHex(sigBytes.slice(33, 65))
+    + ((sigBytes[0] ?? 0) + 27).toString(16).padStart(2, '0');
 }
 
 // V3 version of getNonce — uses /api/v3/getNonce
@@ -521,7 +583,7 @@ export async function asterGetNonceV3(
   const text = await res.text();
   if (!res.ok) {
     let msg = 'Failed to get nonce';
-    try { msg = JSON.parse(text).msg ?? msg; } catch {}
+    try { msg = JSON.parse(text).msg ?? msg; } catch { /* plain-text error */ }
     throw new Error(msg);
   }
   // Server may return plain-text nonce OR JSON { code: 0, data: "nonce_value" }
@@ -529,7 +591,7 @@ export async function asterGetNonceV3(
     const json = JSON.parse(text);
     if (json.data !== undefined && json.data !== null) return String(json.data).trim();
     if (json.nonce !== undefined)                      return String(json.nonce).trim();
-  } catch {}
+  } catch { /* plain-text nonce */ }
   return text.trim();
 }
 
@@ -603,13 +665,7 @@ export async function asterCreateApiKeyV3WithKey(
     .map(k => `${k}=${params[k]}`)
     .join('&');
 
-  const hash     = _asterEip712Hash(paramStr);
-  const sigBytes = await secp.signAsync(hash, mainPrivKey, { lowS: true, format: 'recovered', prehash: false } as any);
-  const recovery = sigBytes[0];
-  const signature = '0x'
-    + bytesToHex(sigBytes.slice(1, 33))
-    + bytesToHex(sigBytes.slice(33, 65))
-    + (recovery + 27).toString(16).padStart(2, '0');
+  const signature = await asterSignHash(_asterEip712Hash(paramStr), mainPrivKey);
 
   const body = new URLSearchParams({
     address,
@@ -646,6 +702,11 @@ export async function asterCreateApiKeyV3WithKey(
  * Signed message field order is FIXED per AsterDEX docs — do NOT reorder or sort:
  *   user, nonce, agentName, agentAddress, expired, signatureChainId,
  *   canSpotTrade, canPerpTrade, canWithdraw, ipWhitelist
+ *
+ * NOTE: canWithdraw is false, which is correct — the edge function's V3
+ * withdrawal path signs the request with the agent key but requires a separate
+ * MAIN-wallet `userSignature` to authorise the funds movement
+ * (see asterSignWithdrawal below).
  *
  * CALLER must wipe `mainPrivKey` after all operations complete.
  */
@@ -704,6 +765,8 @@ export async function asterRegisterAndApproveAgent(
 // - EVM chains (ETH/BSC/ARB): shared treasury contract address from ae/deposit-address.
 // - Solana (chainId 101): per-coin program bank address from the deposit/assets endpoint.
 //   Each SPL token has its own bank; native SOL uses the shared solVault address.
+// This is the direct-from-browser variant; asterWallet.depositAddress() does the
+// same lookup through the edge function (which also normalises the response).
 export async function asterGetDepositAddress(
   chainId: number,
   coin?: string,
@@ -750,67 +813,141 @@ export async function asterGetDepositAddress(
   return String(json.data);
 }
 
+/**
+ * Build the MAIN-wallet `userSignature` that the edge function REQUIRES for any
+ * V3 withdrawal. Without it normalizeV3Params throws
+ * "A V3 withdrawal requires a separate main-wallet userSignature", and the
+ * value is validated against /^0x[0-9a-fA-F]{130}$/ (65 bytes: r || s || v).
+ *
+ * The agent/signer key signs the request envelope; THIS signature authorises
+ * moving the funds, which is why the agent is registered with canWithdraw=false.
+ */
+export async function asterSignWithdrawal(
+  signer: (hash: Uint8Array) => Promise<string>,
+  p: {
+    user: string;      // main wallet address
+    asset: string;     // coin symbol, e.g. USDT
+    receiver: string;  // destination address
+    amount: string;
+    chainId: string;
+    fee: string;
+  },
+): Promise<{ userSignature: string; userNonce: string }> {
+  const userNonce = String(Math.trunc(Date.now() * 1000));
+  const params: Record<string, string> = { ...p, userNonce };
+  const paramStr = Object.keys(params).sort().map(k => `${k}=${params[k]}`).join('&');
+  const userSignature = await signer(_asterEip712Hash(paramStr));
+  if (!/^0x[0-9a-fA-F]{130}$/.test(userSignature)) {
+    throw new Error('Withdrawal signature must be a 65-byte hex signature');
+  }
+  return { userSignature, userNonce };
+}
+
 export const asterWallet = {
-  // Spot account deposit address and history
-  depositAddress: (coin: string, network?: string) =>
-    invoke('spot_deposit_address', { coin, ...(network ? { network } : {}) }, true),
+  // ── Public edge actions ──────────────────────────────────────────────
+  // These are in PUBLIC_ACTIONS, so they do NOT need linked AsterDEX
+  // credentials — but the handler still 401s without a Supabase Bearer token,
+  // hence auth = true.
+  //
+  // The edge derives BOTH chainId and the SOL/EVM flag from the raw network
+  // name via chainDetails(), so always pass a human network name
+  // ('BSC' | 'ETH' | 'ARB' | 'SOL' …) and never a pre-resolved chainId.
+  // Omitting network silently falls back to BSC/56.
+  depositAddress: (coin: string, network = 'BSC'): Promise<AsterDepositAddress> =>
+    invoke('spot_deposit_address', { coin, network }, true),
 
-  depositHistory: (coin?: string) =>
-    invoke('spot_deposit_history', coin ? { coin } : {}, true),
+  futuresDepositAddress: (coin: string, network = 'BSC'): Promise<AsterDepositAddress> =>
+    invoke('futures_deposit_address', { coin, network }, true),
 
-  // Futures/Perpetual account deposit address and history
-  futuresDepositAddress: (coin: string, network?: string) =>
-    invoke('futures_deposit_address', { coin, ...(network ? { network } : {}) }, true),
+  // Fee estimate is network-based and the same regardless of account type.
+  withdrawFeeEstimate: (coin: string, network: string) =>
+    invoke('spot_withdraw_fee_estimate', { coin, network }, true),
 
-  futuresDepositHistory: (coin?: string) =>
-    invoke('futures_deposit_history', coin ? { coin } : {}, true),
+  coinInfo: (network = 'BSC') =>
+    invoke('spot_coin_info', { network }, true),
 
-  // Spot account withdraw history
-  withdrawHistory: (coin?: string) =>
-    invoke('spot_withdraw_history', coin ? { coin } : {}, true),
+  // ── History ──────────────────────────────────────────────────────────
+  // Edge renames coin → asset and filters the consolidated
+  // /fapi/v3/aster/deposit-withdraw-history feed by type + accountType.
+  depositHistory: (coin?: string, opts?: { startTime?: string; endTime?: string; limit?: string }) =>
+    invoke('spot_deposit_history', { coin, ...(opts ?? {}) }, true),
 
-  // Futures account withdraw history
-  futuresWithdrawHistory: (coin?: string) =>
-    invoke('futures_withdraw_history', coin ? { coin } : {}, true),
+  withdrawHistory: (coin?: string, opts?: { startTime?: string; endTime?: string; limit?: string }) =>
+    invoke('spot_withdraw_history', { coin, ...(opts ?? {}) }, true),
 
-  // Fee estimate is network-based and the same regardless of account type
-  withdrawFeeEstimate: (coin: string, network: string) => {
-    const chainId = NETWORK_TO_CHAIN_ID[network.toUpperCase()] ?? '56';
-    const networkType = network.toUpperCase() === 'SOL' ? 'SOL' : 'EVM';
-    return invoke('spot_withdraw_fee_estimate', { coin, chainId, network: networkType }, true);
-  },
+  futuresDepositHistory: (coin?: string, opts?: { startTime?: string; endTime?: string; limit?: string }) =>
+    invoke('futures_deposit_history', { coin, ...(opts ?? {}) }, true),
 
-  // Withdraw from Spot account to an external address
-  withdraw: (
-    coin: string,
-    address: string,
-    amount: string,
-    network: string,
-    fee: string,
-  ) => {
-    const chainId = NETWORK_TO_CHAIN_ID[network.toUpperCase()] ?? '56';
-    const nonce = String(Date.now() * 1000);
-    return invoke('spot_withdraw', { coin, address, amount, network, chainId, fee, nonce }, true);
-  },
+  futuresWithdrawHistory: (coin?: string, opts?: { startTime?: string; endTime?: string; limit?: string }) =>
+    invoke('futures_withdraw_history', { coin, ...(opts ?? {}) }, true),
 
-  // Withdraw from Futures/Perpetual account to an external address
-  futuresWithdraw: (
-    coin: string,
-    address: string,
-    amount: string,
-    network: string,
-    fee: string,
-  ) => {
-    const chainId = NETWORK_TO_CHAIN_ID[network.toUpperCase()] ?? '56';
-    const nonce = String(Date.now() * 1000);
-    return invoke('futures_withdraw', { coin, address, amount, network, chainId, fee, nonce }, true);
-  },
+  // ── Withdraw (spot only) ─────────────────────────────────────────────
+  // The edge maps coin → asset and address → receiver, strips network/nonce,
+  // and generates its own monotonic request nonce — so do not send `nonce`.
+  // `userSignature` + `userNonce` come from asterSignWithdrawal().
+  withdraw: (p: {
+    coin: string;
+    address: string;
+    amount: string;
+    network: string;
+    fee: string;
+    userSignature: string;
+    userNonce: string;
+  }) => invoke('spot_withdraw', {
+    coin:          p.coin,
+    address:       p.address,
+    amount:        p.amount,
+    network:       p.network,
+    chainId:       NETWORK_TO_CHAIN_ID[p.network.toUpperCase()] ?? '56',
+    fee:           p.fee,
+    userSignature: p.userSignature,
+    userNonce:     p.userNonce,
+  }, true),
 
-  coinInfo: () => invoke('spot_coin_info', {}, true),
-
+  // ── Transfers ────────────────────────────────────────────────────────
+  // Edge converts type → kindType (SPOT_FUTURE / FUTURE_SPOT) and adds a
+  // clientTranId automatically.
   transfer: (asset: string, amount: string, type: 'SPOT_TO_FUTURES' | 'FUTURES_TO_SPOT') =>
     invoke('spot_transfer', { asset, amount, type }, true),
+
+  transferHistory: (asset?: string, limit?: string) =>
+    invoke('spot_transfer_history', { asset, limit }, true),
 };
+
+/**
+ * There is NO perpetual withdrawal endpoint on AsterDEX — the edge function
+ * rejects `futures_withdraw` unconditionally. Perp balances must be moved to
+ * spot first, then withdrawn. Replaces the old asterWallet.futuresWithdraw().
+ */
+export async function asterWithdrawFromPerp(p: {
+  user: string;
+  coin: string;
+  address: string;
+  amount: string;
+  network: string;
+  fee: string;
+  signer: (hash: Uint8Array) => Promise<string>; // MAIN wallet signer
+}) {
+  await asterWallet.transfer(p.coin, p.amount, 'FUTURES_TO_SPOT');
+  const chainId = NETWORK_TO_CHAIN_ID[p.network.toUpperCase()] ?? '56';
+  const { userSignature, userNonce } = await asterSignWithdrawal(p.signer, {
+    user:     p.user,
+    asset:    p.coin,
+    receiver: p.address,
+    amount:   p.amount,
+    chainId,
+    fee:      p.fee,
+  });
+  return asterWallet.withdraw({
+    coin:    p.coin,
+    address: p.address,
+    amount:  p.amount,
+    network: p.network,
+    fee:     p.fee,
+    userSignature,
+    userNonce,
+  });
+}
 
 // ── V3 Futures Agent Registration ─────────────────────────────────────────────
 // AsterDEX V3 requires TWO separate agent registrations:
@@ -824,6 +961,8 @@ export const asterWallet = {
 //   - Type: Message(string msg), where msg = ASCII-sorted key=value param string
 //     (must include nonce, user, signer)
 //   - Signed with the SIGNER (API wallet) private key — NOT the main wallet.
+//
+// This matches the edge function's eip712Hash() byte-for-byte; keep them in sync.
 
 function _asterEip712Hash(paramStr: string): Uint8Array {
   const enc = new TextEncoder();
@@ -900,55 +1039,49 @@ export async function asterApproveAgentFuturesWithKey(
   userAddress: string,
   signerAddress: string,
 ): Promise<void> {
-    // Fetch a server-issued nonce for the APPROVE_AGENT operation.
-    // AsterDEX validates that the nonce came from their system, so a
-    // self-generated timestamp nonce causes "Signature check failed".
-    const nonce = await asterGetNonceV3(userAddress, 'APPROVE_AGENT');
-    const agentName = `pexly-${nonce}`;
+  // Fetch a server-issued nonce for the APPROVE_AGENT operation.
+  // AsterDEX validates that the nonce came from their system, so a
+  // self-generated timestamp nonce causes "Signature check failed".
+  const nonce = await asterGetNonceV3(userAddress, 'APPROVE_AGENT');
+  const agentName = `pexly-${nonce}`;
 
-    const params: Record<string, string> = {
-      agentAddress: signerAddress,
-      agentName,
-      canPerpTrade: 'true',
-      canSpotTrade: 'false',
-      canWithdraw:  'false',
-      nonce:        nonce.toString(),
-      signer:       signerAddress,
-      user:         userAddress,
-    };
+  const params: Record<string, string> = {
+    agentAddress: signerAddress,
+    agentName,
+    canPerpTrade: 'true',
+    canSpotTrade: 'false',
+    canWithdraw:  'false',
+    nonce:        nonce.toString(),
+    signer:       signerAddress,
+    user:         userAddress,
+  };
 
-    const paramStr = Object.keys(params)
-      .sort()
-      .map(k => `${k}=${params[k]}`)
-      .join('&');
+  const paramStr = Object.keys(params)
+    .sort()
+    .map(k => `${k}=${params[k]}`)
+    .join('&');
 
-    const hash     = _asterEip712Hash(paramStr);
-    const sigBytes = await secp.signAsync(hash, signerPrivKey, { lowS: true, format: 'recovered', prehash: false } as any);
-    const recovery = sigBytes[0];
-    const signature = '0x'
-      + bytesToHex(sigBytes.slice(1, 33))
-      + bytesToHex(sigBytes.slice(33, 65))
-      + (recovery + 27).toString(16).padStart(2, '0');
+  const signature = await asterSignHash(_asterEip712Hash(paramStr), signerPrivKey);
 
-    const body = new URLSearchParams({
-      agentAddress: signerAddress,
-      user:         userAddress,
-      signer:       signerAddress,
-      nonce:        nonce.toString(),
-      signature,
-      agentName,
-      canSpotTrade: 'false',
-      canPerpTrade: 'true',
-      canWithdraw:  'false',
-    });
+  const body = new URLSearchParams({
+    agentAddress: signerAddress,
+    user:         userAddress,
+    signer:       signerAddress,
+    nonce:        nonce.toString(),
+    signature,
+    agentName,
+    canSpotTrade: 'false',
+    canPerpTrade: 'true',
+    canWithdraw:  'false',
+  });
 
-    const res  = await fetch('https://fapi.asterdex.com/fapi/v3/approveAgent', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body:    body.toString(),
-    });
-    const json = await res.json();
-    if (!res.ok || (json.code !== undefined && json.code !== 0 && json.code !== 200)) {
-      throw new Error(json.msg ?? 'Failed to approve futures agent: ' + JSON.stringify(json));
-    }
+  const res  = await fetch('https://fapi.asterdex.com/fapi/v3/approveAgent', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body:    body.toString(),
+  });
+  const json = await res.json();
+  if (!res.ok || (json.code !== undefined && json.code !== 0 && json.code !== 200)) {
+    throw new Error(json.msg ?? 'Failed to approve futures agent: ' + JSON.stringify(json));
+  }
 }
