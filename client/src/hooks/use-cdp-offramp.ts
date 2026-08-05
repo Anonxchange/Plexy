@@ -9,33 +9,32 @@ export function useCdpOfframp() {
     mutationFn: async (params: {
       address: string;
       sellCurrency: string;
-      sellAmount: string;
       fiatCurrency: string;
+      /** One of: BANK_ACCOUNT | ACH_BANK_ACCOUNT | PAYPAL | FIAT_WALLET */
+      cashoutMethod?: string;
     }) => {
       const networkMap: Record<string, string> = {
-        'BTC': 'bitcoin',
-        'ETH': 'ethereum',
-        'SOL': 'solana',
-        'USDC': 'ethereum',
-        'USDT': 'ethereum',
-        'POL': 'polygon',
+        BTC: 'bitcoin',
+        ETH: 'ethereum',
+        SOL: 'solana',
+        USDC: 'ethereum',
+        USDT: 'ethereum',
+        POL: 'polygon',
       };
 
-      const network = networkMap[params.sellCurrency.toUpperCase()] || 'ethereum';
-      
-      const result = await createCDPOfframpSession(
+      const network = networkMap[params.sellCurrency.toUpperCase()] ?? 'ethereum';
+
+      // The edge fn does not accept a sell amount — the user sets that in the
+      // Coinbase offramp UI. Pass undefined for the _sellAmount positional arg.
+      const { offrampUrl } = await createCDPOfframpSession(
         params.address,
         [params.sellCurrency],
-        params.sellAmount,
+        undefined,
         params.fiatCurrency,
-        { network }
+        { network, cashoutMethod: params.cashoutMethod },
       );
-      
-      const offrampUrl = typeof result === 'string' && result.startsWith('http') 
-        ? result 
-        : null;
 
-      return { success: true, offrampUrl, sessionToken: !offrampUrl ? result : null };
+      return { success: true, offrampUrl };
     },
   });
 }

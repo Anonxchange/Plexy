@@ -11,20 +11,17 @@ export function useCdpOnramp() {
       purchaseCurrency?: string;
       paymentAmount?: string;
       paymentCurrency?: string;
+      /** One of: CARD | ACH_BANK_ACCOUNT | APPLE_PAY | FIAT_WALLET */
+      paymentMethod?: string;
     }) => {
-      const result = await createCDPSession(
-        params.address, 
+      const { onrampUrl, sessionToken } = await createCDPSession(
+        params.address,
         params.purchaseCurrency ? [params.purchaseCurrency] : [],
         params.paymentAmount,
-        params.paymentCurrency
+        params.paymentCurrency,
+        { paymentMethod: params.paymentMethod },
       );
-      
-      // result could be the URL directly or a token
-      const onrampUrl = typeof result === 'string' && result.startsWith('http') 
-        ? result 
-        : null;
-
-      return { success: true, onrampUrl, sessionToken: !onrampUrl ? result : null };
+      return { success: true, onrampUrl, sessionToken };
     },
   });
 }
