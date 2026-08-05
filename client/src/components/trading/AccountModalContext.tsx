@@ -5,7 +5,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   asterTrading, asterWallet,
   asterRegisterAndApproveAgent, asterGenerateSignerWallet,
-  asterGetChainAssets, CoinInfo,
+  asterGetChainAssets, asterSignWithdrawal, asterWithdrawFromPerp,
+  CoinInfo,
 } from "@/lib/asterdex-service";
 import { supabase } from "@/lib/supabase";
 import type { NonCustodialWallet } from "@/lib/non-custodial-wallet";
@@ -19,17 +20,61 @@ import {
 } from "./AccountModalConfig";
 import type { AccountModalProps, AccountType } from "./AccountModalConfig";
 
-function formatSendError(value: unknown): string {
-  if (value instanceof Error && value.message) return value.message;
-  if (typeof value === "string" && value.trim()) return value;
+function nativeAssetForNetwork(network: string): string {
+  return network.toUpperCase() === "BSC" ? "BNB" : "ETH";
+}
+
+function formatWeiAmount(raw: string): string {
+  try {
+    const wei = BigInt(raw);
+    const base = 10n ** 18n;
+    const whole = wei / base;
+    const fraction = (wei % base).toString().padStart(18, "0").replace(/0+$/, "");
+    return fraction ? `${whole}.${fraction}` : whole.toString();
+  } catch {
+    return raw;
+  }
+}
+
+function parseEthAmountToWei(raw: string): bigint | null {
+  const normalized = raw.trim();
+  if (!/^\d+(?:\.\d+)?$/.test(normalized)) return null;
+  const [whole, fraction = ""] = normalized.split(".");
+  try {
+    return BigInt(whole) * 10n ** 18n + BigInt(fraction.padEnd(18, "0").slice(0, 18));
+  } catch {
+    return null;
+  }
+}
+
+function formatSendMessage(message: string, network: string, requestedAmount?: string): string {
+  const insufficientFunds = message.match(/insufficient funds for gas \* price \+ value:\s*have\s+(\d+)\s+want\s+(\d+)/i);
+  if (insufficientFunds) {
+    const asset = nativeAssetForNetwork(network);
+    const totalRequiredWei = BigInt(insufficientFunds[2]);
+    let requiredDescription = `${formatWeiAmount(insufficientFunds[2])} ${asset}`;
+    if (requestedAmount) {
+      const requestedWei = parseEthAmountToWei(requestedAmount);
+      if (requestedWei !== null && requestedWei > 0n && requestedWei <= totalRequiredWei) {
+        const feeWei = totalRequiredWei - requestedWei;
+        requiredDescription = `${requestedAmount} ${asset} plus ${formatWeiAmount(feeWei.toString())} ${asset} in network fees`;
+      }
+    }
+    return `Insufficient funds: your wallet has ${formatWeiAmount(insufficientFunds[1])} ${asset}, but this transaction requires ${requiredDescription}.`;
+  }
+  return message.replace(/\s*\(code\s+[-\d]+\)\s*$/i, "").trim();
+}
+
+function formatSendError(value: unknown, network: string, requestedAmount?: string): string {
+  if (value instanceof Error && value.message) return formatSendMessage(value.message, network, requestedAmount);
+  if (typeof value === "string" && value.trim()) return formatSendMessage(value, network, requestedAmount);
   if (value && typeof value === "object") {
     const error = value as Record<string, unknown>;
     const nested = error.error;
-    if (nested && nested !== value) return formatSendError(nested);
+    if (nested && nested !== value) return formatSendError(nested, network, requestedAmount);
     const message = error.message ?? error.msg ?? error.detail ?? error.reason;
     if (typeof message === "string" && message.trim()) {
-      const code = error.code;
-      return code !== undefined ? `${message} (code ${String(code)})` : message;
+      return formatSendMessage(message, network, requestedAmount);
     }
     try { return JSON.stringify(value); } catch { return "Unknown transaction error"; }
   }
@@ -57,8 +102,10 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
   const [showPassword, setShowPassword]       = useState(false);
   const [txHistoryOpen, setTxHistoryOpen]     = useState(false);
   const [txHistoryTab, setTxHistoryTab]       = useState<"deposits" | "withdrawals">("deposits");
-  const [sendPassword, setSendPassword]       = useState("");
-  const [showSendPwd, setShowSendPwd]         = useState(false);
+  const [sendPassword, setSendPassword]         = useState("");
+  const [showSendPwd, setShowSendPwd]           = useState(false);
+  const [withdrawPassword, setWithdrawPassword] = useState("");
+  const [showWithdrawPwd, setShowWithdrawPwd]   = useState(false);
   const [sendLoading, setSendLoading]         = useState(false);
   const [signingStep, setSigningStep]         = useState("");
   const [sendTxHash, setSendTxHash]           = useState<string | null>(null);
@@ -86,6 +133,7 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
       setAmount("");
       setWithdrawAddress("");
       setWalletPassword("");
+      setWithdrawPassword("");
       setCoinOpen(false);
       setChainOpen(false);
       setAccountTypeOpen(false);
@@ -235,8 +283,8 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
   });
 
   const { data: coinInfoData } = useQuery({
-    queryKey: ["coin-info"],
-    queryFn: () => asterWallet.coinInfo(),
+    queryKey: ["coin-info", network],
+    queryFn: () => asterWallet.coinInfo(network),
     enabled: !!user && open && hasV3,
     staleTime: 60_000,
     retry: 1,
@@ -398,12 +446,44 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
   const onWithdrawError = (err: Error) =>
     toast({ title: "Withdrawal failed", description: err.message, variant: "destructive" });
 
-  const spotWithdrawMutation    = useMutation({
-    mutationFn: () => asterWallet.withdraw(coin, withdrawAddress, amount, network, resolvedFee),
+  const spotWithdrawMutation = useMutation({
+    mutationFn: async () => {
+      if (!userEvmWallet) throw new Error("An EVM wallet is required to sign withdrawals on AsterDEX — please create one in Wallet first.");
+      if (!withdrawPassword) throw new Error("Enter your wallet password to sign the withdrawal.");
+      const vault = userEvmWallet.encryptedMnemonic ?? userEvmWallet.encryptedPrivateKey;
+      if (!vault) throw new Error("Wallet data not found. Please recreate your wallet.");
+      const mainUser = user?.user_metadata?.aster_user as string | undefined;
+      if (!mainUser) throw new Error("Wallet not linked to AsterDEX. Please activate on the Deposit tab.");
+      const workerSigner = async (hash: Uint8Array) =>
+        signEVMRawHashFromVault(vault, withdrawPassword, "0x" + bytesToHex(hash));
+      const chainId = String(CHAIN_MAP[network]?.chainId ?? 56);
+      const { userSignature, userNonce } = await asterSignWithdrawal(workerSigner, {
+        user: mainUser, asset: coin, receiver: withdrawAddress,
+        amount, chainId, fee: resolvedFee,
+      });
+      return asterWallet.withdraw({
+        coin, address: withdrawAddress, amount, network,
+        fee: resolvedFee, userSignature, userNonce,
+      });
+    },
     onSuccess: onWithdrawSuccess, onError: onWithdrawError,
   });
+
   const futuresWithdrawMutation = useMutation({
-    mutationFn: () => asterWallet.futuresWithdraw(coin, withdrawAddress, amount, network, resolvedFee),
+    mutationFn: async () => {
+      if (!userEvmWallet) throw new Error("An EVM wallet is required to sign withdrawals on AsterDEX — please create one in Wallet first.");
+      if (!withdrawPassword) throw new Error("Enter your wallet password to sign the withdrawal.");
+      const vault = userEvmWallet.encryptedMnemonic ?? userEvmWallet.encryptedPrivateKey;
+      if (!vault) throw new Error("Wallet data not found. Please recreate your wallet.");
+      const mainUser = user?.user_metadata?.aster_user as string | undefined;
+      if (!mainUser) throw new Error("Wallet not linked to AsterDEX. Please activate on the Deposit tab.");
+      const workerSigner = async (hash: Uint8Array) =>
+        signEVMRawHashFromVault(vault, withdrawPassword, "0x" + bytesToHex(hash));
+      return asterWithdrawFromPerp({
+        user: mainUser, coin, address: withdrawAddress,
+        amount, network, fee: resolvedFee, signer: workerSigner,
+      });
+    },
     onSuccess: onWithdrawSuccess, onError: onWithdrawError,
   });
   const withdrawMutation = isSpot ? spotWithdrawMutation : futuresWithdrawMutation;
@@ -431,7 +511,8 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
 
   const handleTabChange = (tab: "deposit" | "withdraw" | "transfer") => {
     setActiveTab(tab); setAmount(""); setWithdrawAddress("");
-    setCoinOpen(false); setChainOpen(false); setAccountTypeOpen(false); resetSendState();
+    setCoinOpen(false); setChainOpen(false); setAccountTypeOpen(false);
+    resetSendState(); setWithdrawPassword("");
   };
   const handleAccountTypeChange = (type: AccountType) => {
     setAccountType(type); setAccountTypeOpen(false); setAmount(""); resetSendState();
@@ -498,7 +579,7 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
       setSendPassword("");
       toast({ title: "Deposit sent!", description: "Transaction broadcast successfully." });
     } catch (err: any) {
-      const msg = formatSendError(err);
+      const msg = formatSendError(err, network, amount);
       if (/password|decrypt|invalid|corrupted/i.test(msg)) {
         sendRateLimit.recordFailure();
       }
@@ -529,10 +610,12 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
     // Fee/balance
     currentBalance, resolvedFee, resolvedFeeNum, withdrawMin, youReceive, feeLoading,
     spotBalanceFor, futuresAvailFor, headerBalance, spotLoading, futuresLoading,
-    // Send state
+    // Send state (deposit Sign & Send)
     sendRateLimit,
     sendPassword, setSendPassword, showSendPwd, setShowSendPwd,
     sendLoading, sendTxHash, sendTxUrl, sendError, handleSendFromWallet, sendCooldownUntil,
+    // Withdraw signing password
+    withdrawPassword, setWithdrawPassword, showWithdrawPwd, setShowWithdrawPwd,
     // TX history
     txHistoryOpen, setTxHistoryOpen, txHistoryTab, setTxHistoryTab,
     depositHistory, depositHistoryLoading, withdrawHistory, withdrawHistoryLoading,

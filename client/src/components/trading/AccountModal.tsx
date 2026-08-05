@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { X, ClipboardList, Loader2, AlertCircle, Eye, EyeOff } from '@/lib/icons';
@@ -51,7 +50,7 @@ function WithdrawTab() {
     isSpot, coin, currentBalance, amountNum, withdrawMin, resolvedFee,
     feeLoading, selectedNetworkInfo, youReceive, withdrawMutation,
     user, isAsterRegistered, walletLoading, requireAuth, handleTabChange,
-    withdrawAddress,
+    withdrawAddress, withdrawPassword, setWithdrawPassword, showWithdrawPwd, setShowWithdrawPwd,
   } = useAccountModal();
   return (
     <>
@@ -98,11 +97,31 @@ function WithdrawTab() {
           to enable withdrawals.
         </p>
       )}
+      {user && isAsterRegistered && (
+        <div className="relative mb-4">
+          <input
+            type={showWithdrawPwd ? "text" : "password"}
+            placeholder="Wallet password to sign withdrawal"
+            value={withdrawPassword}
+            onChange={e => setWithdrawPassword(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === "Enter" && withdrawPassword && !withdrawMutation.isPending)
+                withdrawMutation.mutate();
+            }}
+            className="w-full bg-background border border-border rounded-lg px-4 py-3 text-sm pr-12 focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+          <button type="button" onClick={() => setShowWithdrawPwd(v => !v)}
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+            {showWithdrawPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
+      )}
       <button
         onClick={() => !user ? requireAuth() : withdrawMutation.mutate()}
         disabled={
           !user || walletLoading || !withdrawAddress || !amountNum || amountNum <= 0 ||
           amountNum > currentBalance || (amountNum < withdrawMin && amountNum > 0) ||
+          (user && isAsterRegistered && !withdrawPassword) ||
           withdrawMutation.isPending
         }
         className="w-full py-3.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
@@ -167,13 +186,13 @@ function TxHistoryDialog() {
             depositHistoryLoading
               ? <div className="flex justify-center py-8"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
               : Array.isArray(depositHistory) && depositHistory.length > 0
-                ? <TxTable rows={depositHistory} />
+                ? <TxTable rows={depositHistory} type="deposit" />
                 : <div className="flex justify-center py-8 text-sm text-muted-foreground">No deposit history</div>
           ) : (
             withdrawHistoryLoading
               ? <div className="flex justify-center py-8"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
               : Array.isArray(withdrawHistory) && withdrawHistory.length > 0
-                ? <TxTable rows={withdrawHistory} />
+                ? <TxTable rows={withdrawHistory} type="withdraw" />
                 : <div className="flex justify-center py-8 text-sm text-muted-foreground">No withdrawal history</div>
           )}
         </div>
@@ -182,7 +201,25 @@ function TxHistoryDialog() {
   );
 }
 
-function TxTable({ rows }: { rows: any[] }) {
+// AsterDEX uses Binance-compatible numeric status codes.
+// Deposit: 0=Pending, 1=Credited (not claimable), 6=Success, 7=Done
+// Withdraw: 0=Email Sent, 1=Cancelled, 2=Awaiting Approval, 3=Rejected, 4=Processing, 5=Failure, 6=Success
+const DEPOSIT_STATUS: Record<number, string> = {
+  0: "Pending", 1: "Credited", 6: "Success", 7: "Done",
+};
+const WITHDRAW_STATUS: Record<number, string> = {
+  0: "Email Sent", 1: "Cancelled", 2: "Awaiting Approval",
+  3: "Rejected", 4: "Processing", 5: "Failed", 6: "Success",
+};
+
+function formatTxStatus(status: unknown, type: "deposit" | "withdraw"): string {
+  if (status === null || status === undefined) return "—";
+  const n = Number(status);
+  const map = type === "deposit" ? DEPOSIT_STATUS : WITHDRAW_STATUS;
+  return (!Number.isNaN(n) && map[n]) ? map[n] : String(status);
+}
+
+function TxTable({ rows, type }: { rows: any[]; type: "deposit" | "withdraw" }) {
   return (
     <table className="w-full text-xs">
       <thead className="sticky top-0 bg-background">
@@ -195,11 +232,11 @@ function TxTable({ rows }: { rows: any[] }) {
       </thead>
       <tbody>
         {rows.slice(0, 50).map((r: any, i: number) => (
-          <tr key={r.id ?? i} className="border-b border-border/50 hover:bg-accent/30">
+          <tr key={r.txId ?? r.id ?? i} className="border-b border-border/50 hover:bg-accent/30">
             <td className="px-4 py-2 font-medium text-foreground">{r.coin ?? r.asset ?? "—"}</td>
             <td className="px-4 py-2 text-right font-mono-num">{r.amount ?? "—"}</td>
-            <td className="px-4 py-2 text-muted-foreground">{r.network ?? r.chain ?? "—"}</td>
-            <td className="px-4 py-2 text-right text-muted-foreground">{r.status ?? "—"}</td>
+            <td className="px-4 py-2 text-muted-foreground">{r.network ?? "—"}</td>
+            <td className="px-4 py-2 text-right text-muted-foreground">{formatTxStatus(r.status, type)}</td>
           </tr>
         ))}
       </tbody>
