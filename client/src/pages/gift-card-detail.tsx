@@ -11,6 +11,7 @@ import {
   ChevronDown,
   ChevronUp,
   Tag,
+  Gift,
 } from '@/lib/icons';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,7 +34,12 @@ import { Separator } from "@/components/ui/separator";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { sanitizeImageUrl } from "@/lib/sanitize";
 import { PexlyFooter } from "@/components/pexly-footer";
-import { useGiftCardProduct, useCreateGiftCardOrder } from "@/hooks/use-reloadly";
+import {
+  useGiftCardProduct,
+  useGiftCardProducts,
+  useCreateGiftCardOrder,
+  type ReloadlyProduct,
+} from "@/hooks/use-reloadly";
 import { toast } from "sonner";
 import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
 import { GiftCardCartSheet } from "@/components/gift-card-cart-sheet";
@@ -98,6 +104,133 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
   );
 }
 
+function RelatedProductCard({
+  product,
+  onSelect,
+}: {
+  product: ReloadlyProduct;
+  onSelect: (id: string) => void;
+}) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const imageUrl = sanitizeImageUrl(product.logoUrls?.[0]);
+  const denominationRange = getGiftCardDenominationRange(product);
+  const priceRange =
+    denominationRange.min != null && denominationRange.max != null
+      ? `${denominationRange.min}–${denominationRange.max} ${product.recipientCurrencyCode}`
+      : `Flexible value · ${product.recipientCurrencyCode}`;
+
+  return (
+    <button
+      type="button"
+      data-testid={`button-related-gift-card-${product.productId}`}
+      aria-label={`View ${product.productName} gift card`}
+      onClick={() => onSelect(String(product.productId))}
+      className="group w-full text-left rounded-2xl border border-border/60 bg-card p-2.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary/50"
+    >
+      <div className="relative aspect-[1.28/1] overflow-hidden rounded-xl border border-border/50 bg-secondary/55">
+        {product.discountPercentage > 0 && (
+          <Badge className="absolute left-2 top-2 z-10 border-none bg-[#B4F22E] px-2 py-0.5 text-[10px] font-bold text-black shadow-sm">
+            Save {product.discountPercentage}%
+          </Badge>
+        )}
+        <div className="flex h-full items-center justify-center p-5">
+          {imageUrl && !imageFailed ? (
+            <img
+              src={imageUrl}
+              alt={product.productName}
+              loading="lazy"
+              decoding="async"
+              onError={() => setImageFailed(true)}
+              className="h-full w-full object-contain transition-transform duration-200 group-hover:scale-105"
+            />
+          ) : (
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <Gift className="h-6 w-6" aria-hidden="true" />
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="px-1 pb-1 pt-3">
+        <p
+          data-testid={`text-related-product-name-${product.productId}`}
+          className="line-clamp-2 min-h-10 text-sm font-semibold leading-snug text-foreground"
+        >
+          {product.productName}
+        </p>
+        <div className="mt-1.5 flex items-center justify-between gap-2">
+          <p className="truncate text-xs text-muted-foreground">{priceRange}</p>
+          {product.country?.isoName && (
+            <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/75">
+              {product.country.isoName}
+            </span>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function RelatedGiftCards({
+  products,
+  isLoading,
+  onSelect,
+}: {
+  products: ReloadlyProduct[];
+  isLoading: boolean;
+  onSelect: (id: string) => void;
+}) {
+  if (!isLoading && products.length === 0) return null;
+
+  return (
+    <section
+      aria-labelledby="related-gift-cards-heading"
+      data-testid="section-related-gift-cards"
+      className="overflow-hidden rounded-2xl border border-border/60 bg-card p-5 sm:p-6"
+    >
+      <div className="mb-5 flex items-end justify-between gap-4">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
+            Keep exploring
+          </p>
+          <h3 id="related-gift-cards-heading" className="mt-1 text-lg font-semibold">
+            You may also like
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            More gift cards selected for this region and category.
+          </p>
+        </div>
+        <div className="hidden h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary sm:flex">
+          <Gift className="h-4 w-4" aria-hidden="true" />
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {[...Array(6)].map((_, index) => (
+            <div key={index} className="rounded-2xl border border-border/50 p-2.5">
+              <div className="aspect-[1.28/1] animate-pulse rounded-xl bg-secondary" />
+              <div className="space-y-2 px-1 pb-1 pt-3">
+                <div className="h-4 w-4/5 animate-pulse rounded bg-secondary" />
+                <div className="h-3 w-1/2 animate-pulse rounded bg-secondary" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {products.map((product) => (
+            <RelatedProductCard
+              key={product.productId}
+              product={product}
+              onSelect={onSelect}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function GiftCardDetail() {
   useHead({
     title: "Gift Card | Pexly",
@@ -117,6 +250,10 @@ export function GiftCardDetail() {
 
   const cardId = params?.id;
   const { data: card, isLoading, error } = useGiftCardProduct(cardId);
+  const {
+    data: relatedProductsData,
+    isLoading: relatedProductsLoading,
+  } = useGiftCardProducts({ page: 1, size: 200 });
   const { mutate: createOrder, isPending: isOrdering } = useCreateGiftCardOrder();
   const { items: cartItems, addToCart, isLoading: isAddingToCart } = useGiftCardCart();
   const cartCount = cartItems.reduce((acc, i) => acc + i.quantity, 0);
@@ -475,7 +612,6 @@ export function GiftCardDetail() {
                     disabled={!isValueValid}
                     className="w-full h-12 text-base font-bold bg-[#B4F22E] text-black hover:opacity-90 rounded-xl shadow-lg shadow-[#B4F22E]/20 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <span role="img" aria-label="gift" className="mr-2">🎁</span>
                     Buy Now
                   </Button>
                   <Button
@@ -543,6 +679,20 @@ export function GiftCardDetail() {
                 ))}
               </div>
             </div>
+
+            <RelatedGiftCards
+              products={(relatedProductsData?.content ?? [])
+                .filter((product) => String(product.productId) !== String(card.productId))
+                .sort((a, b) => {
+                  const score = (product: ReloadlyProduct) =>
+                    (product.category?.id === card.category?.id ? 2 : 0) +
+                    (product.country?.isoName === card.country?.isoName ? 1 : 0);
+                  return score(b) - score(a);
+                })
+                .slice(0, 6)}
+              isLoading={relatedProductsLoading}
+              onSelect={(id) => setLocation(`/gift-cards/${id}`)}
+            />
           </div>
 
         </div>
