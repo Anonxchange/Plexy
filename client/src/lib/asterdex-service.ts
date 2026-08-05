@@ -200,6 +200,23 @@ async function futuresFetch(path: string, params: Record<string, string> = {}) {
 // so sending them would make our local payload differ from the signed one.
 type InvokeValue = string | number | boolean | undefined | null;
 
+function formatAsterError(value: unknown): string {
+  if (value instanceof Error && value.message) return value.message;
+  if (typeof value === 'string' && value.trim()) return value;
+  if (value && typeof value === 'object') {
+    const error = value as Record<string, unknown>;
+    const nested = error.error;
+    if (nested && nested !== value) return formatAsterError(nested);
+    const message = error.message ?? error.msg ?? error.detail ?? error.reason;
+    if (typeof message === 'string' && message.trim()) {
+      const code = error.code;
+      return code !== undefined ? `${message} (code ${String(code)})` : message;
+    }
+    try { return JSON.stringify(value); } catch { return 'Unknown AsterDEX error'; }
+  }
+  return String(value || 'Unknown AsterDEX error');
+}
+
 async function invoke(
   action: string,
   params: Record<string, InvokeValue> = {},
@@ -230,10 +247,10 @@ async function invoke(
       else if (body?.msg) message = body.msg;
       else if (body?.detail) message = body.detail;
     } catch { /* upstream returned a non-JSON body */ }
-    throw new Error(message);
+    throw new Error(formatAsterError(message));
   }
-  if (data?.code && data.code < 0) throw new Error(data.msg || `AsterDEX error ${data.code}`);
-  if (data?.error) throw new Error(data.error);
+  if (data?.code && data.code < 0) throw new Error(formatAsterError(data.msg || data));
+  if (data?.error) throw new Error(formatAsterError(data.error));
   return data;
 }
 

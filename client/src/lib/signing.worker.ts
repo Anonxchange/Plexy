@@ -321,12 +321,31 @@ async function workerGatewayRpc(chain: string, method: string, params: unknown[]
     });
     let data: any;
     try { data = await res.json(); } catch { throw new Error(`Gateway returned non-JSON (HTTP ${res.status})`); }
-    if (!res.ok || data?.error) throw new Error(String(data?.error ?? `Gateway HTTP ${res.status}`));
+    if (!res.ok || data?.error) {
+      throw new Error(formatWorkerRpcError(data?.error ?? data?.message ?? `Gateway HTTP ${res.status}`));
+    }
     // Extract the JSON-RPC result from the {result, jsonrpc, id} envelope
     return data?.result ?? data;
   } finally {
     clearTimeout(t);
   }
+}
+
+function formatWorkerRpcError(value: unknown): string {
+  if (value instanceof Error && value.message) return value.message;
+  if (typeof value === "string" && value.trim()) return value;
+  if (value && typeof value === "object") {
+    const error = value as Record<string, unknown>;
+    const nested = error.error;
+    if (nested && nested !== value) return formatWorkerRpcError(nested);
+    const message = error.message ?? error.msg ?? error.detail ?? error.reason;
+    if (typeof message === "string" && message.trim()) {
+      const code = error.code;
+      return code !== undefined ? `${message} (code ${String(code)})` : message;
+    }
+    try { return JSON.stringify(value); } catch { return "Unknown RPC error"; }
+  }
+  return String(value || "Unknown RPC error");
 }
 
 // ─── RPC response validators ──────────────────────────────────────────────────
@@ -1630,7 +1649,11 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     }
     response = { id: msg.id, ok: true, result };
   } catch (err) {
-    response = { id: msg.id, ok: false, error: err instanceof Error ? err.message : String(err) };
+    response = {
+      id: msg.id,
+      ok: false,
+      error: err instanceof Error ? err.message : formatWorkerRpcError(err),
+    };
   }
   self.postMessage(response);
 };

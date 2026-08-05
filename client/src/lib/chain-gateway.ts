@@ -21,6 +21,27 @@ const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL as string | undefined) ?
 const SUPABASE_ANON_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ?? '';
 const GATEWAY_URL = `${SUPABASE_URL}/functions/v1/chain-gateway`;
 
+function formatGatewayError(value: unknown): string {
+  if (value instanceof Error && value.message) return value.message;
+  if (typeof value === 'string' && value.trim()) return value;
+  if (value && typeof value === 'object') {
+    const error = value as Record<string, unknown>;
+    const nested = error.error;
+    if (nested && nested !== value) return formatGatewayError(nested);
+    const message = error.message ?? error.msg ?? error.detail ?? error.reason;
+    if (typeof message === 'string' && message.trim()) {
+      const code = error.code;
+      return code !== undefined ? `${message} (code ${String(code)})` : message;
+    }
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return 'Unknown gateway error';
+    }
+  }
+  return String(value || 'Unknown gateway error');
+}
+
 // ── Auth ─────────────────────────────────────────────────────────────────────
 
 async function getAuthToken(): Promise<string | null> {
@@ -68,7 +89,7 @@ async function gatewayPost(body: Record<string, unknown>, withAuth = false): Pro
   }
 
   if (!res.ok || data?.error) {
-    throw new Error(String(data?.error ?? `Gateway HTTP ${res.status}`));
+    throw new Error(formatGatewayError(data?.error ?? data?.message ?? `Gateway HTTP ${res.status}`));
   }
 
   return data;
