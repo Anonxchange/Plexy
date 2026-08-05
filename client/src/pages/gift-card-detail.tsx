@@ -133,7 +133,7 @@ function RelatedProductCard({
             Save {product.discountPercentage}%
           </Badge>
         )}
-        <div className="flex h-full items-center justify-center p-5">
+        <div className="flex h-full items-center justify-center p-2">
           {imageUrl && !imageFailed ? (
             <img
               src={imageUrl}
