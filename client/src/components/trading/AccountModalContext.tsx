@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   asterTrading, asterWallet,
   asterRegisterAndApproveAgent, asterGenerateSignerWallet,
-  asterGetDepositAddress, asterGetChainAssets, CoinInfo,
+  asterGetChainAssets, CoinInfo,
 } from "@/lib/asterdex-service";
 import { supabase } from "@/lib/supabase";
 import type { NonCustodialWallet } from "@/lib/non-custodial-wallet";
@@ -18,6 +18,23 @@ import {
   CHAIN_MAP, DEPOSIT_CHAINS, FALLBACK_COINS, asterRegKey,
 } from "./AccountModalConfig";
 import type { AccountModalProps, AccountType } from "./AccountModalConfig";
+
+function formatSendError(value: unknown): string {
+  if (value instanceof Error && value.message) return value.message;
+  if (typeof value === "string" && value.trim()) return value;
+  if (value && typeof value === "object") {
+    const error = value as Record<string, unknown>;
+    const nested = error.error;
+    if (nested && nested !== value) return formatSendError(nested);
+    const message = error.message ?? error.msg ?? error.detail ?? error.reason;
+    if (typeof message === "string" && message.trim()) {
+      const code = error.code;
+      return code !== undefined ? `${message} (code ${String(code)})` : message;
+    }
+    try { return JSON.stringify(value); } catch { return "Unknown transaction error"; }
+  }
+  return String(value || "Unknown transaction error");
+}
 
 // ── Internal hook: all state & logic ─────────────────────
 function useAccountModalValue(props: AccountModalProps & { children?: React.ReactNode }) {
@@ -246,7 +263,9 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
     error: depositError,
   } = useQuery({
     queryKey: ["deposit-address", coin, network, chainAccountType],
-    queryFn: () => asterGetDepositAddress(CHAIN_MAP[network]?.chainId ?? 56, coin, chainAccountType),
+    queryFn: () => isSpot
+      ? asterWallet.depositAddress(coin, network)
+      : asterWallet.futuresDepositAddress(coin, network),
     enabled: !!user && open && activeTab === "deposit" && !!network,
     staleTime: 300_000,
     placeholderData: undefined,
@@ -479,7 +498,7 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
       setSendPassword("");
       toast({ title: "Deposit sent!", description: "Transaction broadcast successfully." });
     } catch (err: any) {
-      const msg = err.message ?? "";
+      const msg = formatSendError(err);
       if (/password|decrypt|invalid|corrupted/i.test(msg)) {
         sendRateLimit.recordFailure();
       }
