@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button";
 import { ChevronDown, CreditCard, Landmark, Wallet } from '@/lib/icons';
 import { cn } from "@/lib/utils";
 
+// IDs must match the values the cdp-create-session edge function accepts:
+// CARD | ACH_BANK_ACCOUNT | APPLE_PAY | FIAT_WALLET
 const paymentMethods = [
-  { id: "CARD", name: "Credit / Debit Card", icon: CreditCard, description: "Visa, Mastercard" },
-  { id: "APPLE_PAY", name: "Apple Pay", icon: Wallet, description: "Fast & Secure" },
-  { id: "GOOGLE_PAY", name: "Google Pay", icon: Wallet, description: "Fast & Secure" },
-  { id: "BANK_TRANSFER", name: "Bank Transfer", icon: Landmark, description: "Lower fees" },
+  { id: "CARD",            name: "Credit / Debit Card", icon: CreditCard, description: "Visa, Mastercard" },
+  { id: "APPLE_PAY",       name: "Apple Pay",           icon: Wallet,     description: "Fast & Secure" },
+  { id: "ACH_BANK_ACCOUNT",name: "Bank Transfer (ACH)", icon: Landmark,   description: "Lower fees" },
+  { id: "FIAT_WALLET",     name: "Coinbase Wallet",     icon: Wallet,     description: "Pay from balance" },
 ];
 
 interface PaymentMethodSelectorProps {
