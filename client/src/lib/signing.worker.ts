@@ -364,6 +364,57 @@ function validateRpcGasPrice(raw: unknown): bigint {
   return v;
 }
 
+function tryValidateRpcGasPrice(raw: unknown): bigint | null {
+  try {
+    return validateRpcGasPrice(raw);
+  } catch {
+    return null;
+  }
+}
+
+interface FeeHistoryFallback {
+  latestBaseFeePerGas: bigint;
+  priorityFeePerGas: bigint;
+}
+
+/**
+ * Some RPC providers return zero for eth_gasPrice and/or
+ * eth_maxPriorityFeePerGas while feeHistory is still populated. Use the
+ * canonical EIP-1559 fee-history method before rejecting the transaction.
+ *
+ * This is deliberately not a hardcoded gas-price fallback: the values still
+ * come from the authenticated chain gateway and are checked against the same
+ * safety bounds as every other RPC-derived fee.
+ */
+async function getFeeHistoryFallback(chain: string): Promise<FeeHistoryFallback> {
+  const raw = await workerGatewayRpc(chain, "eth_feeHistory", ["0x5", "latest", [25, 50, 75]]) as any;
+  const baseFees = Array.isArray(raw?.baseFeePerGas) ? raw.baseFeePerGas : [];
+  const rewards = Array.isArray(raw?.reward) ? raw.reward : [];
+
+  // eth_feeHistory returns one more base fee than the number of sampled
+  // blocks; the final entry is the next block's base fee and is the best
+  // current estimate for maxFeePerGas.
+  const latestBaseFeePerGas = tryValidateRpcGasPrice(baseFees[baseFees.length - 1]);
+  if (latestBaseFeePerGas == null) {
+    throw new Error("RPC feeHistory did not contain a valid base fee");
+  }
+
+  const priorityCandidates = rewards
+    .flatMap((row: unknown) => Array.isArray(row) ? row : [])
+    .map((value: unknown) => tryValidateRpcGasPrice(value))
+    .filter((value: bigint | null): value is bigint => value != null)
+    .sort((a: bigint, b: bigint) => a < b ? -1 : a > b ? 1 : 0);
+
+  if (priorityCandidates.length === 0) {
+    throw new Error("RPC feeHistory did not contain a valid priority fee");
+  }
+
+  return {
+    latestBaseFeePerGas,
+    priorityFeePerGas: priorityCandidates[Math.floor(priorityCandidates.length / 2)],
+  };
+}
+
 function validateRpcGasLimit(raw: unknown, floorOverride?: bigint): bigint {
   let v: bigint;
   try { v = BigInt(typeof raw === "string" ? raw : String(raw)); }
@@ -937,16 +988,30 @@ async function _signEVMCore(
   const useEip1559 = config.eip1559 && request.type !== 0;
 
   if (useEip1559) {
-    const rawPri = request.maxPriorityFeePerGas != null
-      ? request.maxPriorityFeePerGas
-      : await workerGatewayRpc(gwChain, "eth_maxPriorityFeePerGas", []);
-    const maxPriorityFeePerGas = validateRpcGasPrice(rawPri);
+    let feeHistory: FeeHistoryFallback | null = null;
+    let maxPriorityFeePerGas: bigint;
+
+    if (request.maxPriorityFeePerGas != null) {
+      maxPriorityFeePerGas = validateRpcGasPrice(request.maxPriorityFeePerGas);
+    } else {
+      const rawPri = await workerGatewayRpc(gwChain, "eth_maxPriorityFeePerGas", []);
+      maxPriorityFeePerGas = tryValidateRpcGasPrice(rawPri) ?? (
+        feeHistory = await getFeeHistoryFallback(gwChain),
+        feeHistory.priorityFeePerGas
+      );
+    }
+
     let maxFeePerGas: bigint;
     if (request.maxFeePerGas != null) {
       maxFeePerGas = validateRpcGasPrice(request.maxFeePerGas);
     } else {
-      const gp = validateRpcGasPrice(await workerGatewayRpc(gwChain, "eth_gasPrice", []));
-      maxFeePerGas = gp * 2n;
+      const gasPrice = tryValidateRpcGasPrice(await workerGatewayRpc(gwChain, "eth_gasPrice", []));
+      if (gasPrice != null) {
+        maxFeePerGas = gasPrice * 2n;
+      } else {
+        feeHistory ??= await getFeeHistoryFallback(gwChain);
+        maxFeePerGas = feeHistory.latestBaseFeePerGas * 2n + maxPriorityFeePerGas;
+      }
       if (maxFeePerGas > RPC_GAS_PRICE_MAX) maxFeePerGas = RPC_GAS_PRICE_MAX;
     }
     if (maxFeePerGas < maxPriorityFeePerGas) maxFeePerGas = maxPriorityFeePerGas;
