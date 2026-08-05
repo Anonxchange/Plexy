@@ -9,6 +9,12 @@ import {
   Loader2,
   ChevronRight,
   Star,
+  TrendingUp,
+  TrendingDown,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  ExternalLink,
 } from '@/lib/icons';
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +32,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useCdpOnramp } from "@/hooks/use-cdp-onramp";
 import { useCdpOfframp } from "@/hooks/use-cdp-offramp";
 import { safeExternalRedirect, COINBASE_PAY_ORIGINS } from "@/lib/sanitize";
+import { PaymentMethodSelector } from "@/components/buy-crypto/PaymentMethodSelector";
+import { useCdpTransactions, type CdpTransaction } from "@/hooks/use-cdp-transactions";
 
 const QUICK_AMOUNTS = ["100", "250", "500", "1000"];
 
@@ -402,6 +410,8 @@ const BuyCryptoPage = () => {
   const [crypto, setCrypto] = useState("BTC");
   const [showAllAssets, setShowAllAssets] = useState(false);
   const [activeCrypto, setActiveCrypto] = useState("BTC");
+  // Valid onramp payment methods accepted by the edge fn.
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("CARD");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -413,6 +423,7 @@ const BuyCryptoPage = () => {
 
   const cdpOnramp = useCdpOnramp();
   const cdpOfframp = useCdpOfframp();
+  const { data: txHistory = [], isLoading: txLoading } = useCdpTransactions(user?.id);
 
   const cryptoName = crypto === "BTC" ? "Bitcoin" : crypto === "ETH" ? "Ethereum" : crypto === "SOL" ? "Solana" : crypto;
 
@@ -441,16 +452,35 @@ const BuyCryptoPage = () => {
       const wallet = sel || wallets.find((w) => String(w.isActive) === "true") || wallets[0];
       const addr = wallet?.address || (user as any)?.walletAddress || (user as any)?.wallet_address || (user as any)?.user_metadata?.wallet_address;
       if (!addr) { toast({ title: "Wallet required", description: "Set up your wallet address in settings first.", variant: "destructive" }); return; }
-      let data;
+
+      let rawUrl: string | null = null;
+
       if (mode === "buy") {
-        data = await cdpOnramp.mutateAsync({ address: addr, purchaseCurrency: crypto, paymentAmount: amount, paymentCurrency: fiat });
+        const data = await cdpOnramp.mutateAsync({
+          address: addr,
+          purchaseCurrency: crypto,
+          paymentAmount: amount,
+          paymentCurrency: fiat,
+          paymentMethod: selectedPaymentMethod,
+        });
+        rawUrl = data.onrampUrl;
+        // Session-token fallback for the Coinbase onramp widget URL.
+        if (!rawUrl && data.sessionToken) {
+          rawUrl = `https://pay.coinbase.com/buy?sessionToken=${data.sessionToken}`;
+        }
       } else {
-        data = await cdpOfframp.mutateAsync({ address: addr, sellCurrency: crypto, sellAmount: amount, fiatCurrency: fiat, paymentMethod: "CARD" });
+        const data = await cdpOfframp.mutateAsync({
+          address: addr,
+          sellCurrency: crypto,
+          fiatCurrency: fiat,
+          // Edge fn accepts: BANK_ACCOUNT | ACH_BANK_ACCOUNT | PAYPAL | FIAT_WALLET
+          cashoutMethod: "BANK_ACCOUNT",
+        });
+        rawUrl = data.offrampUrl;
       }
-      const rawUrl = data.onrampUrl || data.offrampUrl || (data as any).session?.onrampUrl || (data as any).session?.offrampUrl;
+
       const safeUrl = safeExternalRedirect(rawUrl, COINBASE_PAY_ORIGINS);
       if (safeUrl) window.location.href = safeUrl;
-      else if (data.sessionToken) window.location.href = `${mode === "buy" ? "https://pay.coinbase.com/buy" : "https://pay.coinbase.com/sell"}?sessionToken=${data.sessionToken}`;
       else throw new Error("Failed to get redirect URL");
     } catch (e: any) { toast({ title: "Error", description: e.message, variant: "destructive" }); }
   };
@@ -529,6 +559,16 @@ const BuyCryptoPage = () => {
           </button>
         ))}
       </div>
+
+      {/* Payment method picker (buy mode only) */}
+      {mode === "buy" && (
+        <div className="px-3 pb-2">
+          <PaymentMethodSelector
+            selectedId={selectedPaymentMethod}
+            onSelect={setSelectedPaymentMethod}
+          />
+        </div>
+      )}
 
       {/* CTA */}
       <div className="px-3 pb-4 space-y-2">
@@ -807,6 +847,121 @@ const BuyCryptoPage = () => {
           </Accordion>
         </div>
       </section>
+
+      {/* ══════════════════════════════════════════
+          TRANSACTION HISTORY  (logged-in users only)
+      ══════════════════════════════════════════ */}
+      {user && (
+        <section className="px-5 pb-12 max-w-6xl mx-auto">
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-foreground">Transaction History</h2>
+              <p className="text-muted-foreground text-sm mt-0.5">Your recent crypto buys and sells via Coinbase</p>
+            </div>
+            {txHistory.length > 0 && (
+              <span className="text-xs text-muted-foreground bg-muted border border-border rounded-full px-3 py-1 font-medium">
+                {txHistory.length} record{txHistory.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+
+          {txLoading ? (
+            <div className="flex items-center justify-center py-14 gap-3 text-muted-foreground">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span className="text-sm">Loading transactions…</span>
+            </div>
+          ) : txHistory.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border bg-card/50 py-14 flex flex-col items-center gap-3 text-center">
+              <ArrowLeftRight className="w-8 h-8 text-muted-foreground/40" />
+              <p className="text-muted-foreground text-sm font-medium">No transactions yet</p>
+              <p className="text-muted-foreground/60 text-xs max-w-xs">
+                Your buy and sell history will appear here once you complete your first transaction.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-border bg-card overflow-hidden">
+              {txHistory.map((tx, i) => {
+                const isBuy = tx.transaction_type === 'onramp';
+
+                const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+                  completed:  { label: 'Completed', color: 'text-green-500',  icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
+                  success:    { label: 'Completed', color: 'text-green-500',  icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
+                  failed:     { label: 'Failed',    color: 'text-red-500',    icon: <XCircle className="w-3.5 h-3.5" /> },
+                  expired:    { label: 'Expired',   color: 'text-red-400',    icon: <XCircle className="w-3.5 h-3.5" /> },
+                  pending:    { label: 'Pending',   color: 'text-yellow-500', icon: <Clock className="w-3.5 h-3.5" /> },
+                  processing: { label: 'Processing',color: 'text-yellow-500', icon: <Clock className="w-3.5 h-3.5" /> },
+                };
+                const statusKey = (tx.status ?? '').toLowerCase();
+                const statusInfo = statusConfig[statusKey] ?? { label: tx.status ?? 'Unknown', color: 'text-muted-foreground', icon: <Clock className="w-3.5 h-3.5" /> };
+
+                const displayDate = tx.updated_at
+                  ? new Date(tx.updated_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                  : '—';
+
+                return (
+                  <div
+                    key={tx.external_id}
+                    className={`flex items-center gap-4 px-5 py-4 ${i < txHistory.length - 1 ? 'border-b border-border' : ''} hover:bg-muted/30 transition-colors`}
+                  >
+                    {/* Direction icon */}
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${isBuy ? 'bg-green-500/10' : 'bg-blue-500/10'}`}>
+                      {isBuy
+                        ? <TrendingUp className="w-4 h-4 text-green-500" />
+                        : <TrendingDown className="w-4 h-4 text-blue-400" />}
+                    </div>
+
+                    {/* Left: type + date */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-foreground">
+                          {isBuy ? 'Buy' : 'Sell'}{tx.asset ? ` ${tx.asset}` : ''}
+                        </span>
+                        <span className={`inline-flex items-center gap-1 text-xs font-medium ${statusInfo.color}`}>
+                          {statusInfo.icon}
+                          {statusInfo.label}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{displayDate}</p>
+                      {tx.tx_hash && (
+                        <p className="text-xs text-muted-foreground/50 font-mono mt-0.5 truncate">
+                          {tx.tx_hash.slice(0, 12)}…{tx.tx_hash.slice(-6)}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Right: amounts */}
+                    <div className="text-right flex-shrink-0">
+                      {tx.amount && tx.asset && (
+                        <p className="text-sm font-bold text-foreground">
+                          {tx.amount} {tx.asset}
+                        </p>
+                      )}
+                      {tx.fiat_amount && tx.fiat_currency && (
+                        <p className="text-xs text-muted-foreground">
+                          {tx.fiat_amount} {tx.fiat_currency}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* External link to explorer (if tx hash available) */}
+                    {tx.tx_hash && (
+                      <a
+                        href={`https://etherscan.io/tx/${tx.tx_hash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-muted-foreground/50 hover:text-primary transition-colors ml-1 flex-shrink-0"
+                        title="View on explorer"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* ── NEED HELP ── */}
       <section className="px-5 pb-10 lg:pb-14 max-w-6xl mx-auto">
