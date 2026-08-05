@@ -17,31 +17,43 @@ import { useToast } from "@/hooks/use-toast";
 import { usePasswordRateLimit } from "@/hooks/use-password-rate-limit";
 import {
   CHAIN_MAP, DEPOSIT_CHAINS, FALLBACK_COINS, asterRegKey,
+  CHAIN_COINS, mergeCoinInfo, isFeeKnown, FEE_UNKNOWN,
 } from "./AccountModalConfig";
-import type { AccountModalProps, AccountType } from "./AccountModalConfig";
+import type { AccountModalProps, AccountType, DepositChain } from "./AccountModalConfig";
 
+// FIX: ARB settles gas in ETH, SOL in SOL. The old BSC ? BNB : ETH branch
+// mislabelled Solana fee errors as ETH.
 function nativeAssetForNetwork(network: string): string {
-  return network.toUpperCase() === "BSC" ? "BNB" : "ETH";
+  switch (network.toUpperCase()) {
+    case "BSC": return "BNB";
+    case "SOL": return "SOL";
+    default:    return "ETH";
+  }
 }
 
-function formatWeiAmount(raw: string): string {
+function decimalsForNetwork(network: string): number {
+  return network.toUpperCase() === "SOL" ? 9 : 18;
+}
+
+function formatWeiAmount(raw: string, decimals = 18): string {
   try {
     const wei = BigInt(raw);
-    const base = 10n ** 18n;
+    const base = 10n ** BigInt(decimals);
     const whole = wei / base;
-    const fraction = (wei % base).toString().padStart(18, "0").replace(/0+$/, "");
+    const fraction = (wei % base).toString().padStart(decimals, "0").replace(/0+$/, "");
     return fraction ? `${whole}.${fraction}` : whole.toString();
   } catch {
     return raw;
   }
 }
 
-function parseEthAmountToWei(raw: string): bigint | null {
+function parseEthAmountToWei(raw: string, decimals = 18): bigint | null {
   const normalized = raw.trim();
   if (!/^\d+(?:\.\d+)?$/.test(normalized)) return null;
   const [whole, fraction = ""] = normalized.split(".");
   try {
-    return BigInt(whole) * 10n ** 18n + BigInt(fraction.padEnd(18, "0").slice(0, 18));
+    return BigInt(whole) * 10n ** BigInt(decimals)
+      + BigInt(fraction.padEnd(decimals, "0").slice(0, decimals));
   } catch {
     return null;
   }
@@ -51,16 +63,17 @@ function formatSendMessage(message: string, network: string, requestedAmount?: s
   const insufficientFunds = message.match(/insufficient funds for gas \* price \+ value:\s*have\s+(\d+)\s+want\s+(\d+)/i);
   if (insufficientFunds) {
     const asset = nativeAssetForNetwork(network);
+    const dp = decimalsForNetwork(network);
     const totalRequiredWei = BigInt(insufficientFunds[2]);
-    let requiredDescription = `${formatWeiAmount(insufficientFunds[2])} ${asset}`;
+    let requiredDescription = `${formatWeiAmount(insufficientFunds[2], dp)} ${asset}`;
     if (requestedAmount) {
-      const requestedWei = parseEthAmountToWei(requestedAmount);
+      const requestedWei = parseEthAmountToWei(requestedAmount, dp);
       if (requestedWei !== null && requestedWei > 0n && requestedWei <= totalRequiredWei) {
         const feeWei = totalRequiredWei - requestedWei;
-        requiredDescription = `${requestedAmount} ${asset} plus ${formatWeiAmount(feeWei.toString())} ${asset} in network fees`;
+        requiredDescription = `${requestedAmount} ${asset} plus ${formatWeiAmount(feeWei.toString(), dp)} ${asset} in network fees`;
       }
     }
-    return `Insufficient funds: your wallet has ${formatWeiAmount(insufficientFunds[1])} ${asset}, but this transaction requires ${requiredDescription}.`;
+    return `Insufficient funds: your wallet has ${formatWeiAmount(insufficientFunds[1], dp)} ${asset}, but this transaction requires ${requiredDescription}.`;
   }
   return message.replace(/\s*\(code\s+[-\d]+\)\s*$/i, "").trim();
 }
@@ -274,10 +287,13 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
     refetchInterval: 30_000,
   });
 
+  // FIX: futures_balance is a SIGNED V3 action on the edge function — it 400s
+  // with "AsterDEX credentials not linked" when the signer key is missing.
+  // Gate it on hasV3 exactly like spotAccount.
   const { data: futuresBalance, isLoading: futuresLoading } = useQuery({
     queryKey: ["futures-balance"],
     queryFn: () => asterTrading.futuresBalance(),
-    enabled: !!user,
+    enabled: !!user && hasV3,
     staleTime: 15_000,
     refetchInterval: 30_000,
   });
@@ -290,20 +306,23 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
     retry: 1,
   });
 
+  // FIX: history is signed too — gate on hasV3 so we don't fire guaranteed 400s.
   const { data: depositHistory, isLoading: depositHistoryLoading } = useQuery({
     queryKey: ["deposit-history", isSpot],
     queryFn: () => isSpot ? asterWallet.depositHistory() : asterWallet.futuresDepositHistory(),
-    enabled: !!user && txHistoryOpen && txHistoryTab === "deposits",
+    enabled: !!user && hasV3 && txHistoryOpen && txHistoryTab === "deposits",
     staleTime: 30_000,
   });
 
   const { data: withdrawHistory, isLoading: withdrawHistoryLoading } = useQuery({
     queryKey: ["withdraw-history", isSpot],
     queryFn: () => isSpot ? asterWallet.withdrawHistory() : asterWallet.futuresWithdrawHistory(),
-    enabled: !!user && txHistoryOpen && txHistoryTab === "withdrawals",
+    enabled: !!user && hasV3 && txHistoryOpen && txHistoryTab === "withdrawals",
     staleTime: 30_000,
   });
 
+  // Deposit address: edge derives chainId + SOL/EVM from the raw network name,
+  // so `network` must stay a human name ("BSC" | "ETH" | "ARB" | "SOL").
   const {
     data: depositData,
     isLoading: depositLoading,
@@ -333,10 +352,11 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
     retry: 1,
   });
 
+  // Public action — no linked credentials needed, so it must NOT be gated on hasV3.
   const { data: feeEstimate, isLoading: feeLoading } = useQuery({
     queryKey: ["withdraw-fee", coin, network],
     queryFn: () => asterWallet.withdrawFeeEstimate(coin, network),
-    enabled: !!user && open && activeTab === "withdraw",
+    enabled: !!user && open && activeTab === "withdraw" && !!coin && !!network,
     staleTime: 30_000,
     retry: 1,
   });
@@ -346,23 +366,34 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
   const chainAssetsStale = chainAssetsLoading || chainAssetsFetching;
   const depositBusy = depositLoading || depositFetching;
 
-  const coins: CoinInfo[] = useMemo(() => {
-    if (Array.isArray(coinInfoData) && coinInfoData.length > 0) return coinInfoData;
-    return FALLBACK_COINS;
-  }, [coinInfoData]);
+  // FIX: run the live coinInfo through mergeCoinInfo() so only the supported
+  // (chain, coin) pairs survive — USDT / USDC / native token per chain.
+  const coins: CoinInfo[] = useMemo(() => mergeCoinInfo(coinInfoData as CoinInfo[] | undefined), [coinInfoData]);
+
+  // Only the coins this project supports on the selected chain.
+  const allowedCoins = useMemo<string[]>(
+    () => CHAIN_COINS[network as DepositChain] ?? [],
+    [network],
+  );
 
   const selectorCoins: CoinInfo[] = useMemo(() => {
     if (activeTab === "deposit" || activeTab === "withdraw") {
       if (chainAssetsStale) return [];
       if (Array.isArray(chainAssetsData) && chainAssetsData.length > 0) {
-        return chainAssetsData.map(a => {
+        // FIX: BAPI returns the full chain asset list. Restrict it to the
+        // supported matrix so the picker never shows unsupported tokens.
+        const filtered = chainAssetsData.filter(a => allowedCoins.includes(a.coin.toUpperCase()));
+        const list = filtered.length > 0 ? filtered : chainAssetsData;
+        return list.map(a => {
           const withBalance = coins.find(c => c.coin === a.coin);
           return withBalance ? { ...a, free: withBalance.free, locked: withBalance.locked } : a;
         });
       }
+      // No live assets → fall back to the derived matrix for this chain.
+      return FALLBACK_COINS.filter(c => allowedCoins.includes(c.coin));
     }
     return coins;
-  }, [activeTab, chainAssetsData, chainAssetsStale, coins]);
+  }, [activeTab, chainAssetsData, chainAssetsStale, coins, allowedCoins]);
 
   useEffect(() => {
     if (activeTab !== "deposit" && activeTab !== "withdraw") return;
@@ -430,12 +461,26 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
 
   const depositAddress: string = typeof depositData === "string" ? depositData : (depositData as any)?.address ?? "";
   const depositMemo: string    = (depositData as any)?.tag ?? (depositData as any)?.memo ?? "";
-  const liveFee        = feeEstimate?.gasCost ? String(feeEstimate.gasCost) : null;
-  const resolvedFee    = liveFee ?? selectedNetworkInfo?.withdrawFee ?? "0";
-  const resolvedFeeNum = parseFloat(resolvedFee);
+
+  // FIX: fees are never hardcoded and never silently defaulted to "0".
+  // Order of truth: live fee estimate → coinInfo.withdrawFee → unknown.
+  // A "0" default would let the user sign a withdrawal with the wrong fee,
+  // which AsterDEX rejects (the fee is part of the EIP-712 payload).
+  const liveFee = isFeeKnown(feeEstimate?.gasCost != null ? String(feeEstimate.gasCost) : null)
+    ? String(feeEstimate!.gasCost)
+    : null;
+  const resolvedFee: string = liveFee
+    ?? (isFeeKnown(selectedNetworkInfo?.withdrawFee) ? selectedNetworkInfo!.withdrawFee : FEE_UNKNOWN);
+  const feeKnown       = isFeeKnown(resolvedFee);
+  const resolvedFeeNum = feeKnown ? parseFloat(resolvedFee) : 0;
   const amountNum      = parseFloat(amount) || 0;
-  const withdrawMin    = parseFloat(selectedNetworkInfo?.withdrawMin ?? "0");
-  const youReceive     = Math.max(0, amountNum - resolvedFeeNum);
+  const withdrawMin    = isFeeKnown(selectedNetworkInfo?.withdrawMin)
+    ? parseFloat(selectedNetworkInfo!.withdrawMin)
+    : 0;
+  const youReceive     = feeKnown ? Math.max(0, amountNum - resolvedFeeNum) : 0;
+  // The withdraw button must stay disabled until we actually know the fee.
+  const canWithdraw = feeKnown && amountNum > 0 && amountNum >= withdrawMin
+    && amountNum <= currentBalance && !!withdrawAddress && !!withdrawPassword;
 
   // ── Withdraw / Transfer mutations ─────────────────────
 
@@ -448,6 +493,7 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
 
   const spotWithdrawMutation = useMutation({
     mutationFn: async () => {
+      if (!feeKnown) throw new Error("Network fee is still loading. Please try again in a moment.");
       if (!userEvmWallet) throw new Error("An EVM wallet is required to sign withdrawals on AsterDEX — please create one in Wallet first.");
       if (!withdrawPassword) throw new Error("Enter your wallet password to sign the withdrawal.");
       const vault = userEvmWallet.encryptedMnemonic ?? userEvmWallet.encryptedPrivateKey;
@@ -469,8 +515,11 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
     onSuccess: onWithdrawSuccess, onError: onWithdrawError,
   });
 
+  // Perp has NO withdraw endpoint on AsterDEX — asterWithdrawFromPerp()
+  // transfers FUTURE→SPOT first, then performs the signed spot withdrawal.
   const futuresWithdrawMutation = useMutation({
     mutationFn: async () => {
+      if (!feeKnown) throw new Error("Network fee is still loading. Please try again in a moment.");
       if (!userEvmWallet) throw new Error("An EVM wallet is required to sign withdrawals on AsterDEX — please create one in Wallet first.");
       if (!withdrawPassword) throw new Error("Enter your wallet password to sign the withdrawal.");
       const vault = userEvmWallet.encryptedMnemonic ?? userEvmWallet.encryptedPrivateKey;
@@ -530,7 +579,10 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
     setCoinOpen(false); setAmount("");
   };
   const handleMax = () => {
-    const max = activeTab === "withdraw" ? Math.max(0, currentBalance - resolvedFeeNum) : currentBalance;
+    // Never subtract an unknown fee — that would silently overstate the max.
+    const max = activeTab === "withdraw" && feeKnown
+      ? Math.max(0, currentBalance - resolvedFeeNum)
+      : currentBalance;
     setAmount(coin === "BTC" ? max.toFixed(8) : max.toFixed(4));
   };
   const requireAuth = () => { if (!user) { navigate("/signin"); onOpenChange(false); } };
@@ -608,7 +660,8 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
     // Deposit
     depositAddress, depositMemo, depositBusy, depositError,
     // Fee/balance
-    currentBalance, resolvedFee, resolvedFeeNum, withdrawMin, youReceive, feeLoading,
+    currentBalance, resolvedFee, resolvedFeeNum, feeKnown, canWithdraw,
+    withdrawMin, youReceive, feeLoading,
     spotBalanceFor, futuresAvailFor, headerBalance, spotLoading, futuresLoading,
     // Send state (deposit Sign & Send)
     sendRateLimit,
