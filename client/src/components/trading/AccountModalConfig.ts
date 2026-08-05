@@ -2,17 +2,17 @@ import type { CoinInfo } from "@/lib/asterdex-service";
 
 // ── Chain config ──────────────────────────────────────────
 export const CHAINS = [
-  { key: "BSC", name: "BNB Chain",    chainId: 56,    color: "#F3BA2F" },
-  { key: "ETH", name: "Ethereum",      chainId: 1,     color: "#627EEA" },
+  { key: "BSC", name: "BNB Chain",   chainId: 56,    color: "#F3BA2F" },
+  { key: "ETH", name: "Ethereum",    chainId: 1,     color: "#627EEA" },
   { key: "ARB", name: "Arbitrum One", chainId: 42161, color: "#12AAFF" },
-  { key: "SOL", name: "Solana",        chainId: 101,   color: "#9945FF" },
+  { key: "SOL", name: "Solana",      chainId: 101,   color: "#9945FF" },
 ] as const;
 
 // All chains that AsterDEX supports for deposit (EVM + Solana)
 export const DEPOSIT_CHAINS = ["BSC", "ETH", "ARB", "SOL"] as const;
 export type DepositChain = typeof DEPOSIT_CHAINS[number];
 
-export const CHAIN_MAP = Object.fromEntries(CHAINS.map(c => [c.key, c]));
+export const CHAIN_MAP = Object.fromEntries(CHAINS.map((c) => [c.key, c]));
 
 // Real chain logo icons from TrustWallet assets CDN
 export const CHAIN_ICONS: Record<string, string> = {
@@ -25,54 +25,89 @@ export const CHAIN_ICONS: Record<string, string> = {
 // Extra coin icons not in the shared cryptoIconUrls map
 export const EXTRA_COIN_ICONS: Record<string, string> = {
   USDCE: "https://assets.coingecko.com/coins/images/6319/small/usdc.png",
-  USD1:  "https://assets.coingecko.com/coins/images/31212/small/PYUSD_Logo_%282%29.png",
+  USD1: "https://assets.coingecko.com/coins/images/31212/small/PYUSD_Logo_%282%29.png",
   ASTER: "https://assets.coingecko.com/coins/images/30980/small/token-logo.png",
+  ARB: "https://assets.coingecko.com/coins/images/16547/small/arb.jpg",
+  BNB: "https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png",
 };
 
 export const ACCOUNT_TYPES = ["Spot account", "Perpetual account"] as const;
 export type AccountType = typeof ACCOUNT_TYPES[number];
 
-// Fallback coin list used when the authenticated coinInfo API is unavailable
-export const FALLBACK_COINS: CoinInfo[] = [
-  { coin: "USDT", name: "Tether", free: "0", locked: "0", networkList: [
-    { network: "BSC", withdrawEnable: true, depositEnable: true, withdrawFee: "0.5",    withdrawMin: "5",     depositMin: "5"    },
-    { network: "ETH", withdrawEnable: true, depositEnable: true, withdrawFee: "2",      withdrawMin: "10",    depositMin: "10"   },
-    { network: "ARB", withdrawEnable: true, depositEnable: true, withdrawFee: "0.5",    withdrawMin: "5",     depositMin: "5"    },
-    { network: "SOL", withdrawEnable: true, depositEnable: true, withdrawFee: "0.2",    withdrawMin: "2",     depositMin: "2"    },
-  ]},
-  { coin: "USDC", name: "USD Coin", free: "0", locked: "0", networkList: [
-    { network: "ETH", withdrawEnable: true, depositEnable: true, withdrawFee: "2",      withdrawMin: "10",    depositMin: "10"   },
-    { network: "ARB", withdrawEnable: true, depositEnable: true, withdrawFee: "0.5",    withdrawMin: "5",     depositMin: "5"    },
-    { network: "SOL", withdrawEnable: true, depositEnable: true, withdrawFee: "0.2",    withdrawMin: "2",     depositMin: "2"    },
-  ]},
-  { coin: "BNB",  name: "BNB", free: "0", locked: "0", networkList: [
-    { network: "BSC", withdrawEnable: true, depositEnable: true, withdrawFee: "0.001",  withdrawMin: "0.01",  depositMin: "0.01" },
-  ]},
-  { coin: "ETH",  name: "Ethereum", free: "0", locked: "0", networkList: [
-    { network: "ETH", withdrawEnable: true, depositEnable: true, withdrawFee: "0.001",  withdrawMin: "0.01",  depositMin: "0.01" },
-    { network: "ARB", withdrawEnable: true, depositEnable: true, withdrawFee: "0.001",  withdrawMin: "0.01",  depositMin: "0.01" },
-    { network: "BSC", withdrawEnable: true, depositEnable: true, withdrawFee: "0.001",  withdrawMin: "0.01",  depositMin: "0.01" },
-  ]},
-  { coin: "BTC",  name: "Bitcoin", free: "0", locked: "0", networkList: [
-    { network: "BSC", withdrawEnable: true, depositEnable: true, withdrawFee: "0.0001", withdrawMin: "0.001", depositMin: "0.001" },
-    { network: "ETH", withdrawEnable: true, depositEnable: true, withdrawFee: "0.0001", withdrawMin: "0.001", depositMin: "0.001" },
-  ]},
-  { coin: "SOL",  name: "Solana", free: "0", locked: "0", networkList: [
-    { network: "SOL", withdrawEnable: true, depositEnable: true, withdrawFee: "0.01",   withdrawMin: "0.1",   depositMin: "0.1"  },
-  ]},
-  { coin: "USD1", name: "USD1", free: "0", locked: "0", networkList: [
-    { network: "BSC", withdrawEnable: true, depositEnable: true, withdrawFee: "0.5",    withdrawMin: "5",     depositMin: "5"    },
-    { network: "ETH", withdrawEnable: true, depositEnable: true, withdrawFee: "2",      withdrawMin: "10",    depositMin: "10"   },
-  ]},
-  { coin: "USDCE", name: "Bridged USDC", free: "0", locked: "0", networkList: [
-    { network: "ARB", withdrawEnable: true, depositEnable: true, withdrawFee: "0.5",    withdrawMin: "5",     depositMin: "5"    },
-  ]},
-  { coin: "ASTER", name: "Aster", free: "0", locked: "0", networkList: [
-    { network: "BSC", withdrawEnable: true, depositEnable: true, withdrawFee: "1",      withdrawMin: "10",    depositMin: "10"   },
-  ]},
-];
+// ── Chain → supported assets ──────────────────────────────
+// Per chain: the two stables + that chain's own token.
+export const CHAIN_COINS: Record<DepositChain, string[]> = {
+  BSC: ["USDT", "USDC", "BNB"],
+  ETH: ["USDT", "USDC", "ETH"],
+  ARB: ["USDT", "USDC", "ARB"],
+  SOL: ["USDT", "USDC", "SOL"],
+};
 
-export function asterRegKey(userId: string) { return `aster_reg_${userId}`; }
+const COIN_NAMES: Record<string, string> = {
+  USDT: "Tether",
+  USDC: "USD Coin",
+  BNB: "BNB",
+  ETH: "Ethereum",
+  ARB: "Arbitrum",
+  SOL: "Solana",
+};
+
+/**
+ * Fees are NOT hardcoded. AsterDEX publishes the live `withdrawFee` /
+ * `withdrawMin` / `depositMin` per (coin, network) on the authenticated
+ * coinInfo endpoint, and they change. Anything below is a shape-only
+ * placeholder used while that call is in flight or has failed — never a
+ * value to charge or display as final.
+ */
+export const FEE_UNKNOWN = "";
+
+export function isFeeKnown(v: string | undefined | null): v is string {
+  return typeof v === "string" && v !== "" && Number.isFinite(Number(v));
+}
+
+/** Format a fee for the UI, degrading gracefully when it isn't loaded yet. */
+export function formatFee(v: string | undefined | null, coin: string): string {
+  return isFeeKnown(v) ? `${v} ${coin}` : "—";
+}
+
+// Derived from CHAIN_COINS so the matrix lives in exactly one place.
+export const FALLBACK_COINS: CoinInfo[] = Array.from(
+  new Set(Object.values(CHAIN_COINS).flat()),
+).map((coin) => ({
+  coin,
+  name: COIN_NAMES[coin] ?? coin,
+  free: "0",
+  locked: "0",
+  networkList: (Object.keys(CHAIN_COINS) as DepositChain[])
+    .filter((chain) => CHAIN_COINS[chain].includes(coin))
+    .map((network) => ({
+      network,
+      withdrawEnable: true,
+      depositEnable: true,
+      withdrawFee: FEE_UNKNOWN,
+      withdrawMin: FEE_UNKNOWN,
+      depositMin: FEE_UNKNOWN,
+    })),
+}));
+
+/** Merge live coinInfo over the fallback, keeping only supported pairs. */
+export function mergeCoinInfo(live: CoinInfo[] | null | undefined): CoinInfo[] {
+  if (!live?.length) return FALLBACK_COINS;
+  const supported = new Set(Object.values(CHAIN_COINS).flat());
+  return live
+    .filter((c) => supported.has(c.coin.toUpperCase()))
+    .map((c) => ({
+      ...c,
+      networkList: (c.networkList ?? []).filter((n) =>
+        CHAIN_COINS[n.network as DepositChain]?.includes(c.coin.toUpperCase()),
+      ),
+    }))
+    .filter((c) => c.networkList.length > 0);
+}
+
+export function asterRegKey(userId: string) {
+  return `aster_reg_${userId}`;
+}
 
 // ── Props ─────────────────────────────────────────────────
 export interface AccountModalProps {
