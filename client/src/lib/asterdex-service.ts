@@ -209,8 +209,7 @@ function formatAsterError(value: unknown): string {
     if (nested && nested !== value) return formatAsterError(nested);
     const message = error.message ?? error.msg ?? error.detail ?? error.reason;
     if (typeof message === 'string' && message.trim()) {
-      const code = error.code;
-      return code !== undefined ? `${message} (code ${String(code)})` : message;
+      return message.replace(/\s*\(code\s+[-\d]+\)\s*$/i, '').trim();
     }
     try { return JSON.stringify(value); } catch { return 'Unknown AsterDEX error'; }
   }
