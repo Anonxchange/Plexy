@@ -442,16 +442,47 @@ const BuyCryptoPage = () => {
     try {
       const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
       const wallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
-      const sel = wallets.find((w) => {
-        const s = crypto.toUpperCase(), ws = (w.chainId || "").toUpperCase(), wt = (w.walletType || "").toUpperCase();
-        if (s === "BTC") return ws === "BTC" || wt === "BITCOIN";
-        if (s === "ETH") return ws === "ETH" || wt === "ETHEREUM";
-        if (s === "SOL") return ws === "SOL" || wt === "SOLANA";
-        return ws.includes(s) || wt.includes(s);
+
+      // Both CDP edge functions enforce EVM address validation (/^0x[a-fA-F0-9]{40}$/).
+      // BTC and SOL native addresses are rejected with 400 before Coinbase is called.
+      // We must always send an EVM (0x...) address.
+      const EVM_RE = /^0x[a-fA-F0-9]{40}$/;
+
+      // SOL requires a native Solana address. Both CDP edge functions enforce
+      // EVM-only address validation, so SOL is unsupported for buy and sell.
+      if (crypto === "SOL") {
+        toast({
+          title: "SOL not yet supported",
+          description: `${mode === "buy" ? "Buying" : "Selling"} SOL requires a Solana wallet address, which isn't supported by the current payment provider. Try ETH, USDC, or BTC instead.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Prefer the wallet matching the selected crypto if it is EVM-compatible.
+      // Fall back to any EVM wallet the user owns.
+      const evmWallets = wallets.filter((w) => EVM_RE.test(w.address || ""));
+      const matchedEvm = evmWallets.find((w) => {
+        const ws = (w.chainId || "").toUpperCase(), wt = (w.walletType || "").toUpperCase();
+        const s = crypto.toUpperCase();
+        return ws.includes(s) || wt.includes(s) || ws === "ETH" || wt === "ETHEREUM";
       });
-      const wallet = sel || wallets.find((w) => String(w.isActive) === "true") || wallets[0];
-      const addr = wallet?.address || (user as any)?.walletAddress || (user as any)?.wallet_address || (user as any)?.user_metadata?.wallet_address;
-      if (!addr) { toast({ title: "Wallet required", description: "Set up your wallet address in settings first.", variant: "destructive" }); return; }
+      const bestWallet = matchedEvm || evmWallets[0];
+
+      const addr =
+        bestWallet?.address ||
+        (EVM_RE.test((user as any)?.walletAddress || "") ? (user as any).walletAddress : null) ||
+        (EVM_RE.test((user as any)?.wallet_address || "") ? (user as any).wallet_address : null) ||
+        (EVM_RE.test((user as any)?.user_metadata?.wallet_address || "") ? (user as any).user_metadata.wallet_address : null);
+
+      if (!addr) {
+        toast({
+          title: "Ethereum wallet required",
+          description: "Add an Ethereum wallet in your settings to buy crypto. BTC purchases are delivered as cbBTC on Base.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       let rawUrl: string | null = null;
 
