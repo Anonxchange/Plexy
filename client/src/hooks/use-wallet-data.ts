@@ -31,7 +31,6 @@ const ASSET_NAMES: Record<string, string> = {
   BNB: "BNB",
   XRP: "XRP",
   MATIC: "Polygon",
-  POL: "Polygon",
   ARB: "Arbitrum",
   OP: "Optimism",
   AVAX: "Avalanche",
@@ -52,7 +51,6 @@ const SORT_ORDER: Record<string, number> = {
   ARB: 10,
   OP: 11,
   AVAX: 12,
-  POL: 13,
 };
 
 export function useWalletData() {
