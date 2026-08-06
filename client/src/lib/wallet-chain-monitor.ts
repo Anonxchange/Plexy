@@ -67,6 +67,9 @@ export function resolveWalletChain(chainId: string): {
   if (id.includes("optimism") || id === "op") {
     return { chain: "OPTIMISM", isToken: false, supported: true };
   }
+  if (id.includes("avalanche") || id === "avax") {
+    return { chain: "AVAX", isToken: false, supported: true };
+  }
   return { chain: String(chainId ?? "").toUpperCase(), isToken: false, supported: false };
 }
 

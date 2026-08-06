@@ -268,8 +268,9 @@ const CHAIN_CONFIGS: Record<string, {
   BSC:  { chainId: 56,    symbol: "BNB", eip1559: false },
   BNB:  { chainId: 56,    symbol: "BNB", eip1559: false },
   ARB:  { chainId: 42161, symbol: "ETH", eip1559: true  },
-  POL:  { chainId: 137,   symbol: "POL", eip1559: true  },
-  MATIC:{ chainId: 137,   symbol: "POL", eip1559: true  },
+  POL:  { chainId: 137,   symbol: "POL",  eip1559: true  },
+  MATIC:{ chainId: 137,   symbol: "POL",  eip1559: true  },
+  AVAX: { chainId: 43114, symbol: "AVAX", eip1559: true  },
 };
 
 const TOKEN_CONTRACTS: Record<string, { address: string; decimals: number }> = {

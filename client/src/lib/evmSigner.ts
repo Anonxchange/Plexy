@@ -27,6 +27,7 @@ export const CHAIN_CONFIGS: Record<string, { chainId: number; symbol: string }> 
   MATIC:{ chainId: 137,   symbol: "POL" },
   OP:   { chainId: 10,    symbol: "ETH" },
   BASE: { chainId: 8453,  symbol: "ETH" },
+  AVAX: { chainId: 43114, symbol: "AVAX" },
 };
 
 // Maps CHAIN_CONFIGS key → Alchemy chain identifier used by chain-gateway.
@@ -56,7 +57,7 @@ export interface EVMTransactionRequest {
   to: string;
   amount: string;
   currency:
-    | "ETH" | "BSC" | "BNB" | "ARB"
+    | "ETH" | "BSC" | "BNB" | "ARB" | "AVAX"
     | "USDT_ETH" | "USDC_ETH"
     | "USDT_BSC" | "USDC_BSC"
     | "USDT_BNB" | "USDC_BNB"
