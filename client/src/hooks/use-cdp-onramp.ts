@@ -11,6 +11,7 @@ export function useCdpOnramp() {
       purchaseCurrency?: string;
       paymentAmount?: string;
       paymentCurrency?: string;
+      network?: string;
       /** One of: CARD | ACH_BANK_ACCOUNT | APPLE_PAY | FIAT_WALLET */
       paymentMethod?: string;
     }) => {
@@ -19,7 +20,7 @@ export function useCdpOnramp() {
         params.purchaseCurrency ? [params.purchaseCurrency] : [],
         params.paymentAmount,
         params.paymentCurrency,
-        { paymentMethod: params.paymentMethod },
+        { network: params.network, paymentMethod: params.paymentMethod },
       );
       return { success: true, onrampUrl, sessionToken };
     },

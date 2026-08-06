@@ -12,6 +12,7 @@ export function useCdpOfframp() {
       fiatCurrency: string;
       /** One of: BANK_ACCOUNT | ACH_BANK_ACCOUNT | PAYPAL | FIAT_WALLET */
       cashoutMethod?: string;
+      network?: string;
     }) => {
       const networkMap: Record<string, string> = {
         BTC: 'bitcoin',
@@ -20,9 +21,14 @@ export function useCdpOfframp() {
         USDC: 'ethereum',
         USDT: 'ethereum',
         POL: 'polygon',
+        MATIC: 'polygon',
+        ARB: 'arbitrum',
+        OP: 'optimism',
+        AVAX: 'avalanche-c-chain',
+        XRP: 'ripple',
       };
 
-      const network = networkMap[params.sellCurrency.toUpperCase()] ?? 'ethereum';
+      const network = params.network ?? networkMap[params.sellCurrency.toUpperCase()] ?? 'ethereum';
 
       // The edge fn does not accept a sell amount — the user sets that in the
       // Coinbase offramp UI. Pass undefined for the _sellAmount positional arg.
