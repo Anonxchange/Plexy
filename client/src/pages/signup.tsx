@@ -228,7 +228,9 @@ export function SignUp() {
 
     // Email signup → requires password validation
     if (signupMethod === "email") {
-      if (!email) {
+      const normalizedEmail = email.trim().toLowerCase();
+
+      if (!normalizedEmail) {
         toast({
           title: "Error",
           description: "Email is required",
@@ -237,7 +239,65 @@ export function SignUp() {
         return;
       }
 
+      // Check the account store before starting AML screening or sending the
+      // signup OTP. The verification endpoint intentionally accepts an email
+      // before an auth session exists, so this guard must happen first.
+      // This also catches casing differences such as User@Example.com vs
+      // user@example.com.
+      setLoading(true);
+      const { data: authAccountExists, error: rpcError } = await supabase.rpc(
+        "email_exists_for_signup",
+        { p_email: normalizedEmail },
+      );
+
+      // The RPC reads auth.users with SECURITY DEFINER. Keep a profile
+      // fallback for existing projects where the migration has not been
+      // applied yet, and also cover older profiles whose email was stored as
+      // their username.
+      const { data: existingEmailProfile, error: existingEmailProfileError } = await supabase
+        .from("user_profiles")
+        .select("id")
+        .eq("email", normalizedEmail)
+        .maybeSingle();
+
+      const { data: existingUsernameProfile, error: existingUsernameProfileError } =
+        existingEmailProfile || existingEmailProfileError
+          ? { data: null, error: existingEmailProfileError }
+          : await supabase
+              .from("user_profiles")
+              .select("id")
+              .eq("username", normalizedEmail)
+              .maybeSingle();
+
+      if (
+        rpcError &&
+        existingEmailProfileError &&
+        existingUsernameProfileError
+      ) {
+        setLoading(false);
+        toast({
+          title: "Unable to check account",
+          description: "We couldn't verify whether this email is available. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (
+        authAccountExists === true ||
+        Boolean(existingEmailProfile || existingUsernameProfile)
+      ) {
+        setLoading(false);
+        toast({
+          title: "Account already exists",
+          description: "An account with this email already exists. Please log in instead.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       if (password !== confirmPassword) {
+        setLoading(false);
         toast({
           title: "Error",
           description: "Passwords do not match",
@@ -247,6 +307,7 @@ export function SignUp() {
       }
 
       if (!passwordValidation.isValid) {
+        setLoading(false);
         const missingReqs = passwordValidation.requirements
           .filter((r) => !r.met)
           .map((r) => r.label)
@@ -260,7 +321,6 @@ export function SignUp() {
       }
 
       setSignupInProgress(true);
-      setLoading(true);
       
       // Basic AML screening before account creation
       try {
@@ -277,6 +337,7 @@ export function SignUp() {
             description: "We cannot create an account at this time. Please contact support if you believe this is an error.",
             variant: "destructive",
           });
+          setSignupInProgress(false);
           return;
         }
       } catch (error) {
@@ -290,7 +351,7 @@ export function SignUp() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
-        body: JSON.stringify({ email, type: 'signup' }),
+        body: JSON.stringify({ email: normalizedEmail, type: 'signup' }),
       });
 
       setLoading(false);
@@ -314,6 +375,7 @@ export function SignUp() {
       
       setOtpSent(true);
       setStep("email_verify");
+      setEmail(normalizedEmail);
     } else {
       // Phone signup → OTP only, no password required
       if (!phoneNumber) {
