@@ -53,6 +53,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
     OP: ["Optimism"],
     ARB: ["Arbitrum"],
     XRP: ["Ripple"],
+    AVAX: ["Avalanche (C-Chain)"],
     USDC: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)", "Polygon", "Optimism", "Arbitrum"],
     USDT: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)", "Polygon", "Optimism", "Arbitrum"],
   };
@@ -69,6 +70,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
     OP: "Optimism",
     ARB: "Arbitrum",
     XRP: "Ripple",
+    AVAX: "Avalanche",
   };
 
   const handleClose = () => onOpenChange(false);
@@ -109,6 +111,10 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
 
         if (selectedNetwork.includes('TRC-20')) {
           return normalizedChainId.includes('TRC20') || (normalizedChainId === 'TRX' && normalizedSelectedCrypto === 'TRX') || (normalizedChainId === 'TRON (TRC-20)');
+        }
+        if (selectedNetwork.includes('Avalanche') || selectedCrypto === 'AVAX') {
+          return normalizedChainId === 'AVALANCHE' || normalizedChainId === 'AVAX' ||
+            normalizedChainId.includes('AVALANCHE');
         }
         if (selectedNetwork.includes('ERC-20') || ['POLYGON', 'OPTIMISM', 'ARBITRUM'].includes(selectedNetwork.toUpperCase())) {
           return normalizedChainId.includes('ERC-20') ||

@@ -294,6 +294,7 @@ export function SendCryptoDialog({
     SOL: ["Solana"],
     BNB: ["Binance Smart Chain (BEP-20)"],
     TRX: ["Tron (TRC-20)"],
+    AVAX: ["Avalanche (C-Chain)"],
     USDC: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)"],
     USDT: ["Ethereum (ERC-20)", "Binance Smart Chain (BEP-20)", "Tron (TRC-20)", "Solana (SPL)"],
   };
@@ -405,6 +406,10 @@ export function SendCryptoDialog({
       const txData = { to: toAddress, amount: cryptoAmountNum.toString(), currency: symbolToUse as any };
       const result = await signEVMTransactionFromVault(vault, password, txData) as any;
       await broadcastEVMTransaction(result.signedTx, chainKey);
+    } else if (selectedNetwork.includes("Avalanche") || selectedCrypto === "AVAX") {
+      const txData = { to: toAddress, amount: cryptoAmountNum.toString(), currency: "AVAX" as any };
+      const result = await signEVMTransactionFromVault(vault, password, txData) as any;
+      await broadcastEVMTransaction(result.signedTx, "AVAX");
     } else if (selectedNetwork.includes("Solana")) {
       const recentBlockhash = await getLatestBlockhash();
       const result = await signSolanaTransactionFromVault(vault, password, {
@@ -454,6 +459,7 @@ export function SendCryptoDialog({
       const symbolMap: Record<string, string> = {
         BTC: "Bitcoin (SegWit)", ETH: "Ethereum", SOL: "Solana",
         BNB: "Binance Smart Chain (BEP-20)", TRX: "Tron (TRC-20)",
+        AVAX: "Avalanche",
         USDT: "USDT", USDC: "USDC",
       };
       const chainIdToFind = symbolMap[selectedCrypto] || selectedCrypto;
