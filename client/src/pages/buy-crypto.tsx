@@ -431,6 +431,7 @@ const BuyCryptoPage = () => {
   const [showAllAssets, setShowAllAssets] = useState(false);
   // Valid onramp payment methods accepted by the edge fn.
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("CARD");
+  const [showFees, setShowFees] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -558,72 +559,127 @@ const BuyCryptoPage = () => {
   const assetsToShow = showAllAssets ? ALL_ASSETS : FEATURED_ASSETS;
 
   const Widget = (
+    /* ── Ramp-style trade card (logged-in + logged-out) ─────────────── */
     <div className="bg-card border border-border rounded-3xl shadow-xl overflow-hidden w-full">
-      {/* Tab row */}
-      <div className="flex items-center p-1 gap-1 border-b border-border bg-muted">
-        {(["buy", "sell"] as const).map((m) => (
+      {/* Segmented mode switch */}
+      <div className="p-3 pb-2">
+        <div className="flex rounded-full bg-muted p-1">
+          {(["buy", "sell"] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              className={`flex-1 rounded-full py-2.5 text-[15px] font-semibold capitalize transition-all ${
+                mode === m
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Logged-in reward strip */}
+      {user && (
+        <div className="mx-3 mb-3 rounded-3xl border border-border bg-muted/40 p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-1">
+              <p className="text-[15px] font-semibold text-foreground">Save 50% on fees in the app</p>
+              <p className="mt-1 text-sm leading-snug text-muted-foreground">
+                Unlock up to 8 USDC in rewards and 50% off fees on your next 2 trades.
+              </p>
+            </div>
+            <div className="w-9 h-9 rounded-2xl bg-primary/15 flex items-center justify-center flex-shrink-0">
+              <Star className="w-4 h-4 text-primary fill-primary" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pay / receive card */}
+      <div className="mx-3 rounded-3xl border border-border overflow-hidden">
+        {/* Pay row */}
+        <div className="flex items-center gap-3 p-4">
           <button
-            key={m}
-            onClick={() => setMode(m)}
-            className={`flex-1 py-1.5 rounded-lg text-sm font-bold capitalize transition-all ${
-              mode === m
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
+            onClick={() => toast({ title: "USD checkout", description: "USD is the only fiat currency currently available." })}
+            className="flex items-center gap-1.5 bg-background hover:bg-muted border border-border rounded-full px-3 py-2 text-[15px] font-semibold transition-colors text-foreground flex-shrink-0"
           >
-            {m}
+            {fiat} <ChevronDown className="w-4 h-4 opacity-50" />
           </button>
-        ))}
+          <div className="min-w-0 flex-1 text-right">
+            <p className="text-sm text-muted-foreground">
+              {mode === "buy" ? "Pay with United States Dollar" : "You receive in US Dollar"}
+            </p>
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full bg-transparent text-right text-3xl font-black outline-none leading-tight text-foreground caret-primary"
+              placeholder="0"
+            />
+          </div>
+        </div>
+
+        <div className="h-px bg-border" />
+
+        {/* Receive row */}
+        <div className="flex items-center gap-3 p-4">
+          <button
+            onClick={() => setShowAllAssets(true)}
+            className="flex items-center gap-1.5 bg-background hover:bg-muted border border-border rounded-full px-3 py-2 text-[15px] font-semibold transition-colors text-foreground flex-shrink-0"
+          >
+            <CoinIcon symbol={crypto.toUpperCase()} className="w-5 h-5" />
+            {crypto}
+            <ChevronDown className="w-4 h-4 opacity-50" />
+          </button>
+          <div className="min-w-0 flex-1 text-right">
+            <p className="text-sm text-muted-foreground">
+              {mode === "buy" ? `Buy ${cryptoName}` : `Sell ${cryptoName}`}
+            </p>
+            <p className="truncate text-3xl font-black leading-tight text-foreground">{estimatedCrypto}</p>
+          </div>
+        </div>
       </div>
 
-      {/* Selectors */}
-      <div className="flex items-center justify-between px-3 pt-3 pb-1 gap-2">
-        <button className="flex items-center gap-1.5 bg-muted hover:bg-muted/80 border border-border rounded-full px-3 py-1.5 text-sm font-semibold transition-colors text-foreground">
-          {fiat} <ChevronDown className="w-3.5 h-3.5 opacity-50" />
-        </button>
-        <button
-           onClick={() => setShowAllAssets(true)}
-          className="flex items-center gap-2 bg-muted hover:bg-muted/80 border border-border rounded-full px-3 py-1.5 text-sm font-semibold transition-colors text-foreground"
-        >
-          <CoinIcon symbol={crypto.toUpperCase()} className="w-5 h-5" />
-          {mode === "buy" ? "Buy" : "Sell"} {crypto}
-          <ChevronDown className="w-3.5 h-3.5 opacity-50" />
-        </button>
-         <button
-           onClick={() => toast({ title: "USD checkout", description: "USD is the only fiat currency currently available." })}
-           aria-label="Payment settings"
-           className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80 border border-border flex items-center justify-center transition-colors flex-shrink-0"
-         >
-          <Settings className="w-3.5 h-3.5 text-muted-foreground" />
-        </button>
-      </div>
-
-      {/* Amount */}
-      <div className="px-4 pt-2 pb-1 text-center">
-        <div className="flex items-start justify-center gap-0.5">
-          <span className="text-lg font-bold text-muted-foreground/50 mt-1 select-none">$</span>
-          <input
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="text-5xl font-bold w-full text-center outline-none bg-transparent leading-tight text-foreground caret-primary"
-            style={{ minWidth: 0 }}
-            placeholder="0"
-          />
+      {/* Fees + rate */}
+      <div className="px-4 pt-4">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setShowFees(!showFees)}
+            className="flex items-center gap-1.5 text-[15px] font-medium text-foreground"
+          >
+            Fees included
+            <ChevronDown className={`w-4 h-4 transition-transform ${showFees ? "rotate-180" : ""}`} />
+          </button>
+          <p className="text-[15px] font-medium text-foreground">
+            1.00 {crypto} ≈ {selectedAsset.price}
+          </p>
         </div>
-        <div className="flex items-center justify-center gap-1.5 mt-1 text-muted-foreground text-xs font-medium">
-          <ArrowLeftRight className="w-3 h-3" />
-          <span>≈ {estimatedCrypto} {crypto}</span>
-        </div>
+        {showFees && (
+          <div className="mt-3 space-y-2 rounded-2xl bg-muted/60 p-4 text-sm text-muted-foreground">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5"><ArrowLeftRight className="w-3.5 h-3.5" /> Network fee</span>
+              <span className="font-semibold text-foreground">Included</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Processing fee</span>
+              <span className="font-semibold text-foreground">Included</span>
+            </div>
+            <p className="text-xs text-muted-foreground/70">
+              Final fees are confirmed by Coinbase on the checkout screen.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Quick amounts */}
-      <div className="flex gap-1.5 px-3 pb-3 mt-1">
+      <div className="flex gap-2 px-4 pt-4">
         {QUICK_AMOUNTS.map((q) => (
           <button
             key={q}
             onClick={() => setAmount(q)}
-            className={`flex-1 py-1.5 rounded-xl text-sm font-semibold border transition-all ${
+            className={`flex-1 py-2 rounded-full text-sm font-semibold border transition-all ${
               amount === q
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
@@ -636,7 +692,7 @@ const BuyCryptoPage = () => {
 
       {/* Payment method picker (buy mode only) */}
       {mode === "buy" && (
-        <div className="px-3 pb-2">
+        <div className="px-4 pt-4">
           <PaymentMethodSelector
             selectedId={selectedPaymentMethod}
             onSelect={setSelectedPaymentMethod}
@@ -645,16 +701,16 @@ const BuyCryptoPage = () => {
       )}
 
       {/* CTA */}
-      <div className="px-3 pb-4 space-y-2">
+      <div className="px-4 pt-4 pb-5 space-y-3">
         <Button
           onClick={handleAction}
           disabled={cdpOnramp.isPending || cdpOfframp.isPending || !amount}
-          className="w-full h-11 bg-primary hover:bg-primary/90 text-black rounded-2xl text-sm font-bold border-none shadow-md shadow-primary/20 transition-all"
+          className="w-full h-14 bg-primary hover:bg-primary/90 text-black rounded-full text-lg font-bold border-none shadow-md shadow-primary/20 transition-all"
         >
           {cdpOnramp.isPending || cdpOfframp.isPending ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className="w-5 h-5 animate-spin" />
           ) : user ? (
-            `Continue with ${cryptoName}`
+            "Continue"
           ) : (
             "Sign in to continue"
           )}
