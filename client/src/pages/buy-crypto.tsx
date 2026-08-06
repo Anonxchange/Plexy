@@ -37,24 +37,44 @@ import { useCdpTransactions, type CdpTransaction } from "@/hooks/use-cdp-transac
 
 const QUICK_AMOUNTS = ["100", "250", "500", "1000"];
 
-const FEATURED_ASSETS = [
-  { symbol: "BTC", name: "Bitcoin",  price: "$76,400", change: "+2.4%", up: true },
-  { symbol: "ETH", name: "Ethereum", price: "$2,650",  change: "+1.8%", up: true },
-  { symbol: "SOL", name: "Solana",   price: "$138",    change: "+5.1%", up: true },
-  { symbol: "DOGE", name: "Dogecoin",price: "$0.165",  change: "-1.2%", up: false },
-  { symbol: "XRP",  name: "XRP",     price: "$0.52",   change: "+0.9%", up: true },
-  { symbol: "MATIC", name: "Polygon",price: "$0.72",   change: "+3.3%", up: true },
-  { symbol: "LTC",  name: "Litecoin",price: "$87",     change: "-0.7%", up: false },
-  { symbol: "AVAX", name: "Avalanche",price: "$28",    change: "+4.2%", up: true },
+/**
+ * This list intentionally mirrors the asset/network matrix in the CDP edge
+ * functions. Keep the ticker sent to CDP canonical: Polygon is POL (MATIC is
+ * accepted as an input alias by the edge function, but is no longer shown).
+ */
+type SupportedAsset = {
+  symbol: string;
+  name: string;
+  price: string;
+  change: string;
+  up: boolean;
+  network: string;
+  networkLabel: string;
+};
+
+const FEATURED_ASSETS: SupportedAsset[] = [
+  { symbol: "BTC",  name: "Bitcoin",  price: "$76,400", change: "+2.4%", up: true, network: "bitcoin", networkLabel: "Bitcoin" },
+  { symbol: "ETH",  name: "Ethereum", price: "$2,650",  change: "+1.8%", up: true, network: "ethereum", networkLabel: "Ethereum" },
+  { symbol: "USDC", name: "USD Coin", price: "$1.00",   change: "0.0%",  up: true, network: "ethereum", networkLabel: "Ethereum" },
+  { symbol: "SOL",  name: "Solana",   price: "$138",    change: "+5.1%", up: true, network: "solana", networkLabel: "Solana" },
+  { symbol: "POL",  name: "Polygon",  price: "$0.72",   change: "+3.3%", up: true, network: "polygon", networkLabel: "Polygon" },
+  { symbol: "XRP",  name: "XRP",      price: "$0.52",   change: "+0.9%", up: true, network: "ripple", networkLabel: "XRP Ledger" },
 ];
 
-const ALL_ASSETS = [
+const ALL_ASSETS: SupportedAsset[] = [
   ...FEATURED_ASSETS,
-  { symbol: "USDC",  name: "USDC",      price: "$1.00",  change: "0.0%",  up: true },
-  { symbol: "USDT",  name: "Tether",    price: "$1.00",  change: "0.0%",  up: true },
-  { symbol: "DOT",   name: "Polkadot",  price: "$5.40",  change: "+2.1%", up: true },
-  { symbol: "LINK",  name: "Chainlink", price: "$11.20", change: "+3.5%", up: true },
+  { symbol: "USDT", name: "Tether",    price: "$1.00", change: "0.0%",  up: true, network: "ethereum", networkLabel: "Ethereum" },
+  { symbol: "ARB",  name: "Arbitrum",  price: "$0.72",  change: "+2.1%", up: true, network: "arbitrum", networkLabel: "Arbitrum One" },
+  { symbol: "OP",   name: "Optimism",  price: "$1.64",  change: "+3.5%", up: true, network: "optimism", networkLabel: "Optimism" },
+  { symbol: "AVAX", name: "Avalanche", price: "$28",    change: "+4.2%", up: true, network: "avalanche-c-chain", networkLabel: "Avalanche C-Chain" },
 ];
+
+const ASSET_ALIASES: Record<string, string> = {
+  MATIC: "POL",
+  POLYGON: "POL",
+};
+
+const SUPPORTED_SYMBOLS = new Set(ALL_ASSETS.map((asset) => asset.symbol));
 
 const HOW_TO_STEPS = [
   {
@@ -77,7 +97,7 @@ const HOW_TO_STEPS = [
   {
     num: "2",
     title: "Select your crypto",
-    desc: "Choose from 100+ assets. Enter your spend amount in any local currency.",
+     desc: "Choose from supported assets. Enter your spend amount in any local currency.",
     svg: (
       <svg viewBox="0 0 28 28" fill="none" className="w-5 h-5">
         <defs>
@@ -409,26 +429,29 @@ const BuyCryptoPage = () => {
   const [fiat] = useState("USD");
   const [crypto, setCrypto] = useState("BTC");
   const [showAllAssets, setShowAllAssets] = useState(false);
-  const [activeCrypto, setActiveCrypto] = useState("BTC");
   // Valid onramp payment methods accepted by the edge fn.
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("CARD");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const modeParam = params.get("mode");
-    const cryptoParam = params.get("crypto")?.toUpperCase();
+    const requestedCrypto = params.get("crypto")?.toUpperCase();
+    const cryptoParam = requestedCrypto ? (ASSET_ALIASES[requestedCrypto] ?? requestedCrypto) : undefined;
     if (modeParam === "sell" || modeParam === "buy") setMode(modeParam);
-    if (cryptoParam) { setCrypto(cryptoParam); setActiveCrypto(cryptoParam); }
+    if (cryptoParam && SUPPORTED_SYMBOLS.has(cryptoParam)) setCrypto(cryptoParam);
+    // Unsupported query values are deliberately ignored: the visible picker
+    // always remains inside the edge-function support matrix.
   }, []);
 
   const cdpOnramp = useCdpOnramp();
   const cdpOfframp = useCdpOfframp();
   const { data: txHistory = [], isLoading: txLoading } = useCdpTransactions(user?.id);
 
-  const cryptoName = crypto === "BTC" ? "Bitcoin" : crypto === "ETH" ? "Ethereum" : crypto === "SOL" ? "Solana" : crypto;
+  const selectedAsset = ALL_ASSETS.find((asset) => asset.symbol === crypto) ?? FEATURED_ASSETS[0];
+  const cryptoName = selectedAsset.name;
 
   const estimatedCrypto = useMemo(() => {
-    const prices: Record<string, number> = { BTC: 76400, ETH: 2650, SOL: 138, DOGE: 0.165, XRP: 0.52, MATIC: 0.72, LTC: 87, USDC: 1, USDT: 1, AVAX: 28 };
+    const prices: Record<string, number> = { BTC: 76400, ETH: 2650, SOL: 138, XRP: 0.52, POL: 0.72, ARB: 0.72, OP: 1.64, USDC: 1, USDT: 1, AVAX: 28 };
     const result = (parseFloat(amount) || 0) / (prices[crypto] || 1);
     return result < 0.0001 ? result.toFixed(8) : result < 1 ? result.toFixed(5) : result.toFixed(4);
   }, [amount, crypto]);
@@ -443,42 +466,56 @@ const BuyCryptoPage = () => {
       const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
       const wallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
 
-      // Both CDP edge functions enforce EVM address validation (/^0x[a-fA-F0-9]{40}$/).
-      // BTC and SOL native addresses are rejected with 400 before Coinbase is called.
-      // We must always send an EVM (0x...) address.
-      const EVM_RE = /^0x[a-fA-F0-9]{40}$/;
-
-      // SOL requires a native Solana address. Both CDP edge functions enforce
-      // EVM-only address validation, so SOL is unsupported for buy and sell.
-      if (crypto === "SOL") {
+      const canonicalCrypto = ASSET_ALIASES[crypto] ?? crypto;
+      const asset = ALL_ASSETS.find((candidate) => candidate.symbol === canonicalCrypto);
+      if (!asset) {
         toast({
-          title: "SOL not yet supported",
-          description: `${mode === "buy" ? "Buying" : "Selling"} SOL requires a Solana wallet address, which isn't supported by the current payment provider. Try ETH, USDC, or BTC instead.`,
+          title: "Asset not supported",
+          description: "Choose an asset from the supported list to continue.",
           variant: "destructive",
         });
         return;
       }
 
-      // Prefer the wallet matching the selected crypto if it is EVM-compatible.
-      // Fall back to any EVM wallet the user owns.
-      const evmWallets = wallets.filter((w) => EVM_RE.test(w.address || ""));
-      const matchedEvm = evmWallets.find((w) => {
-        const ws = (w.chainId || "").toUpperCase(), wt = (w.walletType || "").toUpperCase();
-        const s = crypto.toUpperCase();
-        return ws.includes(s) || wt.includes(s) || ws === "ETH" || wt === "ETHEREUM";
-      });
-      const bestWallet = matchedEvm || evmWallets[0];
-
-      const addr =
-        bestWallet?.address ||
-        (EVM_RE.test((user as any)?.walletAddress || "") ? (user as any).walletAddress : null) ||
-        (EVM_RE.test((user as any)?.wallet_address || "") ? (user as any).wallet_address : null) ||
-        (EVM_RE.test((user as any)?.user_metadata?.wallet_address || "") ? (user as any).user_metadata.wallet_address : null);
+      // CDP validates both the address family and asset/network pair. Match
+      // the wallet to the selected chain before creating a session.
+      const EVM_RE = /^0x[a-fA-F0-9]{40}$/;
+      const BTC_RE = /^(bc1[02-9ac-hj-np-z]{11,71}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/;
+      const SOL_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+      const XRP_RE = /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/;
+      const addressMatchesNetwork = (address: string | undefined) => {
+        if (!address) return false;
+        if (asset.network === "bitcoin") return BTC_RE.test(address);
+        if (asset.network === "solana") return SOL_RE.test(address);
+        if (asset.network === "ripple") return XRP_RE.test(address);
+        return EVM_RE.test(address);
+      };
+      const networkWords: Record<string, string[]> = {
+        bitcoin: ["bitcoin", "btc"],
+        ethereum: ["ethereum", "eth"],
+        polygon: ["polygon", "pol", "matic"],
+        arbitrum: ["arbitrum", "arb"],
+        optimism: ["optimism", "op"],
+        "avalanche-c-chain": ["avalanche", "avax"],
+        solana: ["solana", "sol"],
+        ripple: ["xrp", "ripple"],
+      };
+      const words = networkWords[asset.network] ?? [];
+      const bestWallet = wallets.find((wallet) => {
+        const descriptor = `${wallet.chainId ?? ""} ${wallet.walletType ?? ""}`.toLowerCase();
+        return addressMatchesNetwork(wallet.address) && words.some((word) => descriptor.includes(word));
+      }) ?? wallets.find((wallet) => addressMatchesNetwork(wallet.address));
+      const profileAddresses = [
+        (user as any)?.walletAddress,
+        (user as any)?.wallet_address,
+        (user as any)?.user_metadata?.wallet_address,
+      ];
+      const addr = bestWallet?.address ?? profileAddresses.find(addressMatchesNetwork) ?? null;
 
       if (!addr) {
         toast({
-          title: "Ethereum wallet required",
-          description: "Add an Ethereum wallet in your settings to buy crypto. BTC purchases are delivered as cbBTC on Base.",
+          title: `${asset.networkLabel} wallet required`,
+          description: `Add a ${asset.networkLabel} wallet in your settings before starting this ${mode} flow.`,
           variant: "destructive",
         });
         return;
@@ -489,10 +526,11 @@ const BuyCryptoPage = () => {
       if (mode === "buy") {
         const data = await cdpOnramp.mutateAsync({
           address: addr,
-          purchaseCurrency: crypto,
+           purchaseCurrency: canonicalCrypto,
           paymentAmount: amount,
           paymentCurrency: fiat,
-          paymentMethod: selectedPaymentMethod,
+           paymentMethod: selectedPaymentMethod,
+           network: asset.network,
         });
         rawUrl = data.onrampUrl;
         // Session-token fallback for the Coinbase onramp widget URL.
@@ -502,8 +540,9 @@ const BuyCryptoPage = () => {
       } else {
         const data = await cdpOfframp.mutateAsync({
           address: addr,
-          sellCurrency: crypto,
+           sellCurrency: canonicalCrypto,
           fiatCurrency: fiat,
+           network: asset.network,
           // Edge fn accepts: BANK_ACCOUNT | ACH_BANK_ACCOUNT | PAYPAL | FIAT_WALLET
           cashoutMethod: "BANK_ACCOUNT",
         });
@@ -543,14 +582,18 @@ const BuyCryptoPage = () => {
           {fiat} <ChevronDown className="w-3.5 h-3.5 opacity-50" />
         </button>
         <button
-          onClick={() => setActiveCrypto(crypto)}
+           onClick={() => setShowAllAssets(true)}
           className="flex items-center gap-2 bg-muted hover:bg-muted/80 border border-border rounded-full px-3 py-1.5 text-sm font-semibold transition-colors text-foreground"
         >
           <CoinIcon symbol={crypto.toUpperCase()} className="w-5 h-5" />
           {mode === "buy" ? "Buy" : "Sell"} {crypto}
           <ChevronDown className="w-3.5 h-3.5 opacity-50" />
         </button>
-        <button className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80 border border-border flex items-center justify-center transition-colors flex-shrink-0">
+         <button
+           onClick={() => toast({ title: "USD checkout", description: "USD is the only fiat currency currently available." })}
+           aria-label="Payment settings"
+           className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80 border border-border flex items-center justify-center transition-colors flex-shrink-0"
+         >
           <Settings className="w-3.5 h-3.5 text-muted-foreground" />
         </button>
       </div>
@@ -656,15 +699,17 @@ const BuyCryptoPage = () => {
               {/* ── NOT LOGGED IN: CTAs ── */}
               {!user && (
                 <div className="flex flex-wrap gap-3 mb-8">
-                  <Link href="/signup">
-                    <button className="bg-primary hover:bg-primary/90 text-black font-bold px-6 py-3 rounded-2xl text-sm transition-all shadow-lg shadow-primary/20">
-                      Get started free →
-                    </button>
+                  <Link
+                    href="/signup"
+                    className="bg-primary hover:bg-primary/90 text-black font-bold px-6 py-3 rounded-2xl text-sm transition-all shadow-lg shadow-primary/20"
+                  >
+                    Get started free →
                   </Link>
-                  <Link href="/signin">
-                    <button className="bg-muted hover:bg-muted/80 border border-border text-foreground font-bold px-6 py-3 rounded-2xl text-sm transition-all">
-                      Sign in
-                    </button>
+                  <Link
+                    href="/signin"
+                    className="bg-muted hover:bg-muted/80 border border-border text-foreground font-bold px-6 py-3 rounded-2xl text-sm transition-all"
+                  >
+                    Sign in
                   </Link>
                 </div>
               )}
@@ -672,8 +717,8 @@ const BuyCryptoPage = () => {
               {/* ── LOGGED IN: quick action links ── */}
               {user && (
                 <div className="flex flex-wrap gap-2 mb-8">
-                  {["Bitcoin", "Ethereum", "Solana"].map((n) => {
-                    const s = n === "Bitcoin" ? "BTC" : n === "Ethereum" ? "ETH" : "SOL";
+                  {["Bitcoin", "Ethereum", "Solana", "Polygon"].map((n) => {
+                    const s = n === "Bitcoin" ? "BTC" : n === "Ethereum" ? "ETH" : n === "Solana" ? "SOL" : "POL";
                     return (
                       <button
                         key={s}
@@ -751,7 +796,7 @@ const BuyCryptoPage = () => {
         <div className="flex items-end justify-between mb-8">
           <div className="space-y-2">
             <span className="inline-block text-primary text-xs font-bold uppercase tracking-widest bg-primary/10 px-3 py-1.5 rounded-full">Markets</span>
-            <h2 className="text-4xl lg:text-5xl font-bold text-foreground">Buy {cryptoName} and 100+ assets</h2>
+           <h2 className="text-4xl lg:text-5xl font-bold text-foreground">Choose an asset that fits your route</h2>
           </div>
           <button
             onClick={() => setShowAllAssets(!showAllAssets)}
@@ -780,13 +825,20 @@ const BuyCryptoPage = () => {
                 <CoinIcon symbol={asset.symbol.toUpperCase()} className="w-10 h-10 lg:w-12 lg:h-12 flex-shrink-0" />
                 <div>
                   <p className="font-bold text-sm lg:text-base text-foreground">{asset.name}</p>
-                  <p className="text-muted-foreground text-xs lg:text-sm font-medium">{asset.symbol}</p>
+                  <p className="text-muted-foreground text-xs lg:text-sm font-medium">{asset.symbol} · {asset.networkLabel}</p>
                 </div>
               </div>
               <p className="font-bold text-sm lg:text-base text-foreground hidden md:block">{asset.price}</p>
               <p className={`font-bold text-sm lg:text-base hidden md:block ${asset.up ? "text-emerald-500" : "text-red-400"}`}>{asset.change}</p>
               <div className="hidden md:block">
-                <button className="text-sm font-bold bg-primary/10 hover:bg-primary/20 text-primary px-4 py-2 rounded-xl transition-colors">
+                <button
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setCrypto(asset.symbol);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  className="text-sm font-bold bg-primary/10 hover:bg-primary/20 text-primary px-4 py-2 rounded-xl transition-colors"
+                >
                   Buy {asset.symbol}
                 </button>
               </div>
@@ -834,10 +886,11 @@ const BuyCryptoPage = () => {
               <button className="bg-primary hover:bg-primary/90 text-black font-bold px-8 py-4 rounded-2xl text-sm transition-all shadow-lg shadow-primary/25">
                 Download app
               </button>
-              <Link href="/signup">
-                <button className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold px-8 py-4 rounded-2xl text-sm transition-all backdrop-blur-sm">
-                  Sign up free
-                </button>
+              <Link
+                href="/signup"
+                className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold px-8 py-4 rounded-2xl text-sm transition-all backdrop-blur-sm"
+              >
+                Sign up free
               </Link>
             </div>
           </div>
@@ -1006,15 +1059,17 @@ const BuyCryptoPage = () => {
               </p>
             </div>
             <div className="flex gap-3 flex-wrap flex-shrink-0">
-              <Link href="/support">
-                <button className="bg-foreground text-background font-bold px-5 py-3 rounded-2xl text-sm hover:opacity-90 transition-opacity">
-                  Help Centre
-                </button>
+              <Link
+                href="/support"
+                className="bg-foreground text-background font-bold px-5 py-3 rounded-2xl text-sm hover:opacity-90 transition-opacity"
+              >
+                Help Centre
               </Link>
-              <Link href="/academy">
-                <button className="bg-muted hover:bg-muted/80 border border-border text-foreground font-bold px-5 py-3 rounded-2xl text-sm transition-all">
-                  Pexly Academy
-                </button>
+              <Link
+                href="/academy"
+                className="bg-muted hover:bg-muted/80 border border-border text-foreground font-bold px-5 py-3 rounded-2xl text-sm transition-all"
+              >
+                Pexly Academy
               </Link>
             </div>
           </div>
