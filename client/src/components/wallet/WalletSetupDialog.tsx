@@ -142,7 +142,7 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
         );
 
       const generatedWallets = [ethWallet];
-      const chains = ["Bitcoin (SegWit)", "Solana", "Tron (TRC-20)", "XRP", "BNB"];
+      const chains = ["Bitcoin (SegWit)", "Solana", "Tron (TRC-20)", "XRP", "BNB", "Avalanche"];
       const failed: string[] = [];
 
       for (const chain of chains) {
@@ -351,7 +351,7 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
                 <div className="bg-gray-50 p-5 rounded-[24px] border border-gray-100">
                   <p className="text-[10px] text-[#8BB424] font-bold uppercase tracking-[0.2em] mb-3">Supported Networks</p>
                   <div className="flex flex-wrap gap-2 justify-center">
-                    {["BTC", "ETH", "BNB", "TRX", "SOL", "USDT", "USDC"].map((s) => (
+                    {["BTC", "ETH", "BNB", "TRX", "SOL", "AVAX", "USDT", "USDC"].map((s) => (
                       <span key={s} className="px-2.5 py-1 bg-white border border-gray-100 rounded-lg text-[10px] font-bold text-black shadow-sm">
                         {s}
                       </span>
