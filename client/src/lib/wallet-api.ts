@@ -347,7 +347,9 @@ export async function createCDPSession(
   const { data: { session } } = await supabase.auth.getSession();
   const access_token = session?.access_token;
 
-  const purchaseCurrency = assets[0] || 'USDC';
+  const purchaseCurrency = (assets[0] || 'USDC').toUpperCase() === 'MATIC'
+    ? 'POL'
+    : (assets[0] || 'USDC').toUpperCase();
 
   // Both edge functions validate `address` with /^0x[a-fA-F0-9]{40}$/ (EVM only).
   // Network mapping must therefore be EVM-compatible:
@@ -403,7 +405,9 @@ export async function createCDPOfframpSession(
   const { data: { session } } = await supabase.auth.getSession();
   const access_token = session?.access_token;
 
-  const sellCurrency = assets[0] || 'USDC';
+  const sellCurrency = (assets[0] || 'USDC').toUpperCase() === 'MATIC'
+    ? 'POL'
+    : (assets[0] || 'USDC').toUpperCase();
 
   // Derive network from currency when not provided.
   let sellNetwork = options?.network;
