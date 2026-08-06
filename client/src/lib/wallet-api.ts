@@ -336,12 +336,12 @@ export async function monitorDeposits(userId: string, cryptoSymbol: string): Pro
 }
 
 export async function createCDPSession(
-  address: string, 
-  assets: string[], 
-  paymentAmount?: string, 
+  address: string,
+  assets: string[],
+  paymentAmount?: string,
   paymentCurrency?: string,
-  options?: { network?: string }
-): Promise<string> {
+  options?: { network?: string; paymentMethod?: string }
+): Promise<{ onrampUrl: string | null; sessionToken: string | null }> {
   if (import.meta.env.DEV) console.log("[createCDPSession] Initiating cdp-create-session");
 
   const { data: { session } } = await supabase.auth.getSession();
@@ -349,34 +349,32 @@ export async function createCDPSession(
 
   const purchaseCurrency = assets[0] || 'USDC';
 
-  // Map network based on currency if not provided
+  // Both edge functions validate `address` with /^0x[a-fA-F0-9]{40}$/ (EVM only).
+  // Network mapping must therefore be EVM-compatible:
+  //   BTC  → 'base'  (Coinbase delivers cbBTC on Base to any EVM address)
+  //   everything else → 'ethereum' or the caller-supplied network
   let destinationNetwork = options?.network;
   if (!destinationNetwork) {
-    if (purchaseCurrency === 'BTC') {
-      destinationNetwork = 'bitcoin';
-    } else if (purchaseCurrency === 'ETH' || purchaseCurrency === 'USDC' || purchaseCurrency === 'USDT') {
-      destinationNetwork = 'ethereum';
-    } else if (purchaseCurrency === 'SOL') {
-      destinationNetwork = 'solana';
-    } else {
-      destinationNetwork = 'ethereum'; // Default
-    }
+    if (purchaseCurrency === 'BTC') destinationNetwork = 'base';
+    else destinationNetwork = 'ethereum'; // ETH, USDC, USDT, SOL not EVM-supported
   }
+
+  // Edge fn only accepts these four values; default to CARD.
+  const VALID_PAYMENT_METHODS = new Set(['CARD', 'ACH_BANK_ACCOUNT', 'APPLE_PAY', 'FIAT_WALLET']);
+  const paymentMethod = (options?.paymentMethod && VALID_PAYMENT_METHODS.has(options.paymentMethod))
+    ? options.paymentMethod
+    : 'CARD';
 
   const { data, error } = await supabase.functions.invoke('cdp-create-session', {
     body: {
       address,
-      addresses: [{ address, network: destinationNetwork }],
+      destinationNetwork,
       purchaseCurrency,
-      assets,
       paymentAmount,
       paymentCurrency,
-      destinationNetwork,
-      sourceNetwork: destinationNetwork
+      paymentMethod,
     },
-    headers: access_token ? {
-      Authorization: `Bearer ${access_token}`,
-    } : undefined,
+    headers: access_token ? { Authorization: `Bearer ${access_token}` } : undefined,
   });
 
   if (error) {
@@ -387,32 +385,19 @@ export async function createCDPSession(
   if (import.meta.env.DEV) console.log("[createCDPSession] Session created successfully");
 
   const result = data as any;
-  const token = result?.session_token || result?.sessionToken || result?.token || 
-                result?.data?.session_token || result?.data?.sessionToken || result?.data?.token ||
-                result?.result?.session_token || result?.result?.sessionToken || result?.result?.token ||
-                result?.session?.sessionToken || result?.session?.session_token;
-  
-  const onrampUrl = result?.onramp_url || result?.onrampUrl || 
-                    result?.data?.onramp_url || result?.data?.onrampUrl ||
-                    result?.session?.onrampUrl || result?.session?.onramp_url;
+  const onrampUrl: string | null = result?.onrampUrl ?? null;
+  const sessionToken: string | null = result?.sessionToken ?? null;
 
-  if (onrampUrl) return onrampUrl;
-  
-  if (!token && !onrampUrl) {
-    console.error("[createCDPSession] No token or URL found in response:", data);
-    if (typeof data === 'string' && data.length > 20) return data;
-  }
-
-  return token;
+  return { onrampUrl, sessionToken };
 }
 
 export async function createCDPOfframpSession(
-  address: string, 
-  assets: string[], 
-  sellAmount?: string, 
+  address: string,
+  assets: string[],
+  _sellAmount: string | undefined,   // kept for call-site compat; edge fn does not use it
   fiatCurrency?: string,
-  options?: { network?: string, paymentMethod?: string }
-): Promise<string> {
+  options?: { network?: string; cashoutMethod?: string }
+): Promise<{ offrampUrl: string | null }> {
   if (import.meta.env.DEV) console.log("[createCDPOfframpSession] Initiating cdp-offramp-session");
 
   const { data: { session } } = await supabase.auth.getSession();
@@ -420,32 +405,29 @@ export async function createCDPOfframpSession(
 
   const sellCurrency = assets[0] || 'USDC';
 
-  // Map network based on currency if not provided
+  // Derive network from currency when not provided.
   let sellNetwork = options?.network;
   if (!sellNetwork) {
-    if (sellCurrency === 'BTC') {
-      sellNetwork = 'bitcoin';
-    } else if (sellCurrency === 'ETH' || sellCurrency === 'USDC' || sellCurrency === 'USDT') {
-      sellNetwork = 'ethereum';
-    } else if (sellCurrency === 'SOL') {
-      sellNetwork = 'solana';
-    } else {
-      sellNetwork = 'ethereum'; // Default
-    }
+    if (sellCurrency === 'BTC') sellNetwork = 'bitcoin';
+    else if (sellCurrency === 'SOL') sellNetwork = 'solana';
+    else sellNetwork = 'ethereum';
   }
+
+  // Edge fn accepts: BANK_ACCOUNT | ACH_BANK_ACCOUNT | PAYPAL | FIAT_WALLET
+  const VALID_CASHOUT_METHODS = new Set(['BANK_ACCOUNT', 'ACH_BANK_ACCOUNT', 'PAYPAL', 'FIAT_WALLET']);
+  const cashoutMethod = (options?.cashoutMethod && VALID_CASHOUT_METHODS.has(options.cashoutMethod))
+    ? options.cashoutMethod
+    : 'BANK_ACCOUNT';
 
   const { data, error } = await supabase.functions.invoke('cdp-create-offramp-session', {
     body: {
       sourceAddress: address,
       sellCurrency,
       sellNetwork,
-      sellAmount,
       cashoutCurrency: fiatCurrency || 'USD',
-      cashoutMethod: options?.paymentMethod || 'BANK_ACCOUNT',
+      cashoutMethod,
     },
-    headers: access_token ? {
-      Authorization: `Bearer ${access_token}`,
-    } : undefined,
+    headers: access_token ? { Authorization: `Bearer ${access_token}` } : undefined,
   });
 
   if (error) {
@@ -454,16 +436,9 @@ export async function createCDPOfframpSession(
   }
 
   const result = data as any;
-  const token = result?.session_token || result?.sessionToken || result?.token || 
-                result?.data?.session_token || result?.data?.sessionToken || result?.data?.token ||
-                result?.session?.sessionToken || result?.session?.session_token;
-  
-  const offrampUrl = result?.offramp_url || result?.offrampUrl || 
-                     result?.data?.offramp_url || result?.data?.offrampUrl ||
-                     result?.session?.offrampUrl || result?.session?.offramp_url;
-
-  if (offrampUrl) return offrampUrl;
-  return token;
+  // The edge fn returns { success, offrampUrl } — no session token.
+  const offrampUrl: string | null = result?.offrampUrl ?? null;
+  return { offrampUrl };
 }
 
 export function startDepositMonitoring(

@@ -68,7 +68,12 @@ export function sanitizeImageUrl(url: string | null | undefined): string {
   }
 }
 
-const COINBASE_PAY_ORIGINS = ["https://pay.coinbase.com", "https://buy.coinbase.com"];
+const COINBASE_PAY_ORIGINS = [
+  "https://pay.coinbase.com",
+  "https://buy.coinbase.com",
+  "https://onramp.coinbase.com",
+  "https://www.coinbase.com",
+];
 
 export function safeExternalRedirect(
   url: string | null | undefined,
