@@ -185,11 +185,20 @@ export function SignUp() {
   const handleGoogleSignIn = async () => {
     if (googleRedirectingRef.current) return;
 
+    if (import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken) {
+      toast({
+        title: "Security check required",
+        description: "Complete the CAPTCHA before continuing with Google.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     googleRedirectingRef.current = true;
     setGoogleRedirecting(true);
 
     try {
-      await signInWithGoogle();
+      await signInWithGoogle(captchaToken);
     } catch (error) {
       googleRedirectingRef.current = false;
       setGoogleRedirecting(false);
@@ -705,7 +714,10 @@ export function SignUp() {
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
-                disabled={googleRedirecting}
+                disabled={
+                  googleRedirecting ||
+                  Boolean(import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken)
+                }
                 aria-label={googleRedirecting ? "Connecting to Google" : "Continue with Google"}
                 className="w-12 h-12 rounded-full border-2 border-border hover:border-border/60 flex items-center justify-center transition-colors text-muted-foreground hover:text-foreground disabled:opacity-60 disabled:cursor-wait"
               >
