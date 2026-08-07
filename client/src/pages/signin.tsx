@@ -12,6 +12,7 @@ import { CountryCodeSelector } from "@/components/country-code-selector";
 import { PhoneVerification } from "@/components/phone-verification";
 import { DeviceOTPVerification } from "@/components/device-otp-verification";
 import { supabase } from "@/lib/supabase";
+import { signInWithGoogle } from "@/lib/google-auth";
 import { useTheme } from "@/components/theme-provider";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { deviceFingerprint } from "@/lib/security/device-fingerprint";
@@ -45,6 +46,7 @@ export function SignIn() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleRedirecting, setGoogleRedirecting] = useState(false);
   const [show2FAInput, setShow2FAInput] = useState(false);
   const [showPhoneVerification, setShowPhoneVerification] = useState(false);
   const [showDeviceVerification, setShowDeviceVerification] = useState(false);
@@ -59,6 +61,7 @@ export function SignIn() {
   const [passkeySupported, setPasskeySupported] = useState(false);
   const conditionalAbortRef = useRef<AbortController | null>(null);
   const captchaTokenRef = useRef<string | null>(null);
+  const googleRedirectingRef = useRef(false);
   const { signIn, signOut, user, session, pendingOTPVerification, completeOTPVerification, cancelOTPVerification, completeTOTPSignIn, cancelTOTPSignIn, pauseSessionForTOTP, beginPasskeyAuth, releasePasskeyAuth } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -219,6 +222,25 @@ export function SignIn() {
   }, [inputValue]);
 
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputValue.trim());
+
+  const handleGoogleSignIn = async () => {
+    if (googleRedirectingRef.current) return;
+
+    googleRedirectingRef.current = true;
+    setGoogleRedirecting(true);
+
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      googleRedirectingRef.current = false;
+      setGoogleRedirecting(false);
+      toast({
+        title: "Google sign-in failed",
+        description: friendlyAuthError(error instanceof Error ? error.message : null),
+        variant: "destructive",
+      });
+    }
+  };
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -610,14 +632,16 @@ export function SignIn() {
 
             {/* Social Login Buttons */}
             <div className="flex justify-center gap-4 mb-8">
-              <button 
+              <button
                 type="button"
-                onClick={() => toast({ title: "Coming soon", description: "Google sign-in will be available soon" })}
+                onClick={handleGoogleSignIn}
+                disabled={googleRedirecting}
+                aria-label={googleRedirecting ? "Connecting to Google" : "Continue with Google"}
                 className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-colors ${
                   isDark 
                     ? 'border-gray-800 hover:border-gray-700 text-gray-400 hover:text-white' 
                     : 'border-gray-200 hover:border-gray-300 text-gray-600 hover:text-black'
-                }`}
+                } disabled:opacity-60 disabled:cursor-wait`}
               >
                 <FcGoogle className="w-5 h-5" />
               </button>

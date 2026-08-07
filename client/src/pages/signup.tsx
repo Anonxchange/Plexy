@@ -1,5 +1,5 @@
 import { useHead } from "@unhead/react";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation } from "wouter";
 import portraitImage from "@assets/young-woman-portrait-close-up_1_3_optimized.webp";
 import { useAuth } from "@/lib/auth-context";
@@ -10,6 +10,7 @@ import { FcGoogle } from "react-icons/fc";
 import { FaApple, FaFacebook } from "react-icons/fa";
 import { PhoneVerification } from "@/components/phone-verification";
 import { supabase } from "@/lib/supabase";
+import { signInWithGoogle } from "@/lib/google-auth";
 import { CountryCodeSelector } from "@/components/country-code-selector";
 import { useTheme } from "@/components/theme-provider";
 import { amlScreening } from "@/lib/security/aml-screening";
@@ -161,6 +162,7 @@ export function SignUp() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleRedirecting, setGoogleRedirecting] = useState(false);
   const [step, setStep] = useState<"details" | "email_verify" | "phone">("details");
   const [userId, setUserId] = useState<string | null>(null);
   const [emailOtp, setEmailOtp] = useState("");
@@ -172,12 +174,34 @@ export function SignUp() {
   const [resendCooldown, setResendCooldown] = useState(60);
   const [isResending, setIsResending] = useState(false);
   const [signupInProgress, setSignupInProgress] = useState(false);
+  const googleRedirectingRef = useRef(false);
   const { signUp, signIn, user, loading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
 
   const passwordValidation = useMemo(() => validatePassword(password), [password]);
+
+  const handleGoogleSignIn = async () => {
+    if (googleRedirectingRef.current) return;
+
+    googleRedirectingRef.current = true;
+    setGoogleRedirecting(true);
+
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      googleRedirectingRef.current = false;
+      setGoogleRedirecting(false);
+      toast({
+        title: "Google sign-in failed",
+        description: error instanceof Error
+          ? "We couldn't connect to Google. Please try again."
+          : "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Auto-detect country on mount
   useEffect(() => {
@@ -678,10 +702,12 @@ export function SignUp() {
 
             {/* Social Login Buttons */}
             <div className="flex justify-center gap-4 mb-6">
-              <button 
+              <button
                 type="button"
-                onClick={() => toast({ title: "Coming soon", description: "Google sign-in will be available soon" })}
-                className="w-12 h-12 rounded-full border-2 border-border hover:border-border/60 flex items-center justify-center transition-colors text-muted-foreground hover:text-foreground"
+                onClick={handleGoogleSignIn}
+                disabled={googleRedirecting}
+                aria-label={googleRedirecting ? "Connecting to Google" : "Continue with Google"}
+                className="w-12 h-12 rounded-full border-2 border-border hover:border-border/60 flex items-center justify-center transition-colors text-muted-foreground hover:text-foreground disabled:opacity-60 disabled:cursor-wait"
               >
                 <FcGoogle className="w-5 h-5" />
               </button>
