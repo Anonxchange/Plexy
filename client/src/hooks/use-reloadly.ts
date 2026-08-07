@@ -1,21 +1,29 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import {
-  hasGiftCardDenominationRange,
-} from "@/lib/gift-card-denominations";
+import { hasGiftCardDenominationRange } from "@/lib/gift-card-denominations";
 
 export interface ReloadlyProduct {
   productId: number;
   productName: string;
+  global?: boolean;
+  status?: string;
   brand: { brandId: number; brandName: string };
   country: { isoName: string; name: string; flagUrl: string };
   category: { id: number; name: string };
+
   recipientCurrencyCode: string;
   senderCurrencyCode: string;
-  denominationType: string;
+  recipientCurrencyToSenderCurrencyExchangeRate: number | null;
+
+  denominationType: "FIXED" | "RANGE" | string;
   fixedRecipientDenominations: number[] | null;
   minRecipientDenomination: number | null;
   maxRecipientDenomination: number | null;
+  fixedSenderDenominations: number[] | null;
+  minSenderDenomination: number | null;
+  maxSenderDenomination: number | null;
+  fixedRecipientToSenderDenominationsMap: Record<string, number>[] | null;
+
   senderFee: number;
   senderFeePercentage: number;
   discountPercentage: number;
@@ -30,6 +38,20 @@ export interface ProductsResponse {
   pageable: { pageNumber: number; pageSize: number };
 }
 
+const FUNCTIONS_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+
+async function authHeaders(): Promise<Record<string, string>> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const token = session?.access_token ?? import.meta.env.VITE_SUPABASE_ANON_KEY;
+  return {
+    Authorization: `Bearer ${token}`,
+    apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+    "Content-Type": "application/json",
+  };
+}
+
 export function useGiftCardProducts(params: {
   page?: number;
   size?: number;
@@ -40,30 +62,14 @@ export function useGiftCardProducts(params: {
   return useQuery<ProductsResponse>({
     queryKey: ["gift-card-products", params],
     queryFn: async () => {
-      const queryParams: Record<string, string> = {
-        page: String(params.page || 1),
-        size: String(params.size || 20),
-      };
-      if (params.countryCode) queryParams.countryCode = params.countryCode;
-      if (params.productName) queryParams.productName = params.productName;
-      if (params.categoryId) queryParams.categoryId = String(params.categoryId);
+      const url = new URL(`${FUNCTIONS_BASE}/reloadly-products`);
+      url.searchParams.set("page", String(params.page || 1));
+      url.searchParams.set("size", String(params.size || 20));
+      if (params.countryCode) url.searchParams.set("countryCode", params.countryCode);
+      if (params.productName) url.searchParams.set("productName", params.productName);
+      if (params.categoryId) url.searchParams.set("categoryId", String(params.categoryId));
 
-      const url = new URL(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reloadly-products`
-      );
-      Object.entries(queryParams).forEach(([k, v]) => url.searchParams.set(k, v));
-
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token ?? import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-      const res = await fetch(url.toString(), {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-          "Content-Type": "application/json",
-        },
-      });
-
+      const res = await fetch(url.toString(), { headers: await authHeaders() });
       if (!res.ok) throw new Error("Failed to fetch products");
       return res.json();
     },
@@ -75,55 +81,49 @@ export function useGiftCardProduct(productId: string | undefined) {
     queryKey: ["gift-card-product", productId],
     enabled: !!productId,
     queryFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token ?? import.meta.env.VITE_SUPABASE_ANON_KEY;
-      const headers = {
-        Authorization: `Bearer ${token}`,
-        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-        "Content-Type": "application/json",
-      };
+      const headers = await authHeaders();
 
-      const extractProduct = (data: any): ReloadlyProduct | undefined => {
+      const extractProduct = (data: unknown): ReloadlyProduct | undefined => {
         if (!data) return undefined;
-        if (Array.isArray(data)) {
-          return data.find((p) => String(p.productId) === String(productId));
-        }
-        if (Array.isArray(data.content)) {
-          return data.content.find((p: ReloadlyProduct) => String(p.productId) === String(productId));
-        }
-        if (String(data.productId) === String(productId)) return data as ReloadlyProduct;
+        const match = (p: ReloadlyProduct) => String(p.productId) === String(productId);
+        if (Array.isArray(data)) return (data as ReloadlyProduct[]).find(match);
+        const obj = data as { content?: ReloadlyProduct[]; productId?: number };
+        if (Array.isArray(obj.content)) return obj.content.find(match);
+        if (String(obj.productId) === String(productId)) return data as ReloadlyProduct;
         return undefined;
       };
 
-      let directProduct: ReloadlyProduct | undefined;
-
-      // 1. Try the direct productId query first (fast path, works if the
-      //    edge function supports filtering a single product).
-      try {
-        const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reloadly-products?productId=${productId}`,
-          { headers }
-        );
-        if (res.ok) {
-          directProduct = extractProduct(await res.json());
-          if (directProduct && hasGiftCardDenominationRange(directProduct)) {
-            return directProduct;
+      // GET /products/{id} is the ONLY authoritative source for denominations.
+      // Never overwrite it with a row scraped from a cached/partial list — that
+      // was how stale or mismatched min/max values leaked into the UI.
+      const res = await fetch(
+        `${FUNCTIONS_BASE}/reloadly-products?productId=${encodeURIComponent(String(productId))}`,
+        { headers },
+      );
+      if (res.ok) {
+        const direct = extractProduct(await res.json());
+        if (direct) {
+          if (!hasGiftCardDenominationRange(direct)) {
+            console.warn(
+              `[reloadly] product ${productId} returned no recipient denominations`,
+              direct,
+            );
           }
+          return direct;
         }
-      } catch { /* fall through to list search */ }
+      }
 
-      // 2. Fall back to scanning the full product list for this productId,
-      //    since some deployments of the edge function only support listing
-      //    products and don't support filtering by a single productId.
-      const url = new URL(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reloadly-products`);
+      // Fallback only when the single-product endpoint returns nothing at all.
+      const url = new URL(`${FUNCTIONS_BASE}/reloadly-products`);
       url.searchParams.set("page", "1");
       url.searchParams.set("size", "200");
       const listRes = await fetch(url.toString(), { headers });
       if (!listRes.ok) throw new Error("Failed to fetch product");
       const listData: ProductsResponse = await listRes.json();
-      const product = (listData.content ?? []).find((p) => String(p.productId) === String(productId));
+      const product = (listData.content ?? []).find(
+        (p) => String(p.productId) === String(productId),
+      );
       if (product) return product;
-      if (directProduct) return directProduct;
       throw new Error("Failed to fetch product");
     },
   });
@@ -131,6 +131,7 @@ export function useGiftCardProduct(productId: string | undefined) {
 
 interface OrderParams {
   productId: number;
+  /** Face value in the RECIPIENT currency — what Reloadly's /orders expects. */
   unitPrice: number;
   quantity?: number;
   recipientEmail?: string;
@@ -143,7 +144,6 @@ export function useCreateGiftCardOrder() {
       const { data, error } = await supabase.functions.invoke("reloadly-order", {
         body: params,
       });
-
       if (error) throw error;
       return data;
     },
@@ -162,9 +162,7 @@ export interface ReloadlyCountry {
 }
 
 function isoToFlag(iso: string): string {
-  return iso.toUpperCase().replace(/./g, (c) =>
-    String.fromCodePoint(c.charCodeAt(0) + 127397)
-  );
+  return iso.toUpperCase().replace(/./g, (c) => String.fromCodePoint(c.charCodeAt(0) + 127397));
 }
 
 export function useGiftCardCountries() {
@@ -172,42 +170,30 @@ export function useGiftCardCountries() {
     queryKey: ["gift-card-countries"],
     staleTime: 1000 * 60 * 30,
     queryFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token ?? import.meta.env.VITE_SUPABASE_ANON_KEY;
-      const headers = {
-        Authorization: `Bearer ${token}`,
-        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-        "Content-Type": "application/json",
-      };
+      const headers = await authHeaders();
 
-      // 1. Try the dedicated countries edge function first
       try {
-        const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reloadly-countries`,
-          { headers }
-        );
+        const res = await fetch(`${FUNCTIONS_BASE}/reloadly-countries`, { headers });
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data) && data.length > 0) {
             return data
-              .filter((c: any) => c.isoName && c.name)
-              .map((c: any) => ({
-                isoName: c.isoName as string,
-                name: c.name as string,
+              .filter((c: { isoName?: string; name?: string }) => c.isoName && c.name)
+              .map((c: { isoName: string; name: string }) => ({
+                isoName: c.isoName,
+                name: c.name,
                 flag: isoToFlag(c.isoName),
               }))
               .sort((a, b) => a.name.localeCompare(b.name));
           }
         }
-      } catch { /* fall through */ }
+      } catch {
+        /* fall through */
+      }
 
-      // 2. Derive real countries from a large product fetch
-      const url = new URL(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reloadly-products`
-      );
+      const url = new URL(`${FUNCTIONS_BASE}/reloadly-products`);
       url.searchParams.set("page", "1");
       url.searchParams.set("size", "200");
-
       const res = await fetch(url.toString(), { headers });
       if (!res.ok) throw new Error("Failed to fetch products for countries");
       const data: ProductsResponse = await res.json();
@@ -231,33 +217,21 @@ export function useGiftCardCategories() {
     queryKey: ["gift-card-categories"],
     staleTime: 1000 * 60 * 60,
     queryFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token ?? import.meta.env.VITE_SUPABASE_ANON_KEY;
-      const headers = {
-        Authorization: `Bearer ${token}`,
-        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-        "Content-Type": "application/json",
-      };
+      const headers = await authHeaders();
 
-      // 1. Try the dedicated categories edge function first
       try {
-        const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reloadly-categories`,
-          { headers }
-        );
+        const res = await fetch(`${FUNCTIONS_BASE}/reloadly-categories`, { headers });
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data) && data.length > 0) return data;
         }
-      } catch { /* fall through */ }
+      } catch {
+        /* fall through */
+      }
 
-      // 2. Derive categories from a large product fetch
-      const url = new URL(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reloadly-products`
-      );
+      const url = new URL(`${FUNCTIONS_BASE}/reloadly-products`);
       url.searchParams.set("page", "1");
       url.searchParams.set("size", "200");
-
       const res = await fetch(url.toString(), { headers });
       if (!res.ok) throw new Error("Failed to fetch products for categories");
       const data: ProductsResponse = await res.json();
