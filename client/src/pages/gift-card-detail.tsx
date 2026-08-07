@@ -45,7 +45,12 @@ import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
 import { GiftCardCartSheet } from "@/components/gift-card-cart-sheet";
 import { getLocalizedCheckoutPath } from "@/lib/checkout-navigation";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { getGiftCardDenominationRange } from "@/lib/gift-card-denominations";
+import {
+  getRecipientDenominationRange,
+  getSenderDenominationRange,
+  getSenderPriceForRecipientAmount,
+  formatDenominationRange,
+} from "@/lib/gift-card-denominations";
 
 const faqs = [
   {
@@ -113,11 +118,13 @@ function RelatedProductCard({
 }) {
   const [imageFailed, setImageFailed] = useState(false);
   const imageUrl = sanitizeImageUrl(product.logoUrls?.[0]);
-  const denominationRange = getGiftCardDenominationRange(product);
+  // Face value (recipient side) — the same numbers Reloadly's catalog shows.
+  const denominationRange = getRecipientDenominationRange(product);
+  const rangeCurrency = denominationRange.currencyCode ?? product.recipientCurrencyCode;
   const priceRange =
     denominationRange.min != null && denominationRange.max != null
-      ? `${denominationRange.min}–${denominationRange.max} ${product.recipientCurrencyCode}`
-      : `Flexible value · ${product.recipientCurrencyCode}`;
+      ? formatDenominationRange(denominationRange)
+      : `Flexible value · ${rangeCurrency}`;
 
   return (
     <button
@@ -263,7 +270,11 @@ export function GiftCardDetail() {
 
   useEffect(() => {
     if (card && !valueTouched && !cardValue) {
-      setCardValue(String(card.minRecipientDenomination || 10));
+      // Never fall back to a hardcoded 10: use the product's real face-value
+      // denominations (first fixed value, else the recipient minimum).
+      const initial = getRecipientDenominationRange(card);
+      const initialValue = initial.fixed[0] ?? initial.min;
+      if (initialValue != null) setCardValue(String(initialValue));
     }
   }, [card, cardValue, valueTouched]);
 
@@ -274,7 +285,8 @@ export function GiftCardDetail() {
       title: `${card.productName} Gift Card`,
       description: `${qty}x ${card.productName} Gift Card`,
       amount: totalFinalPrice,
-      currency: (card.recipientCurrencyCode || "usd").toLowerCase(),
+      // What the customer is charged is in the SENDER (account) currency.
+      currency: (getSenderDenominationRange(card).currencyCode || card.recipientCurrencyCode || "usd").toLowerCase(),
       image: sanitizeImageUrl(card.logoUrls?.[0]),
       metadata: {
         service: "gift-card",
@@ -335,23 +347,39 @@ export function GiftCardDetail() {
   }
 
   const discountPercentage = card?.discountPercentage || 0;
-  const denominationRange = getGiftCardDenominationRange(card);
+  const denominationRange = getRecipientDenominationRange(card);
+  const senderRange = getSenderDenominationRange(card);
+  const rangeCurrency = denominationRange.currencyCode ?? card.recipientCurrencyCode;
   const qty = parseInt(numberOfCards) || 1;
   const value = parseFloat(cardValue) || 0;
   const discountAmount = value * (discountPercentage / 100);
-  const unitFinalPrice = value - discountAmount;
+  // Reloadly gives the real charge for a face value via the recipient->sender
+  // map / exchange rate; fall back to the discounted face value when absent.
+  const senderPrice = getSenderPriceForRecipientAmount(card, value);
+  const unitFinalPrice = senderPrice ?? value - discountAmount;
   const totalFinalPrice = unitFinalPrice * qty;
-  const totalOriginalPrice = value * qty;
+  // Pre-discount price expressed in the SAME currency as the total above.
+  const unitOriginalPrice =
+    senderPrice != null && discountPercentage < 100
+      ? senderPrice / (1 - discountPercentage / 100)
+      : value;
+  const totalOriginalPrice = unitOriginalPrice * qty;
 
   // Card value must stay inside the product's allowed range.
   const minValue = denominationRange.min ?? 0;
   const maxValue = denominationRange.max ?? Infinity;
   const hasValue = cardValue.trim() !== "" && Number.isFinite(parseFloat(cardValue));
-  const isValueValid = hasValue && value >= minValue && value <= maxValue;
+  const isValueValid = hasValue && (
+    denominationRange.isFixed
+      ? denominationRange.fixed.includes(value)
+      : value >= minValue && value <= maxValue
+  );
   const valueError = !hasValue
     ? "Enter a card value"
     : !isValueValid
-      ? `Value must be between ${minValue} and ${maxValue} ${card?.recipientCurrencyCode ?? ""}`
+      ? denominationRange.isFixed
+        ? `Choose one of the available values: ${denominationRange.fixed.join(", ")} ${rangeCurrency ?? ""}`
+        : `Value must be between ${minValue} and ${maxValue} ${rangeCurrency ?? ""}`
       : null;
 
   const handleAddToCart = async () => {
@@ -360,7 +388,7 @@ export function GiftCardDetail() {
       productId: String(card.productId),
       title: card.productName,
       price: unitFinalPrice,
-      currency: card.recipientCurrencyCode,
+      currency: senderRange.currencyCode ?? card.recipientCurrencyCode,
       image: sanitizeImageUrl(card.logoUrls?.[0]),
     });
     setCartOpen(true);
@@ -525,7 +553,7 @@ export function GiftCardDetail() {
                 {/* Value input */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    Card value ({card.recipientCurrencyCode})
+                    Card value ({rangeCurrency})
                   </label>
                   <Input
                     type="number"
@@ -545,8 +573,31 @@ export function GiftCardDetail() {
                     <p className="text-xs text-destructive">{valueError}</p>
                   ) : (
                     <p className="text-xs text-muted-foreground">
-                      Range: {denominationRange.min ?? "?"} – {denominationRange.max ?? "?"} {card.recipientCurrencyCode}
+                      {denominationRange.isFixed
+                        ? `Available values: ${denominationRange.fixed.join(", ")} ${rangeCurrency ?? ""}`
+                        : `Range: ${formatDenominationRange(denominationRange)}`}
                     </p>
+                  )}
+                  {denominationRange.isFixed && denominationRange.fixed.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {denominationRange.fixed.map((amount) => (
+                        <button
+                          key={amount}
+                          type="button"
+                          onClick={() => {
+                            setValueTouched(true);
+                            setCardValue(String(amount));
+                          }}
+                          className={`px-3 h-9 rounded-lg border text-sm font-semibold transition-colors ${
+                            value === amount
+                              ? "border-primary bg-primary/10 text-foreground"
+                              : "border-border bg-background hover:bg-secondary"
+                          }`}
+                        >
+                          {amount} {rangeCurrency}
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
 
@@ -585,7 +636,7 @@ export function GiftCardDetail() {
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Original price</span>
                       <span className="line-through text-muted-foreground">
-                        {totalOriginalPrice.toFixed(2)} {card.recipientCurrencyCode}
+                        {totalOriginalPrice.toFixed(2)} {senderRange.currencyCode ?? card.recipientCurrencyCode}
                       </span>
                     </div>
                   )}
@@ -593,14 +644,14 @@ export function GiftCardDetail() {
                     <div className="flex justify-between text-sm">
                       <span className="text-green-600 font-medium">Discount ({discountPercentage}%)</span>
                       <span className="text-green-600 font-medium">
-                        − {(totalOriginalPrice - totalFinalPrice).toFixed(2)} {card.recipientCurrencyCode}
+                        − {(totalOriginalPrice - totalFinalPrice).toFixed(2)} {senderRange.currencyCode ?? card.recipientCurrencyCode}
                       </span>
                     </div>
                   )}
                   <div className="flex justify-between items-center">
                     <span className="font-semibold">Total</span>
                     <span className="text-2xl font-bold">
-                      {totalFinalPrice.toFixed(2)} {card.recipientCurrencyCode}
+                      {totalFinalPrice.toFixed(2)} {senderRange.currencyCode ?? card.recipientCurrencyCode}
                     </span>
                   </div>
                 </div>
