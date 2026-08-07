@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { sanitizeImageUrl } from "@/lib/sanitize";
-import { getGiftCardDenominationRange } from "@/lib/gift-card-denominations";
+import { getRecipientDenominationRange, formatDenominationRange } from "@/lib/gift-card-denominations";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { useGiftCardProducts, useGiftCardCategories, useGiftCardCountries } from "@/hooks/use-reloadly";
 import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
@@ -93,12 +93,18 @@ export function dedupeByBrand(content: any[], preferredCountry?: string): any[] 
 
 export function mapProducts(content: any[]): { id: string; name: string; priceRange: string; discount: number; image: string }[] {
   return (content || []).map((card: any) => {
-    const currencyCode: string = card.recipientCurrencyCode || "USD";
-    const { min, max } = getGiftCardDenominationRange(card);
+    // Face value (recipient side), with the currency that those numbers are
+    // actually expressed in — never the sender/account currency.
+    const range = getRecipientDenominationRange(card);
+    const currencyCode: string = range.currencyCode || card.recipientCurrencyCode || "USD";
+    const { min, max } = range;
     return {
       id: String(card.productId),
       name: card.productName,
-      priceRange: `${currencyCode} ${min ?? "?"} – ${max ?? "?"}`,
+      priceRange:
+        min != null && max != null
+          ? formatDenominationRange(range)
+          : `${currencyCode} ${min ?? "?"} – ${max ?? "?"}`,
       discount: card.discountPercentage || 0,
       image: sanitizeImageUrl(card.logoUrls?.[0]) || "",
     };
