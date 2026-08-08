@@ -76,6 +76,40 @@ export function useGiftCardProducts(params: {
   });
 }
 
+/**
+ * Fetch one gift-card product directly from Reloadly.
+ *
+ * Checkout uses this instead of the cached product list so the selected
+ * denomination is validated against Reloadly immediately before ordering.
+ */
+export async function fetchGiftCardProductFromReloadly(productId: string): Promise<ReloadlyProduct> {
+  const url = new URL(`${FUNCTIONS_BASE}/reloadly-products`);
+  url.searchParams.set("productId", String(productId));
+  url.searchParams.set("_t", String(Date.now()));
+
+  const res = await fetch(url.toString(), {
+    headers: await authHeaders(),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Failed to refresh gift card ${productId} from Reloadly`);
+
+  const data = await res.json();
+  const match = (p: ReloadlyProduct) => String(p.productId) === String(productId);
+  const product = Array.isArray(data)
+    ? (data as ReloadlyProduct[]).find(match)
+    : Array.isArray(data?.content)
+      ? (data.content as ReloadlyProduct[]).find(match)
+      : String(data?.productId) === String(productId)
+        ? (data as ReloadlyProduct)
+        : undefined;
+
+  if (!product) throw new Error(`Reloadly returned no product for ${productId}`);
+  if (!hasGiftCardDenominationRange(product)) {
+    throw new Error(`Reloadly returned no valid denominations for gift card ${productId}`);
+  }
+  return product;
+}
+
 export function useGiftCardProduct(productId: string | undefined) {
   return useQuery<ReloadlyProduct>({
     queryKey: ["gift-card-product", productId],
