@@ -91,7 +91,6 @@ export function PaymentMethods() {
     { icon: "card",     color: "#3B82F6", name: t('products.card_name'),       count: "80+",  description: t('products.card_desc'),       route: "/visa-card" },
     { icon: "bitcoin",  color: "#F59E0B", name: t('products.buy_name'),        count: "150+", description: t('products.buy_desc'),        route: "/wallet/buy-crypto" },
     { icon: "mobile",   color: "#10B981", name: t('products.topup_name'),      count: "60+",  description: t('products.topup_desc'),      route: "/wallet/mobile-topup" },
-    { icon: "giftcard", color: "#06B6D4", name: t('products.prediction_name'), count: "85+",  description: t('products.prediction_desc'), route: "/prediction" },
     { icon: "bank",     color: "#8B5CF6", name: t('products.bank_name'),       count: "200+", description: t('products.bank_desc'),       route: "/p2p" },
     { icon: "card",     color: "#EC4899", name: t('products.cards_name'),      count: "80+",  description: t('products.cards_desc'),      route: "/p2p" },
     { icon: "globe",    color: "#14B8A6", name: t('products.explorer_name'),   count: "150+", description: t('products.explorer_desc'),   route: "/explorer" },

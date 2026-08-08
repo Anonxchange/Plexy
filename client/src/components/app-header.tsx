@@ -224,7 +224,7 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar, onPreloadSide
             >
               <DropdownMenuTrigger asChild>
                 <Button
-                  variant={location === "/wallet/stake" || location === "/referral" || location === "/rewards" ? "secondary" : "ghost"}
+                  variant={location === "/referral" || location === "/rewards" ? "secondary" : "ghost"}
                   size="sm"
                   className="gap-1 group text-sm font-medium px-2 xl:px-3"
                 >

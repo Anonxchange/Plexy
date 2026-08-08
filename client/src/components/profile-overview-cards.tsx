@@ -1,11 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation, Link } from "wouter";
-import { useMarkets } from "@/hooks/use-polymarket";
 import { shopifyService } from "@/lib/shopify-service";
 import { createClient } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import DOMPurify from "dompurify";
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -148,94 +146,15 @@ function useShopProducts(count: number) {
 // ─── ProfileOverviewCards ─────────────────────────────────────────────────────
 
 interface OverviewProps {
-  onViewPredictions: () => void;
   onViewShop: () => void;
 }
 
-export function ProfileOverviewCards({ onViewPredictions, onViewShop }: OverviewProps) {
+export function ProfileOverviewCards({ onViewShop }: OverviewProps) {
   const [, setLocation] = useLocation();
-  const { data: predictionMarkets } = useMarkets({ limit: 50 });
   const shopProducts = useShopProducts(4);
-
-  const displayedMarkets = useMemo(() => {
-    if (!predictionMarkets || predictionMarkets.length === 0) return [];
-    const active = predictionMarkets.filter((m: any) => m.active && !m.closed);
-    const pool = active.length >= 3 ? active : predictionMarkets;
-    return randomPick(pool, 3);
-  }, [predictionMarkets]);
 
   return (
     <div className="space-y-4">
-
-      {/* ══ ACTIVE PREDICTIONS ══ */}
-      <div className="rounded-2xl overflow-hidden border border-slate-100 dark:border-border shadow-sm bg-white dark:bg-card">
-        <div className="flex items-center justify-between px-4 pt-4 pb-3">
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-4 rounded-full bg-gradient-to-b from-lime-400 to-emerald-500 inline-block" />
-            <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-muted-foreground">Active Predictions</span>
-          </div>
-          <button
-            onClick={onViewPredictions}
-            className="text-[11px] font-semibold text-primary hover:opacity-70 transition-opacity flex items-center gap-1 bg-primary/8 px-2.5 py-1 rounded-full"
-          >
-            View all
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
-          </button>
-        </div>
-
-        {displayedMarkets.length === 0 ? (
-          <div className="px-4 pb-5">
-            {[0, 1, 2].map(i => (
-              <div key={i} className={cn("flex items-center gap-3 py-3", i < 2 && "border-b border-slate-100 dark:border-border")}>
-                <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-muted animate-pulse flex-shrink-0" />
-                <div className="flex-1 space-y-1.5">
-                  <div className="h-2.5 bg-slate-100 dark:bg-muted rounded-full animate-pulse w-3/4" />
-                  <div className="h-2 bg-slate-100 dark:bg-muted rounded-full animate-pulse w-1/2" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="px-4 pb-4">
-            {displayedMarkets.map((m: any, i: number) => {
-              const prices = parsePrices(m.outcomePrices);
-              const yesOdds = prices[0] ? Math.round(parseFloat(prices[0]) * 100) : 0;
-              const isHigh = yesOdds >= 50;
-              const isLast = i === displayedMarkets.length - 1;
-              const imgSrc = m.image || m.icon || null;
-              return (
-                <button
-                  key={m.id}
-                  onClick={() => setLocation(`/prediction/${m.id}`)}
-                  className={cn("w-full flex items-center gap-3 py-3 text-left group transition-colors rounded-xl px-1 -mx-1 hover:bg-slate-50 dark:hover:bg-muted/40", !isLast && "border-b border-slate-100 dark:border-border")}
-                >
-                  <div className="relative flex-shrink-0">
-                    <div className="w-11 h-11 rounded-xl overflow-hidden bg-slate-100 dark:bg-muted">
-                      {imgSrc ? (
-                        <img src={imgSrc} alt={m.question} className="w-full h-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
-                      ) : (
-                        <div className={cn("w-full h-full flex items-center justify-center text-lg font-bold", isHigh ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600" : "bg-red-50 dark:bg-red-950/50 text-red-500")}>
-                          {m.question.charAt(0)}
-                        </div>
-                      )}
-                    </div>
-                    <span className={cn("absolute -bottom-1 -right-1 text-[9px] font-bold px-1 py-0.5 rounded-md leading-none shadow-sm border", isHigh ? "bg-emerald-500 text-white border-emerald-400" : "bg-red-500 text-white border-red-400")}>
-                      {yesOdds}%
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-slate-800 dark:text-foreground line-clamp-2 leading-snug">{m.question}</p>
-                    <p className="text-[10px] text-slate-400 dark:text-muted-foreground mt-0.5 truncate">Vol: {m.volume || "—"}</p>
-                  </div>
-                  <svg className="flex-shrink-0 text-slate-300 dark:text-muted-foreground group-hover:text-primary transition-colors" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
 
       {/* ══ TRENDING PRODUCTS (6 items) ══ */}
       <div className="rounded-2xl overflow-hidden border border-slate-100 dark:border-border shadow-sm bg-white dark:bg-card">
@@ -298,90 +217,6 @@ export function ProfileOverviewCards({ onViewPredictions, onViewShop }: Overview
         )}
       </div>
 
-    </div>
-  );
-}
-
-// ─── ProfilePredictionsTab ─────────────────────────────────────────────────────
-
-export function ProfilePredictionsTab() {
-  const [, setLocation] = useLocation();
-  const { data: predictionMarkets } = useMarkets({ limit: 10 });
-
-  const activeMarkets = useMemo(() => {
-    if (!predictionMarkets) return [];
-    return [...predictionMarkets].sort((a: any, b: any) => (b.volumeNum || 0) - (a.volumeNum || 0));
-  }, [predictionMarkets]);
-
-  return (
-    <div className="space-y-3 animate-in fade-in-0 duration-200">
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-2">
-          <span className="w-1.5 h-4 rounded-full bg-gradient-to-b from-lime-400 to-emerald-500 inline-block" />
-          <h2 className="text-sm font-bold text-slate-900 dark:text-foreground">Prediction Markets</h2>
-        </div>
-        <Link href="/prediction" className="text-[11px] font-semibold text-primary flex items-center gap-1 bg-primary/8 px-2.5 py-1 rounded-full hover:opacity-70 transition-opacity">
-          Browse all <IconExternalLink size={10} />
-        </Link>
-      </div>
-
-      {activeMarkets.length === 0 ? (
-        <div className="rounded-2xl border border-slate-100 dark:border-border bg-white dark:bg-card p-10 text-center">
-          <p className="text-sm text-slate-400">No prediction markets available</p>
-        </div>
-      ) : (
-        activeMarkets.map((m: any) => {
-          const prices = (() => { try { return JSON.parse(m.outcomePrices || "[]"); } catch { return []; } })();
-          const yesOdds = prices[0] ? Math.round(parseFloat(prices[0]) * 100) : 0;
-          const noOdds = 100 - yesOdds;
-          const isHigh = yesOdds >= 50;
-          const imgSrc = m.image || m.icon || null;
-          const isTrending = (m.volumeNum || 0) > 500000;
-          return (
-            <div key={m.id} className="rounded-2xl border border-slate-100 dark:border-border bg-white dark:bg-card overflow-hidden shadow-sm hover:shadow-md hover:border-slate-200 dark:hover:border-border/80 transition-all duration-200 group">
-              <div className="relative h-28 bg-slate-100 dark:bg-muted overflow-hidden cursor-pointer" onClick={() => setLocation(`/prediction/${m.id}`)}>
-                {imgSrc
-                  ? <img src={DOMPurify.sanitize(imgSrc)} alt={m.question} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                  : <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-muted dark:to-muted/50 flex items-center justify-center"><span className="text-4xl opacity-20 select-none">{m.question.charAt(0)}</span></div>}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                <div className="absolute bottom-2 left-3 flex items-center gap-1.5">
-                  <span className={cn("text-xs font-bold px-2 py-0.5 rounded-lg shadow", isHigh ? "bg-emerald-500 text-white" : "bg-red-500 text-white")}>
-                    {yesOdds}% YES
-                  </span>
-                  {isTrending && (
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-lime-400 text-lime-900 flex items-center gap-1">
-                      <IconTrending size={9} up /> Hot
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="p-4">
-                <h3
-                  className="text-sm font-semibold text-slate-800 dark:text-foreground leading-snug mb-3 cursor-pointer hover:text-primary transition-colors line-clamp-2"
-                  onClick={() => setLocation(`/prediction/${m.id}`)}
-                >
-                  {m.question}
-                </h3>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold w-8 shrink-0">YES {yesOdds}%</span>
-                  <div className="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-muted overflow-hidden">
-                    <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-700" style={{ width: `${yesOdds}%` }} />
-                  </div>
-                  <span className="text-[10px] text-red-500 font-semibold w-8 shrink-0 text-right">NO {noOdds}%</span>
-                </div>
-                <p className="text-[10px] text-slate-400 dark:text-muted-foreground mb-3">Vol: {m.volume || "—"}</p>
-                <div className="flex gap-2">
-                  <button className="flex-1 h-8 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white transition-colors" onClick={() => setLocation(`/prediction/${m.id}`)}>Buy YES</button>
-                  <button className="flex-1 h-8 rounded-xl text-xs font-bold bg-red-500 hover:bg-red-600 text-white transition-colors" onClick={() => setLocation(`/prediction/${m.id}`)}>Buy NO</button>
-                  <button className="h-8 w-8 rounded-xl border border-slate-200 dark:border-border flex items-center justify-center text-slate-400 hover:text-primary hover:border-primary/50 transition-colors" onClick={() => setLocation(`/prediction/${m.id}`)}>
-                    <IconChevronRight size={13} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })
-      )}
     </div>
   );
 }

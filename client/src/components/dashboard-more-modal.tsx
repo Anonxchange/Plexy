@@ -285,8 +285,6 @@ export const DashboardMoreModal = ({ isOpen, onClose }: MoreModalProps) => {
     { icon: "perpetual",  label: "Perpetual Trade",   color: "#6366F1",  href: "/perpetual" },
     { icon: "spot",       label: "Spot Trade",        color: "#0EA5E9",  href: "/spot" },
     { icon: "utility",    label: "Utility",           color: "#14B8A6",  href: "/utility" },
-    { icon: "prediction", label: "Prediction",        color: "#8B5CF6",  href: "/prediction" },
-    { icon: "stake",      label: "Stake",             color: "#10B981",  href: "/wallet/stake" },
     { icon: "explorer",   label: "Explorer",          color: "#3B82F6",  href: "/explorer" },
   ];
 

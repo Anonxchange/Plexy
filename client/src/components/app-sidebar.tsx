@@ -201,7 +201,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         <NavGroup
           label={t("nav.trade")}
           defaultOpen={
-            ["/buy-crypto", "/spot", "/perpetual", "/swap", "/prediction"].includes(location)
+            ["/buy-crypto", "/spot", "/perpetual", "/swap"].includes(location)
           }
         >
           <SubItem label={t("trade.buy_crypto")} href="/buy-crypto" active={location === "/buy-crypto"} onClick={onNavigate}
@@ -209,7 +209,6 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
           <SubItem label={t("trade.spot_trading")} href="/spot" active={location === "/spot"} onClick={onNavigate} />
           <SubItem label={t("trade.perpetual")} href="/perpetual" active={location === "/perpetual"} onClick={onNavigate} />
           <SubItem label={t("trade.swap")} href="/swap" active={location === "/swap"} onClick={onNavigate} />
-          <SubItem label={t("trade.prediction")} href="/prediction" active={location === "/prediction"} onClick={onNavigate} />
         </NavGroup>
 
         <NavItem
@@ -225,7 +224,6 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         >
           <SubItem label={t("wallet.assets")} href="/wallet" active={location === "/wallet"} onClick={onNavigate} />
           <SubItem label={t("wallet.visa_card")} href="/wallet/virtual-numbers" active={location === "/wallet/virtual-numbers" || location === "/wallet/visa-card"} onClick={onNavigate} />
-          <SubItem label={t("wallet.lightning")} href="/wallet/lightning" active={location === "/wallet/lightning"} onClick={onNavigate} />
           <SubItem label={t("wallet.mobile_topup")} href="/wallet/mobile-topup" active={location === "/wallet/mobile-topup"} onClick={onNavigate} />
           <SubItem label={t("wallet.utility")} href="/utility" active={location === "/utility"} onClick={onNavigate} />
         </NavGroup>
@@ -242,10 +240,8 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
         <NavGroup
           label={t("nav.earn")}
-          defaultOpen={["/wallet/stake", "/referral", "/rewards"].includes(location)}
+          defaultOpen={["/referral", "/rewards"].includes(location)}
         >
-          <SubItem label={t("earn.stake")} href="/wallet/stake" active={location === "/wallet/stake"} onClick={onNavigate}
-            badge={<Badge className="text-xs py-0 bg-red-500 hover:bg-red-500 border-none animate-pulse">HOT</Badge>} />
           <SubItem label={t("earn.referral_program")} href="/referral" active={location === "/referral"} onClick={onNavigate} />
           <SubItem label={t("earn.rewards")} href="/rewards" active={location === "/rewards"} onClick={onNavigate} />
         </NavGroup>
