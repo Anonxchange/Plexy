@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
+import { fetchGiftCardProductFromReloadly } from "@/hooks/use-reloadly";
 import { placeReloadlyOrder } from "@/hooks/use-utility-billers";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,12 @@ import NowPaymentsCheckout from "@/components/nowpayments-checkout";
 import { SYMBOL_ICON_MAP } from "@/lib/crypto-icons";
 // ── Fee config — all service fees defined in one place ────────────────────────
 import { calcServiceFee, calcGiftCardFee } from "@/lib/checkout-config";
+import {
+  getRecipientAmountForSenderPrice,
+  getRecipientDenominationRange,
+  getSenderDenominationRange,
+  getSenderPriceForRecipientAmount,
+} from "@/lib/gift-card-denominations";
 
 type DeliveryTarget = "self" | "gift";
 type PaymentMethod = "card" | "crypto";
@@ -382,7 +389,7 @@ function KoraPayTrigger({
 export function Checkout() {
   const { user, loading } = useAuth();
   const [, setLocation] = useLocation();
-  const { items, updateQuantity, removeItem, clearCart } = useGiftCardCart();
+  const { items, updateItem, updateQuantity, removeItem, clearCart } = useGiftCardCart();
   const [deliveryTarget, setDeliveryTarget] = useState<DeliveryTarget>("self");
   const [activePayment, setActivePayment] = useState<PaymentMethod>("card");
   const [fulfilling, setFulfilling] = useState(false);
@@ -411,6 +418,9 @@ export function Checkout() {
   const [recipientName, setRecipientName] = useState("");
   const [giftMessage, setGiftMessage] = useState("");
   const [scheduleDate, setScheduleDate] = useState("");
+  const [refreshAttempt, setRefreshAttempt] = useState(0);
+  const [refreshingGiftCardPrices, setRefreshingGiftCardPrices] = useState(items.length > 0);
+  const [giftCardRefreshError, setGiftCardRefreshError] = useState<string | null>(null);
 
   const [promoCode, setPromoCode] = useState("");
   const [promoApplied, setPromoApplied] = useState(false);
@@ -421,6 +431,88 @@ export function Checkout() {
       .then((r) => { if (!cancelled) setRates(r); })
       .catch(() => {});
     return () => { cancelled = true; };
+  }, []);
+
+  // localStorage can contain prices from an earlier Reloadly response. Refresh
+  // every cart item from the individual product endpoint before allowing
+  // payment, and replace the stored sender-side price with the current one.
+  const cartRefreshSignature = items
+    .map((item) => `${item.id}:${item.productId}:${item.recipientAmount ?? ""}`)
+    .join("|");
+
+  useEffect(() => {
+    if (items.length === 0) {
+      setRefreshingGiftCardPrices(false);
+      setGiftCardRefreshError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setRefreshingGiftCardPrices(true);
+    setGiftCardRefreshError(null);
+
+    Promise.all(items.map(async (item) => {
+      const product = await fetchGiftCardProductFromReloadly(String(item.productId));
+      const recipientRange = getRecipientDenominationRange(product);
+      const storedRecipientAmount = Number(item.recipientAmount);
+      const recoveredRecipientAmount = Number.isFinite(storedRecipientAmount) && storedRecipientAmount > 0
+        ? storedRecipientAmount
+        : getRecipientAmountForSenderPrice(product, item.price);
+      const recipientAmount = recoveredRecipientAmount
+        ?? recipientRange.fixed[0]
+        ?? recipientRange.min;
+
+      if (recipientAmount == null) {
+        throw new Error(`${item.title} has no available Reloadly denomination`);
+      }
+      const validRecipientAmount = recipientRange.isFixed
+        ? recipientRange.fixed.some((amount) => Math.abs(amount - recipientAmount) < 0.01)
+        : (recipientRange.min == null || recipientAmount >= recipientRange.min)
+          && (recipientRange.max == null || recipientAmount <= recipientRange.max);
+      if (!validRecipientAmount) {
+        throw new Error(
+          `${item.title} changed on Reloadly. Reopen the gift card and choose a current denomination.`,
+        );
+      }
+
+      const senderPrice = getSenderPriceForRecipientAmount(product, recipientAmount);
+      const senderRange = getSenderDenominationRange(product);
+      return {
+        id: item.id,
+        patch: {
+          title: product.productName,
+          price: senderPrice ?? recipientAmount,
+          currency: senderRange.currencyCode ?? product.recipientCurrencyCode,
+          recipientAmount,
+          recipientCurrency: recipientRange.currencyCode ?? product.recipientCurrencyCode,
+          image: product.logoUrls?.[0] ?? item.image,
+        },
+      };
+    }))
+      .then((refreshed) => {
+        if (cancelled) return;
+        refreshed.forEach(({ id, patch }) => updateItem(id, patch));
+        setRefreshingGiftCardPrices(false);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setRefreshingGiftCardPrices(false);
+        setGiftCardRefreshError(
+          error instanceof Error ? error.message : "Could not refresh gift-card prices from Reloadly",
+        );
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // The signature intentionally excludes the stored sender price. Updating
+    // that price must not trigger an endless refresh loop.
+  }, [cartRefreshSignature, refreshAttempt]);
+
+  useEffect(() => {
+    const refreshOnFocus = () => setRefreshAttempt((attempt) => attempt + 1);
+    window.addEventListener("focus", refreshOnFocus);
+    return () => window.removeEventListener("focus", refreshOnFocus);
   }, []);
 
 
@@ -1269,7 +1361,9 @@ export function Checkout() {
         item.product_name ??
         item.name ??
         item.title,
-      unitPrice: item.unitPrice ?? item.unit_price ?? item.price,
+      // Reloadly expects the recipient face value, never the sender-side
+      // converted charge that is displayed in the cart.
+      unitPrice: item.recipientAmount ?? item.unitPrice ?? item.unit_price ?? item.price,
       quantity: item.quantity || 1,
     })),
   };
@@ -1524,7 +1618,28 @@ export function Checkout() {
                     </div>
                   )}
 
-                  {activePayment === "crypto" && (
+                  {activePayment === "crypto" && refreshingGiftCardPrices && (
+                    <div className="rounded-xl border border-border bg-secondary/30 p-4 text-sm text-muted-foreground">
+                      Refreshing gift-card prices from Reloadly…
+                    </div>
+                  )}
+
+                  {activePayment === "crypto" && giftCardRefreshError && !refreshingGiftCardPrices && (
+                    <div className="space-y-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+                      <p className="text-sm text-destructive">
+                        {giftCardRefreshError}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setRefreshAttempt((attempt) => attempt + 1)}
+                      >
+                        Refresh prices from Reloadly
+                      </Button>
+                    </div>
+                  )}
+
+                  {activePayment === "crypto" && !refreshingGiftCardPrices && !giftCardRefreshError && (
                     <NowPaymentsCheckout
                       amount={total}
                       currency="usd"
