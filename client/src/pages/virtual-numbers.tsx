@@ -16,6 +16,9 @@ import {
   type VNApp,
   type VNPurchase,
 } from "@/hooks/use-virtual-numbers";
+// Pay-first flow: the client asks for an ORDER + checkout URL. It never asks
+// Fleexa for a number — fleexa?action=buy now answers 403 by design.
+import { useInitiateOrder, goToCheckout } from "@/hooks/use-sms-orders";
 import {
   Search,
   ChevronLeft,
@@ -66,6 +69,10 @@ const SERVERS = [
 ] as const;
 
 // ── Nigeria region detection ──────────────────────────────────────────────────
+// Kept for reference. No longer gates checkout: it hid KoraPay from anyone whose
+// timezone was not Africa/Lagos (VPN, traveller, frozen TZ) — i.e. the only
+// working payment path.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function isNigeriaRegion(): boolean {
   try {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -902,6 +909,9 @@ function ActiveNumberView({
 }
 
 // ── KoraPay inline loader ─────────────────────────────────────────────────────
+// Unused: the inline widget created a client-side reference the webhook could
+// never match. Payment now goes through the hosted checkout from korapay-initiate.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function loadKoraPayScript(): Promise<void> {
   return new Promise((resolve) => {
     if ((window as any).Korapay) return resolve();
@@ -929,7 +939,9 @@ export default function VirtualNumbers() {
   const [selectedCountry, setSelectedCountry] = useState<VNCountry | null>(null);
   const [activePurchase, setActivePurchase] = useState<VNPurchase | null>(null);
 
-  const buyMutation = useBuyVirtualNumber(selectedServer);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const buyMutation = useBuyVirtualNumber(selectedServer); // legacy — 403 on the server, kept only so nothing else breaks
+  const initiate = useInitiateOrder();
 
   // Handle return from crypto checkout with number data in URL
   useEffect(() => {
@@ -999,69 +1011,26 @@ export default function VirtualNumbers() {
 
   const handleBuyKoraPay = useCallback(async () => {
     if (!selectedService || !selectedCountry || !user) return;
-    const publicKey = import.meta.env.VITE_KORAPAY_PUBLIC_KEY as string;
-    if (!publicKey) {
-      toast.error("KoraPay is not configured yet.");
-      return;
-    }
     setView("purchasing");
     try {
-      await loadKoraPayScript();
-      const Korapay = (window as any).Korapay;
-      if (!Korapay) throw new Error("KoraPay script failed to load");
-      const priceNgn = parseFloat(selectedService.price_ngn);
-      const reference = `pexly_vn_${Date.now()}`;
-      await new Promise<void>((resolve, reject) => {
-        Korapay.initialize({
-          key: publicKey,
-          reference,
-          amount: Math.round(priceNgn * 100),
-          currency: "NGN",
-          customer: { email: user.email ?? "", name: user.email ?? "Pexly User" },
-          onSuccess: async () => {
-            toast.success("Payment confirmed! Assigning your number…");
-            try {
-              const result = await buyMutation.mutateAsync({
-                countryName: selectedCountry.title,
-                appName: selectedService.name,
-                countryId: String(selectedCountry.id),
-                projectId: selectedService.id,
-              });
-              setActivePurchase(result);
-              setView("active");
-              resolve();
-            } catch (e: any) {
-              toast.error(e.message ?? "Failed to assign number");
-              setView("confirm");
-              reject(e);
-            }
-          },
-          onFailed: () => { toast.error("KoraPay payment failed or was cancelled."); setView("confirm"); reject(new Error("Payment failed")); },
-          onClose: () => { setView("confirm"); reject(new Error("Closed")); },
-        });
-      });
-    } catch {
-      setView("confirm");
-    }
-  }, [selectedService, selectedCountry, selectedServer, user, buyMutation]);
-
-  const handleRetry = useCallback(async () => {
-    if (!selectedService || !selectedCountry) return;
-    setView("purchasing");
-    try {
-      const result = await buyMutation.mutateAsync({
-        countryName: selectedCountry.title,
-        appName: selectedService.name,
+      // korapay-initiate prices the order server-side, writes sms_orders(pending)
+      // with the pxl_ reference that fleexa-webhook matches on, and returns the
+      // hosted checkout URL. The number is bought by the webhook AFTER payment.
+      const res = await initiate.mutateAsync({
+        server: selectedServer,
+        appId: String(selectedService.id),
         countryId: String(selectedCountry.id),
-        projectId: selectedService.id,
+        intent: "buy",
       });
-      setActivePurchase(result);
-      setView("active");
+      goToCheckout(res); // leaves the SPA -> Korapay -> /my-numbers?ref=...
     } catch (e: any) {
-      toast.error(e.message ?? "Failed to assign number");
+      toast.error(e?.message ?? "Could not start payment");
       setView("confirm");
     }
-  }, [selectedService, selectedCountry, buyMutation]);
+  }, [selectedService, selectedCountry, selectedServer, user, initiate]);
+
+  // Retrying means starting a new PAID order — an unpaid buy is rejected (403).
+  const handleRetry = handleBuyKoraPay;
 
   const handleDone = () => {
     setSelectedService(null);
@@ -1115,6 +1084,13 @@ export default function VirtualNumbers() {
               Receive SMS verification codes for any app — privately, instantly,
               without using your real number.
             </p>
+            <button
+              onClick={() => setLocation("/my-numbers")}
+              className="mt-5 inline-flex items-center gap-2 rounded-full bg-primary-foreground/10 border border-primary-foreground/20 px-5 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-foreground/20 transition-colors"
+            >
+              <MessageSquare className="h-4 w-4" />
+              View my numbers
+            </button>
           </div>
         </section>
       )}
@@ -1130,6 +1106,14 @@ export default function VirtualNumbers() {
               Each server has different speeds and cancel windows.
             </p>
             <ServerView onSelect={handleServerSelect} />
+
+            <button
+              onClick={() => setLocation("/my-numbers")}
+              className="mt-6 w-full flex items-center justify-center gap-2 py-3 rounded-full border border-border text-sm font-semibold text-foreground hover:bg-muted transition-colors"
+            >
+              <Phone className="h-4 w-4" />
+              My numbers
+            </button>
           </>
         )}
 
@@ -1161,8 +1145,8 @@ export default function VirtualNumbers() {
             onBack={() => setView("countries")}
             onBuyKoraPay={handleBuyKoraPay}
             onBuyCrypto={handleBuyCrypto}
-            purchasing={false}
-            showKoraPay={isNigeriaRegion()}
+            purchasing={initiate.isPending}
+            showKoraPay={true} /* NGN checkout works for everyone; TZ sniffing hid the only working path */
           />
         )}
 
@@ -1170,8 +1154,8 @@ export default function VirtualNumbers() {
         {view === "purchasing" && (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
             <div className="h-14 w-14 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-            <p className="text-base font-semibold text-foreground">Assigning your number…</p>
-            <p className="text-sm text-muted-foreground">This usually takes a few seconds.</p>
+            <p className="text-base font-semibold text-foreground">Opening secure checkout…</p>
+            <p className="text-sm text-muted-foreground">You'll be redirected to KoraPay to pay. Your number is assigned right after.</p>
           </div>
         )}
 
