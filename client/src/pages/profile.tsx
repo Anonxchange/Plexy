@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PexlyFooter } from "@/components/pexly-footer";
 import { getCountryFlag } from "@/lib/localization";
-import { ProfileOverviewCards, ProfilePredictionsTab, ProfileShopTab, ProfileActivityTab } from "@/components/profile-overview-cards";
+import { ProfileOverviewCards, ProfileShopTab, ProfileActivityTab } from "@/components/profile-overview-cards";
 import { GiftCardMarquee } from "@/components/gift-card-marquee";
 import { cn } from "@/lib/utils";
 import { Upload, User } from '@/lib/icons';
@@ -241,7 +241,7 @@ function Card({ children, className }: { children: React.ReactNode; className?: 
   return <div className={cn("bg-white dark:bg-card rounded-2xl border border-slate-200 dark:border-border shadow-sm", className)}>{children}</div>;
 }
 
-const TABS = ["Overview", "Predictions", "Shop", "Activity"] as const;
+const TABS = ["Overview", "Shop", "Activity"] as const;
 type Tab = typeof TABS[number];
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
@@ -630,14 +630,12 @@ export function Profile() {
         {tab === "Overview" && (
           <div className="space-y-4 animate-in fade-in-0 duration-200">
             <ProfileOverviewCards
-              onViewPredictions={() => setTab("Predictions")}
               onViewShop={() => setTab("Shop")}
             />
 
           </div>
         )}
 
-        {tab === "Predictions" && <ProfilePredictionsTab />}
         {tab === "Shop" && <ProfileShopTab />}
         {tab === "Activity" && <ProfileActivityTab userId={user?.id} />}
 
