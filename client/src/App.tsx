@@ -54,8 +54,6 @@ const CheckoutPayCrypto = lazy(() => import("@/pages/checkout-pay-crypto").then(
 const VirtualNumbers = lazy(() => import("@/pages/virtual-numbers"));
 const MobileTopup = lazy(() => import("@/pages/mobile-topup"));
 const UtilityBill = lazy(() => import("@/pages/utility-bill"));
-const Stake = lazy(() => import("@/pages/stake"));
-const Lightning = lazy(() => import("@/pages/lightning"));
 const BuyCrypto = lazy(() => import("@/pages/buy-crypto"));
 const RewardsPage = lazy(() => import("@/pages/rewards"));
 const ReferralPage = lazy(() => import("@/pages/referral"));
@@ -101,9 +99,7 @@ const adminGiftCards = lazy(() => import("@/pages/admin-gift-cards"));
 const AdminBlogLazy = lazy(() => import("@/pages/admin-blog"));
 const Blog = lazy(() => import("@/pages/blog"));
 
-const Prediction = lazy(() => import("@/pages/prediction"));
 const Perpetual = lazy(() => import("@/pages/perpetual"));
-const PredictionDetail = lazy(() => import("@/pages/prediction-detail"));
 
 import { GiftCardCartProvider } from "@/hooks/use-gift-card-cart";
 
@@ -236,8 +232,6 @@ function AppRoutes() {
       <Route path="/" component={Home} />
       <Route path="/perpetual">{() => <LazyRoute component={Perpetual} />}</Route>
       <Route path="/swap">{() => <LazyRoute component={Swap} />}</Route>
-      <Route path="/prediction">{() => <LazyRoute component={Prediction} />}</Route>
-      <Route path="/prediction/:id">{() => <LazyRoute component={PredictionDetail} />}</Route> 
       <Route path="/about">{() => <LazyRoute component={About} />}</Route>
       <Route path="/explorer">{() => <LazyRoute component={Explorer} skeleton={<ChartPageSkeleton />} />}</Route>
       <Route path="/explorer/prices">{() => <LazyRoute component={Prices} skeleton={<ChartPageSkeleton />} />}</Route>
@@ -289,8 +283,6 @@ function AppRoutes() {
       <Route path="/wallet/mobile-topup">{() => <LazyRoute component={MobileTopup} />}</Route>
       <Route path="/utility">{() => <LazyRoute component={UtilityBill} />}</Route>
       <Route path="/wallet/utility-bill">{() => <LazyRoute component={UtilityBill} />}</Route>
-      <Route path="/wallet/stake">{() => <LazyRoute component={Stake} />}</Route>
-      <Route path="/wallet/lightning">{() => <LazyRoute component={Lightning} />}</Route>
       <Route path="/account-settings">{() => <ProtectedRoute component={AccountSettings} skeleton={<PageSkeleton />} />}</Route>
       <Route path="/devices">{() => <ProtectedRoute component={DevicesPage} />}</Route>
       <Route path="/notification-settings">{() => <ProtectedRoute component={NotificationSettings} />}</Route>
@@ -319,7 +311,7 @@ function AppRoutes() {
 function AppContent() {
   const { user, walletImportState, setWalletImportState } = useAuth();
   const [location] = useLocation();
-  const hideAppFooter = ["/", "/about", "/spot", "/perpetual", "/swap", "/prediction", "/wallet", "/analysis", "/wallet/virtual-numbers", "/wallet/mobile-topup", "/wallet/utility-bill", "/utility", "/wallet/stake", "/wallet/lightning", "/wallet/buy-crypto", "/gift-cards", "/dashboard", "/profile", "/shop", "/shop/post", "/account-settings", "/verification", "/admin", "/admin/verifications", "/admin/blog", "/admin/gift-cards", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/support", "/contact", "/referral", "/rewards", "/terms", "/privacy", "/cookie-policy", "/restricted-countries", "/rewards-program", "/risk-disclosure", "/refund-policy", "/submit-idea", "/explorer", "/shop/product", "/buy-crypto", "/bitcoin-calculator", "/checkout"].some(path => location === path || location.startsWith(path + "/")) || location.startsWith("/explorer/") || location.startsWith("/blog/") || location.startsWith("/gift-cards/");
+  const hideAppFooter = ["/", "/about", "/spot", "/perpetual", "/swap", "/wallet", "/analysis", "/wallet/virtual-numbers", "/wallet/mobile-topup", "/wallet/utility-bill", "/utility", "/wallet/buy-crypto", "/gift-cards", "/dashboard", "/profile", "/shop", "/shop/post", "/account-settings", "/verification", "/admin", "/admin/verifications", "/admin/blog", "/admin/gift-cards", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/support", "/contact", "/referral", "/rewards", "/terms", "/privacy", "/cookie-policy", "/restricted-countries", "/rewards-program", "/risk-disclosure", "/refund-policy", "/submit-idea", "/explorer", "/shop/product", "/buy-crypto", "/bitcoin-calculator", "/checkout"].some(path => location === path || location.startsWith(path + "/")) || location.startsWith("/explorer/") || location.startsWith("/blog/") || location.startsWith("/gift-cards/");
   const hideHeaderAndNav = ["/signin", "/signup", "/verify-email", "/support", "/contact", "/explorer", "/checkout"].includes(location) || location.startsWith("/explorer/") || location.startsWith("/support/") || location.startsWith("/checkout/");
   const hidePageNav = ["/terms", "/refund-policy", "/explorer"].includes(location) || location.startsWith("/explorer/");
 
