@@ -389,6 +389,8 @@ export function GiftCardDetail() {
       title: card.productName,
       price: unitFinalPrice,
       currency: senderRange.currencyCode ?? card.recipientCurrencyCode,
+      recipientAmount: value,
+      recipientCurrency: rangeCurrency ?? card.recipientCurrencyCode,
       image: sanitizeImageUrl(card.logoUrls?.[0]),
     });
     setCartOpen(true);
