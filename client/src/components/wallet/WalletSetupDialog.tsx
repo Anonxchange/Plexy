@@ -10,7 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { deriveVaultKey } from "@/lib/webCrypto";
 import { createClient } from "@/lib/supabase";
 import { devLog } from "@/lib/dev-logger";
-import { AlertTriangle, Loader2, X } from '@/lib/icons';
+import { AlertTriangle, X } from '@/lib/icons';
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 const COMMON_PASSWORDS = [
   "password","password1","password123","12345678","123456789","1234567890",
@@ -231,7 +232,7 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
                   <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
                   <p className="text-xs text-red-800 leading-relaxed font-medium">
                     <span className="font-bold text-red-700 block mb-1 uppercase tracking-wider">Crucial Security Notice:</span>
-                    We cannot recover your password. If lost, your wallet and all funds will be permanently inaccessible.
+                    We cannot recover your password. Keep your password and secret phrase safe. Your secret phrase can also restore access to your wallet on another non-custodial platform.
                   </p>
                 </div>
 
@@ -329,12 +330,12 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
               <div className="flex flex-col items-center justify-center py-10 space-y-6 animate-in zoom-in-95 duration-500">
                 <div className="relative">
                   <div className="absolute inset-0 bg-[#B4F22E]/20 blur-2xl rounded-full"></div>
-                  <Loader2 className="w-16 h-16 text-[#B4F22E] animate-spin relative" />
+                   <LoadingSpinner size={64} color="hsl(var(--primary))" className="relative" />
                 </div>
                 <div className="text-center space-y-2">
                   <h2 className="text-xl font-bold text-black uppercase tracking-widest">Encrypting</h2>
                   <p className="text-gray-500 text-sm max-w-xs">
-                    Initializing multi-chain security protocols...
+                     Do not disconnect from Wi-Fi or close this tab while encryption is in progress. The process may take several minutes.
                   </p>
                 </div>
               </div>
