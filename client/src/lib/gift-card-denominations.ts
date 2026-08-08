@@ -98,12 +98,32 @@ function buildRange(
 export function getRecipientDenominationRange(
   card: GiftCardDenominationFields | null | undefined,
 ): GiftCardDenominationRange {
+  const fixed = toSortedAmounts(card?.fixedRecipientDenominations);
+  const denominationType = String(card?.denominationType ?? "").toUpperCase();
+  const min = toFiniteAmount(card?.minRecipientDenomination);
+  const max = toFiniteAmount(card?.maxRecipientDenomination ?? card?.maxrecipientDenomination);
+
+  // Reloadly can include fixed values alongside a RANGE product when both
+  // includeFixed and includeRange are requested. For RANGE products, the live
+  // min/max fields are authoritative; treating the fixed array as the range
+  // would incorrectly truncate values (for example, displaying 100 instead
+  // of Reloadly's max of 500).
+  if (denominationType !== "FIXED" && (denominationType === "RANGE" || min !== null || max !== null)) {
+    return buildRange(
+      "recipient",
+      card?.recipientCurrencyCode,
+      null,
+      min,
+      max,
+    );
+  }
+
   return buildRange(
     "recipient",
     card?.recipientCurrencyCode,
-    card?.fixedRecipientDenominations,
-    card?.minRecipientDenomination,
-    card?.maxRecipientDenomination ?? card?.maxrecipientDenomination,
+    fixed,
+    null,
+    null,
   );
 }
 
