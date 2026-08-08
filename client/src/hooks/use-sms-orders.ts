@@ -7,8 +7,15 @@
 //   polling    -> fleexa?action=code&orderId=...
 //   cancel     -> fleexa?action=cancel&orderId=...
 //
-// The old `useBuyVirtualNumber` is intentionally left in place — the edge
-// function now answers it with 403, so nothing silently spends money.
+// FIXES IN THIS REVISION
+//   1. `retry: 0` on initiate. react-query's default retry:3 turned one failed
+//      tap into four Korapay charges — the direct cause of the 429s.
+//   2. A stable idempotencyKey is sent per (server, appId, countryId, intent)
+//      so a double tap or a browser-level retry collides server-side.
+//   3. An in-flight guard: initiate cannot be entered twice concurrently.
+//   4. Poll loops back off on 429/503 instead of hammering, and stop after
+//      repeated failures rather than spinning forever.
+//   5. HTTP status is carried on the thrown error so callers can react.
 //
 // NOTE: adjust the supabase import path to whatever your project uses
 // (e.g. "@/lib/supabase" or "@/integrations/supabase/client").
@@ -17,6 +24,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 
 const FUNCTIONS_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+
+export class FnError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "FnError";
+    this.status = status;
+  }
+}
 
 async function authHeaders(): Promise<Record<string, string>> {
   const { data } = await supabase.auth.getSession();
@@ -35,7 +51,12 @@ async function callFn<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { ...(await authHeaders()), ...(init?.headers ?? {}) },
   });
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((body as any)?.error ?? `Request failed (${res.status})`);
+  if (!res.ok) {
+    throw new FnError(
+      (body as any)?.error ?? `Request failed (${res.status})`,
+      res.status,
+    );
+  }
   return body as T;
 }
 
@@ -71,22 +92,55 @@ export type InitiateResponse = {
   amount: number;
   currency: "NGN";
   checkout_url?: string;
+  reused?: boolean;
+};
+
+export type InitiateInput = {
+  server: string;
+  appId: string;
+  countryId?: string;
+  intent?: "buy" | "reuse";
+  reuseOf?: string;
 };
 
 // ── 1. Start a purchase (pay first) ──────────────────────────────────────────
+
+/**
+ * Stable per-intent key. Two taps on the same service inside the same session
+ * produce the same key, so the server returns the existing checkout instead of
+ * asking Korapay for a second charge.
+ */
+function idempotencyKeyFor(input: InitiateInput): string {
+  const parts = [
+    input.intent ?? "buy",
+    input.server,
+    input.appId,
+    input.countryId ?? "",
+    input.reuseOf ?? "",
+    // Bucket by 10-minute window so a genuine later purchase is not blocked.
+    Math.floor(Date.now() / (10 * 60 * 1000)),
+  ];
+  return parts.join(":");
+}
+
+/** Module-level guard: one initiate in flight at a time, app-wide. */
+let initiateInFlight: Promise<InitiateResponse> | null = null;
+
 export function useInitiateOrder() {
-  return useMutation({
-    mutationFn: (input: {
-      server: string;
-      appId: string;
-      countryId?: string;
-      intent?: "buy" | "reuse";
-      reuseOf?: string;
-    }) =>
-      callFn<InitiateResponse>("korapay-initiate", {
+  return useMutation<InitiateResponse, Error, InitiateInput>({
+    // CRITICAL: no automatic retries. Each retry is a real payment attempt.
+    retry: 0,
+    mutationFn: (input) => {
+      if (initiateInFlight) return initiateInFlight;
+      const promise = callFn<InitiateResponse>("korapay-initiate", {
         method: "POST",
-        body: JSON.stringify(input),
-      }),
+        body: JSON.stringify({ ...input, idempotencyKey: idempotencyKeyFor(input) }),
+      }).finally(() => {
+        initiateInFlight = null;
+      });
+      initiateInFlight = promise;
+      return promise;
+    },
   });
 }
 
@@ -101,7 +155,10 @@ export function useMyNumbers(enabled = true) {
   return useQuery({
     queryKey: ["sms-orders"],
     enabled,
+    retry: 1,
     refetchInterval: (q) => {
+      // Back off rather than hammer a rate-limited or booting function.
+      if (q.state.status === "error") return 15000;
       const rows = (q.state.data as { data: SmsOrder[] } | undefined)?.data ?? [];
       // Poll while anything is still in flight (payment landing / SMS pending).
       return rows.some((o) => o.status === "pending" || o.status === "paid" || o.awaiting_code)
@@ -114,12 +171,22 @@ export function useMyNumbers(enabled = true) {
 }
 
 // ── 3. Poll one order for its SMS code ───────────────────────────────────────
+const MAX_CODE_POLL_FAILURES = 5;
+
 export function useOrderCode(orderId: string | null, enabled = true) {
   return useQuery({
     queryKey: ["sms-order-code", orderId],
     enabled: !!orderId && enabled,
-    refetchInterval: (q) =>
-      (q.state.data as any)?.data?.code ? false : 5000,
+    retry: 0,
+    refetchInterval: (q) => {
+      // Give up after repeated failures instead of polling a broken endpoint.
+      if (q.state.fetchFailureCount >= MAX_CODE_POLL_FAILURES) return false;
+      if (q.state.status === "error") {
+        const status = (q.state.error as FnError | null)?.status;
+        return status === 429 || status === 503 ? 20000 : 10000;
+      }
+      return (q.state.data as any)?.data?.code ? false : 5000;
+    },
     queryFn: () =>
       callFn<{ data: { status: string; number: string | null; code: string | null; message?: string | null } }>(
         `fleexa?action=code&orderId=${encodeURIComponent(orderId!)}`,
@@ -132,6 +199,7 @@ export function useOrderCode(orderId: string | null, enabled = true) {
 export function useCancelOrder() {
   const qc = useQueryClient();
   return useMutation({
+    retry: 0,
     mutationFn: (orderId: string) =>
       callFn(`fleexa?action=cancel&orderId=${encodeURIComponent(orderId)}`, { method: "POST" }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["sms-orders"] }),
