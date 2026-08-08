@@ -161,6 +161,32 @@ export function getSenderPriceForRecipientAmount(
   return rate ? recipientAmount * rate : null;
 }
 
+/** Recover a recipient face value from a previously stored sender-side price. */
+export function getRecipientAmountForSenderPrice(
+  card: GiftCardDenominationFields | null | undefined,
+  senderAmount: number,
+): number | null {
+  const target = toFiniteAmount(senderAmount);
+  if (target === null) return null;
+
+  const map = Array.isArray(card?.fixedRecipientToSenderDenominationsMap)
+    ? card.fixedRecipientToSenderDenominationsMap
+    : [];
+
+  for (const entry of map) {
+    for (const [key, value] of Object.entries(entry ?? {})) {
+      const recipient = toFiniteAmount(key);
+      const sender = toFiniteAmount(value);
+      if (recipient !== null && sender !== null && Math.abs(sender - target) < 0.01) {
+        return recipient;
+      }
+    }
+  }
+
+  const rate = toFiniteAmount(card?.recipientCurrencyToSenderCurrencyExchangeRate);
+  return rate ? target / rate : null;
+}
+
 /**
  * Backwards-compatible default: the RECIPIENT (face value) range.
  * Existing callers keep working, but now get the same numbers Reloadly shows.
