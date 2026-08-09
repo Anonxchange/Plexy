@@ -14,6 +14,7 @@ import { DeviceOTPVerification } from "@/components/device-otp-verification";
 import { supabase } from "@/lib/supabase";
 import { getSupabase } from "@/lib/supabase";
 import { signInWithGoogle } from "@/lib/google-auth";
+import { resolveAccountState } from "@/lib/google-account-state";
 import { useTheme } from "@/components/theme-provider";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { deviceFingerprint } from "@/lib/security/device-fingerprint";
@@ -199,7 +200,8 @@ export function SignIn() {
 
   useEffect(() => {
     const isGoogleOAuthCallback =
-      new URLSearchParams(window.location.search).get("oauth") === "google";
+      new URLSearchParams(window.location.search).get("oauth") === "google" ||
+      sessionStorage.getItem("pexly.oauth.intent") === "signin";
 
     // A Google callback briefly exposes the Supabase session before the
     // profile/MFA callback handler below has finished. Do not redirect that
@@ -239,7 +241,11 @@ export function SignIn() {
   // same TOTP challenge used by password sign-in.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("oauth") !== "google" || params.get("intent") !== "signin") return;
+    const storedIntent = sessionStorage.getItem("pexly.oauth.intent");
+    const isGoogleSignInCallback =
+      (params.get("oauth") === "google" && params.get("intent") === "signin") ||
+      storedIntent === "signin";
+    if (!isGoogleSignInCallback) return;
     if (!user || !session || googleCallbackHandledRef.current) return;
 
     googleCallbackHandledRef.current = true;
@@ -251,57 +257,23 @@ export function SignIn() {
 
       try {
         const sb = await getSupabase();
-        const { data: profile, error: profileError } = await sb
-          .from("user_profiles")
-          // The auth trigger creates a minimal profile as soon as Google
-          // creates an auth.users row. Existence alone therefore cannot tell
-          // us whether Pexly registration was completed.
-          .select("id, email, full_name, username, email_verified, phone_verified, registration_completed")
-          .eq("id", user.id)
-          .maybeSingle();
+        const accountState = await resolveAccountState(user);
 
-        if (profileError) {
-          await signOut();
+        if (accountState.status === "unknown") {
           if (cancelled) return;
           toast({
             title: "Couldn't verify your account",
-            description: "Please try signing in again in a moment.",
+            description: "Please try again in a moment. Your Google session is still active.",
             variant: "destructive",
           });
-          navigateSafely("/signin?reason=verification_unavailable");
+          setLoading(false);
+          setChecking2FA(false);
           return;
         }
 
-        const registrationCompleted = Boolean(
-          profile &&
-          (profile.registration_completed === true ||
-            profile.email_verified === true ||
-            profile.phone_verified === true ||
-            (typeof profile.username === "string" && profile.username.trim().length > 0)),
-        );
-
-        // Older Google accounts may predate registration_completed. A real
-        // username is authoritative evidence that onboarding already finished,
-        // so repair the missing flag instead of bouncing the user to sign-up.
-        if (
-          profile?.registration_completed !== true &&
-          typeof profile?.username === "string" &&
-          profile.username.trim().length > 0
-        ) {
-          void sb
-            .from("user_profiles")
-            .update({ registration_completed: true })
-            .eq("id", user.id);
-        }
-
-        if (!registrationCompleted) {
-          await signOut();
+        if (accountState.status === "new") {
           if (cancelled) return;
-          toast({
-            title: "Finish creating your account",
-            description: "This Google account has not completed Pexly registration yet. Please sign up first.",
-            variant: "destructive",
-          });
+          sessionStorage.setItem("pexly.oauth.intent", "signup");
           navigateSafely("/signup?oauth=google&intent=signup");
           return;
         }
@@ -334,6 +306,7 @@ export function SignIn() {
         }
 
         if (!cancelled) {
+          sessionStorage.removeItem("pexly.oauth.intent");
           setLoading(false);
           setChecking2FA(false);
           navigateSafely("/dashboard");
@@ -384,8 +357,10 @@ export function SignIn() {
     setGoogleRedirecting(true);
 
     try {
+      sessionStorage.setItem("pexly.oauth.intent", "signin");
       await signInWithGoogle(captchaToken, "/signin?oauth=google&intent=signin");
     } catch (error) {
+      sessionStorage.removeItem("pexly.oauth.intent");
       googleRedirectingRef.current = false;
       setGoogleRedirecting(false);
       toast({
@@ -667,6 +642,7 @@ export function SignIn() {
 
       setShow2FAInput(false);
       setChecking2FA(false);
+      sessionStorage.removeItem("pexly.oauth.intent");
       toast({ title: "Success!", description: "You have successfully signed in with 2FA" });
 
       setTimeout(() => {
@@ -1063,6 +1039,7 @@ export function SignIn() {
                 setTotpFactorId(null);
                 setTotpChallengeId(null);
                 setChecking2FA(false);
+                sessionStorage.removeItem("pexly.oauth.intent");
               }}
               className={`w-full py-4 rounded-full text-base transition-colors ${
                 isDark 
