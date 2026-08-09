@@ -363,7 +363,17 @@ function App() {
     } else {
       detectLanguageFromIP().then((lang) => {
         const rest = window.location.pathname;
-        window.history.replaceState(null, "", `/${lang}${rest === "/" ? "" : rest}`);
+        // OAuth callbacks carry the sign-in/sign-up intent in the query
+        // string. Keep both search params and the hash when adding the
+        // language prefix, otherwise the callback becomes an ordinary
+        // authenticated page and immediately redirects to the dashboard.
+        const search = window.location.search;
+        const hash = window.location.hash;
+        window.history.replaceState(
+          null,
+          "",
+          `/${lang}${rest === "/" ? "" : rest}${search}${hash}`,
+        );
         i18n.changeLanguage(lang);
         setLangBase(`/${lang}`);
       });
