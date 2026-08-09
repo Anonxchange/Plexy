@@ -49,6 +49,12 @@ export interface AuthContextType {
    */
   cancelTOTPSignIn: () => Promise<void>;
   /**
+   * Call from the signup page after the user_profiles row has been written
+   * with registration_completed = true. Releases the OAuth registration gate
+   * and commits the session as the active user.
+   */
+  completeOAuthRegistration: () => Promise<void>;
+  /**
    * Call immediately after passkey auth succeeds and before showing the TOTP
    * challenge form. Sets totpPendingRef and clears user/session from React
    * state so that route guards treat the user as unauthenticated until the
@@ -394,6 +400,46 @@ function isSessionExpired(userId: string): boolean {
   if (!last) return false; // no recorded activity → don't expire (backwards-compat)
   return Date.now() - last > SESSION_INACTIVITY_MS;
 }
+// ── OAuth registration gate helpers ─────────────────────────────────────────
+// A Google session is created by Supabase the moment consent is granted, even
+// for a brand-new user. Without this gate the SIGNED_IN event commits the user
+// and the route guards send them straight to /dashboard, skipping signup.
+const OAUTH_PROVIDERS = new Set(['google']);
+
+function isOAuthUser(u: User | null | undefined): boolean {
+  const meta = (u?.app_metadata ?? {}) as { provider?: string; providers?: string[] };
+  const all = meta.providers ?? [];
+  return (!!meta.provider && OAUTH_PROVIDERS.has(meta.provider)) || all.some((x) => OAUTH_PROVIDERS.has(x));
+}
+
+/**
+ * true  = registration complete
+ * false = incomplete (no profile row, or flag not set)
+ * null  = unknown (network / RLS failure) — fail safe, never sign the user out
+ */
+async function fetchRegistrationCompleted(
+  supabase: any,
+  userId: string,
+): Promise<boolean | null> {
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('registration_completed')
+      .eq('id', userId)
+      .maybeSingle();
+    if (error) return null;
+    if (!data) return false;
+    return data.registration_completed === true;
+  } catch {
+    return null;
+  }
+}
+
+/** Preserves an /xx or /xx-YY language prefix when redirecting. */
+function langBase(): string {
+  const seg = window.location.pathname.split('/')[1] ?? '';
+  return /^[a-z]{2}(-[A-Z]{2})?$/.test(seg) ? `/${seg}` : '';
+}
 // ────────────────────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -534,6 +580,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Supabase re-emits SIGNED_IN on tab refocus — this guard ensures we only
   // run the post-login side-effects once per unique session token.
   const lastTrackedTokenRef = useRef<string | null>(null);
+
+  // ── OAuth registration gate ─────────────────────────────────────────────
+  // oauthPendingRef: true while an OAuth session is being verified, and stays
+  //   true for an incomplete registration. Gates every setUser path exactly
+  //   like totpPendingRef, so no landing URL, stored redirect, tab refocus, or
+  //   health-check tick can commit a half-registered user.
+  // oauthCheckedRef: user id we already ran the check for, so the async lookup
+  //   fires once per user rather than on every re-emitted SIGNED_IN.
+  const oauthPendingRef = useRef(false);
+  const oauthCheckedRef = useRef<string | null>(null);
 
   // Keep refs in sync with state so callbacks always see current values
   useEffect(() => {
@@ -816,7 +872,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Don't surface the AAL1 session while a TOTP challenge is active.
           // completeTOTPSignIn() will explicitly commit the AAL2 session once
           // mfa.verify() succeeds.
-          if (totpPendingRef.current) return;
+          if (totpPendingRef.current || oauthPendingRef.current) return;
           setSession(currentSession);
           setUser(currentSession?.user ?? null);
           return;
@@ -829,6 +885,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setWalletImportState({ required: false, expectedAddress: null });
           checkedUsersRef.current.clear();
           lastTrackedTokenRef.current = null; // reset so next sign-in always runs trackDevice
+          oauthPendingRef.current = false;
+          oauthCheckedRef.current = null;
           return;
         }
 
@@ -844,6 +902,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Block it here — completeTOTPSignIn() is the only path allowed to
         // commit a user while totpPendingRef is true.
         if (totpPendingRef.current) return;
+
+        // ── Google/OAuth registration gate ────────────────────────────────
+        // Runs for EVERY session-bearing OAuth event, not just the callback
+        // URL, so no landing path, stored redirect, or re-emitted SIGNED_IN
+        // can bypass signup. This is the only reliable choke point: the
+        // ?oauth=google&intent=signin check on the sign-in page is bound to a
+        // URL that the real provider flow often never lands on.
+        if (isOAuthUser(currentSession.user)) {
+          const uid = currentSession.user.id;
+
+          if (oauthPendingRef.current) return;
+
+          if (oauthCheckedRef.current !== uid) {
+            oauthCheckedRef.current = uid;
+            oauthPendingRef.current = true; // hold the session until we know
+            setSession(null);
+            setUser(null);
+
+            void (async () => {
+              const complete = await fetchRegistrationCompleted(supabase, uid);
+
+              if (complete === null) {
+                // Unknown — don't destroy a valid session over a network blip.
+                // Release the hold and let the route guards / RLS decide.
+                oauthPendingRef.current = false;
+                oauthCheckedRef.current = null;
+                if (!aborted) {
+                  setSession(currentSession);
+                  setUser(currentSession.user);
+                }
+                return;
+              }
+
+              if (complete) {
+                oauthPendingRef.current = false;
+                if (!aborted) {
+                  setSession(currentSession);
+                  setUser(currentSession.user);
+                  touchLastActivity(uid, true);
+                }
+                return;
+              }
+
+              // Incomplete → this is a SIGNUP, not a sign-in.
+              // Keep oauthPendingRef true so nothing can commit the user while
+              // the signup form is open. Do NOT sign out: the signup page needs
+              // the session to write the user_profiles row.
+              if (!aborted) {
+                navigate(`${langBase()}/signup?oauth=google&intent=signup`, { replace: true });
+              }
+            })();
+          }
+          return; // never fall through to setUser on an OAuth event
+        }
 
         // Use user-aware OTP check: stale OTP for a different user is cleared
         // automatically inside isOTPBlockingUser so the real session gets through.
@@ -894,7 +1006,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (aborted) return;
         // Skip entirely while a TOTP challenge is active — the health check
         // would surface the AAL1 session and trigger the AuthRoute redirect.
-        if (totpPendingRef.current) return;
+        if (totpPendingRef.current || oauthPendingRef.current) return;
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         if (currentSession && sessionTokenRef.current !== currentSession.access_token && !isOTPBlockingUser(currentSession.user.id)) {
           setSession(currentSession);
@@ -914,7 +1026,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Also skip while a TOTP challenge is active — the initial-session
         // path would surface the AAL1 session the same way the health check
         // would.
-        if (!blocked && !totpPendingRef.current) {
+        if (!blocked && !totpPendingRef.current && !oauthPendingRef.current) {
           setSession(initialSession);
           setUser(initialSession?.user ?? null);
         }
@@ -1216,6 +1328,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut().catch(() => {});
   }, []);
 
+  // completeOAuthRegistration: called by the signup page once the
+  //   user_profiles row exists with registration_completed = true. Releases
+  //   the gate and commits the already-valid OAuth session.
+  const completeOAuthRegistration = useCallback(async () => {
+    oauthPendingRef.current = false;
+    oauthCheckedRef.current = null;
+    const supabase = await getSupabase();
+    const { data: { session: s } } = await supabase.auth.getSession();
+    if (s?.user) {
+      touchLastActivity(s.user.id, true);
+      setSession(s);
+      setUser(s.user);
+    }
+  }, []);
+
   const signOut = useCallback(async () => {
     // Clear sensitive in-memory state immediately
     setSessionPassword(null);
@@ -1251,6 +1378,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     cancelOTPVerification,
     completeTOTPSignIn,
     cancelTOTPSignIn,
+    completeOAuthRegistration,
     pauseSessionForTOTP,
     beginPasskeyAuth,
     releasePasskeyAuth,
