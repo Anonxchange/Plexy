@@ -1,12 +1,11 @@
 // ============================================================================
-// PATCH for src/lib/auth-context.tsx
+// PATCH for src/lib/auth-context.tsx  — v3 (fixes the /en/en redirect and the
+// "already-registered user gets bounced to /signup" bug)
 //
-// Replaces the onAuthStateChange callback and the initial-session block
-// (roughly lines 852-1030 in the version you sent) with a single gate.
-//
-// Everything above line 852 (helpers, refs, isOAuthUser, langBase,
-// fetchRegistrationCompleted) stays as-is except for the two additions in
-// PART A, which go next to the existing helpers near line 442.
+// Changes vs your v2:
+//   PART A  + navTo() locale-safe navigation helper
+//           + fetchRegistrationState() replaces the boolean-only fetch
+//   PART B  ~ step 4 of commitSession rewritten around the 3-state result
 // ============================================================================
 
 
@@ -14,16 +13,41 @@
 // Add beside isOAuthUser / fetchRegistrationCompleted (module scope, ~line 442).
 
 /**
+ * BUG 1 — https://www.pexly.app/en/en/signup?oauth=google&intent=signup
+ *
+ * `navigate` in this app is already locale-aware (router basename / localized
+ * navigate wrapper), so prefixing with langBase() applied the locale twice.
+ * Rather than guessing which layer owns the prefix, normalise: build the
+ * absolute path once, then collapse a repeated leading locale segment.
+ *
+ * This is correct whether navigate prefixes or not, so it will not silently
+ * break if the router config changes later.
+ */
+const LOCALE_RE = /^[a-z]{2}(-[A-Za-z]{2})?$/;
+
+function dedupeLocale(path: string): string {
+  const [pathname, query = ''] = path.split('?');
+  const segs = pathname.split('/').filter(Boolean);
+  while (segs.length >= 2 && LOCALE_RE.test(segs[0]) && segs[0] === segs[1]) {
+    segs.shift();
+  }
+  return '/' + segs.join('/') + (query ? `?${query}` : '');
+}
+
+/**
+ * Use this INSTEAD of `navigate(`${langBase()}/foo`)` everywhere in this file.
+ * It also tolerates a navigate() that does its own prefixing.
+ */
+function navToPath(path: string): string {
+  const withLocale = path.startsWith('/') && LOCALE_RE.test(path.split('/')[1] ?? '')
+    ? path
+    : `${langBase()}${path}`;
+  return dedupeLocale(withLocale);
+}
+
+/**
  * The only trustworthy answer to "may this session enter the app?".
- *
- * WHY THIS EXISTS: totpPendingRef / oauthPendingRef / show2FAInput are React
- * refs and state. They are gone after a reload, but the Supabase session is
- * already persisted in localStorage by the time any of them are set. Any gate
- * built on them is advisory. getAuthenticatorAssuranceLevel() is derived from
- * the token itself, so it survives reloads, tab restores, and token refreshes.
- *
- * Fails CLOSED: an error means "we do not know", and an unknown session is not
- * allowed to be committed as authenticated.
+ * Fails CLOSED: an error means "we do not know".
  */
 async function sessionMeetsAal(supabase: any): Promise<boolean> {
   try {
@@ -36,24 +60,60 @@ async function sessionMeetsAal(supabase: any): Promise<boolean> {
 }
 
 /**
- * fetchRegistrationCompleted with bounded retry.
+ * BUG 2 — returning Google users landing on /signup.
  *
- * The old code treated `null` (unknown) as "let them in" — a single dropped
- * request, RLS hiccup, or offline moment committed an unverified OAuth session.
- * An attacker can produce that condition on demand. Retry a few times, then
- * give up and let the caller fail closed.
+ * A boolean `registration_completed` cannot distinguish these three cases:
+ *
+ *   a) no user_profiles row at all        -> genuine new signup
+ *   b) row exists, flag false             -> profile started but not finished
+ *   c) row exists, flag true              -> returning user, let them in
+ *   d) the read itself failed             -> unknown, fail closed
+ *
+ * The old code collapsed (a) and (b) — and, in projects where the profile
+ * trigger only sets the flag on the email/password path, EVERY existing OAuth
+ * user reads as (b) and is permanently redirected to signup even though they
+ * are fully registered. Reading the row lets us self-heal that case: a row
+ * that already carries real profile data is treated as complete and the flag
+ * is repaired, instead of bouncing the user to a signup form forever.
  */
-async function fetchRegistrationCompletedWithRetry(
+type RegistrationState = 'new' | 'incomplete' | 'complete' | 'unknown';
+
+async function fetchRegistrationState(
   supabase: any,
   userId: string,
   attempts = 3,
-): Promise<boolean | null> {
+): Promise<RegistrationState> {
   for (let i = 0; i < attempts; i++) {
-    const result = await fetchRegistrationCompleted(supabase, userId);
-    if (result !== null) return result;
-    await new Promise((r) => setTimeout(r, 300 * 2 ** i)); // 300ms, 600ms, 1200ms
+    try {
+      const { data, error, status } = await supabase
+        .from('user_profiles')
+        .select('id, registration_completed, username, created_at')
+        .eq('id', userId)
+        .maybeSingle();
+
+      // 406/PGRST116-style "no rows" is not an error for maybeSingle, but a
+      // real transport/RLS failure is — retry those, never treat as "new".
+      if (error && status !== 406) throw error;
+
+      if (!data) return 'new';
+      if (data.registration_completed === true) return 'complete';
+
+      // Row exists with the flag unset. If the profile already carries the
+      // data signup would have collected, this is a legacy/unbackfilled row,
+      // not an abandoned signup. Repair it and let the user in.
+      if (data.username) {
+        void supabase
+          .from('user_profiles')
+          .update({ registration_completed: true })
+          .eq('id', userId);
+        return 'complete';
+      }
+      return 'incomplete';
+    } catch {
+      await new Promise((r) => setTimeout(r, 300 * 2 ** i)); // 300ms, 600ms, 1200ms
+    }
   }
-  return null;
+  return 'unknown';
 }
 
 
@@ -64,15 +124,7 @@ async function fetchRegistrationCompletedWithRetry(
 getSupabase().then((supabase) => {
   if (aborted) return;
 
-  /**
-   * THE single place a session is allowed to become "the signed-in user".
-   *
-   * Previously three code paths committed sessions independently
-   * (INITIAL_SESSION/TOKEN_REFRESHED, SIGNED_IN, and the 60s health check) and
-   * only the SIGNED_IN path ran the OAuth registration gate — so a reload or a
-   * token refresh committed a Google session that had never been checked. And
-   * a *fourth* handler in signin.tsx raced all of them. One funnel, one policy.
-   */
+  /** THE single place a session is allowed to become "the signed-in user". */
   const commitSession = async (
     currentSession: Session,
     opts: { isFreshSignIn: boolean },
@@ -91,47 +143,55 @@ getSupabase().then((supabase) => {
       return;
     }
 
-    // 3. Step-up. Runs on EVERY event, not just SIGNED_IN, so a reload can no
-    //    longer surface an AAL1 session as authenticated.
+    // 3. Step-up, on EVERY event so a reload cannot surface an AAL1 session.
     if (!(await sessionMeetsAal(supabase))) {
       if (aborted) return;
       setSession(null);
       setUser(null);
-      // Do not sign out: the user may be mid-TOTP. The route guard keeps them
-      // out, and the sign-in page raises the challenge.
       return;
     }
 
-    // 4. OAuth registration gate — now on every path, fail-closed.
+    // 4. OAuth registration gate — every path, fail-closed, three outcomes.
     if (isOAuthUser(u)) {
-      oauthPendingRef.current = true;
-      setSession(null);
-      setUser(null);
+      // Already cleared this exact user in this tab: don't re-gate on every
+      // TOKEN_REFRESHED / health-check tick.
+      if (oauthCheckedRef.current !== u.id) {
+        oauthPendingRef.current = true;
+        setSession(null);
+        setUser(null);
 
-      const complete = await fetchRegistrationCompletedWithRetry(supabase, u.id);
-      if (aborted) return;
+        const state = await fetchRegistrationState(supabase, u.id);
+        if (aborted) return;
 
-      if (complete === null) {
-        // Still unknown after retries. FAIL CLOSED — the old code committed the
-        // session here, which is how an unregistered Google account got in.
+        if (state === 'unknown') {
+          // Do not guess. Do not send them to signup — that is what produced
+          // the "logged-in user lands on the signup page" report.
+          oauthPendingRef.current = false;
+          oauthCheckedRef.current = null;
+          await supabase.auth.signOut();
+          navigate(navToPath('/signin?reason=verification_unavailable'), { replace: true });
+          return;
+        }
+
+        if (state === 'new' || state === 'incomplete') {
+          // Genuine signup still in progress. Hold the session (the signup form
+          // needs it to write user_profiles); completeOAuthRegistration()
+          // releases the hold.
+          oauthCheckedRef.current = u.id;
+          navigate(navToPath('/signup?oauth=google&intent=signup'), { replace: true });
+          return;
+        }
+
         oauthPendingRef.current = false;
-        oauthCheckedRef.current = null;
-        await supabase.auth.signOut();
-        navigate(`${langBase()}/signin?reason=verification_unavailable`, { replace: true });
-        return;
-      }
-
-      if (!complete) {
-        // This is a SIGNUP, not a sign-in. Keep the hold so nothing commits the
-        // user while the signup form is open; the session is needed to write
-        // the user_profiles row. completeOAuthRegistration() releases it.
         oauthCheckedRef.current = u.id;
-        navigate(`${langBase()}/signup?oauth=google&intent=signup`, { replace: true });
-        return;
       }
 
-      oauthPendingRef.current = false;
-      oauthCheckedRef.current = u.id;
+      // Returning, fully registered OAuth user who happens to still be sitting
+      // on the callback URL: get them off it instead of parking them there.
+      const here = window.location.pathname + window.location.search;
+      if (/[?&]oauth=google\b/.test(here) || /\/sign(in|up)\b/.test(here)) {
+        navigate(navToPath(postAuthRedirect ?? '/'), { replace: true });
+      }
     }
 
     if (aborted) return;
@@ -162,7 +222,7 @@ getSupabase().then((supabase) => {
   const { data: { subscription: sub } } = supabase.auth.onAuthStateChange((event, currentSession) => {
     if (aborted) return;
 
-    if (window.location.pathname === '/verify-email') {
+    if (window.location.pathname.endsWith('/verify-email')) {
       setSession(null);
       setUser(null);
       return;
@@ -190,7 +250,6 @@ getSupabase().then((supabase) => {
   subscription = sub;
 
   // Health check: re-run the same funnel rather than assigning state directly.
-  // The old version bypassed every check and could surface an AAL1 session.
   healthCheckInterval = setInterval(async () => {
     if (aborted) return;
     if (totpPendingRef.current || oauthPendingRef.current || signInInProgressRef.current) return;
