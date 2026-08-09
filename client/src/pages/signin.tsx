@@ -12,6 +12,7 @@ import { CountryCodeSelector } from "@/components/country-code-selector";
 import { PhoneVerification } from "@/components/phone-verification";
 import { DeviceOTPVerification } from "@/components/device-otp-verification";
 import { supabase } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 import { signInWithGoogle } from "@/lib/google-auth";
 import { useTheme } from "@/components/theme-provider";
 import { Turnstile } from "@marsidev/react-turnstile";
@@ -62,6 +63,7 @@ export function SignIn() {
   const conditionalAbortRef = useRef<AbortController | null>(null);
   const captchaTokenRef = useRef<string | null>(null);
   const googleRedirectingRef = useRef(false);
+  const googleCallbackHandledRef = useRef(false);
   const { signIn, signOut, user, session, pendingOTPVerification, completeOTPVerification, cancelOTPVerification, completeTOTPSignIn, cancelTOTPSignIn, pauseSessionForTOTP, beginPasskeyAuth, releasePasskeyAuth } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -188,8 +190,16 @@ export function SignIn() {
   }, []);
 
   useEffect(() => {
+    const isGoogleOAuthCallback =
+      new URLSearchParams(window.location.search).get("oauth") === "google";
+
+    // A Google callback briefly exposes the Supabase session before the
+    // profile/MFA callback handler below has finished. Do not redirect that
+    // session to the dashboard before those checks run.
     if (user && !checking2FA && !show2FAInput) {
-      setLocation("/dashboard");
+      if (!isGoogleOAuthCallback) {
+        setLocation("/dashboard");
+      }
     }
 
     const params = new URLSearchParams(window.location.search);
@@ -215,6 +225,98 @@ export function SignIn() {
     }
   }, [user, setLocation, checking2FA, show2FAInput]);
 
+  // Google OAuth returns an authenticated Supabase session before this page
+  // gets a chance to apply Pexly's account and MFA rules. Keep the callback on
+  // this page, reject auth users who have no Pexly profile, and require the
+  // same TOTP challenge used by password sign-in.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("oauth") !== "google" || params.get("intent") !== "signin") return;
+    if (!user || !session || googleCallbackHandledRef.current) return;
+
+    googleCallbackHandledRef.current = true;
+    let cancelled = false;
+
+    const finishGoogleCallback = async () => {
+      setLoading(true);
+      setChecking2FA(true);
+
+      try {
+        const sb = await getSupabase();
+        const { data: profile, error: profileError } = await sb
+          .from("user_profiles")
+          .select("id")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profileError) throw profileError;
+
+        if (!profile) {
+          await signOut();
+          if (cancelled) return;
+          toast({
+            title: "Account not found",
+            description: "This Google account has not signed up for Pexly yet. Please sign up first.",
+            variant: "destructive",
+          });
+          setLocation("/signup");
+          return;
+        }
+
+        const { data: aalData, error: aalError } =
+          await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (aalError) throw aalError;
+
+        if (aalData.currentLevel === "aal1" && aalData.nextLevel === "aal2") {
+          const { data: factorsData, error: factorsError } = await sb.auth.mfa.listFactors();
+          if (factorsError) throw factorsError;
+
+          const factor = (factorsData?.totp ?? []).find((item: any) => item.status === "verified");
+          if (!factor) throw new Error("Your account requires 2FA, but no verified authenticator factor was found.");
+
+          const { data: challengeData, error: challengeError } = await sb.auth.mfa.challenge({
+            factorId: factor.id,
+          });
+          if (challengeError || !challengeData) {
+            throw challengeError ?? new Error("Failed to start the 2FA challenge.");
+          }
+
+          pauseSessionForTOTP();
+          setTotpFactorId(factor.id);
+          setTotpChallengeId(challengeData.id);
+          setShow2FAInput(true);
+          setLoading(false);
+          setChecking2FA(false);
+          return;
+        }
+
+        if (!cancelled) {
+          setLoading(false);
+          setChecking2FA(false);
+          setLocation("/dashboard");
+        }
+      } catch (error) {
+        if (cancelled) return;
+        await signOut();
+        toast({
+          title: "Google sign-in failed",
+          description: error instanceof Error
+            ? error.message
+            : "We couldn't verify your account security settings. Please try again.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        setChecking2FA(false);
+        setLocation("/signin");
+      }
+    };
+
+    void finishGoogleCallback();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, session, pauseSessionForTOTP, signOut, setLocation, toast]);
+
   useEffect(() => {
     const value = inputValue.trim();
     const isPhone = /^[\d\s\-\(\)]+$/.test(value) || value.startsWith('+');
@@ -239,7 +341,7 @@ export function SignIn() {
     setGoogleRedirecting(true);
 
     try {
-      await signInWithGoogle(captchaToken);
+      await signInWithGoogle(captchaToken, "/signin?oauth=google&intent=signin");
     } catch (error) {
       googleRedirectingRef.current = false;
       setGoogleRedirecting(false);

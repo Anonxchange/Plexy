@@ -175,7 +175,7 @@ export function SignUp() {
   const [isResending, setIsResending] = useState(false);
   const [signupInProgress, setSignupInProgress] = useState(false);
   const googleRedirectingRef = useRef(false);
-  const { signUp, signIn, user, loading: authLoading } = useAuth();
+  const { signUp, signIn, signOut, user, loading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
@@ -198,7 +198,7 @@ export function SignUp() {
     setGoogleRedirecting(true);
 
     try {
-      await signInWithGoogle(captchaToken);
+      await signInWithGoogle(captchaToken, "/signup?oauth=google&intent=signup");
     } catch (error) {
       googleRedirectingRef.current = false;
       setGoogleRedirecting(false);
@@ -239,10 +239,74 @@ export function SignUp() {
     // While a signup is running we deliberately hold the session open
     // (email OTP -> phone step -> signOut -> /signin). Don't hijack it.
     if (signupInProgress) return;
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("oauth") === "google" && params.get("intent") === "signup") {
+      if (!authLoading && user && step === "details") {
+        setSignupInProgress(true);
+        setLoading(true);
+
+        void (async () => {
+          try {
+            const { data: existingProfile, error: profileError } = await supabase
+              .from("user_profiles")
+              .select("id")
+              .eq("id", user.id)
+              .maybeSingle();
+
+            if (profileError) throw profileError;
+
+            if (existingProfile) {
+              await signOut();
+              toast({
+                title: "Account already exists",
+                description: "This Google account is already registered. Please sign in instead.",
+                variant: "destructive",
+              });
+              setLocation("/signin");
+              return;
+            }
+
+            // Google has verified the identity, but the Pexly profile still
+            // needs to be created. Keep the user in the registration flow so
+            // they can optionally add a phone number before the first login.
+            const metadata = user.user_metadata ?? {};
+            const { error: upsertError } = await supabase
+              .from("user_profiles")
+              .upsert({
+                id: user.id,
+                email: user.email ?? null,
+                full_name: metadata.full_name ?? metadata.name ?? "",
+                preferred_currency: "usd",
+              }, { onConflict: "id" });
+
+            if (upsertError) throw upsertError;
+
+            setUserId(user.id);
+            setStep("phone");
+          } catch (error) {
+            await signOut();
+            toast({
+              title: "Google sign-up failed",
+              description: error instanceof Error
+                ? error.message
+                : "We couldn't finish creating your account. Please try again.",
+              variant: "destructive",
+            });
+            setLocation("/signup");
+          } finally {
+            setLoading(false);
+          }
+        })();
+        return;
+      }
+      return;
+    }
+
     if (!authLoading && user) {
       setLocation("/dashboard");
     }
-  }, [user, authLoading, setLocation, signupInProgress]);
+  }, [user, authLoading, setLocation, signupInProgress, signOut, step, toast]);
 
   // Countdown timer for OTP expiry and resend cooldown
   useEffect(() => {
