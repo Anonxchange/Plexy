@@ -10,6 +10,7 @@ import { getSupabase } from "@/lib/supabase";
  */
 export async function signInWithGoogle(
   captchaToken?: string | null,
+  redirectPath = "/signin?oauth=google&intent=signin",
 ): Promise<void> {
   const captchaRequired = Boolean(import.meta.env.VITE_TURNSTILE_SITE_KEY);
   if (captchaRequired && !captchaToken) {
@@ -20,7 +21,7 @@ export async function signInWithGoogle(
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: window.location.origin + "/signin",
+      redirectTo: window.location.origin + redirectPath,
     },
   });
 
