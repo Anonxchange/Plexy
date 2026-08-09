@@ -206,10 +206,15 @@ function AuthRoute({
 }) {
   const guard = useAuthGuard();
   const [location] = useLocation();
+  const isGoogleOAuthCallback = new URLSearchParams(location.split("?")[1] ?? "").get("oauth") === "google";
 
   if (guard === 'pending') return <>{skeleton}</>;
 
-  if (guard === 'authed') {
+  // OAuth callbacks must render the auth page long enough to validate the
+  // provider account and complete MFA. Redirecting immediately here would
+  // bypass the callback page before it can reject an account that has not
+  // completed Pexly registration.
+  if (guard === 'authed' && !isGoogleOAuthCallback) {
     const params = new URLSearchParams(location.split("?")[1] ?? "");
     const raw = params.get("redirect") ?? "/dashboard";
     const redirect = raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
