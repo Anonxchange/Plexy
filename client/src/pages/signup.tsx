@@ -250,13 +250,22 @@ export function SignUp() {
           try {
             const { data: existingProfile, error: profileError } = await supabase
               .from("user_profiles")
-              .select("id")
+              // Supabase's auth trigger creates a minimal profile before this
+              // page runs. Treat only a verified profile as a completed
+              // Pexly account; a minimal trigger row is still onboarding.
+              .select("id, email_verified, phone_verified")
               .eq("id", user.id)
               .maybeSingle();
 
             if (profileError) throw profileError;
 
-            if (existingProfile) {
+            const registrationCompleted = Boolean(
+              existingProfile &&
+              (existingProfile.email_verified === true ||
+                existingProfile.phone_verified === true),
+            );
+
+            if (registrationCompleted) {
               await signOut();
               toast({
                 title: "Account already exists",
@@ -277,6 +286,11 @@ export function SignUp() {
                 id: user.id,
                 email: user.email ?? null,
                 full_name: metadata.full_name ?? metadata.name ?? "",
+                // Google has already verified the email identity. This
+                // becomes the durable marker used by the sign-in callback to
+                // distinguish a completed Pexly account from the auth
+                // trigger's minimal profile row.
+                email_verified: true,
                 preferred_currency: "usd",
               }, { onConflict: "id" });
 

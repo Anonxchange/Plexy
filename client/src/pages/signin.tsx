@@ -245,18 +245,26 @@ export function SignIn() {
         const sb = await getSupabase();
         const { data: profile, error: profileError } = await sb
           .from("user_profiles")
-          .select("id")
+          // The auth trigger creates a minimal profile as soon as Google
+          // creates an auth.users row. Existence alone therefore cannot tell
+          // us whether Pexly registration was completed.
+          .select("id, email, full_name, email_verified, phone_verified")
           .eq("id", user.id)
           .maybeSingle();
 
         if (profileError) throw profileError;
 
-        if (!profile) {
+        const registrationCompleted = Boolean(
+          profile &&
+          (profile.email_verified === true || profile.phone_verified === true),
+        );
+
+        if (!registrationCompleted) {
           await signOut();
           if (cancelled) return;
           toast({
-            title: "Account not found",
-            description: "This Google account has not signed up for Pexly yet. Please sign up first.",
+            title: "Finish creating your account",
+            description: "This Google account has not completed Pexly registration yet. Please sign up first.",
             variant: "destructive",
           });
           setLocation("/signup");
