@@ -11,10 +11,32 @@ import { getSupabase } from "@/lib/supabase";
  * never mounts, while Supabase has already established an AAL1 session. That is
  * exactly how Google sign-in ended up bypassing 2FA. Always send the provider
  * back to a language-prefixed path.
+ *
+ * The same failure happens silently in production if the language-prefixed URL
+ * is NOT in Supabase Auth -> URL Configuration -> Redirect URLs: Supabase falls
+ * back to the Site URL, the callback effect never mounts, and the AAL1 session
+ * walks straight into the app. Register wildcards for every locale:
+ *
+ *   https://pexly.com/*\/signin*
+ *   https://pexly.com/*\/signup*
+ *   https://pexly.com/signin*
+ *   https://pexly.com/signup*
  */
 function currentLangBase(): string {
   const first = window.location.pathname.split("/")[1] ?? "";
   return /^[a-z]{2}(-[A-Za-z]{2})?$/.test(first) ? `/${first}` : "";
+}
+
+/** Guard against a caller passing an absolute or protocol-relative URL. */
+function assertLocalPath(path: string): string {
+  if (!path.startsWith("/") || path.startsWith("//")) {
+    throw new Error("redirectPath must be a same-origin path starting with '/'");
+  }
+  return path;
+}
+
+export function buildOAuthRedirectUrl(redirectPath: string): string {
+  return `${window.location.origin}${currentLangBase()}${assertLocalPath(redirectPath)}`;
 }
 
 export async function signInWithGoogle(
@@ -30,7 +52,7 @@ export async function signInWithGoogle(
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${window.location.origin}${currentLangBase()}${redirectPath}`,
+      redirectTo: buildOAuthRedirectUrl(redirectPath),
       queryParams: { prompt: "select_account" },
     },
   });

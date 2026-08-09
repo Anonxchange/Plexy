@@ -11,6 +11,7 @@ import { FaApple, FaFacebook } from "react-icons/fa";
 import { PhoneVerification } from "@/components/phone-verification";
 import { supabase } from "@/lib/supabase";
 import { signInWithGoogle } from "@/lib/google-auth";
+import { resolveAccountState } from "@/lib/google-account-state";
 import { CountryCodeSelector } from "@/components/country-code-selector";
 import { useTheme } from "@/components/theme-provider";
 import { amlScreening } from "@/lib/security/aml-screening";
@@ -175,6 +176,7 @@ export function SignUp() {
   const [isResending, setIsResending] = useState(false);
   const [signupInProgress, setSignupInProgress] = useState(false);
   const googleRedirectingRef = useRef(false);
+  const googleCallbackHandledRef = useRef(false);
   const { signUp, signIn, signOut, user, loading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -198,8 +200,10 @@ export function SignUp() {
     setGoogleRedirecting(true);
 
     try {
+      sessionStorage.setItem("pexly.oauth.intent", "signup");
       await signInWithGoogle(captchaToken, "/signup?oauth=google&intent=signup");
     } catch (error) {
+      sessionStorage.removeItem("pexly.oauth.intent");
       googleRedirectingRef.current = false;
       setGoogleRedirecting(false);
       toast({
@@ -241,34 +245,35 @@ export function SignUp() {
     if (signupInProgress) return;
 
     const params = new URLSearchParams(window.location.search);
-    if (params.get("oauth") === "google" && params.get("intent") === "signup") {
-      if (!authLoading && user && step === "details") {
+    const storedIntent = sessionStorage.getItem("pexly.oauth.intent");
+    const isGoogleSignupCallback =
+      (params.get("oauth") === "google" && params.get("intent") === "signup") ||
+      storedIntent === "signup";
+    if (isGoogleSignupCallback) {
+      if (!authLoading && user && step === "details" && !googleCallbackHandledRef.current) {
+        googleCallbackHandledRef.current = true;
         setSignupInProgress(true);
         setLoading(true);
 
         void (async () => {
           try {
-            const { data: existingProfile, error: profileError } = await supabase
-              .from("user_profiles")
-              // Supabase's auth trigger creates a minimal profile before this
-              // page runs. Treat only a verified profile as a completed
-              // Pexly account; a minimal trigger row is still onboarding.
-              .select("id, registration_completed")
-              .eq("id", user.id)
-              .maybeSingle();
+            const accountState = await resolveAccountState(user);
 
-            if (profileError) throw profileError;
-
-            const registrationCompleted = existingProfile?.registration_completed === true;
-
-            if (registrationCompleted) {
-              await signOut();
+            if (accountState.status === "unknown") {
               toast({
-                title: "Account already exists",
-                description: "This Google account is already registered. Please sign in instead.",
+                title: "Couldn't check your account",
+                description: "Please try again in a moment. Your Google session is still active.",
                 variant: "destructive",
               });
-              setLocation("/signin");
+              setSignupInProgress(false);
+              setGoogleRedirecting(false);
+              googleCallbackHandledRef.current = false;
+              return;
+            }
+
+            if (accountState.status === "complete") {
+              sessionStorage.removeItem("pexly.oauth.intent");
+              setLocation("/dashboard");
               return;
             }
 
@@ -296,7 +301,6 @@ export function SignUp() {
             setUserId(user.id);
             setStep("phone");
           } catch (error) {
-            await signOut();
             toast({
               title: "Google sign-up failed",
               description: error instanceof Error
@@ -304,7 +308,9 @@ export function SignUp() {
                 : "We couldn't finish creating your account. Please try again.",
               variant: "destructive",
             });
-            setLocation("/signup");
+            setSignupInProgress(false);
+            setGoogleRedirecting(false);
+            googleCallbackHandledRef.current = false;
           } finally {
             setLoading(false);
           }
@@ -317,7 +323,7 @@ export function SignUp() {
     if (!authLoading && user) {
       setLocation("/dashboard");
     }
-  }, [user, authLoading, setLocation, signupInProgress, signOut, step, toast]);
+  }, [user, authLoading, setLocation, signupInProgress, step, toast]);
 
   // Countdown timer for OTP expiry and resend cooldown
   useEffect(() => {
@@ -650,7 +656,18 @@ export function SignUp() {
         return;
       }
 
-      // Sign out the user after successful signup
+      const isGoogleSignup =
+        new URLSearchParams(window.location.search).get("oauth") === "google" ||
+        sessionStorage.getItem("pexly.oauth.intent") === "signup";
+      if (isGoogleSignup) {
+        sessionStorage.removeItem("pexly.oauth.intent");
+        setSignupInProgress(false);
+        toast({ title: "Success!", description: "Your account is ready." });
+        setLocation("/dashboard");
+        return;
+      }
+
+      // Email signup requires a fresh sign-in after successful registration.
       await supabase.auth.signOut();
       setSignupInProgress(false);
 
@@ -677,7 +694,18 @@ export function SignUp() {
       return;
     }
 
-    // Sign out the user after successful signup
+    const isGoogleSignup =
+      new URLSearchParams(window.location.search).get("oauth") === "google" ||
+      sessionStorage.getItem("pexly.oauth.intent") === "signup";
+    if (isGoogleSignup) {
+      sessionStorage.removeItem("pexly.oauth.intent");
+      setSignupInProgress(false);
+      toast({ title: "Account Created!", description: "Your account is ready." });
+      setLocation("/dashboard");
+      return;
+    }
+
+    // Email signup requires a fresh sign-in after successful registration.
     await supabase.auth.signOut();
     setSignupInProgress(false);
 
