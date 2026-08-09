@@ -70,6 +70,55 @@ export function SignIn() {
   const { theme, setTheme } = useTheme();
 
   const isDark = theme === "dark";
+
+  // Turnstile tokens are single-use. Rotate the widget after every consumed or
+  // failed attempt, otherwise the next submit replays a dead token.
+  const resetCaptcha = () => {
+    setCaptchaToken(null);
+    setCaptchaError(null);
+    setCaptchaKey((k) => k + 1);
+  };
+
+  // The ONLY trustworthy answer to "may this session enter the app?".
+  // Local flags (show2FAInput / checking2FA) are wiped by a page reload.
+  const hasSatisfiedMfa = async () => {
+    const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (error) return false;
+    return !(data.currentLevel === "aal1" && data.nextLevel === "aal2");
+  };
+
+  // Shared MFA gate for every sign-in path (password, phone+password, phone OTP,
+  // passkey, Google). Returns 'ok' when the session is already AAL2 or has no
+  // enrolled factor, 'challenged' when the TOTP prompt was raised, 'failed'
+  // when the session was rejected and signed out.
+  const enforceMfaGate = async (): Promise<"ok" | "challenged" | "failed"> => {
+    const { data: aalData, error: aalErr } =
+      await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aalErr) {
+      await signOut();
+      return "failed";
+    }
+    if (!(aalData.currentLevel === "aal1" && aalData.nextLevel === "aal2")) return "ok";
+
+    const { data: factorsData } = await supabase.auth.mfa.listFactors();
+    const totpFactor = (factorsData?.totp ?? []).find((f: any) => f.status === "verified");
+    if (!totpFactor) {
+      await signOut();
+      return "failed";
+    }
+    const { data: challengeData, error: challengeErr } = await supabase.auth.mfa.challenge({
+      factorId: totpFactor.id,
+    });
+    if (challengeErr || !challengeData) {
+      await signOut();
+      return "failed";
+    }
+    pauseSessionForTOTP();
+    setTotpFactorId(totpFactor.id);
+    setTotpChallengeId(challengeData.id);
+    setShow2FAInput(true);
+    return "challenged";
+  };
   const welcomeText = "Welcome back!";
 
   // Auto-detect country from IP on mount
@@ -196,10 +245,16 @@ export function SignIn() {
     // A Google callback briefly exposes the Supabase session before the
     // profile/MFA callback handler below has finished. Do not redirect that
     // session to the dashboard before those checks run.
-    if (user && !checking2FA && !show2FAInput) {
-      if (!isGoogleOAuthCallback) {
-        setLocation("/dashboard");
-      }
+    if (user && !checking2FA && !show2FAInput && !isGoogleOAuthCallback) {
+      // Never redirect on local state alone: a reload during the TOTP prompt
+      // used to drop an AAL1 session straight into the dashboard.
+      void (async () => {
+        if (await hasSatisfiedMfa()) {
+          setLocation("/dashboard");
+        } else {
+          await signOut();
+        }
+      })();
     }
 
     const params = new URLSearchParams(window.location.search);
@@ -248,18 +303,24 @@ export function SignIn() {
           // The auth trigger creates a minimal profile as soon as Google
           // creates an auth.users row. Existence alone therefore cannot tell
           // us whether Pexly registration was completed.
-          .select("id, email, full_name, email_verified, phone_verified")
+          // registration_completed is the single durable marker, written only by
+          // the server at the end of signup. email_verified/phone_verified are no
+          // longer client-writable and no longer imply a finished registration.
+          .select("id, registration_completed")
           .eq("id", user.id)
           .maybeSingle();
 
         if (profileError) throw profileError;
 
-        const registrationCompleted = Boolean(
-          profile &&
-          (profile.email_verified === true || profile.phone_verified === true),
-        );
+        const registrationCompleted = profile?.registration_completed === true;
 
         if (!registrationCompleted) {
+          // signInWithOAuth ALWAYS provisions the auth user, so a rejected
+          // sign-in leaves an orphan account behind. Ask the server to delete
+          // the just-created, never-completed user before dropping the session.
+          await supabase.functions
+            .invoke("cleanup-abandoned-oauth-user")
+            .catch(() => undefined);
           await signOut();
           if (cancelled) return;
           toast({
@@ -369,18 +430,18 @@ export function SignIn() {
     if (isPhoneNumber) {
       const fullPhoneNumber = `${countryCode}${inputValue}`;
       
-      // Check if phone number exists in database
-      const { data: existingUser, error: checkError } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('phone_number', fullPhoneNumber)
-        .eq('phone_verified', true)
-        .single();
+      // Never query user_profiles from the browser to test existence: with the
+      // anon key that is a user-enumeration endpoint. This RPC is SECURITY
+      // DEFINER + rate limited and returns only a boolean.
+      const { data: phoneRegistered, error: checkError } = await supabase.rpc(
+        "phone_registered_for_signin",
+        { p_phone_number: fullPhoneNumber },
+      );
 
-      if (checkError || !existingUser) {
+      if (checkError || phoneRegistered !== true) {
         toast({
-          title: "Phone Number Not Found",
-          description: "This phone number is not registered. Please sign up first.",
+          title: "Couldn't start sign-in",
+          description: "Check the number and try again, or sign up if you don't have an account yet.",
           variant: "destructive",
         });
         return;
@@ -408,6 +469,7 @@ export function SignIn() {
     if (authResult.error) {
       setLoading(false);
       setChecking2FA(false);
+      resetCaptcha();
       toast({
         title: "Sign-in Failed",
         description: friendlyAuthError(authResult.error.message),
@@ -448,20 +510,14 @@ export function SignIn() {
 
     const deviceStatus = await deviceFingerprint.checkDeviceStatus(userId);
     if (!deviceStatus.exists || !deviceStatus.trusted) {
-      const userEmail = sessionData?.session?.user?.email;
-      if (userEmail) {
-        setShowDeviceVerification(true);
-        setLoading(false);
-        setChecking2FA(false);
-        return;
-      }
+      // No email fall-through: previously a session without an email address
+      // skipped device verification and silently trusted the device.
+      setShowDeviceVerification(true);
+      setLoading(false);
+      setChecking2FA(false);
+      return;
     }
 
-    try {
-      await deviceFingerprint.registerDeviceAsTrusted(userId);
-    } catch (error) {
-      console.error('Error registering device during signin:', error);
-    }
     setChecking2FA(false);
     toast({
       title: "Success!",
@@ -474,6 +530,21 @@ export function SignIn() {
   };
 
   const handlePhoneVerified = async (verifiedPhoneNumber: string) => {
+    // Phone OTP proves possession of the number, not the second factor.
+    const gate = await enforceMfaGate();
+    if (gate === "challenged") {
+      setShowPhoneVerification(false);
+      return;
+    }
+    if (gate === "failed") {
+      toast({
+        title: "Sign-in blocked",
+        description: "We couldn't verify your account's 2FA settings. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const { data: sessionData } = await supabase.auth.getSession();
     if (sessionData?.session?.user?.id) {
       try {
@@ -606,6 +677,13 @@ export function SignIn() {
       });
 
       if (verifyError) {
+        // A consumed or expired challengeId fails forever; issue a fresh one so
+        // the next attempt can actually succeed.
+        const { data: freshChallenge } = await supabase.auth.mfa.challenge({
+          factorId: totpFactorId,
+        });
+        if (freshChallenge?.id) setTotpChallengeId(freshChallenge.id);
+        setTwoFactorCode("");
         toast({
           title: "Invalid Code",
           description: "The verification code is incorrect. Please try again.",
@@ -654,11 +732,12 @@ export function SignIn() {
     const tempEmail = `${fullPhoneNumber.replace(/\+/g, '')}@pexly.phone`;
 
     // Sign in with password
-    const { error, data } = await signIn(tempEmail, password);
+    const { error, data } = await signIn(tempEmail, password, captchaToken ?? undefined);
 
     if (error) {
       setLoading(false);
       setChecking2FA(false);
+      resetCaptcha();
       toast({
         title: "Sign-in Failed",
         description: friendlyAuthError(error.message),
@@ -671,11 +750,30 @@ export function SignIn() {
 
     const { data: userData } = await supabase.auth.getUser();
     if (userData.user) {
-      try {
-        await deviceFingerprint.registerDeviceAsTrusted(userData.user.id);
-      } catch (error) {
-        console.error('Error registering device during phone signin:', error);
+      // This path used to walk straight to /dashboard with no AAL check and no
+      // device check — a complete 2FA bypass. Same gate as every other path.
+      const gate = await enforceMfaGate();
+      if (gate === "challenged") {
+        setLoading(false);
+        return;
       }
+      if (gate === "failed") {
+        setLoading(false);
+        toast({
+          title: "Sign-in blocked",
+          description: "Your account requires 2FA and we couldn't start the challenge. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const deviceStatus = await deviceFingerprint.checkDeviceStatus(userData.user.id);
+      if (!deviceStatus.exists || !deviceStatus.trusted) {
+        setShowDeviceVerification(true);
+        setLoading(false);
+        return;
+      }
+
       toast({
         title: "Welcome back!",
         description: "Successfully signed in",

@@ -253,17 +253,13 @@ export function SignUp() {
               // Supabase's auth trigger creates a minimal profile before this
               // page runs. Treat only a verified profile as a completed
               // Pexly account; a minimal trigger row is still onboarding.
-              .select("id, email_verified, phone_verified")
+              .select("id, registration_completed")
               .eq("id", user.id)
               .maybeSingle();
 
             if (profileError) throw profileError;
 
-            const registrationCompleted = Boolean(
-              existingProfile &&
-              (existingProfile.email_verified === true ||
-                existingProfile.phone_verified === true),
-            );
+            const registrationCompleted = existingProfile?.registration_completed === true;
 
             if (registrationCompleted) {
               await signOut();
@@ -280,21 +276,22 @@ export function SignUp() {
             // needs to be created. Keep the user in the registration flow so
             // they can optionally add a phone number before the first login.
             const metadata = user.user_metadata ?? {};
+            // Only non-privileged display fields may be written from the browser.
+            // email / email_verified / phone_verified / registration_completed are
+            // revoked for the `authenticated` role and are set exclusively by
+            // start_google_signup(), which reads the verified identity from the JWT.
             const { error: upsertError } = await supabase
               .from("user_profiles")
               .upsert({
                 id: user.id,
-                email: user.email ?? null,
                 full_name: metadata.full_name ?? metadata.name ?? "",
-                // Google has already verified the email identity. This
-                // becomes the durable marker used by the sign-in callback to
-                // distinguish a completed Pexly account from the auth
-                // trigger's minimal profile row.
-                email_verified: true,
                 preferred_currency: "usd",
               }, { onConflict: "id" });
 
             if (upsertError) throw upsertError;
+
+            const { error: startError } = await supabase.rpc("start_google_signup");
+            if (startError) throw startError;
 
             setUserId(user.id);
             setStep("phone");
@@ -452,7 +449,16 @@ export function SignUp() {
           return;
         }
       } catch (error) {
+        // Fail closed: a network blip must not wave a sanctioned user through.
         console.error("AML screening error:", error);
+        setLoading(false);
+        setSignupInProgress(false);
+        toast({
+          title: "Couldn't complete checks",
+          description: "We couldn't run the required compliance checks. Please try again shortly.",
+          variant: "destructive",
+        });
+        return;
       }
 
       // Send OTP email
@@ -588,8 +594,6 @@ export function SignUp() {
       if (data.user) {
         await supabase.from('user_profiles').upsert({
           id: data.user.id,
-          phone_number: verifiedPhoneNumber,
-          phone_verified: true,
           full_name: fullName,
           country: country,
           // Always start new accounts in USD. Country is stored above for
@@ -599,6 +603,21 @@ export function SignUp() {
         }, {
           onConflict: 'id'
         });
+
+        // phone_number / phone_verified / registration_completed are server-only
+        // columns: complete_registration() re-verifies the phone against the JWT
+        // identity before writing them.
+        const { error: completeError } = await supabase.rpc("complete_registration", {
+          p_phone_number: verifiedPhoneNumber,
+        });
+        if (completeError) {
+          toast({
+            title: "Couldn't finish signup",
+            description: "Your phone was verified but we couldn't finalise the account. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
 
         try {
           await deviceFingerprint.registerDeviceAsTrusted(data.user.id);
@@ -617,11 +636,19 @@ export function SignUp() {
         setLocation("/signin");
       }
     } else if (userId && userId !== "pending") {
-      // Email signup → Adding phone to existing email account
-      await supabase.from('user_profiles').update({
-        phone_number: verifiedPhoneNumber,
-        phone_verified: true,
-      }).eq('id', userId);
+      // Email signup → Adding phone to existing email account.
+      // Verification flags are never written from the browser.
+      const { error: completeError } = await supabase.rpc("complete_registration", {
+        p_phone_number: verifiedPhoneNumber,
+      });
+      if (completeError) {
+        toast({
+          title: "Couldn't finish signup",
+          description: "Your phone was verified but we couldn't finalise the account. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       // Sign out the user after successful signup
       await supabase.auth.signOut();
@@ -636,6 +663,20 @@ export function SignUp() {
   };
 
   const handleSkipPhone = async () => {
+    // Mark the account complete server-side even without a phone, otherwise the
+    // sign-in gate would treat it as an abandoned registration forever.
+    const { error: completeError } = await supabase.rpc("complete_registration", {
+      p_phone_number: null,
+    });
+    if (completeError) {
+      toast({
+        title: "Couldn't finish signup",
+        description: "We couldn't finalise your account. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Sign out the user after successful signup
     await supabase.auth.signOut();
     setSignupInProgress(false);
@@ -657,7 +698,7 @@ export function SignUp() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, type: 'signup' }),
       });
 
       if (!response.ok) {
