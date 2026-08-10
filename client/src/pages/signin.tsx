@@ -20,6 +20,7 @@ import { Turnstile } from "@marsidev/react-turnstile";
 import { deviceFingerprint } from "@/lib/security/device-fingerprint";
 import { webAuthnService } from "@/lib/webauthn";
 import { ForgotPasswordDialog } from "@/components/forgot-password-dialog";
+import { loginThrottle, formatCooldown } from "@/lib/security/login-throttle";
 
 function friendlyAuthError(raw: string | undefined | null): string {
   if (!raw) return "Something went wrong. Please try again.";
@@ -63,6 +64,10 @@ export function SignIn() {
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [captchaError, setCaptchaError] = useState<string | null>(null);
   const [captchaKey, setCaptchaKey] = useState(0);
+  // --- Login throttling (server-authoritative, mirrored locally for the UI) ---
+  const [lockedUntil, setLockedUntil] = useState<number | null>(null);
+  const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
+  const [cooldownLeft, setCooldownLeft] = useState(0);
   const [displayedText, setDisplayedText] = useState("");
   const [passkeySupported, setPasskeySupported] = useState(false);
   const conditionalAbortRef = useRef<AbortController | null>(null);
@@ -182,6 +187,50 @@ export function SignIn() {
       conditionalAbortRef.current?.abort();
     };
   }, [toast]);
+
+  // Tick the visible cooldown down once per second while a lock is active.
+  useEffect(() => {
+    if (lockedUntil === null) {
+      setCooldownLeft(0);
+      return;
+    }
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((lockedUntil - Date.now()) / 1000));
+      setCooldownLeft(remaining);
+      if (remaining === 0) {
+        setLockedUntil(null);
+        setAttemptsLeft(null);
+      }
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [lockedUntil]);
+
+  // When the typed email changes, ask the server whether that account is already
+  // locked out, so a page refresh or a new tab can't reset the counter.
+  useEffect(() => {
+    const email = inputValue.trim().toLowerCase();
+    if (isPhoneNumber || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setLockedUntil(null);
+      setAttemptsLeft(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      void loginThrottle.status(email).then((state) => {
+        if (cancelled) return;
+        setLockedUntil(state.lockedUntil);
+        setAttemptsLeft(state.attemptsLeft);
+      });
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [inputValue, isPhoneNumber]);
+
+  const isLockedOut = cooldownLeft > 0;
 
   // Typewriter effect for welcome message
   useEffect(() => {
@@ -410,21 +459,63 @@ export function SignIn() {
       return;
     }
 
+    const identifier = inputValue.trim().toLowerCase();
+
     setLoading(true);
     setChecking2FA(true);
 
-    const authResult = await signIn(inputValue, password, captchaToken ?? undefined);
-
-    if (authResult.error) {
+    // 1. Ask the server whether this account is allowed another attempt BEFORE
+    //    spending a request on Supabase Auth. `consume` records the attempt
+    //    atomically, so parallel tabs/requests can't race past the limit.
+    const gate = await loginThrottle.consume(identifier);
+    if (!gate.allowed) {
       setLoading(false);
       setChecking2FA(false);
+      setLockedUntil(gate.lockedUntil);
+      setAttemptsLeft(0);
       toast({
-        title: "Sign-in Failed",
-        description: friendlyAuthError(authResult.error.message),
+        title: "Too many attempts",
+        description: `Account temporarily locked. Try again in ${formatCooldown(gate.lockedUntil)}.`,
         variant: "destructive",
       });
       return;
     }
+
+    const authResult = await signIn(inputValue, password, captchaToken ?? undefined);
+
+    if (authResult.error) {
+      // 2. Record the failure. The server decides the new lock window.
+      const state = await loginThrottle.recordFailure(identifier);
+      setLockedUntil(state.lockedUntil);
+      setAttemptsLeft(state.attemptsLeft);
+
+      // Force a fresh captcha token — Turnstile tokens are single-use, so
+      // without this every retry after the first failed with a captcha error
+      // instead of a real credential check.
+      if (import.meta.env.VITE_TURNSTILE_SITE_KEY) {
+        setCaptchaToken(null);
+        setCaptchaError(null);
+        setCaptchaKey((k) => k + 1);
+      }
+
+      setLoading(false);
+      setChecking2FA(false);
+      toast({
+        title: "Sign-in Failed",
+        description: state.lockedUntil
+          ? `Account temporarily locked. Try again in ${formatCooldown(state.lockedUntil)}.`
+          : state.attemptsLeft !== null && state.attemptsLeft <= 2
+            ? `${friendlyAuthError(authResult.error.message)} ${state.attemptsLeft} attempt${state.attemptsLeft === 1 ? "" : "s"} left before a temporary lock.`
+            : friendlyAuthError(authResult.error.message),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // 3. Credentials were correct — clear the counter for this account.
+    void loginThrottle.reset(identifier);
+    setLockedUntil(null);
+    setAttemptsLeft(null);
 
     // Supabase native MFA (TOTP) — challenge already created inside signIn()
     if (authResult.requiresTOTP && authResult.totpFactorId && authResult.totpChallengeId) {
@@ -943,13 +1034,33 @@ export function SignIn() {
               )}
 
               {/* Sign In Button */}
+              {isLockedOut && !isPhoneNumber && (
+                <p
+                  role="alert"
+                  className={`mb-4 text-center text-sm ${isDark ? 'text-red-400' : 'text-red-500'}`}
+                  data-testid="text-login-lockout"
+                >
+                  Too many failed attempts. Try again in {cooldownLeft}s.
+                </p>
+              )}
+
               <button 
                 type="submit"
-                disabled={loading || (!!import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken && !captchaError)}
+                disabled={
+                  loading ||
+                  (!isPhoneNumber && isLockedOut) ||
+                  (!!import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken && !captchaError)
+                }
                 className="w-full bg-lime-400 hover:bg-lime-500 text-black font-medium py-4 rounded-full text-lg transition-colors disabled:opacity-50" 
                 style={{ fontWeight: 500 }}
               >
-                {loading ? "Signing in..." : isPhoneNumber ? "Continue with SMS" : "Sign in"}
+                {loading
+                  ? "Signing in..."
+                  : !isPhoneNumber && isLockedOut
+                    ? `Locked — retry in ${cooldownLeft}s`
+                    : isPhoneNumber
+                      ? "Continue with SMS"
+                      : "Sign in"}
               </button>
 
               {/* Passkey Sign In — visible whenever device supports passkeys.
