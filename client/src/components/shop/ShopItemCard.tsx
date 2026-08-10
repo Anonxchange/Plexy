@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ShoppingCart, Package } from '@/lib/icons';
 import { sanitizeImageUrl } from "@/lib/sanitize";
 
@@ -26,6 +27,8 @@ interface ShopItemCardProps {
 }
 
 export const ShopItemCard = ({ product, onViewDetails, onAddToCart }: ShopItemCardProps) => {
+  const [loaded, setLoaded] = useState(false);
+
   const disc =
     product.originalPrice && product.originalPrice > product.price
       ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
@@ -37,6 +40,8 @@ export const ShopItemCard = ({ product, onViewDetails, onAddToCart }: ShopItemCa
       : `${product.soldCount}+ sold`
     : null;
 
+  const hasImage = !!(product.images && product.images.length > 0);
+
   return (
     <div
       className="group cursor-pointer flex flex-col bg-background"
@@ -44,15 +49,29 @@ export const ShopItemCard = ({ product, onViewDetails, onAddToCart }: ShopItemCa
     >
       {/* Mobile: natural-height masonry | Desktop: fixed aspect-ratio, object-contain, no bg box */}
       <div className="bg-muted lg:bg-transparent overflow-hidden relative w-full lg:aspect-[3/4]">
-        {product.images && product.images.length > 0 ? (
-          <img
-            src={sanitizeImageUrl(product.images[0])}
-            alt={product.title}
-            className="w-full h-auto block lg:absolute lg:inset-0 lg:h-full lg:object-contain transition-transform duration-500 group-hover:scale-105"
-            loading="lazy"
-          />
+        {hasImage ? (
+          <>
+            {/* Reserved slot + shimmer so the card is never a bare block of text */}
+            {!loaded && (
+              <div
+                className="w-full aspect-[3/4] lg:absolute lg:inset-0 lg:h-full animate-pulse bg-muted"
+                aria-hidden="true"
+              />
+            )}
+            <img
+              src={sanitizeImageUrl(product.images[0])}
+              alt={product.title}
+              className={`w-full h-auto block lg:absolute lg:inset-0 lg:h-full lg:object-contain transition-transform duration-500 group-hover:scale-105 ${
+                loaded ? 'opacity-100' : 'absolute opacity-0 pointer-events-none'
+              }`}
+              loading="lazy"
+              decoding="async"
+              onLoad={() => setLoaded(true)}
+              onError={() => setLoaded(true)}
+            />
+          </>
         ) : (
-          <div className="w-full h-40 lg:absolute lg:inset-0 lg:h-full flex items-center justify-center">
+          <div className="w-full aspect-[3/4] lg:absolute lg:inset-0 lg:h-full flex items-center justify-center">
             <Package className="h-12 w-12 text-muted-foreground/20" />
           </div>
         )}
