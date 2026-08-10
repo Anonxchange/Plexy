@@ -53,6 +53,7 @@ const GiftCardDetail = lazy(() => import("@/pages/gift-card-detail").then(m => (
 const Checkout = lazy(() => import("@/pages/checkout").then(m => ({ default: m.Checkout })));
 const CheckoutPayCrypto = lazy(() => import("@/pages/checkout-pay-crypto").then(m => ({ default: m.CheckoutPayCrypto })));
 const VirtualNumbers = lazy(() => import("@/pages/virtual-numbers"));
+const MyNumbers = lazy(() => import("@/pages/my-numbers"));
 const MobileTopup = lazy(() => import("@/pages/mobile-topup"));
 const UtilityBill = lazy(() => import("@/pages/utility-bill"));
 const BuyCrypto = lazy(() => import("@/pages/buy-crypto"));
@@ -286,6 +287,7 @@ function AppRoutes() {
       <Route path="/wallet">{() => <ProtectedRoute component={Wallet} skeleton={<WalletPageSkeleton />} />}</Route>
       <Route path="/wallet/visa-card">{() => <Redirect to="/wallet/virtual-numbers" />}</Route>
       <Route path="/wallet/virtual-numbers">{() => <ProtectedRoute component={VirtualNumbers} />}</Route>
+      <Route path="/my-numbers">{() => <ProtectedRoute component={MyNumbers} />}</Route>
       <Route path="/wallet/mobile-topup">{() => <LazyRoute component={MobileTopup} />}</Route>
       <Route path="/utility">{() => <LazyRoute component={UtilityBill} />}</Route>
       <Route path="/wallet/utility-bill">{() => <LazyRoute component={UtilityBill} />}</Route>
