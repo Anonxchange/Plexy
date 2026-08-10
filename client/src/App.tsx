@@ -1,6 +1,6 @@
 import { Switch, Route, useLocation, Redirect, Router as WouterRouter } from "wouter";
 import { lazy, Suspense, useEffect, useState } from "react";
-import { Analytics } from "@vercel/analytics/next";
+import { Analytics } from "@vercel/analytics/react";
 import { supabase } from "@/lib/supabase";
 import i18n from "@/lib/i18n";
 import { detectLanguageFromIP, isValidLang } from "@/lib/detect-language";
