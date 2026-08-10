@@ -1,5 +1,6 @@
 import { Switch, Route, useLocation, Redirect, Router as WouterRouter } from "wouter";
 import { lazy, Suspense, useEffect, useState } from "react";
+import { Analytics } from "@vercel/analytics/next";
 import { supabase } from "@/lib/supabase";
 import i18n from "@/lib/i18n";
 import { detectLanguageFromIP, isValidLang } from "@/lib/detect-language";
@@ -384,6 +385,7 @@ function App() {
 
   return (
     <WouterRouter base={langBase}>
+      <Analytics />
       <QueryClientProvider client={queryClient}>
           <ThemeProvider>
             <AuthProvider>
