@@ -4,6 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Copy, CheckCheck, ExternalLink } from "@/lib/icons";
 import { format } from "date-fns";
+import { normalizeWalletDisplayAmount } from "@/lib/wallet-api";
 
 export interface TxForDetail {
   id: string;
@@ -79,8 +80,8 @@ function txTitle(type: string) {
   }
 }
 
-function formatQuantity(amount: number, symbol: string): string {
-  const value = Number(amount);
+function formatQuantity(amount: number, symbol: string, type: string): string {
+  const value = normalizeWalletDisplayAmount(amount, symbol, type);
   if (!Number.isFinite(value)) return `— ${symbol}`;
 
   const decimals = symbol.toUpperCase() === "BTC" ? 8 : 8;
@@ -125,7 +126,7 @@ export function TransactionDetailSheet({
         <div className="px-6 py-6 flex flex-col items-center gap-2 border-b border-border/50">
           <p className="text-xs text-muted-foreground uppercase tracking-widest">Quantity</p>
           <p className="text-3xl font-bold text-foreground">
-            {formatQuantity(tx.amount, tx.crypto_symbol)}
+            {formatQuantity(tx.amount, tx.crypto_symbol, tx.type)}
           </p>
           <span className={`mt-1 inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1 rounded-full ${statusColors(tx.status)}`}>
             {tx.status === "completed" && (
