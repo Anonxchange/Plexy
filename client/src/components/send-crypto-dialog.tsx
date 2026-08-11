@@ -46,7 +46,7 @@ import { broadcastTronTransaction } from "@/lib/tronSigner";
 import { btcFees, btcUtxos, chainBroadcast } from "@/lib/chain-gateway";
 import { monitorWithdrawal } from "@/lib/withdrawal-monitor";
 import { requestWalletRefresh } from "@/hooks/use-wallet-balances";
-import { recordWithdrawalTransaction } from "@/lib/wallet-api";
+import { recordWithdrawalTransaction, toMonitorChainKey } from "@/lib/wallet-api";
 import { useAuth } from "@/lib/auth-context";
 import { CoinIcon } from "@/components/trading/CoinIcon";
 import { useSendFee } from "@/hooks/use-fees";
@@ -459,7 +459,8 @@ export function SendCryptoDialog({
       }
 
       void monitorWithdrawal({
-        chain: selectedNetwork,
+        // The monitor rejects UI labels like "Bitcoin (SegWit)"; send a chain key.
+        chain: toMonitorChainKey(selectedNetwork),
         txHash,
         fromAddress,
         broadcastAt,
