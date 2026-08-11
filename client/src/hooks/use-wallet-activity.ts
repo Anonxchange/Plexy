@@ -31,7 +31,10 @@ export function useWalletActivity() {
   return useQuery<WalletTransaction[]>({
     queryKey,
     enabled: !!userId,
-    queryFn: () => getOnChainTransactions(userId!, 200),
+    queryFn: () => {
+      if (!userId) return Promise.resolve([]);
+      return getOnChainTransactions(userId, 200);
+    },
     staleTime: 60_000,
     gcTime: 5 * 60_000,
     // Returning to the app is a real user signal, not a polling timer.
