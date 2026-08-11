@@ -1,6 +1,7 @@
 import { nonCustodialWalletManager } from "./non-custodial-wallet";
 import { getSupabase, supabase } from "./supabase";
 import { getWalletMonitorTargets } from "./wallet-chain-monitor";
+import { monitorWithdrawal } from "./withdrawal-monitor";
 
 export interface Wallet {
   id: string;
@@ -79,11 +80,47 @@ function readString(raw: any, ...keys: string[]): string | null {
 
 function readAmount(raw: any): number {
   const value = raw?.amount ?? raw?.tokenAmount ?? raw?.value_decimal ?? raw?.value;
-  const candidate = typeof value === "object" ? value?.amount ?? value?.value : value;
-  const amount = typeof candidate === "string" && candidate.startsWith("0x")
+  const candidate = typeof value === "object"
+    ? value?.uiAmountString ?? value?.uiAmount ?? value?.amount ?? value?.value
+    : value;
+  const explicitAmount = typeof candidate === "string" && candidate.startsWith("0x")
     ? parseInt(candidate, 16)
     : Number(candidate);
-  return Number.isFinite(amount) ? amount : 0;
+
+  // The deposit monitor returns both:
+  //   amount    — display units, e.g. "0.00001" BTC
+  //   amountRaw — smallest units, e.g. "1000" satoshis
+  //
+  // Some deployed monitor versions put the raw value in `amount` while
+  // retaining `amountRaw`. Prefer the authoritative raw value when the two
+  // disagree so the activity sheet cannot show satoshis as whole BTC.
+  const rawValue = raw?.amountRaw
+    ?? raw?.valueRaw
+    ?? (typeof raw?.tokenAmount === "object" ? raw.tokenAmount?.amount : undefined);
+  const decimals = Number(raw?.decimals);
+  if (rawValue != null && Number.isInteger(decimals) && decimals >= 0 && decimals <= 36) {
+    try {
+      const rawString = String(rawValue).trim();
+      const rawUnits = rawString.startsWith("0x")
+        ? BigInt(rawString)
+        : /^[+-]?\d+$/.test(rawString) ? BigInt(rawString) : null;
+      if (rawUnits !== null) {
+        const scale = 10 ** decimals;
+        const scaledAmount = Number(rawUnits) / scale;
+        if (
+          Number.isFinite(scaledAmount) &&
+          (!Number.isFinite(explicitAmount) ||
+            Math.abs(explicitAmount - scaledAmount) > Math.max(1e-12, Math.abs(scaledAmount) * 1e-9))
+        ) {
+          return scaledAmount;
+        }
+      }
+    } catch {
+      // Fall through to the display-unit value for malformed upstream data.
+    }
+  }
+
+  return Number.isFinite(explicitAmount) ? explicitAmount : 0;
 }
 
 function readDate(raw: any): string {
@@ -236,10 +273,93 @@ function normalizeOnChainTransaction(
   };
 }
 
+async function refreshWithdrawalStatus(
+  transaction: WalletTransaction,
+  target: { address: string; chain: string },
+): Promise<WalletTransaction> {
+  if (transaction.type !== "withdrawal" || !transaction.tx_hash || transaction.status !== "pending") {
+    return transaction;
+  }
+
+  try {
+    const result = await monitorWithdrawal({
+      chain: target.chain,
+      txHash: transaction.tx_hash,
+      fromAddress: target.address,
+      expected: {
+        toAddress: transaction.to_address ?? undefined,
+        amount: String(transaction.amount),
+        asset: transaction.crypto_symbol,
+      },
+    });
+
+    const terminalFailure = result?.terminalFailure === true;
+    const settled = result?.settled === true;
+    const status: WalletTransaction["status"] = terminalFailure
+      ? "failed"
+      : settled
+        ? "completed"
+        : "pending";
+
+    return {
+      ...transaction,
+      status,
+      confirmations: Number.isFinite(Number(result?.confirmations))
+        ? Number(result.confirmations)
+        : transaction.confirmations,
+      to_address: transaction.to_address ?? result?.recipient ?? null,
+      completed_at: status === "completed" ? new Date().toISOString() : transaction.completed_at,
+      notes: result?.status
+        ? `Withdrawal monitor: ${String(result.status)}`
+        : transaction.notes,
+    };
+  } catch (error) {
+    // The chain activity row remains useful when the withdrawal monitor is
+    // temporarily unavailable. Never turn a monitor outage into a failure.
+    if (import.meta.env.DEV) {
+      console.warn("[wallet-activity] withdrawal status refresh failed:", error);
+    }
+    return transaction;
+  }
+}
+
+/**
+ * Index a broadcast non-custodial withdrawal so outbound activity can be
+ * displayed alongside deposits. The blockchain monitor remains authoritative
+ * for the status of this record.
+ */
+export async function recordWithdrawalTransaction(params: {
+  userId: string;
+  cryptoSymbol: string;
+  amount: number;
+  txHash: string;
+  fromAddress: string;
+  toAddress: string;
+  createdAt?: string;
+}): Promise<void> {
+  const client = await getSupabase();
+  const { error } = await client.from("wallet_transactions").insert({
+    user_id: params.userId,
+    type: "withdrawal",
+    crypto_symbol: params.cryptoSymbol,
+    amount: params.amount,
+    fee: 0,
+    status: "pending",
+    tx_hash: params.txHash,
+    from_address: params.fromAddress,
+    to_address: params.toAddress,
+    notes: "Broadcast from non-custodial wallet",
+    created_at: params.createdAt ?? new Date().toISOString(),
+  });
+
+  if (error) throw new Error(error.message);
+}
+
 /**
  * Read wallet activity from the same public-address monitor used for balances.
- * This intentionally does not query wallet_transactions or pexly_transactions:
- * in a non-custodial wallet, the chain is the source of truth.
+ * Deposits come from the chain scanner. Withdrawals are read from the user's
+ * outbound activity index because the deposit scanner only searches transfers
+ * into the wallet.
  */
 export async function getOnChainTransactions(userId: string, limit: number = 200): Promise<WalletTransaction[]> {
   // Use the same awaited client initialization as balance reads. The lazy
@@ -247,7 +367,6 @@ export async function getOnChainTransactions(userId: string, limit: number = 200
   // which makes activity silently look empty on a fresh/mobile load.
   const client = await getSupabase();
   const targets = await getWalletMonitorTargets(userId);
-  if (targets.length === 0) return [];
 
   let failedTargets = 0;
   const results = await Promise.all(
@@ -279,15 +398,77 @@ export async function getOnChainTransactions(userId: string, limit: number = 200
     }),
   );
 
-  if (failedTargets === targets.length) {
+  if (targets.length > 0 && failedTargets === targets.length) {
     throw new Error("Unable to read on-chain wallet activity");
   }
 
   const unique = new Map<string, WalletTransaction>();
   results.flat().forEach((tx) => unique.set(tx.id, tx));
 
-  return Array.from(unique.values())
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  // Outbound transfers are not discoverable through monitor-deposits. Read
+  // the user's own rows to locate their tx hashes, then verify pending hashes
+  // through the dedicated withdrawal monitor.
+  const { data: withdrawalRows, error: withdrawalError } = await client
+    .from("wallet_transactions")
+    .select("id, user_id, wallet_id, type, crypto_symbol, amount, fee, status, tx_hash, from_address, to_address, reference_id, notes, confirmations, created_at, completed_at")
+    .eq("user_id", userId)
+    .eq("type", "withdrawal")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (withdrawalError && import.meta.env.DEV) {
+    console.warn("[wallet-activity] withdrawal activity read failed:", withdrawalError);
+  }
+
+  for (const row of withdrawalRows ?? []) {
+    const tx: WalletTransaction = {
+      id: String(row.id),
+      user_id: String(row.user_id ?? userId),
+      wallet_id: String(row.wallet_id ?? `withdrawal:${row.id}`),
+      type: "withdrawal",
+      crypto_symbol: String(row.crypto_symbol ?? "").toUpperCase(),
+      amount: Number(row.amount) || 0,
+      fee: Number(row.fee) || 0,
+      status: row.status === "completed" || row.status === "failed" || row.status === "cancelled"
+        ? row.status
+        : "pending",
+      tx_hash: row.tx_hash ? String(row.tx_hash) : null,
+      from_address: row.from_address ? String(row.from_address) : null,
+      to_address: row.to_address ? String(row.to_address) : null,
+      reference_id: row.reference_id ? String(row.reference_id) : null,
+      notes: row.notes ? String(row.notes) : "Withdrawal",
+      confirmations: row.confirmations == null ? null : Number(row.confirmations),
+      created_at: readDate(row),
+      completed_at: row.completed_at ? readDate(row) : null,
+    };
+    unique.set(`withdrawal:${tx.id}`, tx);
+  }
+
+  const sorted = Array.from(unique.values()).sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  );
+
+  // Keep monitor calls bounded: completed historical withdrawals already have
+  // their final state from monitor-deposits, while pending rows need the
+  // dedicated withdrawal monitor for terminal/replacement detection.
+  const pendingWithdrawals = sorted
+    .filter((tx) => tx.type === "withdrawal" && tx.status === "pending")
+    .slice(0, 25);
+  const pendingById = new Map(
+    await Promise.all(
+      pendingWithdrawals.map(async (tx) => {
+        const target = targets.find((candidate) =>
+          !!tx.from_address && candidate.address.toLowerCase() === tx.from_address.toLowerCase(),
+        ) ?? targets.find((candidate) =>
+          tx.wallet_id === `onchain:${candidate.chain}:${candidate.address}`,
+        );
+        return [tx.id, target ? await refreshWithdrawalStatus(tx, target) : tx] as const;
+      }),
+    ),
+  );
+
+  return sorted
+    .map((tx) => pendingById.get(tx.id) ?? tx)
     .slice(0, limit);
 }
 
@@ -472,7 +653,20 @@ export async function monitorWithdrawals(userId: string): Promise<{
   updated: any[];
   message?: string;
 }> {
-  return { updated: [], message: 'Withdrawal monitoring handled on-client' };
+  const transactions = await getOnChainTransactions(userId);
+  const updated = transactions
+    .filter((transaction) => transaction.type === "withdrawal")
+    .map((transaction) => ({
+      transactionId: transaction.id,
+      status: transaction.status,
+      confirmations: transaction.confirmations,
+      txHash: transaction.tx_hash,
+    }));
+
+  return {
+    updated,
+    message: "Withdrawal statuses checked",
+  };
 }
 
 export function startWithdrawalMonitoring(
