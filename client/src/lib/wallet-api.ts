@@ -141,12 +141,35 @@ function readAmount(raw: any, symbolHint?: string | null): number {
     candidateUnits !== 0n;
 
   if (looksLikeSmallestUnits) {
-    const scaled = Number(candidateUnits) / 10 ** decimals!;
+    const scaled = Number(candidateUnits) / 10 ** decimals;
     if (Number.isFinite(scaled)) return scaled;
   }
 
   const numeric = candidateText.startsWith("0x") ? Number(candidateUnits) : Number(candidateText);
   return Number.isFinite(numeric) ? numeric : 0;
+}
+
+/**
+ * Compatibility guard for activity surfaces that can still receive legacy
+ * monitor amounts before `readAmount` has normalized them. The legacy BTC
+ * scanner returns satoshis as whole integers (for example 1000 = 0.00001 BTC).
+ * Fractional values are already display units and are never changed.
+ */
+export function normalizeWalletDisplayAmount(
+  amount: number,
+  symbol: string,
+  transactionType?: string,
+): number {
+  const value = Number(amount);
+  if (!Number.isFinite(value)) return value;
+
+  const isLegacyBtcDeposit =
+    symbol.toUpperCase() === "BTC" &&
+    transactionType === "deposit" &&
+    Number.isInteger(value) &&
+    Math.abs(value) >= 1_000;
+
+  return isLegacyBtcDeposit ? value / 100_000_000 : value;
 }
 
 function readDate(raw: any): string {
@@ -346,17 +369,43 @@ async function refreshWithdrawalStatus(
         ? "completed"
         : "pending";
 
+    const completedAt = status === "completed" ? new Date().toISOString() : transaction.completed_at;
+    const confirmations = Number.isFinite(Number(result?.confirmations))
+      ? Number(result.confirmations)
+      : transaction.confirmations;
+    const recipient = transaction.to_address ?? result?.recipient ?? null;
+    const notes = result?.status
+      ? `Withdrawal monitor: ${String(result.status)}`
+      : transaction.notes;
+
+    // Persist terminal/confirmation progress for indexed withdrawals. Without
+    // this write, every later activity read sees the old pending row and the
+    // monitor appears disconnected after a reload.
+    if (!transaction.id.startsWith("onchain:")) {
+      const client = await getSupabase();
+      const update = await client
+        .from("wallet_transactions")
+        .update({
+          status,
+          confirmations,
+          to_address: recipient,
+          completed_at: completedAt,
+          notes,
+        })
+        .eq("id", transaction.id)
+        .eq("user_id", transaction.user_id);
+      if (update.error && import.meta.env.DEV) {
+        console.warn("[wallet-activity] withdrawal status persistence failed:", update.error);
+      }
+    }
+
     return {
       ...transaction,
       status,
-      confirmations: Number.isFinite(Number(result?.confirmations))
-        ? Number(result.confirmations)
-        : transaction.confirmations,
-      to_address: transaction.to_address ?? result?.recipient ?? null,
-      completed_at: status === "completed" ? new Date().toISOString() : transaction.completed_at,
-      notes: result?.status
-        ? `Withdrawal monitor: ${String(result.status)}`
-        : transaction.notes,
+      confirmations,
+      to_address: recipient,
+      completed_at: completedAt,
+      notes,
     };
   } catch (error) {
     // The chain activity row remains useful when the withdrawal monitor is
