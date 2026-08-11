@@ -39,9 +39,10 @@ function saveSeenIds(userId: string, ids: Set<string>) {
 
 function formatAmount(amount: number, symbol: string) {
   const value = Number(amount);
+  if (!Number.isFinite(value)) return `— ${symbol.toUpperCase()}`;
   const formatted = value < 0.0001
     ? value.toExponential(4)
-    : value.toLocaleString("en-US", { maximumFractionDigits: 8 });
+    : value.toLocaleString("en-US", { maximumFractionDigits: 8, useGrouping: false });
   return `${formatted} ${symbol.toUpperCase()}`;
 }
 

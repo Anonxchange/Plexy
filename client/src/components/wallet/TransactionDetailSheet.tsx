@@ -79,6 +79,18 @@ function txTitle(type: string) {
   }
 }
 
+function formatQuantity(amount: number, symbol: string): string {
+  const value = Number(amount);
+  if (!Number.isFinite(value)) return `— ${symbol}`;
+
+  const decimals = symbol.toUpperCase() === "BTC" ? 8 : 8;
+  return `${value.toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: decimals,
+    useGrouping: false,
+  })} ${symbol}`;
+}
+
 export function TransactionDetailSheet({
   tx,
   open,
@@ -113,7 +125,7 @@ export function TransactionDetailSheet({
         <div className="px-6 py-6 flex flex-col items-center gap-2 border-b border-border/50">
           <p className="text-xs text-muted-foreground uppercase tracking-widest">Quantity</p>
           <p className="text-3xl font-bold text-foreground">
-            {tx.amount} {tx.crypto_symbol}
+            {formatQuantity(tx.amount, tx.crypto_symbol)}
           </p>
           <span className={`mt-1 inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1 rounded-full ${statusColors(tx.status)}`}>
             {tx.status === "completed" && (
