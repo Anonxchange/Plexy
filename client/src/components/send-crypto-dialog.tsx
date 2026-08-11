@@ -45,6 +45,8 @@ import { getLatestBlockhash, broadcastSolanaTransaction } from "@/lib/solanaSign
 import { broadcastTronTransaction } from "@/lib/tronSigner";
 import { btcFees, btcUtxos, chainBroadcast } from "@/lib/chain-gateway";
 import { monitorWithdrawal } from "@/lib/withdrawal-monitor";
+import { requestWalletRefresh } from "@/hooks/use-wallet-balances";
+import { recordWithdrawalTransaction } from "@/lib/wallet-api";
 import { useAuth } from "@/lib/auth-context";
 import { CoinIcon } from "@/components/trading/CoinIcon";
 import { useSendFee } from "@/hooks/use-fees";
@@ -438,6 +440,24 @@ export function SendCryptoDialog({
     // Monitoring runs separately so an indexer outage cannot make an
     // irreversible, already-broadcast withdrawal appear to have failed.
     if (txHash) {
+      try {
+        await recordWithdrawalTransaction({
+          userId: user.id,
+          cryptoSymbol: selectedCrypto,
+          amount: cryptoAmountNum,
+          txHash: String(txHash),
+          fromAddress,
+          toAddress,
+          createdAt: new Date(broadcastAt * 1000).toISOString(),
+        });
+      } catch (recordError) {
+        // The funds are already broadcast. Keep the send successful, but log
+        // the indexing failure so the transaction can be recovered manually.
+        if (import.meta.env.DEV) {
+          console.warn("[withdrawal-monitor] activity index write failed:", recordError);
+        }
+      }
+
       void monitorWithdrawal({
         chain: selectedNetwork,
         txHash,
@@ -453,6 +473,10 @@ export function SendCryptoDialog({
           console.warn("[withdrawal-monitor] initial status read failed:", monitorError);
         }
       });
+      // Refresh balances, recent activity, and the wallet activity notifier
+      // through the same event used by deposit monitoring. This is a signal,
+      // not a background polling loop.
+      requestWalletRefresh();
     }
 
     toast({
