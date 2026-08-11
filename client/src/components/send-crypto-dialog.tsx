@@ -44,6 +44,7 @@ import { broadcastEVMTransaction } from "@/lib/evmSigner";
 import { getLatestBlockhash, broadcastSolanaTransaction } from "@/lib/solanaSigner";
 import { broadcastTronTransaction } from "@/lib/tronSigner";
 import { btcFees, btcUtxos, chainBroadcast } from "@/lib/chain-gateway";
+import { monitorWithdrawal } from "@/lib/withdrawal-monitor";
 import { useAuth } from "@/lib/auth-context";
 import { CoinIcon } from "@/components/trading/CoinIcon";
 import { useSendFee } from "@/hooks/use-fees";
@@ -389,6 +390,8 @@ export function SendCryptoDialog({
     const cryptoAmountNum =
       amountInputMode === "crypto" ? parseFloat(amount) : parseFloat(cryptoAmount);
     const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
+    const broadcastAt = Math.floor(Date.now() / 1000);
+    let txHash = "";
 
     if (selectedNetwork.includes("Bitcoin")) {
       const [feesResult, utxoResult] = await Promise.all([btcFees(), btcUtxos(fromAddress)]);
@@ -400,16 +403,17 @@ export function SendCryptoDialog({
         fromAddress,
       };
       const result = await signBitcoinTransactionFromVault(vault, password, btcTxData) as any;
-      await chainBroadcast("BTC", "sendrawtransaction", [result.signedTx]);
+      const broadcastResult = await chainBroadcast("BTC", "sendrawtransaction", [result.signedTx]);
+      txHash = broadcastResult?.result ?? broadcastResult;
     } else if (selectedNetwork.includes("Ethereum") || selectedNetwork.includes("Binance")) {
       const chainKey = selectedNetwork.includes("Binance") ? "BSC" : "ETH";
       const txData = { to: toAddress, amount: cryptoAmountNum.toString(), currency: symbolToUse as any };
       const result = await signEVMTransactionFromVault(vault, password, txData) as any;
-      await broadcastEVMTransaction(result.signedTx, chainKey);
+      txHash = await broadcastEVMTransaction(result.signedTx, chainKey);
     } else if (selectedNetwork.includes("Avalanche") || selectedCrypto === "AVAX") {
       const txData = { to: toAddress, amount: cryptoAmountNum.toString(), currency: "AVAX" as any };
       const result = await signEVMTransactionFromVault(vault, password, txData) as any;
-      await broadcastEVMTransaction(result.signedTx, "AVAX");
+      txHash = await broadcastEVMTransaction(result.signedTx, "AVAX");
     } else if (selectedNetwork.includes("Solana")) {
       const recentBlockhash = await getLatestBlockhash();
       const result = await signSolanaTransactionFromVault(vault, password, {
@@ -418,16 +422,37 @@ export function SendCryptoDialog({
         currency: "SOL",
         recentBlockhash,
       }) as any;
-      await broadcastSolanaTransaction(result.signedTx);
+      txHash = await broadcastSolanaTransaction(result.signedTx);
     } else if (selectedNetwork.includes("Tron")) {
       const result = await signTronTransactionFromVault(vault, password, {
         to: toAddress,
         amount: cryptoAmountNum.toString(),
         currency: symbolToUse as any,
       }) as any;
-      await broadcastTronTransaction(result.signedTx);
+      txHash = await broadcastTronTransaction(result.signedTx);
     } else {
       throw new Error(`Signing not supported for ${selectedNetwork}`);
+    }
+
+    // The chain broadcast above is the source of truth for send success.
+    // Monitoring runs separately so an indexer outage cannot make an
+    // irreversible, already-broadcast withdrawal appear to have failed.
+    if (txHash) {
+      void monitorWithdrawal({
+        chain: selectedNetwork,
+        txHash,
+        fromAddress,
+        broadcastAt,
+        expected: {
+          toAddress,
+          amount: cryptoAmountNum.toString(),
+          asset: selectedCrypto,
+        },
+      }).catch((monitorError) => {
+        if (import.meta.env.DEV) {
+          console.warn("[withdrawal-monitor] initial status read failed:", monitorError);
+        }
+      });
     }
 
     toast({
