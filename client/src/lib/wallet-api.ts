@@ -78,49 +78,75 @@ function readString(raw: any, ...keys: string[]): string | null {
   return null;
 }
 
-function readAmount(raw: any): number {
-  const value = raw?.amount ?? raw?.tokenAmount ?? raw?.value_decimal ?? raw?.value;
-  const candidate = typeof value === "object"
-    ? value?.uiAmountString ?? value?.uiAmount ?? value?.amount ?? value?.value
-    : value;
-  const explicitAmount = typeof candidate === "string" && candidate.startsWith("0x")
-    ? parseInt(candidate, 16)
-    : Number(candidate);
+// ── Unit normalization ──────────────────────────────────────────────────────
+// Some deployed monitor versions return BTC/XRP/SOL/TRX amounts in smallest
+// units (satoshis, drops, lamports, sun) and omit `decimals`. Without a
+// per-asset fallback, 1000 satoshis (0.00001 BTC) renders as "1000 BTC".
+const ASSET_DECIMALS: Record<string, number> = {
+  BTC: 8, XRP: 6, SOL: 9, TRX: 6,
+  ETH: 18, BNB: 18, POL: 18, MATIC: 18, AVAX: 18,
+  USDT: 6, USDC: 6,
+};
 
-  // The deposit monitor returns both:
-  //   amount    — display units, e.g. "0.00001" BTC
-  //   amountRaw — smallest units, e.g. "1000" satoshis
-  //
-  // Some deployed monitor versions put the raw value in `amount` while
-  // retaining `amountRaw`. Prefer the authoritative raw value when the two
-  // disagree so the activity sheet cannot show satoshis as whole BTC.
+function decimalsFor(raw: any, symbolHint?: string | null): number | null {
+  const explicit = Number(raw?.decimals ?? raw?.tokenDecimals ?? raw?.tokenAmount?.decimals);
+  if (Number.isInteger(explicit) && explicit >= 0 && explicit <= 36) return explicit;
+  const symbol = String(symbolHint ?? "").toUpperCase();
+  return ASSET_DECIMALS[symbol] ?? null;
+}
+
+function readAmount(raw: any, symbolHint?: string | null): number {
+  const decimals = decimalsFor(raw, symbolHint);
+
+  const toBigInt = (value: any): bigint | null => {
+    if (value == null) return null;
+    const text = String(value).trim();
+    if (!text) return null;
+    try {
+      if (/^0x[0-9a-f]+$/i.test(text)) return BigInt(text);
+      if (/^[+-]?\d+$/.test(text)) return BigInt(text);
+    } catch { /* not an integer string */ }
+    return null;
+  };
+
   const rawValue = raw?.amountRaw
     ?? raw?.valueRaw
+    ?? raw?.rawAmount
     ?? (typeof raw?.tokenAmount === "object" ? raw.tokenAmount?.amount : undefined);
-  const decimals = Number(raw?.decimals);
-  if (rawValue != null && Number.isInteger(decimals) && decimals >= 0 && decimals <= 36) {
-    try {
-      const rawString = String(rawValue).trim();
-      const rawUnits = rawString.startsWith("0x")
-        ? BigInt(rawString)
-        : /^[+-]?\d+$/.test(rawString) ? BigInt(rawString) : null;
-      if (rawUnits !== null) {
-        const scale = 10 ** decimals;
-        const scaledAmount = Number(rawUnits) / scale;
-        if (
-          Number.isFinite(scaledAmount) &&
-          (!Number.isFinite(explicitAmount) ||
-            Math.abs(explicitAmount - scaledAmount) > Math.max(1e-12, Math.abs(scaledAmount) * 1e-9))
-        ) {
-          return scaledAmount;
-        }
-      }
-    } catch {
-      // Fall through to the display-unit value for malformed upstream data.
-    }
+
+  // 1. Authoritative smallest-unit value.
+  const rawUnits = toBigInt(rawValue);
+  if (rawUnits !== null && decimals != null) {
+    const scaled = Number(rawUnits) / 10 ** decimals;
+    if (Number.isFinite(scaled)) return scaled;
   }
 
-  return Number.isFinite(explicitAmount) ? explicitAmount : 0;
+  // 2. Display value — but only trust it when it is not itself a
+  //    smallest-unit integer. A BTC "amount" of "1000" with no fractional
+  //    part is satoshis, never 1000 BTC.
+  const display = raw?.amount ?? raw?.value_decimal ?? raw?.value;
+  const candidate = typeof display === "object"
+    ? display?.uiAmountString ?? display?.uiAmount ?? display?.amount ?? display?.value
+    : display;
+
+  if (typeof candidate === "object" || candidate == null) return 0;
+
+  const candidateText = String(candidate).trim();
+  const candidateUnits = toBigInt(candidateText);
+  const looksLikeSmallestUnits =
+    candidateUnits !== null &&
+    decimals != null &&
+    decimals > 0 &&
+    !candidateText.includes(".") &&
+    candidateUnits !== 0n;
+
+  if (looksLikeSmallestUnits) {
+    const scaled = Number(candidateUnits) / 10 ** decimals!;
+    if (Number.isFinite(scaled)) return scaled;
+  }
+
+  const numeric = candidateText.startsWith("0x") ? Number(candidateUnits) : Number(candidateText);
+  return Number.isFinite(numeric) ? numeric : 0;
 }
 
 function readDate(raw: any): string {
@@ -259,7 +285,7 @@ function normalizeOnChainTransaction(
     wallet_id: `onchain:${target.chain}:${target.address}`,
     type,
     crypto_symbol: symbol,
-    amount: readAmount(raw),
+    amount: readAmount(raw, symbol),
     fee: Number(raw?.fee ?? 0) || 0,
     status,
     tx_hash: hash,
@@ -273,6 +299,24 @@ function normalizeOnChainTransaction(
   };
 }
 
+/** The withdrawal monitor edge function only accepts chain keys
+ *  (BTC/XRP/ETH/BSC/POLYGON/ARBITRUM/OPTIMISM/BASE/AVAX/SOL/TRX).
+ *  UI network labels such as "Bitcoin (SegWit)" must be mapped first. */
+export function toMonitorChainKey(input: string): string {
+  const value = String(input ?? "").toUpperCase();
+  if (value.includes("BITCOIN") || value === "BTC") return "BTC";
+  if (value.includes("XRP") || value.includes("RIPPLE")) return "XRP";
+  if (value.includes("SOLANA") || value === "SOL") return "SOL";
+  if (value.includes("TRON") || value === "TRX") return "TRX";
+  if (value.includes("BINANCE") || value.includes("BEP-20") || value === "BNB" || value === "BSC") return "BSC";
+  if (value.includes("POLYGON") || value === "POL" || value === "MATIC") return "POLYGON";
+  if (value.includes("ARBITRUM")) return "ARBITRUM";
+  if (value.includes("OPTIMISM")) return "OPTIMISM";
+  if (value.includes("AVALANCHE") || value === "AVAX") return "AVAX";
+  if (value.includes("BASE")) return "BASE";
+  return "ETH";
+}
+
 async function refreshWithdrawalStatus(
   transaction: WalletTransaction,
   target: { address: string; chain: string },
@@ -283,9 +327,10 @@ async function refreshWithdrawalStatus(
 
   try {
     const result = await monitorWithdrawal({
-      chain: target.chain,
+      chain: toMonitorChainKey(target.chain),
       txHash: transaction.tx_hash,
       fromAddress: target.address,
+      broadcastAt: Math.floor(new Date(transaction.created_at).getTime() / 1000),
       expected: {
         toAddress: transaction.to_address ?? undefined,
         amount: String(transaction.amount),
