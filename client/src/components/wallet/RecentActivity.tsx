@@ -5,7 +5,7 @@ import {
   ArrowDownLeft, ArrowUpRight, RefreshCw,
   ArrowRight, ChevronDown, Check, X,
 } from '@/lib/icons';
-import { WalletTransaction } from "@/lib/wallet-api";
+import { WalletTransaction, normalizeWalletDisplayAmount } from "@/lib/wallet-api";
 import { useWalletActivity } from "@/hooks/use-wallet-activity";
 import { format, subDays, subMonths, startOfDay, isAfter } from "date-fns";
 import { TransactionDetailSheet } from "@/components/wallet/TransactionDetailSheet";
@@ -202,7 +202,7 @@ const ActivityTable = ({
               <TableCell className="py-4 text-center font-bold text-xs">{tx.crypto_symbol}</TableCell>
               <TableCell className="py-4 text-center font-bold text-xs">
                 <span className={tx.type === 'deposit' ? 'text-green-500' : 'text-foreground'}>
-                  {tx.type === 'deposit' ? '+' : '-'}{tx.amount}
+                  {tx.type === 'deposit' ? '+' : '-'}{normalizeWalletDisplayAmount(tx.amount, tx.crypto_symbol).toLocaleString('en-US', { maximumFractionDigits: 8 })}
                 </span>
               </TableCell>
               {isOperations ? (
