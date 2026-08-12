@@ -78,98 +78,105 @@ function readString(raw: any, ...keys: string[]): string | null {
   return null;
 }
 
-// ── Unit normalization ──────────────────────────────────────────────────────
-// Some deployed monitor versions return BTC/XRP/SOL/TRX amounts in smallest
-// units (satoshis, drops, lamports, sun) and omit `decimals`. Without a
-// per-asset fallback, 1000 satoshis (0.00001 BTC) renders as "1000 BTC".
-const ASSET_DECIMALS: Record<string, number> = {
-  BTC: 8, XRP: 6, SOL: 9, TRX: 6,
-  ETH: 18, BNB: 18, POL: 18, MATIC: 18, AVAX: 18,
-  USDT: 6, USDC: 6,
+/** Base-unit exponent per asset. EVM-style assets default to 18. */
+export const ASSET_DECIMALS: Record<string, number> = {
+  BTC: 8, LTC: 8, BCH: 8, DOGE: 8, DASH: 8, ZEC: 8,
+  XRP: 6, TRX: 6, ATOM: 6, USDT: 6, USDC: 6,
+  SOL: 9, TON: 9,
+  ETH: 18, BNB: 18, MATIC: 18, POL: 18, AVAX: 18, ARB: 18,
+  OP: 18, BASE: 18, DAI: 18, LINK: 18, UNI: 18, SHIB: 18,
 };
 
-function decimalsFor(raw: any, symbolHint?: string | null): number | null {
-  const explicit = Number(raw?.decimals ?? raw?.tokenDecimals ?? raw?.tokenAmount?.decimals);
-  if (Number.isInteger(explicit) && explicit >= 0 && explicit <= 36) return explicit;
-  const symbol = String(symbolHint ?? "").toUpperCase();
-  return ASSET_DECIMALS[symbol] ?? null;
-}
-
-function readAmount(raw: any, symbolHint?: string | null): number {
-  const decimals = decimalsFor(raw, symbolHint);
-
-  const toBigInt = (value: any): bigint | null => {
-    if (value == null) return null;
-    const text = String(value).trim();
-    if (!text) return null;
-    try {
-      if (/^0x[0-9a-f]+$/i.test(text)) return BigInt(text);
-      if (/^[+-]?\d+$/.test(text)) return BigInt(text);
-    } catch { /* not an integer string */ }
-    return null;
-  };
-
-  const rawValue = raw?.amountRaw
-    ?? raw?.valueRaw
-    ?? raw?.rawAmount
-    ?? (typeof raw?.tokenAmount === "object" ? raw.tokenAmount?.amount : undefined);
-
-  // 1. Authoritative smallest-unit value.
-  const rawUnits = toBigInt(rawValue);
-  if (rawUnits !== null && decimals != null) {
-    const scaled = Number(rawUnits) / 10 ** decimals;
-    if (Number.isFinite(scaled)) return scaled;
-  }
-
-  // 2. Display value — but only trust it when it is not itself a
-  //    smallest-unit integer. A BTC "amount" of "1000" with no fractional
-  //    part is satoshis, never 1000 BTC.
-  const display = raw?.amount ?? raw?.value_decimal ?? raw?.value;
-  const candidate = typeof display === "object"
-    ? display?.uiAmountString ?? display?.uiAmount ?? display?.amount ?? display?.value
-    : display;
-
-  if (typeof candidate === "object" || candidate == null) return 0;
-
-  const candidateText = String(candidate).trim();
-  const candidateUnits = toBigInt(candidateText);
-  const looksLikeSmallestUnits =
-    candidateUnits !== null &&
-    decimals != null &&
-    decimals > 0 &&
-    !candidateText.includes(".") &&
-    candidateUnits !== 0n;
-
-  if (looksLikeSmallestUnits) {
-    const scaled = Number(candidateUnits) / 10 ** decimals;
-    if (Number.isFinite(scaled)) return scaled;
-  }
-
-  const numeric = candidateText.startsWith("0x") ? Number(candidateUnits) : Number(candidateText);
-  return Number.isFinite(numeric) ? numeric : 0;
+export function getAssetDecimals(symbol?: string | null): number {
+  if (!symbol) return 18;
+  return ASSET_DECIMALS[symbol.toUpperCase().trim()] ?? 18;
 }
 
 /**
- * Compatibility guard for activity surfaces that can still receive legacy
- * monitor amounts before `readAmount` has normalized them. The legacy BTC
- * scanner returns satoshis as whole integers (for example 1000 = 0.00001 BTC).
- * Fractional values are already display units and are never changed.
+ * Largest plausible *human* amount, keyed by the asset's decimals.
+ * An integer at or above this is almost certainly stored in base units
+ * (satoshis, drops, sun, lamports, wei).
+ */
+const HUMAN_MAX_BY_DECIMALS: Record<number, number> = {
+  6: 1_000_000_000,
+  8: 1_000,
+  9: 1_000_000,
+  18: 1_000_000_000,
+};
+
+/**
+ * Converts a stored/legacy wallet amount into its human display value.
+ * Fractional values pass through untouched; integers that look like base
+ * units are divided by 10^decimals for that asset. Nothing is hardcoded
+ * per transaction — this is pure unit inference and applies to every coin,
+ * not just BTC.
  */
 export function normalizeWalletDisplayAmount(
-  amount: number,
-  symbol: string,
-  transactionType?: string,
+  amount: number | string | null | undefined,
+  symbol?: string | null,
 ): number {
-  const value = Number(amount);
-  if (!Number.isFinite(value)) return value;
+  const raw = typeof amount === "string" ? Number(amount) : amount;
+  if (raw == null || !Number.isFinite(raw) || raw === 0) return 0;
 
-  const isLegacyBtcDeposit =
-    symbol.toUpperCase() === "BTC" &&
-    transactionType === "deposit" &&
-    Number.isInteger(value) &&
-    Math.abs(value) >= 1_000;
+  const sign = raw < 0 ? -1 : 1;
+  const value = Math.abs(raw);
+  if (!Number.isInteger(value)) return sign * value;
 
-  return isLegacyBtcDeposit ? value / 100_000_000 : value;
+  const decimals = getAssetDecimals(symbol);
+  const threshold = HUMAN_MAX_BY_DECIMALS[decimals] ?? 1_000_000;
+  if (value >= threshold) return sign * (value / Math.pow(10, decimals));
+
+  return sign * value;
+}
+
+function readAmount(raw: any, symbol?: string | null): number {
+  const value = raw?.amount ?? raw?.tokenAmount ?? raw?.value_decimal ?? raw?.value;
+  const candidate = typeof value === "object"
+    ? value?.uiAmountString ?? value?.uiAmount ?? value?.amount ?? value?.value
+    : value;
+  const explicitAmount = typeof candidate === "string" && candidate.startsWith("0x")
+    ? parseInt(candidate, 16)
+    : Number(candidate);
+
+  // The deposit monitor returns both:
+  //   amount    — display units, e.g. "0.00001" BTC
+  //   amountRaw — smallest units, e.g. "1000" satoshis
+  //
+  // Some deployed monitor versions put the raw value in `amount` while
+  // retaining `amountRaw`. Prefer the authoritative raw value when the two
+  // disagree so the activity sheet cannot show base units as whole coins.
+  const rawValue = raw?.amountRaw
+    ?? raw?.valueRaw
+    ?? (typeof raw?.tokenAmount === "object" ? raw.tokenAmount?.amount : undefined);
+
+  // Decimals from the payload when present, otherwise the per-asset fallback.
+  const payloadDecimals = Number(
+    raw?.decimals ?? (typeof raw?.tokenAmount === "object" ? raw.tokenAmount?.decimals : undefined),
+  );
+  const decimals = Number.isInteger(payloadDecimals) && payloadDecimals >= 0 && payloadDecimals <= 36
+    ? payloadDecimals
+    : getAssetDecimals(symbol);
+
+  if (rawValue != null) {
+    try {
+      const rawString = String(rawValue).trim();
+      const rawUnits = rawString.startsWith("0x")
+        ? BigInt(rawString)
+        : /^[+-]?\d+$/.test(rawString) ? BigInt(rawString) : null;
+      if (rawUnits !== null) {
+        const scaledAmount = Number(rawUnits) / Math.pow(10, decimals);
+        if (Number.isFinite(scaledAmount)) return scaledAmount;
+      }
+    } catch {
+      // Fall through to the display-unit value for malformed upstream data.
+    }
+  }
+
+  // No raw field: the monitor may still be handing us base units in `amount`.
+  return normalizeWalletDisplayAmount(
+    Number.isFinite(explicitAmount) ? explicitAmount : 0,
+    symbol,
+  );
 }
 
 function readDate(raw: any): string {
@@ -322,24 +329,6 @@ function normalizeOnChainTransaction(
   };
 }
 
-/** The withdrawal monitor edge function only accepts chain keys
- *  (BTC/XRP/ETH/BSC/POLYGON/ARBITRUM/OPTIMISM/BASE/AVAX/SOL/TRX).
- *  UI network labels such as "Bitcoin (SegWit)" must be mapped first. */
-export function toMonitorChainKey(input: string): string {
-  const value = String(input ?? "").toUpperCase();
-  if (value.includes("BITCOIN") || value === "BTC") return "BTC";
-  if (value.includes("XRP") || value.includes("RIPPLE")) return "XRP";
-  if (value.includes("SOLANA") || value === "SOL") return "SOL";
-  if (value.includes("TRON") || value === "TRX") return "TRX";
-  if (value.includes("BINANCE") || value.includes("BEP-20") || value === "BNB" || value === "BSC") return "BSC";
-  if (value.includes("POLYGON") || value === "POL" || value === "MATIC") return "POLYGON";
-  if (value.includes("ARBITRUM")) return "ARBITRUM";
-  if (value.includes("OPTIMISM")) return "OPTIMISM";
-  if (value.includes("AVALANCHE") || value === "AVAX") return "AVAX";
-  if (value.includes("BASE")) return "BASE";
-  return "ETH";
-}
-
 async function refreshWithdrawalStatus(
   transaction: WalletTransaction,
   target: { address: string; chain: string },
@@ -350,10 +339,9 @@ async function refreshWithdrawalStatus(
 
   try {
     const result = await monitorWithdrawal({
-      chain: toMonitorChainKey(target.chain),
+      chain: target.chain,
       txHash: transaction.tx_hash,
       fromAddress: target.address,
-      broadcastAt: Math.floor(new Date(transaction.created_at).getTime() / 1000),
       expected: {
         toAddress: transaction.to_address ?? undefined,
         amount: String(transaction.amount),
@@ -369,43 +357,17 @@ async function refreshWithdrawalStatus(
         ? "completed"
         : "pending";
 
-    const completedAt = status === "completed" ? new Date().toISOString() : transaction.completed_at;
-    const confirmations = Number.isFinite(Number(result?.confirmations))
-      ? Number(result.confirmations)
-      : transaction.confirmations;
-    const recipient = transaction.to_address ?? result?.recipient ?? null;
-    const notes = result?.status
-      ? `Withdrawal monitor: ${String(result.status)}`
-      : transaction.notes;
-
-    // Persist terminal/confirmation progress for indexed withdrawals. Without
-    // this write, every later activity read sees the old pending row and the
-    // monitor appears disconnected after a reload.
-    if (!transaction.id.startsWith("onchain:")) {
-      const client = await getSupabase();
-      const update = await client
-        .from("wallet_transactions")
-        .update({
-          status,
-          confirmations,
-          to_address: recipient,
-          completed_at: completedAt,
-          notes,
-        })
-        .eq("id", transaction.id)
-        .eq("user_id", transaction.user_id);
-      if (update.error && import.meta.env.DEV) {
-        console.warn("[wallet-activity] withdrawal status persistence failed:", update.error);
-      }
-    }
-
     return {
       ...transaction,
       status,
-      confirmations,
-      to_address: recipient,
-      completed_at: completedAt,
-      notes,
+      confirmations: Number.isFinite(Number(result?.confirmations))
+        ? Number(result.confirmations)
+        : transaction.confirmations,
+      to_address: transaction.to_address ?? result?.recipient ?? null,
+      completed_at: status === "completed" ? new Date().toISOString() : transaction.completed_at,
+      notes: result?.status
+        ? `Withdrawal monitor: ${String(result.status)}`
+        : transaction.notes,
     };
   } catch (error) {
     // The chain activity row remains useful when the withdrawal monitor is
