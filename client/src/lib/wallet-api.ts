@@ -44,6 +44,31 @@ function mapChainIdToSymbol(chainId: string): string {
   return chainId;
 }
 
+/**
+ * Map a crypto symbol to the chain key used by the on-chain monitor.
+ * Inverse of mapChainIdToSymbol: values returned here round-trip back to
+ * the original symbol. Non-native assets default to the mainnet their
+ * monitor scanner reads them on (USDT/USDC -> Ethereum unless token-specific).
+ */
+export function toMonitorChainKey(cryptoSymbol: string): string {
+  const s = (cryptoSymbol || '').toUpperCase().trim();
+
+  // Native / wrapped native assets.
+  if (s === 'BTC' || s === 'WBTC' || s === 'CBTC' || s === 'XBT') return 'Bitcoin';
+  if (s === 'BNB' || s === 'WBNB') return 'BSC';
+  if (s === 'SOL' || s === 'WSOL') return 'Solana';
+  if (s === 'TRX' || s === 'TRX_TRON') return 'Tron';
+  if (s === 'XRP') return 'XRP';
+  if (s === 'POL' || s === 'MATIC' || s === 'POLYGON') return 'POLYGON';
+  if (s === 'BASE' || s === 'CBETH') return 'BASE';
+  if (s === 'ARB' || s === 'ARBITRUM') return 'ARBITRUM';
+  if (s === 'OP' || s === 'OPTIMISM') return 'OPTIMISM';
+
+  // Everything else (ETH, USDT, USDC, DAI, LINK, ...) defaults to Ethereum.
+  return 'Ethereum';
+}
+
+
 export async function getUserWallets(userId: string): Promise<Wallet[]> {
   try {
     const localWallets = await (nonCustodialWalletManager as any).getWalletsFromStorage(userId);
