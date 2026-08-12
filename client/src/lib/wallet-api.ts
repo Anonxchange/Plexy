@@ -153,9 +153,13 @@ function readAmount(raw: any, symbol?: string | null): number {
   const payloadDecimals = Number(
     raw?.decimals ?? (typeof raw?.tokenAmount === "object" ? raw.tokenAmount?.decimals : undefined),
   );
-  const decimals = Number.isInteger(payloadDecimals) && payloadDecimals >= 0 && payloadDecimals <= 36
+  const assetDecimals = getAssetDecimals(symbol);
+  // Only trust payload decimals when they are plausible. Some monitor builds
+  // send `decimals: 0` alongside base units, which would leave 1000 satoshis
+  // rendered as "1,000 BTC".
+  const decimals = Number.isInteger(payloadDecimals) && payloadDecimals > 0 && payloadDecimals <= 36
     ? payloadDecimals
-    : getAssetDecimals(symbol);
+    : assetDecimals;
 
   if (rawValue != null) {
     try {
@@ -165,7 +169,9 @@ function readAmount(raw: any, symbol?: string | null): number {
         : /^[+-]?\d+$/.test(rawString) ? BigInt(rawString) : null;
       if (rawUnits !== null) {
         const scaledAmount = Number(rawUnits) / Math.pow(10, decimals);
-        if (Number.isFinite(scaledAmount)) return scaledAmount;
+        // Safety net: if the payload decimals were wrong, the result is still
+        // an integer in base units. Re-run unit inference for the asset.
+        if (Number.isFinite(scaledAmount)) return normalizeWalletDisplayAmount(scaledAmount, symbol);
       }
     } catch {
       // Fall through to the display-unit value for malformed upstream data.
@@ -393,22 +399,83 @@ export async function recordWithdrawalTransaction(params: {
   toAddress: string;
   createdAt?: string;
 }): Promise<void> {
-  const client = await getSupabase();
-  const { error } = await client.from("wallet_transactions").insert({
-    user_id: params.userId,
-    type: "withdrawal",
-    crypto_symbol: params.cryptoSymbol,
-    amount: params.amount,
-    fee: 0,
-    status: "pending",
-    tx_hash: params.txHash,
-    from_address: params.fromAddress,
-    to_address: params.toAddress,
-    notes: "Broadcast from non-custodial wallet",
-    created_at: params.createdAt ?? new Date().toISOString(),
-  });
+  // Non-custodial: nothing is written to a database. The broadcast hash is
+  // cached locally so outbound activity can be shown until the chain indexes
+  // it; the chain remains the only source of truth.
+  addLocalWithdrawalHash(params);
+}
 
-  if (error) throw new Error(error.message);
+const LOCAL_WITHDRAWALS_KEY = "pexly_local_withdrawals_v1";
+
+interface LocalWithdrawal {
+  userId: string;
+  cryptoSymbol: string;
+  amount: number;
+  txHash: string;
+  fromAddress: string;
+  toAddress: string;
+  createdAt: string;
+}
+
+function readLocalWithdrawalCache(): LocalWithdrawal[] {
+  if (typeof localStorage === "undefined") return [];
+  try {
+    const parsed = JSON.parse(localStorage.getItem(LOCAL_WITHDRAWALS_KEY) ?? "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function addLocalWithdrawalHash(params: {
+  userId: string;
+  cryptoSymbol: string;
+  amount: number;
+  txHash: string;
+  fromAddress: string;
+  toAddress: string;
+  createdAt?: string;
+}) {
+  if (typeof localStorage === "undefined") return;
+  const entry: LocalWithdrawal = {
+    userId: params.userId,
+    cryptoSymbol: params.cryptoSymbol.toUpperCase(),
+    amount: params.amount,
+    txHash: params.txHash,
+    fromAddress: params.fromAddress,
+    toAddress: params.toAddress,
+    createdAt: params.createdAt ?? new Date().toISOString(),
+  };
+  const next = [entry, ...readLocalWithdrawalCache().filter((w) => w.txHash !== entry.txHash)].slice(0, 200);
+  try {
+    localStorage.setItem(LOCAL_WITHDRAWALS_KEY, JSON.stringify(next));
+  } catch {
+    // Cache only; the chain stays authoritative.
+  }
+}
+
+function readLocalWithdrawals(userId: string, limit: number): WalletTransaction[] {
+  return readLocalWithdrawalCache()
+    .filter((w) => w.userId === userId)
+    .slice(0, limit)
+    .map((w) => ({
+      id: `local:${w.txHash}`,
+      user_id: userId,
+      wallet_id: `withdrawal:${w.txHash}`,
+      type: "withdrawal" as const,
+      crypto_symbol: w.cryptoSymbol,
+      amount: normalizeWalletDisplayAmount(w.amount, w.cryptoSymbol),
+      fee: 0,
+      status: "pending" as const,
+      tx_hash: w.txHash,
+      from_address: w.fromAddress,
+      to_address: w.toAddress,
+      reference_id: w.txHash,
+      notes: "Broadcast from non-custodial wallet",
+      confirmations: null,
+      created_at: w.createdAt,
+      completed_at: null,
+    }));
 }
 
 /**
@@ -464,39 +531,7 @@ export async function getOnChainTransactions(userId: string, limit: number = 200
   // Outbound transfers are not discoverable through monitor-deposits. Read
   // the user's own rows to locate their tx hashes, then verify pending hashes
   // through the dedicated withdrawal monitor.
-  const { data: withdrawalRows, error: withdrawalError } = await client
-    .from("wallet_transactions")
-    .select("id, user_id, wallet_id, type, crypto_symbol, amount, fee, status, tx_hash, from_address, to_address, reference_id, notes, confirmations, created_at, completed_at")
-    .eq("user_id", userId)
-    .eq("type", "withdrawal")
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  if (withdrawalError && import.meta.env.DEV) {
-    console.warn("[wallet-activity] withdrawal activity read failed:", withdrawalError);
-  }
-
-  for (const row of withdrawalRows ?? []) {
-    const tx: WalletTransaction = {
-      id: String(row.id),
-      user_id: String(row.user_id ?? userId),
-      wallet_id: String(row.wallet_id ?? `withdrawal:${row.id}`),
-      type: "withdrawal",
-      crypto_symbol: String(row.crypto_symbol ?? "").toUpperCase(),
-      amount: Number(row.amount) || 0,
-      fee: Number(row.fee) || 0,
-      status: row.status === "completed" || row.status === "failed" || row.status === "cancelled"
-        ? row.status
-        : "pending",
-      tx_hash: row.tx_hash ? String(row.tx_hash) : null,
-      from_address: row.from_address ? String(row.from_address) : null,
-      to_address: row.to_address ? String(row.to_address) : null,
-      reference_id: row.reference_id ? String(row.reference_id) : null,
-      notes: row.notes ? String(row.notes) : "Withdrawal",
-      confirmations: row.confirmations == null ? null : Number(row.confirmations),
-      created_at: readDate(row),
-      completed_at: row.completed_at ? readDate(row) : null,
-    };
+  for (const tx of readLocalWithdrawals(userId, limit)) {
     unique.set(`withdrawal:${tx.id}`, tx);
   }
 
