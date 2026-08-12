@@ -202,7 +202,7 @@ const ActivityTable = ({
               <TableCell className="py-4 text-center font-bold text-xs">{tx.crypto_symbol}</TableCell>
               <TableCell className="py-4 text-center font-bold text-xs">
                 <span className={tx.type === 'deposit' ? 'text-green-500' : 'text-foreground'}>
-                  {tx.type === 'deposit' ? '+' : '-'}{normalizeWalletDisplayAmount(tx.amount, tx.crypto_symbol).toLocaleString('en-US', { maximumFractionDigits: 8 })}
+                  {tx.type === 'deposit' ? '+' : '-'}{normalizeWalletDisplayAmount(tx.amount, tx.crypto_symbol).toLocaleString('en-US', { maximumFractionDigits: 8, useGrouping: false })}
                 </span>
               </TableCell>
               {isOperations ? (

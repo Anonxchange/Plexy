@@ -81,7 +81,7 @@ function txTitle(type: string) {
 }
 
 function formatQuantity(amount: number, symbol: string, type: string): string {
-  const value = normalizeWalletDisplayAmount(amount, symbol, type);
+  const value = normalizeWalletDisplayAmount(amount, symbol);
   if (!Number.isFinite(value)) return `— ${symbol}`;
 
   const decimals = symbol.toUpperCase() === "BTC" ? 8 : 8;

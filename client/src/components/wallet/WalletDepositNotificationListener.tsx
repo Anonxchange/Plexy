@@ -39,7 +39,7 @@ function saveSeenIds(userId: string, ids: Set<string>) {
 }
 
 function formatAmount(amount: number, symbol: string) {
-  const value = normalizeWalletDisplayAmount(amount, symbol, "deposit");
+  const value = normalizeWalletDisplayAmount(amount, symbol);
   if (!Number.isFinite(value)) return `— ${symbol.toUpperCase()}`;
   const formatted = value < 0.0001
     ? value.toExponential(4)
