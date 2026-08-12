@@ -122,9 +122,7 @@ const TABS: { id: TabId; label: string }[] = [
 ];
 
 function formatAmount(amount: number, symbol: string) {
-  // Normalize base units (satoshi / drops / lamports / wei) to whole-coin values
-  const value = normalizeWalletDisplayAmount(amount, symbol);
-  const formatted = value.toLocaleString("en-US", {
+  const formatted = normalizeWalletDisplayAmount(amount, symbol).toLocaleString("en-US", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 8,
   });
