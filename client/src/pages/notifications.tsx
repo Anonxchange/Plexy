@@ -36,7 +36,7 @@ import {
   type Notification,
   type Announcement,
 } from "@/lib/notifications-api";
-import type { WalletTransaction } from "@/lib/wallet-api";
+import { normalizeWalletDisplayAmount, type WalletTransaction } from "@/lib/wallet-api";
 import { useWalletActivity } from "@/hooks/use-wallet-activity";
 import { TransactionDetailSheet, type TxForDetail } from "@/components/wallet/TransactionDetailSheet";
 import { useAuth } from "@/lib/auth-context";
@@ -122,7 +122,9 @@ const TABS: { id: TabId; label: string }[] = [
 ];
 
 function formatAmount(amount: number, symbol: string) {
-  const formatted = amount.toLocaleString("en-US", {
+  // Normalize base units (satoshi / drops / lamports / wei) to whole-coin values
+  const value = normalizeWalletDisplayAmount(amount, symbol);
+  const formatted = value.toLocaleString("en-US", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 8,
   });
