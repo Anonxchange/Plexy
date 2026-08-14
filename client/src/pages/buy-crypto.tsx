@@ -767,33 +767,27 @@ const BuyCryptoPage = () => {
   ];
 
   const LoggedInWidget = (
-    <div className="w-full overflow-hidden rounded-[28px] border border-white/[0.07] bg-[#101316] text-[#f3f5f7] shadow-2xl shadow-black/30">
-      <div className="flex items-center justify-between px-5 pb-2 pt-5">
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#b4f22e] text-[#0b0d0f]">
-            <SiBitcoin className="h-4 w-4" />
-          </span>
-          <span className="text-sm font-black tracking-[0.18em] text-white">ENDURE</span>
-        </div>
+    <div className="w-full text-card-foreground">
+      <div className="flex items-center justify-end pb-2">
         <button
           type="button"
           aria-label="Open buy crypto settings"
-          className="rounded-xl p-2 text-white/55 transition-colors hover:bg-white/[0.06] hover:text-white"
+          className="rounded-xl p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           onClick={() => toast({ title: "Checkout settings", description: "Your selected asset and payment preferences are saved on this device." })}
         >
           <Settings className="h-5 w-5" />
         </button>
       </div>
 
-      <div className="px-4 pb-4 pt-3">
-        <div className="flex rounded-2xl bg-[#191c20] p-1">
+      <div className="pb-4">
+        <div className="flex rounded-2xl border border-border bg-muted p-1">
           {(["buy", "sell"] as const).map((item) => (
             <button
               key={item}
               type="button"
               onClick={() => setMode(item)}
               className={`flex-1 rounded-xl py-3 text-sm font-bold capitalize transition-all ${
-                mode === item ? "bg-[#b4f22e] text-[#0b0d0f] shadow-lg shadow-[#b4f22e]/10" : "text-white/45 hover:text-white"
+                mode === item ? "bg-primary text-primary-foreground shadow-lg shadow-primary/10" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {item === "buy" ? "Buy coins" : "Sell coins"}
@@ -804,60 +798,60 @@ const BuyCryptoPage = () => {
 
       <div className={`mx-4 mb-4 flex items-center gap-2 rounded-2xl border px-3.5 py-3 text-xs ${
         isOffline
-          ? "border-amber-300/20 bg-amber-300/[0.06] text-amber-100"
-          : "border-[#b4f22e]/15 bg-[#b4f22e]/[0.05] text-[#d8e6c5]"
+          ? "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-200"
+          : "border-primary/25 bg-primary/10 text-foreground"
       }`}>
-        <span className={`h-2 w-2 rounded-full ${isOffline ? "bg-amber-300" : "bg-[#b4f22e] shadow-[0_0_10px_#b4f22e]"}`} />
+        <span className={`h-2 w-2 rounded-full ${isOffline ? "bg-amber-500" : "bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.65)]"}`} />
         <span>{isOffline ? "Offline — your details are kept locally" : "Secure quote connection active"}</span>
       </div>
 
       <div className="space-y-3 px-4">
-        <div className="rounded-2xl bg-[#191c20] p-4">
+        <div className="rounded-2xl border border-border bg-card p-4">
           <div className="flex items-center justify-between">
-            <label htmlFor="endure-amount" className="text-xs font-medium text-white/48">Spend</label>
-            <span className="rounded-lg bg-white/[0.04] px-2.5 py-1 text-xs font-bold text-white/70">USD</span>
+            <label htmlFor="buy-crypto-amount" className="text-xs font-medium text-muted-foreground">Spend</label>
+            <span className="rounded-lg bg-muted px-2.5 py-1 text-xs font-bold text-foreground">USD</span>
           </div>
           <div className="mt-1 flex items-center gap-2">
-            <span className="text-lg text-white/40">$</span>
+            <span className="text-lg text-muted-foreground">$</span>
             <input
-              id="endure-amount"
+              id="buy-crypto-amount"
               type="number"
               min="1"
               inputMode="decimal"
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
-              className="w-full bg-transparent text-2xl font-black tracking-tight text-white outline-none placeholder:text-white/20"
+              className="w-full bg-transparent text-2xl font-black tracking-tight text-foreground outline-none placeholder:text-muted-foreground/50"
               aria-label="Spend amount in USD"
             />
           </div>
         </div>
 
-        <div className="rounded-2xl bg-[#191c20] p-4">
+        <div className="rounded-2xl border border-border bg-card p-4">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-white/48">Receive</span>
+            <span className="text-xs font-medium text-muted-foreground">Receive</span>
             <button
               type="button"
               onClick={() => setShowAllAssets((value) => !value)}
-              className="flex items-center gap-2 rounded-lg bg-white/[0.04] px-2.5 py-1 text-xs font-bold text-white/80 transition-colors hover:bg-white/[0.08]"
+              className="flex items-center gap-2 rounded-lg bg-muted px-2.5 py-1 text-xs font-bold text-foreground transition-colors hover:bg-accent"
             >
               <CoinIcon symbol={crypto} className="h-4 w-4" />
               {crypto}
-              <ChevronDown className="h-3.5 w-3.5 text-white/45" />
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
             </button>
           </div>
-          <p className="mt-1 text-2xl font-black tracking-tight text-white">{estimatedCrypto}</p>
-          <p className="mt-1 text-xs text-white/35">Rate protected until checkout</p>
+          <p className="mt-1 text-2xl font-black tracking-tight text-foreground">{estimatedCrypto}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Rate protected until checkout</p>
         </div>
 
         {showAllAssets && (
-          <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/[0.07] bg-[#191c20] p-2">
+          <div className="grid grid-cols-3 gap-2 rounded-2xl border border-border bg-card p-2">
             {FEATURED_ASSETS.map((asset) => (
               <button
                 key={asset.symbol}
                 type="button"
                 onClick={() => { setCrypto(asset.symbol); setShowAllAssets(false); }}
                 className={`rounded-xl px-2 py-2 text-xs font-bold transition-colors ${
-                  crypto === asset.symbol ? "bg-[#b4f22e] text-[#0b0d0f]" : "text-white/65 hover:bg-white/[0.06] hover:text-white"
+                  crypto === asset.symbol ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 {asset.symbol}
@@ -867,42 +861,42 @@ const BuyCryptoPage = () => {
         )}
 
         <div className="space-y-2 pt-1">
-          <label htmlFor="endure-network" className="text-sm font-semibold text-white/80">Selected blockchain</label>
+          <label htmlFor="buy-crypto-network" className="text-sm font-semibold text-foreground">Selected blockchain</label>
           <div className="relative">
             <select
-              id="endure-network"
+              id="buy-crypto-network"
               value={selectedNetwork}
               onChange={(event) => setSelectedNetwork(event.target.value)}
-              className="w-full appearance-none rounded-2xl bg-[#191c20] px-4 py-3.5 text-base font-semibold text-white outline-none ring-1 ring-transparent transition focus:ring-[#b4f22e]/50"
+              className="w-full appearance-none rounded-2xl border border-border bg-card px-4 py-3.5 text-base font-semibold text-foreground outline-none ring-1 ring-transparent transition focus:ring-primary/50"
             >
               <option value={selectedAsset.network}>{selectedAsset.networkLabel}</option>
             </select>
-            <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/55" />
+            <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           </div>
         </div>
 
         <div className="space-y-2 pt-1">
-          <label htmlFor="endure-wallet" className="text-sm font-semibold text-white/80">Your wallet address</label>
+          <label htmlFor="buy-crypto-wallet" className="text-sm font-semibold text-foreground">Your wallet address</label>
           <input
-            id="endure-wallet"
+            id="buy-crypto-wallet"
             value={walletAddress}
             onChange={(event) => setWalletAddress(event.target.value.trim())}
             placeholder={`Enter your ${selectedAsset.networkLabel} wallet address`}
-            className={`w-full rounded-2xl bg-[#191c20] px-4 py-3.5 text-sm text-white outline-none ring-1 transition placeholder:text-white/30 ${
-              walletAddress && !walletIsValid ? "ring-red-400/70" : "ring-transparent focus:ring-[#b4f22e]/50"
+            className={`w-full rounded-2xl border border-border bg-card px-4 py-3.5 text-sm text-foreground outline-none ring-1 transition placeholder:text-muted-foreground/60 ${
+              walletAddress && !walletIsValid ? "ring-destructive/70" : "ring-transparent focus:ring-primary/50"
             }`}
             autoComplete="off"
           />
           {walletAddress && !walletIsValid ? (
-            <p className="flex items-center gap-1.5 text-xs text-red-300"><XCircle className="h-3.5 w-3.5" /> Check the wallet format for {selectedAsset.networkLabel}.</p>
+            <p className="flex items-center gap-1.5 text-xs text-destructive"><XCircle className="h-3.5 w-3.5" /> Check the wallet format for {selectedAsset.networkLabel}.</p>
           ) : (
-            <p className="flex items-center gap-1.5 text-xs text-white/35"><CheckCircle2 className="h-3.5 w-3.5 text-[#b4f22e]/70" /> Crypto is delivered directly to this address.</p>
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Crypto is delivered directly to this address.</p>
           )}
         </div>
 
         {mode === "buy" && (
           <div className="space-y-2 pt-1">
-            <p className="text-sm font-semibold text-white/80">Payment method</p>
+            <p className="text-sm font-semibold text-foreground">Payment method</p>
             <div className="grid grid-cols-2 gap-2">
               {loggedInPaymentMethods.map(({ id, label, fee, Icon }) => (
                 <button
@@ -911,16 +905,16 @@ const BuyCryptoPage = () => {
                   onClick={() => setSelectedPaymentMethod(id)}
                   className={`relative min-h-[92px] rounded-2xl border p-3 text-left transition-all ${
                     selectedPaymentMethod === id
-                      ? "border-[#b4f22e]/70 bg-[#b4f22e]/[0.12] shadow-[0_0_0_1px_rgba(180,242,46,0.14)]"
-                      : "border-white/[0.06] bg-[#191c20] hover:border-white/20"
+                      ? "border-primary/70 bg-primary/10 shadow-[0_0_0_1px_hsl(var(--primary)/0.14)]"
+                      : "border-border bg-card hover:border-primary/40"
                   }`}
                 >
-                  {selectedPaymentMethod === id && <CheckCircle2 className="absolute right-3 top-3 h-4 w-4 text-[#b4f22e]" />}
-                  <span className="flex h-8 w-12 items-center justify-center rounded-lg bg-white text-[#101316]">
+                  {selectedPaymentMethod === id && <CheckCircle2 className="absolute right-3 top-3 h-4 w-4 text-primary" />}
+                  <span className="flex h-8 w-12 items-center justify-center rounded-lg bg-background text-foreground">
                     <Icon className="h-5 w-5" />
                   </span>
-                  <span className="mt-2 block text-xs font-bold text-white">{label}</span>
-                  <span className="mt-0.5 block text-[10px] text-white/45">{fee}</span>
+                  <span className="mt-2 block text-xs font-bold text-foreground">{label}</span>
+                  <span className="mt-0.5 block text-[10px] text-muted-foreground">{fee}</span>
                 </button>
               ))}
             </div>
@@ -931,16 +925,16 @@ const BuyCryptoPage = () => {
           <button
             type="button"
             onClick={() => setShowFees((value) => !value)}
-            className="flex w-full items-center justify-between px-1 text-sm text-white/70"
+            className="flex w-full items-center justify-between px-1 text-sm text-muted-foreground"
           >
             <span>Summary</span>
-            <span className="flex items-center gap-1 text-white/50">Show full summary <ChevronDown className={`h-4 w-4 transition-transform ${showFees ? "rotate-180" : ""}`} /></span>
+            <span className="flex items-center gap-1 text-muted-foreground">Show full summary <ChevronDown className={`h-4 w-4 transition-transform ${showFees ? "rotate-180" : ""}`} /></span>
           </button>
           {showFees && (
-            <div className="mt-2 rounded-2xl bg-[#191c20] p-4 text-sm">
-              <div className="flex items-center justify-between text-white/55"><span>Network fee</span><span className="text-white">Included</span></div>
-              <div className="mt-2 flex items-center justify-between text-white/55"><span>Gateway fee</span><span className="text-white">{selectedPaymentMethod === "GOOGLE_PAY" ? "0%" : "1.99%"}</span></div>
-              <div className="mt-3 flex items-center justify-between border-t border-white/[0.07] pt-3 font-bold text-white"><span>Total payable</span><span>${Number(amount || 0).toFixed(2)} USD</span></div>
+            <div className="mt-2 rounded-2xl border border-border bg-card p-4 text-sm">
+              <div className="flex items-center justify-between text-muted-foreground"><span>Network fee</span><span className="text-foreground">Included</span></div>
+              <div className="mt-2 flex items-center justify-between text-muted-foreground"><span>Gateway fee</span><span className="text-foreground">{selectedPaymentMethod === "GOOGLE_PAY" ? "0%" : "1.99%"}</span></div>
+              <div className="mt-3 flex items-center justify-between border-t border-border pt-3 font-bold text-foreground"><span>Total payable</span><span>${Number(amount || 0).toFixed(2)} USD</span></div>
             </div>
           )}
         </div>
@@ -948,11 +942,11 @@ const BuyCryptoPage = () => {
         <Button
           onClick={handleAction}
           disabled={cdpOnramp.isPending || cdpOfframp.isPending || !amount || !walletIsValid || isOffline}
-          className="h-14 w-full rounded-2xl border-none bg-[#b4f22e] text-base font-black text-[#0b0d0f] shadow-lg shadow-[#b4f22e]/10 transition-all hover:bg-[#c8ff5b] disabled:bg-white/15 disabled:text-white/35 disabled:shadow-none"
+          className="h-14 w-full rounded-2xl border-none bg-primary text-base font-black text-primary-foreground shadow-lg shadow-primary/10 transition-all hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
         >
           {cdpOnramp.isPending || cdpOfframp.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : "Create order"}
         </Button>
-        <p className="pb-1 text-center text-[11px] text-white/30">Endure keeps your checkout details safe while the quote reconnects.</p>
+        <p className="pb-1 text-center text-[11px] text-muted-foreground">Your checkout details stay protected while the quote reconnects.</p>
       </div>
     </div>
   );
@@ -1056,10 +1050,10 @@ const BuyCryptoPage = () => {
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/6 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-primary/3 rounded-full blur-3xl pointer-events-none" />
 
-           <div className="relative mx-auto w-full lg:max-w-[480px]">
+           <div className="relative mx-auto w-full">
              {LoggedInWidget}
              <div className="mt-4 flex items-center justify-center gap-2 text-xs text-muted-foreground/70">
-               <CheckCircle2 className="h-4 w-4 text-[#b4f22e]" />
+                <CheckCircle2 className="h-4 w-4 text-primary" />
                Protected checkout for signed-in users
              </div>
            </div>
