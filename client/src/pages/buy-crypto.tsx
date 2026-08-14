@@ -730,6 +730,7 @@ const BuyCryptoPage = () => {
       {/* ═══════════════════════════════════════
           HERO
       ═══════════════════════════════════════ */}
+      {!user ? (
       <section className="relative overflow-hidden bg-background pt-8 pb-10 px-4 lg:px-8">
 
         {/* Glow blobs */}
@@ -815,6 +816,43 @@ const BuyCryptoPage = () => {
           </div>
         </div>
       </section>
+      ) : (
+        /* ── LOGGED IN: widget-only view (no hero) ── */
+        <section className="relative overflow-hidden bg-background pt-6 pb-10 px-4 lg:px-8">
+          {/* Glow blobs */}
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/6 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-primary/3 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative mx-auto w-full lg:max-w-[480px]">
+            {/* Quick asset chips — same set as the hero, kept for signed-in users */}
+            <div className="flex flex-wrap gap-2 mb-5">
+              {["Bitcoin", "Ethereum", "Solana", "Polygon"].map((n) => {
+                const s = n === "Bitcoin" ? "BTC" : n === "Ethereum" ? "ETH" : n === "Solana" ? "SOL" : "POL";
+                return (
+                  <button
+                    key={s}
+                    onClick={() => setCrypto(s)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                      crypto === s
+                        ? "bg-primary/15 border-primary/30 text-primary"
+                        : "bg-muted border-border text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                    }`}
+                  >
+                    <CoinIcon symbol={s.toUpperCase()} className="w-3.5 h-3.5" />
+                    {n}
+                  </button>
+                );
+              })}
+            </div>
+
+            {Widget}
+
+            <div className="mt-5">
+              <TrustBadges />
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ═══════════════════════════════════════
           CONTENT — light/dark background
