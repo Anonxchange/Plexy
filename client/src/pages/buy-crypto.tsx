@@ -432,6 +432,11 @@ const BuyCryptoPage = () => {
   // Valid onramp payment methods accepted by the edge fn.
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("CARD");
   const [showFees, setShowFees] = useState(false);
+  const [walletAddress, setWalletAddress] = useState("");
+  const [selectedNetwork, setSelectedNetwork] = useState("bitcoin");
+  const [isOffline, setIsOffline] = useState(() => (
+    typeof navigator !== "undefined" ? !navigator.onLine : false
+  ));
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -451,6 +456,21 @@ const BuyCryptoPage = () => {
   const selectedAsset = ALL_ASSETS.find((asset) => asset.symbol === crypto) ?? FEATURED_ASSETS[0];
   const cryptoName = selectedAsset.name;
 
+  useEffect(() => {
+    setSelectedNetwork(selectedAsset.network);
+  }, [selectedAsset.network]);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
   const estimatedCrypto = useMemo(() => {
     const prices: Record<string, number> = { BTC: 76400, ETH: 2650, SOL: 138, XRP: 0.52, POL: 0.72, ARB: 0.72, OP: 1.64, USDC: 1, USDT: 1, AVAX: 28 };
     const result = (parseFloat(amount) || 0) / (prices[crypto] || 1);
@@ -461,6 +481,13 @@ const BuyCryptoPage = () => {
     if (!user) { setLocation("/signin"); return; }
     if (!amount || parseFloat(amount) <= 0) {
       toast({ title: "Invalid amount", description: "Please enter a valid amount.", variant: "destructive" });
+      return;
+    }
+    if (isOffline) {
+      toast({
+        title: "Connection paused",
+        description: "Your order details are still here. Reconnect to continue securely.",
+      });
       return;
     }
     try {
@@ -480,16 +507,14 @@ const BuyCryptoPage = () => {
 
       // CDP validates both the address family and asset/network pair. Match
       // the wallet to the selected chain before creating a session.
-      const EVM_RE = /^0x[a-fA-F0-9]{40}$/;
-      const BTC_RE = /^(bc1[02-9ac-hj-np-z]{11,71}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/;
-      const SOL_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
-      const XRP_RE = /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/;
       const addressMatchesNetwork = (address: string | undefined) => {
         if (!address) return false;
-        if (asset.network === "bitcoin") return BTC_RE.test(address);
-        if (asset.network === "solana") return SOL_RE.test(address);
-        if (asset.network === "ripple") return XRP_RE.test(address);
-        return EVM_RE.test(address);
+        if (selectedNetwork === "bitcoin") {
+          return /^(bc1[02-9ac-hj-np-z]{11,71}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/.test(address);
+        }
+        if (selectedNetwork === "solana") return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address);
+        if (selectedNetwork === "ripple") return /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(address);
+        return /^0x[a-fA-F0-9]{40}$/.test(address);
       };
       const networkWords: Record<string, string[]> = {
         bitcoin: ["bitcoin", "btc"],
@@ -501,7 +526,7 @@ const BuyCryptoPage = () => {
         solana: ["solana", "sol"],
         ripple: ["xrp", "ripple"],
       };
-      const words = networkWords[asset.network] ?? [];
+      const words = networkWords[selectedNetwork] ?? [];
       const bestWallet = wallets.find((wallet) => {
         const descriptor = `${wallet.chainId ?? ""} ${wallet.walletType ?? ""}`.toLowerCase();
         return addressMatchesNetwork(wallet.address) && words.some((word) => descriptor.includes(word));
@@ -511,7 +536,7 @@ const BuyCryptoPage = () => {
         (user as any)?.wallet_address,
         (user as any)?.user_metadata?.wallet_address,
       ];
-      const addr = bestWallet?.address ?? profileAddresses.find(addressMatchesNetwork) ?? null;
+      const addr = walletAddress.trim() || bestWallet?.address || profileAddresses.find(addressMatchesNetwork) || null;
 
       if (!addr) {
         toast({
@@ -531,7 +556,7 @@ const BuyCryptoPage = () => {
           paymentAmount: amount,
           paymentCurrency: fiat,
            paymentMethod: selectedPaymentMethod,
-           network: asset.network,
+           network: selectedNetwork,
         });
         rawUrl = data.onrampUrl;
         // Session-token fallback for the Coinbase onramp widget URL.
@@ -543,7 +568,7 @@ const BuyCryptoPage = () => {
           address: addr,
            sellCurrency: canonicalCrypto,
           fiatCurrency: fiat,
-           network: asset.network,
+           network: selectedNetwork,
           // Edge fn accepts: BANK_ACCOUNT | ACH_BANK_ACCOUNT | PAYPAL | FIAT_WALLET
           cashoutMethod: "BANK_ACCOUNT",
         });
@@ -724,6 +749,214 @@ const BuyCryptoPage = () => {
     </div>
   );
 
+  const walletIsValid = useMemo(() => {
+    const value = walletAddress.trim();
+    if (!value) return false;
+    if (selectedNetwork === "bitcoin") {
+      return /^(bc1[02-9ac-hj-np-z]{11,71}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/.test(value);
+    }
+    if (selectedNetwork === "solana") return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(value);
+    if (selectedNetwork === "ripple") return /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(value);
+    return /^0x[a-fA-F0-9]{40}$/.test(value);
+  }, [selectedNetwork, walletAddress]);
+
+  const loggedInPaymentMethods = [
+    { id: "APPLE_PAY", label: "Apple Pay", fee: "Gateway Fee 1.99%", Icon: SiApplepay },
+    { id: "CARD", label: "Visa / Mastercard", fee: "Gateway Fee 1.99%", Icon: SiVisa },
+    { id: "GOOGLE_PAY", label: "Google Pay", fee: "Gateway Fee 0%", Icon: SiGooglepay },
+  ];
+
+  const LoggedInWidget = (
+    <div className="w-full overflow-hidden rounded-[28px] border border-white/[0.07] bg-[#101316] text-[#f3f5f7] shadow-2xl shadow-black/30">
+      <div className="flex items-center justify-between px-5 pb-2 pt-5">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#b4f22e] text-[#0b0d0f]">
+            <SiBitcoin className="h-4 w-4" />
+          </span>
+          <span className="text-sm font-black tracking-[0.18em] text-white">ENDURE</span>
+        </div>
+        <button
+          type="button"
+          aria-label="Open buy crypto settings"
+          className="rounded-xl p-2 text-white/55 transition-colors hover:bg-white/[0.06] hover:text-white"
+          onClick={() => toast({ title: "Checkout settings", description: "Your selected asset and payment preferences are saved on this device." })}
+        >
+          <Settings className="h-5 w-5" />
+        </button>
+      </div>
+
+      <div className="px-4 pb-4 pt-3">
+        <div className="flex rounded-2xl bg-[#191c20] p-1">
+          {(["buy", "sell"] as const).map((item) => (
+            <button
+              key={item}
+              type="button"
+              onClick={() => setMode(item)}
+              className={`flex-1 rounded-xl py-3 text-sm font-bold capitalize transition-all ${
+                mode === item ? "bg-[#b4f22e] text-[#0b0d0f] shadow-lg shadow-[#b4f22e]/10" : "text-white/45 hover:text-white"
+              }`}
+            >
+              {item === "buy" ? "Buy coins" : "Sell coins"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className={`mx-4 mb-4 flex items-center gap-2 rounded-2xl border px-3.5 py-3 text-xs ${
+        isOffline
+          ? "border-amber-300/20 bg-amber-300/[0.06] text-amber-100"
+          : "border-[#b4f22e]/15 bg-[#b4f22e]/[0.05] text-[#d8e6c5]"
+      }`}>
+        <span className={`h-2 w-2 rounded-full ${isOffline ? "bg-amber-300" : "bg-[#b4f22e] shadow-[0_0_10px_#b4f22e]"}`} />
+        <span>{isOffline ? "Offline — your details are kept locally" : "Secure quote connection active"}</span>
+      </div>
+
+      <div className="space-y-3 px-4">
+        <div className="rounded-2xl bg-[#191c20] p-4">
+          <div className="flex items-center justify-between">
+            <label htmlFor="endure-amount" className="text-xs font-medium text-white/48">Spend</label>
+            <span className="rounded-lg bg-white/[0.04] px-2.5 py-1 text-xs font-bold text-white/70">USD</span>
+          </div>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="text-lg text-white/40">$</span>
+            <input
+              id="endure-amount"
+              type="number"
+              min="1"
+              inputMode="decimal"
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+              className="w-full bg-transparent text-2xl font-black tracking-tight text-white outline-none placeholder:text-white/20"
+              aria-label="Spend amount in USD"
+            />
+          </div>
+        </div>
+
+        <div className="rounded-2xl bg-[#191c20] p-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-white/48">Receive</span>
+            <button
+              type="button"
+              onClick={() => setShowAllAssets((value) => !value)}
+              className="flex items-center gap-2 rounded-lg bg-white/[0.04] px-2.5 py-1 text-xs font-bold text-white/80 transition-colors hover:bg-white/[0.08]"
+            >
+              <CoinIcon symbol={crypto} className="h-4 w-4" />
+              {crypto}
+              <ChevronDown className="h-3.5 w-3.5 text-white/45" />
+            </button>
+          </div>
+          <p className="mt-1 text-2xl font-black tracking-tight text-white">{estimatedCrypto}</p>
+          <p className="mt-1 text-xs text-white/35">Rate protected until checkout</p>
+        </div>
+
+        {showAllAssets && (
+          <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/[0.07] bg-[#191c20] p-2">
+            {FEATURED_ASSETS.map((asset) => (
+              <button
+                key={asset.symbol}
+                type="button"
+                onClick={() => { setCrypto(asset.symbol); setShowAllAssets(false); }}
+                className={`rounded-xl px-2 py-2 text-xs font-bold transition-colors ${
+                  crypto === asset.symbol ? "bg-[#b4f22e] text-[#0b0d0f]" : "text-white/65 hover:bg-white/[0.06] hover:text-white"
+                }`}
+              >
+                {asset.symbol}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="space-y-2 pt-1">
+          <label htmlFor="endure-network" className="text-sm font-semibold text-white/80">Selected blockchain</label>
+          <div className="relative">
+            <select
+              id="endure-network"
+              value={selectedNetwork}
+              onChange={(event) => setSelectedNetwork(event.target.value)}
+              className="w-full appearance-none rounded-2xl bg-[#191c20] px-4 py-3.5 text-base font-semibold text-white outline-none ring-1 ring-transparent transition focus:ring-[#b4f22e]/50"
+            >
+              <option value={selectedAsset.network}>{selectedAsset.networkLabel}</option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/55" />
+          </div>
+        </div>
+
+        <div className="space-y-2 pt-1">
+          <label htmlFor="endure-wallet" className="text-sm font-semibold text-white/80">Your wallet address</label>
+          <input
+            id="endure-wallet"
+            value={walletAddress}
+            onChange={(event) => setWalletAddress(event.target.value.trim())}
+            placeholder={`Enter your ${selectedAsset.networkLabel} wallet address`}
+            className={`w-full rounded-2xl bg-[#191c20] px-4 py-3.5 text-sm text-white outline-none ring-1 transition placeholder:text-white/30 ${
+              walletAddress && !walletIsValid ? "ring-red-400/70" : "ring-transparent focus:ring-[#b4f22e]/50"
+            }`}
+            autoComplete="off"
+          />
+          {walletAddress && !walletIsValid ? (
+            <p className="flex items-center gap-1.5 text-xs text-red-300"><XCircle className="h-3.5 w-3.5" /> Check the wallet format for {selectedAsset.networkLabel}.</p>
+          ) : (
+            <p className="flex items-center gap-1.5 text-xs text-white/35"><CheckCircle2 className="h-3.5 w-3.5 text-[#b4f22e]/70" /> Crypto is delivered directly to this address.</p>
+          )}
+        </div>
+
+        {mode === "buy" && (
+          <div className="space-y-2 pt-1">
+            <p className="text-sm font-semibold text-white/80">Payment method</p>
+            <div className="grid grid-cols-2 gap-2">
+              {loggedInPaymentMethods.map(({ id, label, fee, Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setSelectedPaymentMethod(id)}
+                  className={`relative min-h-[92px] rounded-2xl border p-3 text-left transition-all ${
+                    selectedPaymentMethod === id
+                      ? "border-[#b4f22e]/70 bg-[#b4f22e]/[0.12] shadow-[0_0_0_1px_rgba(180,242,46,0.14)]"
+                      : "border-white/[0.06] bg-[#191c20] hover:border-white/20"
+                  }`}
+                >
+                  {selectedPaymentMethod === id && <CheckCircle2 className="absolute right-3 top-3 h-4 w-4 text-[#b4f22e]" />}
+                  <span className="flex h-8 w-12 items-center justify-center rounded-lg bg-white text-[#101316]">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <span className="mt-2 block text-xs font-bold text-white">{label}</span>
+                  <span className="mt-0.5 block text-[10px] text-white/45">{fee}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="pt-1">
+          <button
+            type="button"
+            onClick={() => setShowFees((value) => !value)}
+            className="flex w-full items-center justify-between px-1 text-sm text-white/70"
+          >
+            <span>Summary</span>
+            <span className="flex items-center gap-1 text-white/50">Show full summary <ChevronDown className={`h-4 w-4 transition-transform ${showFees ? "rotate-180" : ""}`} /></span>
+          </button>
+          {showFees && (
+            <div className="mt-2 rounded-2xl bg-[#191c20] p-4 text-sm">
+              <div className="flex items-center justify-between text-white/55"><span>Network fee</span><span className="text-white">Included</span></div>
+              <div className="mt-2 flex items-center justify-between text-white/55"><span>Gateway fee</span><span className="text-white">{selectedPaymentMethod === "GOOGLE_PAY" ? "0%" : "1.99%"}</span></div>
+              <div className="mt-3 flex items-center justify-between border-t border-white/[0.07] pt-3 font-bold text-white"><span>Total payable</span><span>${Number(amount || 0).toFixed(2)} USD</span></div>
+            </div>
+          )}
+        </div>
+
+        <Button
+          onClick={handleAction}
+          disabled={cdpOnramp.isPending || cdpOfframp.isPending || !amount || !walletIsValid || isOffline}
+          className="h-14 w-full rounded-2xl border-none bg-[#b4f22e] text-base font-black text-[#0b0d0f] shadow-lg shadow-[#b4f22e]/10 transition-all hover:bg-[#c8ff5b] disabled:bg-white/15 disabled:text-white/35 disabled:shadow-none"
+        >
+          {cdpOnramp.isPending || cdpOfframp.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : "Create order"}
+        </Button>
+        <p className="pb-1 text-center text-[11px] text-white/30">Endure keeps your checkout details safe while the quote reconnects.</p>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-background text-foreground">
 
@@ -823,34 +1056,13 @@ const BuyCryptoPage = () => {
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/6 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-primary/3 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="relative mx-auto w-full lg:max-w-[480px]">
-            {/* Quick asset chips — same set as the hero, kept for signed-in users */}
-            <div className="flex flex-wrap gap-2 mb-5">
-              {["Bitcoin", "Ethereum", "Solana", "Polygon"].map((n) => {
-                const s = n === "Bitcoin" ? "BTC" : n === "Ethereum" ? "ETH" : n === "Solana" ? "SOL" : "POL";
-                return (
-                  <button
-                    key={s}
-                    onClick={() => setCrypto(s)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
-                      crypto === s
-                        ? "bg-primary/15 border-primary/30 text-primary"
-                        : "bg-muted border-border text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-                    }`}
-                  >
-                    <CoinIcon symbol={s.toUpperCase()} className="w-3.5 h-3.5" />
-                    {n}
-                  </button>
-                );
-              })}
-            </div>
-
-            {Widget}
-
-            <div className="mt-5">
-              <TrustBadges />
-            </div>
-          </div>
+           <div className="relative mx-auto w-full lg:max-w-[480px]">
+             {LoggedInWidget}
+             <div className="mt-4 flex items-center justify-center gap-2 text-xs text-muted-foreground/70">
+               <CheckCircle2 className="h-4 w-4 text-[#b4f22e]" />
+               Protected checkout for signed-in users
+             </div>
+           </div>
         </section>
       )}
 
