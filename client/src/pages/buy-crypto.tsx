@@ -8,6 +8,7 @@ import {
   Minus,
   Loader2,
   ChevronRight,
+  History,
   Star,
   TrendingUp,
   TrendingDown,
@@ -34,6 +35,7 @@ import { useCdpOfframp } from "@/hooks/use-cdp-offramp";
 import { safeExternalRedirect, COINBASE_PAY_ORIGINS } from "@/lib/sanitize";
 import { PaymentMethodSelector } from "@/components/buy-crypto/PaymentMethodSelector";
 import { useCdpTransactions, type CdpTransaction } from "@/hooks/use-cdp-transactions";
+import type { NonCustodialWallet } from "@/lib/non-custodial-wallet";
 
 const QUICK_AMOUNTS = ["100", "250", "500", "1000"];
 
@@ -75,6 +77,317 @@ const ASSET_ALIASES: Record<string, string> = {
 };
 
 const SUPPORTED_SYMBOLS = new Set(ALL_ASSETS.map((asset) => asset.symbol));
+
+const NETWORK_WORDS: Record<string, string[]> = {
+  bitcoin: ["bitcoin", "btc"],
+  ethereum: ["ethereum", "eth"],
+  polygon: ["polygon", "pol", "matic"],
+  arbitrum: ["arbitrum", "arb"],
+  optimism: ["optimism", "op"],
+  "avalanche-c-chain": ["avalanche", "avax"],
+  solana: ["solana", "sol"],
+  ripple: ["xrp", "ripple"],
+};
+
+function addressMatchesNetwork(address: string | undefined, network: string) {
+  if (!address) return false;
+  const EVM_RE = /^0x[a-fA-F0-9]{40}$/;
+  const BTC_RE = /^(bc1[02-9ac-hj-np-z]{11,71}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/;
+  const SOL_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+  const XRP_RE = /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/;
+  if (network === "bitcoin") return BTC_RE.test(address);
+  if (network === "solana") return SOL_RE.test(address);
+  if (network === "ripple") return XRP_RE.test(address);
+  return EVM_RE.test(address);
+}
+
+function walletMatchesAsset(wallet: Pick<NonCustodialWallet, "address" | "chainId" | "walletType">, asset: SupportedAsset) {
+  if (!addressMatchesNetwork(wallet.address, asset.network)) return false;
+  const descriptor = `${wallet.chainId ?? ""} ${wallet.walletType ?? ""}`.toLowerCase();
+  return (NETWORK_WORDS[asset.network] ?? []).some((word) => descriptor.includes(word));
+}
+
+function AuthenticatedBuyCryptoView({
+  mode,
+  setMode,
+  amount,
+  setAmount,
+  crypto,
+  setCrypto,
+  selectedAsset,
+  estimatedCrypto,
+  selectedPaymentMethod,
+  setSelectedPaymentMethod,
+  selectedWallet,
+  walletAddressLoading,
+  txHistory,
+  txLoading,
+  isPending,
+  onAction,
+}: {
+  mode: "buy" | "sell";
+  setMode: (mode: "buy" | "sell") => void;
+  amount: string;
+  setAmount: (amount: string) => void;
+  crypto: string;
+  setCrypto: (crypto: string) => void;
+  selectedAsset: SupportedAsset;
+  estimatedCrypto: string;
+  selectedPaymentMethod: string;
+  setSelectedPaymentMethod: (method: string) => void;
+  selectedWallet?: NonCustodialWallet;
+  walletAddressLoading: boolean;
+  txHistory: CdpTransaction[];
+  txLoading: boolean;
+  isPending: boolean;
+  onAction: () => void;
+}) {
+  const [, navigate] = useLocation();
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const walletAddress = selectedWallet?.address ?? null;
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <main className="mx-auto w-full max-w-2xl px-4 pb-12 pt-6 sm:px-6 lg:max-w-5xl lg:px-8">
+        <div className="mb-5 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Pexly wallet</p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">Buy crypto</h1>
+          </div>
+          <div className="relative flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setHistoryOpen((open) => !open)}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:border-primary/40 hover:text-primary"
+              aria-label="Open transaction history"
+              title="Transaction history"
+            >
+              <History className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/account-settings")}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:border-primary/40 hover:text-primary"
+              aria-label="Open account settings"
+              title="Account settings"
+            >
+              <Settings className="h-4 w-4" />
+            </button>
+            {historyOpen && (
+              <div className="absolute right-12 top-12 z-30 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-border bg-popover shadow-xl">
+                <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                  <span className="text-sm font-bold text-foreground">Transaction history</span>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/notifications")}
+                    className="text-xs font-semibold text-primary hover:underline"
+                  >
+                    View all
+                  </button>
+                </div>
+                {txLoading ? (
+                  <div className="px-4 py-6 text-center text-xs text-muted-foreground">Loading transactions…</div>
+                ) : txHistory.length === 0 ? (
+                  <div className="px-4 py-6 text-center text-xs text-muted-foreground">No buy or sell transactions yet.</div>
+                ) : (
+                  <div className="max-h-72 overflow-y-auto">
+                    {txHistory.slice(0, 5).map((tx) => (
+                      <div key={tx.external_id} className="flex items-center gap-3 border-b border-border/60 px-4 py-3 last:border-0">
+                        <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${tx.transaction_type === "onramp" ? "bg-emerald-500/10" : "bg-blue-500/10"}`}>
+                          {tx.transaction_type === "onramp"
+                            ? <TrendingUp className="h-4 w-4 text-emerald-600" />
+                            : <TrendingDown className="h-4 w-4 text-blue-600" />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-semibold text-foreground">
+                            {tx.transaction_type === "onramp" ? "Buy" : "Sell"}{tx.asset ? ` ${tx.asset}` : ""}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {(tx.status || "pending").toString()}
+                          </p>
+                        </div>
+                        <span className="text-xs font-bold text-foreground">{tx.fiat_amount ? `${tx.fiat_amount} ${tx.fiat_currency ?? ""}` : "—"}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5">
+          <div className="mb-4 flex rounded-2xl bg-muted p-1">
+            {(["buy", "sell"] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setMode(tab)}
+                className={`flex-1 rounded-xl py-3 text-sm font-bold capitalize transition-colors ${
+                  mode === tab
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab} coins
+              </button>
+            ))}
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-2">
+            <div className="rounded-2xl border border-border bg-muted/35 p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-sm font-medium text-muted-foreground">Spend</span>
+                <span className="text-xs font-semibold text-muted-foreground">USD</span>
+              </div>
+              <input
+                type="number"
+                min="1"
+                inputMode="decimal"
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                className="w-full bg-transparent text-3xl font-bold tracking-tight text-foreground outline-none placeholder:text-muted-foreground/50"
+                placeholder="100"
+                aria-label="Amount in USD"
+              />
+              <div className="mt-3 flex gap-2">
+                {QUICK_AMOUNTS.map((quickAmount) => (
+                  <button
+                    key={quickAmount}
+                    type="button"
+                    onClick={() => setAmount(quickAmount)}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      amount === quickAmount
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-card text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    ${quickAmount === "1000" ? "1k" : quickAmount}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-muted/35 p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-sm font-medium text-muted-foreground">
+                  {mode === "buy" ? "Receive" : "Sell"}
+                </span>
+                <span className="text-xs font-semibold text-muted-foreground">{selectedAsset.price} per coin</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <CoinIcon symbol={crypto} className="h-9 w-9" />
+                <select
+                  value={crypto}
+                  onChange={(event) => setCrypto(event.target.value)}
+                  className="min-w-0 flex-1 appearance-none bg-transparent text-lg font-bold text-foreground outline-none"
+                  aria-label="Select cryptocurrency"
+                >
+                  {ALL_ASSETS.map((asset) => (
+                    <option key={asset.symbol} value={asset.symbol}>
+                      {asset.symbol} · {asset.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+              </div>
+              <p className="mt-3 text-2xl font-bold tabular-nums text-foreground">
+                {estimatedCrypto} {crypto}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-border bg-muted/35 p-4">
+              <p className="mb-2 text-sm font-medium text-muted-foreground">Selected blockchain</p>
+              <div className="flex items-center justify-between rounded-xl bg-card px-3 py-3">
+                <span className="font-semibold">{selectedAsset.networkLabel}</span>
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {selectedAsset.symbol} is delivered on this network.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-muted/35 p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-sm font-medium text-muted-foreground">Your wallet address</p>
+                {walletAddress && <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Connected</span>}
+              </div>
+              <button
+                type="button"
+                onClick={() => !walletAddress && navigate("/account-settings")}
+                className="w-full rounded-xl bg-card px-3 py-3 text-left text-sm transition-colors hover:bg-muted"
+                title={walletAddress ?? "Open account settings"}
+              >
+                {walletAddressLoading ? (
+                  <span className="font-medium text-muted-foreground">Checking connected wallet…</span>
+                ) : walletAddress ? (
+                  <span className="block truncate font-mono text-xs text-foreground">
+                    {walletAddress.slice(0, 10)}…{walletAddress.slice(-8)}
+                  </span>
+                ) : (
+                  <span className="font-medium text-muted-foreground">Connect a {selectedAsset.networkLabel} wallet in settings</span>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {mode === "buy" && (
+            <div className="mt-3">
+              <p className="mb-2 text-sm font-medium text-muted-foreground">Payment method</p>
+              <PaymentMethodSelector
+                selectedId={selectedPaymentMethod}
+                onSelect={setSelectedPaymentMethod}
+              />
+            </div>
+          )}
+
+          <div className="mt-4 flex items-center justify-between border-t border-border pt-4 text-sm">
+            <span className="text-muted-foreground">Fees included</span>
+            <span className="font-semibold text-foreground">1 {crypto} ≈ {selectedAsset.price}</span>
+          </div>
+
+          <Button
+            type="button"
+            onClick={onAction}
+            disabled={isPending || walletAddressLoading || !amount}
+            className="mt-4 h-12 w-full rounded-xl bg-primary text-base font-bold text-primary-foreground shadow-sm hover:bg-primary/90"
+          >
+            {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : mode === "buy" ? "Create order" : "Continue to sell"}
+          </Button>
+          <p className="mt-3 text-center text-xs text-muted-foreground">
+            Your crypto is sent to the connected wallet address after checkout.
+          </p>
+        </div>
+
+        <div className="mt-5">
+          <p className="mb-3 text-sm font-bold text-foreground">Supported coins</p>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {ALL_ASSETS.slice(0, 6).map((asset) => (
+              <button
+                key={asset.symbol}
+                type="button"
+                onClick={() => setCrypto(asset.symbol)}
+                className={`flex min-w-[116px] items-center gap-2 rounded-xl border px-3 py-2 text-left transition-colors ${
+                  crypto === asset.symbol
+                    ? "border-primary/50 bg-primary/10"
+                    : "border-border bg-card hover:bg-muted"
+                }`}
+              >
+                <CoinIcon symbol={asset.symbol} className="h-7 w-7" />
+                <span className="min-w-0">
+                  <span className="block text-xs font-bold">{asset.symbol}</span>
+                  <span className="block truncate text-[10px] text-muted-foreground">{asset.networkLabel}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
 
 const HOW_TO_STEPS = [
   {
@@ -447,9 +760,26 @@ const BuyCryptoPage = () => {
   const cdpOnramp = useCdpOnramp();
   const cdpOfframp = useCdpOfframp();
   const { data: txHistory = [], isLoading: txLoading } = useCdpTransactions(user?.id);
+  const { data: monitoredWallets = [], isLoading: walletBalancesLoading } = useWalletBalances();
+  const { data: walletData, isLoading: walletDataLoading } = useWalletData();
 
   const selectedAsset = ALL_ASSETS.find((asset) => asset.symbol === crypto) ?? FEATURED_ASSETS[0];
   const cryptoName = selectedAsset.name;
+  const walletBalances = useMemo(() => {
+    const balances: Record<string, number> = {};
+    for (const asset of walletData?.assets ?? []) {
+      const symbol = asset.symbol === "MATIC" ? "POL" : asset.symbol;
+      balances[symbol] = (balances[symbol] ?? 0) + (Number(asset.balance) || 0);
+    }
+    return balances;
+  }, [walletData?.assets]);
+  const selectedWallet = useMemo(
+    () =>
+      monitoredWallets.find((wallet) => walletMatchesAsset(wallet, selectedAsset)) ??
+      monitoredWallets.find((wallet) => addressMatchesNetwork(wallet.deposit_address ?? undefined, selectedAsset.network)),
+    [monitoredWallets, selectedAsset],
+  );
+  const selectedBalance = walletBalances[crypto] ?? 0;
 
   const estimatedCrypto = useMemo(() => {
     const prices: Record<string, number> = { BTC: 76400, ETH: 2650, SOL: 138, XRP: 0.52, POL: 0.72, ARB: 0.72, OP: 1.64, USDC: 1, USDT: 1, AVAX: 28 };
@@ -557,6 +887,32 @@ const BuyCryptoPage = () => {
   };
 
   const assetsToShow = showAllAssets ? ALL_ASSETS : FEATURED_ASSETS;
+
+  if (user) {
+    return (
+      <AuthenticatedBuyCryptoView
+        mode={mode}
+        setMode={setMode}
+        amount={amount}
+        setAmount={setAmount}
+        crypto={crypto}
+        setCrypto={setCrypto}
+        selectedAsset={selectedAsset}
+        estimatedCrypto={estimatedCrypto}
+        selectedPaymentMethod={selectedPaymentMethod}
+        setSelectedPaymentMethod={setSelectedPaymentMethod}
+        selectedWallet={selectedWallet}
+        selectedBalance={selectedBalance}
+        walletBalances={walletBalances}
+        totalBalance={walletData?.totalBalance ?? 0}
+        totalBalanceCurrency={walletData?.preferredCurrency ?? "USD"}
+        walletLoading={walletBalancesLoading || walletDataLoading}
+        isConverting={walletData?.isConverting ?? false}
+        isPending={cdpOnramp.isPending || cdpOfframp.isPending}
+        onAction={handleAction}
+      />
+    );
+  }
 
   const Widget = (
     /* ── Ramp-style trade card (logged-in + logged-out) ─────────────── */
