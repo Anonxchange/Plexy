@@ -34,7 +34,6 @@ import { useCdpOfframp } from "@/hooks/use-cdp-offramp";
 import { safeExternalRedirect, COINBASE_PAY_ORIGINS } from "@/lib/sanitize";
 import { PaymentMethodSelector } from "@/components/buy-crypto/PaymentMethodSelector";
 import { useCdpTransactions, type CdpTransaction } from "@/hooks/use-cdp-transactions";
-import { useWalletData } from "@/hooks/use-wallet-data";
 
 const QUICK_AMOUNTS = ["100", "250", "500", "1000"];
 
@@ -51,7 +50,6 @@ type SupportedAsset = {
   up: boolean;
   network: string;
   networkLabel: string;
-  walletBalance?: number;
 };
 
 const FEATURED_ASSETS: SupportedAsset[] = [
@@ -76,29 +74,7 @@ const ASSET_ALIASES: Record<string, string> = {
   POLYGON: "POL",
 };
 
-const WALLET_ASSET_NETWORKS: Record<string, { network: string; networkLabel: string }> = {
-  BTC: { network: "bitcoin", networkLabel: "Bitcoin" },
-  ETH: { network: "ethereum", networkLabel: "Ethereum" },
-  USDC: { network: "ethereum", networkLabel: "Ethereum" },
-  USDT: { network: "ethereum", networkLabel: "Ethereum" },
-  SOL: { network: "solana", networkLabel: "Solana" },
-  POL: { network: "polygon", networkLabel: "Polygon" },
-  BNB: { network: "bsc", networkLabel: "BNB Smart Chain" },
-  XRP: { network: "ripple", networkLabel: "XRP Ledger" },
-  TRX: { network: "tron", networkLabel: "Tron" },
-  ARB: { network: "arbitrum", networkLabel: "Arbitrum One" },
-  OP: { network: "optimism", networkLabel: "Optimism" },
-  AVAX: { network: "avalanche-c-chain", networkLabel: "Avalanche C-Chain" },
-  DAI: { network: "ethereum", networkLabel: "Ethereum" },
-  LINK: { network: "ethereum", networkLabel: "Ethereum" },
-  UNI: { network: "ethereum", networkLabel: "Ethereum" },
-  SHIB: { network: "ethereum", networkLabel: "Ethereum" },
-};
-
-function formatWalletAddress(address: string): string {
-  if (address.length <= 18) return address;
-  return `${address.slice(0, 8)}…${address.slice(-8)}`;
-}
+const SUPPORTED_SYMBOLS = new Set(ALL_ASSETS.map((asset) => asset.symbol));
 
 const HOW_TO_STEPS = [
   {
@@ -458,11 +434,9 @@ const BuyCryptoPage = () => {
   const [showFees, setShowFees] = useState(false);
   const [walletAddress, setWalletAddress] = useState("");
   const [selectedNetwork, setSelectedNetwork] = useState("bitcoin");
-  const [walletConnectionLoading, setWalletConnectionLoading] = useState(false);
   const [isOffline, setIsOffline] = useState(() => (
     typeof navigator !== "undefined" ? !navigator.onLine : false
   ));
-  const { data: walletData } = useWalletData();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -470,106 +444,21 @@ const BuyCryptoPage = () => {
     const requestedCrypto = params.get("crypto")?.toUpperCase();
     const cryptoParam = requestedCrypto ? (ASSET_ALIASES[requestedCrypto] ?? requestedCrypto) : undefined;
     if (modeParam === "sell" || modeParam === "buy") setMode(modeParam);
-    if (cryptoParam && availableAssets.some((asset) => asset.symbol === cryptoParam)) setCrypto(cryptoParam);
+    if (cryptoParam && SUPPORTED_SYMBOLS.has(cryptoParam)) setCrypto(cryptoParam);
     // Unsupported query values are deliberately ignored: the visible picker
     // always remains inside the edge-function support matrix.
-  }, [availableAssets]);
+  }, []);
 
   const cdpOnramp = useCdpOnramp();
   const cdpOfframp = useCdpOfframp();
   const { data: txHistory = [], isLoading: txLoading } = useCdpTransactions(user?.id);
 
-  const walletAssets = useMemo<SupportedAsset[]>(() => {
-    return (walletData?.assets ?? [])
-      .filter((asset) => asset.balance > 0)
-      .map((asset) => {
-        const symbol = ASSET_ALIASES[asset.symbol.toUpperCase()] ?? asset.symbol.toUpperCase();
-        const network = WALLET_ASSET_NETWORKS[symbol] ?? {
-          network: "ethereum",
-          networkLabel: "Ethereum",
-        };
-        const price = Number(asset.price) || 0;
-        return {
-          symbol,
-          name: asset.name,
-          price: price > 0 ? `$${price.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "$—",
-          change: `${asset.change24h >= 0 ? "+" : ""}${asset.change24h.toFixed(1)}%`,
-          up: asset.change24h >= 0,
-          network: network.network,
-          networkLabel: network.networkLabel,
-          walletBalance: asset.balance,
-        };
-      });
-  }, [walletData?.assets]);
-
-  const availableAssets = useMemo<SupportedAsset[]>(() => {
-    const assets = new Map(ALL_ASSETS.map((asset) => [asset.symbol, asset]));
-    walletAssets.forEach((asset) => {
-      const existing = assets.get(asset.symbol);
-      assets.set(asset.symbol, existing ? { ...existing, walletBalance: asset.walletBalance } : asset);
-    });
-    return Array.from(assets.values());
-  }, [walletAssets]);
-
-  const assetPickerAssets = useMemo(() => {
-    const featuredSymbols = new Set(FEATURED_ASSETS.map((asset) => asset.symbol));
-    return [
-      ...FEATURED_ASSETS,
-      ...walletAssets.filter((asset) => !featuredSymbols.has(asset.symbol)),
-    ];
-  }, [walletAssets]);
-
-  const selectedAsset = availableAssets.find((asset) => asset.symbol === crypto) ?? FEATURED_ASSETS[0];
+  const selectedAsset = ALL_ASSETS.find((asset) => asset.symbol === crypto) ?? FEATURED_ASSETS[0];
   const cryptoName = selectedAsset.name;
 
   useEffect(() => {
     setSelectedNetwork(selectedAsset.network);
   }, [selectedAsset.network]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    if (!user?.id) {
-      setWalletAddress("");
-      return;
-    }
-
-    const loadConnectedWallet = async () => {
-      setWalletConnectionLoading(true);
-      try {
-        const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
-        const wallets = await nonCustodialWalletManager.getWalletsFromStorage(user.id);
-        const networkWords: Record<string, string[]> = {
-          bitcoin: ["bitcoin", "btc"],
-          solana: ["solana", "sol"],
-          ripple: ["ripple", "xrp"],
-          tron: ["tron", "trx"],
-          polygon: ["polygon", "pol", "matic"],
-          bsc: ["bsc", "binance", "bnb"],
-          ethereum: ["ethereum", "eth"],
-          arbitrum: ["arbitrum", "arb"],
-          optimism: ["optimism", "op"],
-          "avalanche-c-chain": ["avalanche", "avax"],
-        };
-        const words = networkWords[selectedNetwork] ?? [];
-        const connectedWallet = wallets.find((wallet) => {
-          const descriptor = `${wallet.chainId ?? ""} ${wallet.walletType ?? ""}`.toLowerCase();
-          return wallet.isActive && words.some((word) => descriptor.includes(word));
-        }) ?? wallets.find((wallet) => wallet.isActive && wallet.address);
-
-        if (!cancelled) setWalletAddress(connectedWallet?.address ?? "");
-      } catch {
-        if (!cancelled) setWalletAddress("");
-      } finally {
-        if (!cancelled) setWalletConnectionLoading(false);
-      }
-    };
-
-    loadConnectedWallet();
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedNetwork, user?.id]);
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
@@ -583,8 +472,8 @@ const BuyCryptoPage = () => {
   }, []);
 
   const estimatedCrypto = useMemo(() => {
-    const selectedPrice = Number(selectedAsset.price.replace(/[$,]/g, "")) || 1;
-    const result = (parseFloat(amount) || 0) / selectedPrice;
+    const prices: Record<string, number> = { BTC: 76400, ETH: 2650, SOL: 138, XRP: 0.52, POL: 0.72, ARB: 0.72, OP: 1.64, USDC: 1, USDT: 1, AVAX: 28 };
+    const result = (parseFloat(amount) || 0) / (prices[crypto] || 1);
     return result < 0.0001 ? result.toFixed(8) : result < 1 ? result.toFixed(5) : result.toFixed(4);
   }, [amount, crypto]);
 
@@ -606,7 +495,7 @@ const BuyCryptoPage = () => {
       const wallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
 
       const canonicalCrypto = ASSET_ALIASES[crypto] ?? crypto;
-      const asset = availableAssets.find((candidate) => candidate.symbol === canonicalCrypto);
+      const asset = ALL_ASSETS.find((candidate) => candidate.symbol === canonicalCrypto);
       if (!asset) {
         toast({
           title: "Asset not supported",
@@ -692,7 +581,7 @@ const BuyCryptoPage = () => {
     } catch (e: any) { toast({ title: "Error", description: e.message, variant: "destructive" }); }
   };
 
-  const assetsToShow = showAllAssets ? availableAssets : FEATURED_ASSETS;
+  const assetsToShow = showAllAssets ? ALL_ASSETS : FEATURED_ASSETS;
 
   const Widget = (
     /* ── Ramp-style trade card (logged-in + logged-out) ─────────────── */
@@ -956,7 +845,7 @@ const BuyCryptoPage = () => {
 
         {showAllAssets && (
           <div className="grid grid-cols-3 gap-2 rounded-2xl border border-border bg-card p-2">
-            {assetPickerAssets.map((asset) => (
+            {FEATURED_ASSETS.map((asset) => (
               <button
                 key={asset.symbol}
                 type="button"
@@ -965,12 +854,7 @@ const BuyCryptoPage = () => {
                   crypto === asset.symbol ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
-                <span>{asset.symbol}</span>
-                {asset.walletBalance !== undefined && (
-                  <span className="mt-0.5 block text-[10px] font-medium opacity-70">
-                    {asset.walletBalance.toLocaleString(undefined, { maximumFractionDigits: 6 })}
-                  </span>
-                )}
+                {asset.symbol}
               </button>
             ))}
           </div>
@@ -992,41 +876,21 @@ const BuyCryptoPage = () => {
         </div>
 
         <div className="space-y-2 pt-1">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-foreground">Connected wallet</span>
-            <span className={`text-xs font-semibold ${walletAddress ? "text-primary" : "text-muted-foreground"}`}>
-              {walletConnectionLoading ? "Checking…" : walletAddress ? "Connected" : "Not connected"}
-            </span>
-          </div>
-          <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3.5">
-            {walletAddress ? (
-              <>
-                <span
-                  className="min-w-0 truncate font-mono text-sm text-foreground"
-                  title={walletAddress}
-                >
-                  {formatWalletAddress(walletAddress)}
-                </span>
-                <Link
-                  href="/wallet"
-                  className="flex-shrink-0 text-xs font-semibold text-primary transition-colors hover:text-foreground"
-                >
-                  Manage wallet
-                </Link>
-              </>
-            ) : (
-              <Link
-                href="/wallet"
-                className="text-sm font-semibold text-primary transition-colors hover:text-foreground"
-              >
-                Connect a wallet to continue
-              </Link>
-            )}
-          </div>
+          <label htmlFor="buy-crypto-wallet" className="text-sm font-semibold text-foreground">Your wallet address</label>
+          <input
+            id="buy-crypto-wallet"
+            value={walletAddress}
+            onChange={(event) => setWalletAddress(event.target.value.trim())}
+            placeholder={`Enter your ${selectedAsset.networkLabel} wallet address`}
+            className={`w-full rounded-2xl border border-border bg-card px-4 py-3.5 text-sm text-foreground outline-none ring-1 transition placeholder:text-muted-foreground/60 ${
+              walletAddress && !walletIsValid ? "ring-destructive/70" : "ring-transparent focus:ring-primary/50"
+            }`}
+            autoComplete="off"
+          />
           {walletAddress && !walletIsValid ? (
-            <p className="flex items-center gap-1.5 text-xs text-destructive"><XCircle className="h-3.5 w-3.5" /> The connected wallet does not match {selectedAsset.networkLabel}.</p>
+            <p className="flex items-center gap-1.5 text-xs text-destructive"><XCircle className="h-3.5 w-3.5" /> Check the wallet format for {selectedAsset.networkLabel}.</p>
           ) : (
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Crypto is delivered directly to this connected address.</p>
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Crypto is delivered directly to this address.</p>
           )}
         </div>
 
