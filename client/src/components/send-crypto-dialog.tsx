@@ -405,12 +405,18 @@ export function SendCryptoDialog({
 
       // Never spend mempool outputs. The gateway returns a dedicated
       // spendableUtxos list, and the fallback still requires one confirmation.
+      const isConfirmedUtxo = (u: {
+        confirmed?: boolean;
+        confirmations?: number;
+        blockHeight?: number | null;
+      }) => u.confirmed === true || (u.confirmations ?? 0) >= 1 || (u.blockHeight ?? null) !== null;
+
+      const spendableList = Array.isArray(utxoResult.spendableUtxos)
+        ? utxoResult.spendableUtxos
+        : [];
+
       const confirmedUtxos = (
-        Array.isArray(utxoResult.spendableUtxos)
-          ? utxoResult.spendableUtxos
-          : utxoResult.utxos.filter(
-              (u) => u.confirmed && (u.confirmations ?? 0) >= 1,
-            )
+        spendableList.length > 0 ? spendableList : (utxoResult.utxos ?? []).filter(isConfirmedUtxo)
       ).map((u) => ({
         txid: u.txid,
         vout: u.vout,
