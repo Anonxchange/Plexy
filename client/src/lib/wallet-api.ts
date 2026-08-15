@@ -7,8 +7,16 @@ export interface Wallet {
   id: string;
   user_id: string;
   crypto_symbol: string;
+  /** Total on-chain value, including inbound value below the confirmation minimum. */
   balance: number;
+  /** Inbound value that has not reached this chain's confirmation minimum. */
+  unconfirmed_balance: number;
+  /** Structurally unspendable value (e.g. the XRP base reserve). */
   locked_balance: number;
+  /** balance - unconfirmed_balance - locked_balance. Spend flows must use this. */
+  available_balance: number;
+  /** True when no live chain read backed this row (never spendable). */
+  is_stale: boolean;
   deposit_address: string | null;
   created_at: string;
   updated_at: string;
@@ -30,6 +38,8 @@ export interface WalletTransaction {
   reference_id: string | null;
   notes: string | null;
   confirmations: number | null;
+  /** Confirmations required before this transaction is treated as final. */
+  required_confirmations: number | null;
   created_at: string;
   completed_at: string | null;
 }
@@ -68,22 +78,171 @@ export function toMonitorChainKey(cryptoSymbol: string): string {
   return 'Ethereum';
 }
 
+/* =========================================
+   CONFIRMATION POLICY
 
+   Mirrors the deposit scanner's MIN_CONFIRMATIONS.
+   A transaction is only "completed" once it has at
+   least this many confirmations on its chain — not
+   at the first confirmation.
+========================================= */
+
+export const MIN_CONFIRMATIONS: Record<string, number> = {
+  BITCOIN: 2,
+  BTC: 2,
+  ETHEREUM: 12,
+  ETH: 12,
+  BSC: 15,
+  POLYGON: 128,
+  ARBITRUM: 20,
+  OPTIMISM: 20,
+  BASE: 20,
+  AVALANCHE: 20,
+  SOLANA: 32,
+  SOL: 32,
+  TRON: 19,
+  TRX: 19,
+  XRP: 1,
+};
+
+export function minConfirmationsForChain(chain?: string | null): number {
+  return MIN_CONFIRMATIONS[String(chain ?? '').toUpperCase().trim()] ?? 12;
+}
+
+/**
+ * XRP base reserve fallback (XRP). The live network value is an
+ * amendment-controlled parameter — the provider value always wins; this is
+ * only used when the provider omits it.
+ */
+const XRP_FALLBACK_RESERVE = 1;
+
+function toNumber(value: unknown, fallback = 0): number {
+  const n = typeof value === 'number' ? value : parseFloat(String(value ?? ''));
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function readUnconfirmed(scope: any): number {
+  const value =
+    scope?.unconfirmed ??
+    scope?.unconfirmedBalance ??
+    scope?.unconfirmed_balance ??
+    scope?.pending ??
+    scope?.pendingBalance ??
+    scope?.incomingPending;
+  const n = toNumber(value, 0);
+  return n > 0 ? n : 0;
+}
+
+/**
+ * Live balance read for one (address, chain) pair.
+ * Returns null when the chain could not be read — callers must treat that as
+ * "unknown", never as zero and never as "the cached number is fine to spend".
+ */
+async function readAddressBalances(
+  client: any,
+  address: string,
+  chain: string,
+): Promise<any | null> {
+  try {
+    const res = await client.functions.invoke('monitor-deposits', {
+      body: {
+        address,
+        chain,
+        mode: 'balances',
+        minConfirmations: minConfirmationsForChain(chain),
+      },
+    });
+    if (res.error || !res.data?.success || !res.data?.native) return null;
+    return res.data;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Wallets for a user.
+ *
+ * Addresses come from the local non-custodial wallet store, but BALANCES ARE
+ * NEVER read from local storage: that value is user-writable and cannot be
+ * trusted for anything financial. Every balance below is read live from the
+ * chain, split into confirmed / unconfirmed / locked, and any chain that could
+ * not be read is returned as is_stale with available_balance 0.
+ */
 export async function getUserWallets(userId: string): Promise<Wallet[]> {
   try {
     const localWallets = await (nonCustodialWalletManager as any).getWalletsFromStorage(userId);
     if (import.meta.env.DEV) console.log(`[getUserWallets] Found ${localWallets.length} local wallets`);
-    return localWallets.map((w: any) => ({
-      id: w.id,
-      user_id: userId,
-      crypto_symbol: mapChainIdToSymbol(w.chainId),
-      balance: typeof w.balance === 'number' ? w.balance : (typeof w.balance === 'string' ? parseFloat(w.balance) || 0 : 0),
-      locked_balance: 0,
-      deposit_address: w.address,
-      created_at: w.createdAt,
-      updated_at: w.createdAt,
-      isNonCustodial: true
-    }));
+
+    const client = await getSupabase();
+    const now = new Date().toISOString();
+
+    // Deduplicate the chain reads: several wallet rows can share one address.
+    const balanceCache = new Map<string, Promise<any | null>>();
+    const readCached = (address: string, chain: string) => {
+      const key = `${address}::${chain}`;
+      if (!balanceCache.has(key)) balanceCache.set(key, readAddressBalances(client, address, chain));
+      return balanceCache.get(key)!;
+    };
+
+    return await Promise.all(
+      localWallets.map(async (w: any): Promise<Wallet> => {
+        const symbol = mapChainIdToSymbol(w.chainId);
+        const address = typeof w.address === 'string' ? w.address.trim() : '';
+        const chain = toMonitorChainKey(symbol);
+
+        const base: Wallet = {
+          id: w.id,
+          user_id: userId,
+          crypto_symbol: symbol,
+          balance: 0,
+          unconfirmed_balance: 0,
+          locked_balance: 0,
+          available_balance: 0,
+          is_stale: true,
+          deposit_address: address || null,
+          created_at: w.createdAt,
+          updated_at: w.createdAt,
+          isNonCustodial: true,
+        };
+
+        if (!address) return base;
+
+        const data = await readCached(address, chain);
+        if (!data) return base;
+
+        const isNative = String(data?.native?.symbol ?? '').toUpperCase() === symbol.toUpperCase();
+        const token = Array.isArray(data?.tokens)
+          ? data.tokens.find((t: any) => String(t?.symbol ?? '').toUpperCase() === symbol.toUpperCase())
+          : undefined;
+        const scope = isNative ? data.native : token;
+
+        // A successful read with no matching asset means the balance is 0.
+        const total = scope ? toNumber(scope.balance) : 0;
+        const unconfirmed = Math.min(
+          scope ? (readUnconfirmed(scope) || (isNative ? readUnconfirmed(data) : 0)) : 0,
+          total,
+        );
+
+        let locked = 0;
+        if (chain === 'XRP' && isNative) {
+          locked = data?.accountFunded === false
+            ? 0
+            : Math.min(toNumber(data?.reserve, XRP_FALLBACK_RESERVE), total);
+        }
+
+        const available = Math.max(0, total - unconfirmed - locked);
+
+        return {
+          ...base,
+          balance: total,
+          unconfirmed_balance: unconfirmed,
+          locked_balance: locked,
+          available_balance: available,
+          is_stale: false,
+          updated_at: now,
+        };
+      }),
+    );
   } catch (e) {
     console.error(`[getUserWallets] Error fetching wallets:`, e);
     return [];
@@ -95,9 +254,29 @@ export async function getWalletBalance(userId: string, cryptoSymbol: string): Pr
   return wallets.find(w => w.crypto_symbol === cryptoSymbol) || null;
 }
 
+/**
+ * Spendable amount for a symbol. 0 when the chain read failed (is_stale) or
+ * when everything held is unconfirmed / reserved. Never use `wallet.balance`
+ * to authorise a send, swap or escrow lock.
+ */
+export async function getSpendableBalance(userId: string, cryptoSymbol: string): Promise<number> {
+  const wallet = await getWalletBalance(userId, cryptoSymbol);
+  if (!wallet || wallet.is_stale) return 0;
+  return wallet.available_balance;
+}
+
 function readString(raw: any, ...keys: string[]): string | null {
   for (const key of keys) {
     const value = raw?.[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+function readIndex(raw: any, ...keys: string[]): string | null {
+  for (const key of keys) {
+    const value = raw?.[key];
+    if (typeof value === "number" && Number.isFinite(value)) return String(value);
     if (typeof value === "string" && value.trim()) return value.trim();
   }
   return null;
@@ -118,96 +297,86 @@ export function getAssetDecimals(symbol?: string | null): number {
 }
 
 /**
- * Largest plausible *human* amount, keyed by the asset's decimals.
- * An integer at or above this is almost certainly stored in base units
- * (satoshis, drops, sun, lamports, wei).
- */
-const HUMAN_MAX_BY_DECIMALS: Record<number, number> = {
-  6: 1_000_000_000,
-  8: 1_000,
-  9: 1_000_000,
-  18: 1_000_000_000,
-};
-
-/**
- * Converts a stored/legacy wallet amount into its human display value.
- * Fractional values pass through untouched; integers that look like base
- * units are divided by 10^decimals for that asset. Nothing is hardcoded
- * per transaction — this is pure unit inference and applies to every coin,
- * not just BTC.
+ * Display value for an amount that is ALREADY expressed in display units.
+ *
+ * The previous implementation guessed whether an integer was base units by
+ * comparing it against a per-decimals threshold. That guess is unsound in both
+ * directions: `5` on BTC is 5 satoshis or 5 BTC depending on the source, and a
+ * legitimate round amount got divided by 1e8. Unit conversion now happens only
+ * where an explicit base-unit field and an explicit exponent are available
+ * (see `fromBaseUnits`) — nothing is inferred from magnitude.
  */
 export function normalizeWalletDisplayAmount(
   amount: number | string | null | undefined,
-  symbol?: string | null,
+  _symbol?: string | null,
 ): number {
   const raw = typeof amount === "string" ? Number(amount) : amount;
-  if (raw == null || !Number.isFinite(raw) || raw === 0) return 0;
-
-  const sign = raw < 0 ? -1 : 1;
-  const value = Math.abs(raw);
-  if (!Number.isInteger(value)) return sign * value;
-
-  const decimals = getAssetDecimals(symbol);
-  const threshold = HUMAN_MAX_BY_DECIMALS[decimals] ?? 1_000_000;
-  if (value >= threshold) return sign * (value / Math.pow(10, decimals));
-
-  return sign * value;
+  if (raw == null || !Number.isFinite(raw)) return 0;
+  return raw;
 }
 
+/** Exact base-unit -> display conversion with an explicit exponent. */
+function fromBaseUnits(rawValue: unknown, decimals: number): number | null {
+  const rawString = String(rawValue ?? "").trim();
+  if (!rawString) return null;
+  let units: bigint;
+  try {
+    if (/^0x[0-9a-fA-F]+$/.test(rawString)) units = BigInt(rawString);
+    else if (/^[+-]?\d+$/.test(rawString)) units = BigInt(rawString);
+    else return null;
+  } catch {
+    return null;
+  }
+  const negative = units < 0n;
+  const abs = negative ? -units : units;
+  const divisor = 10n ** BigInt(decimals);
+  const whole = abs / divisor;
+  const fraction = abs % divisor;
+  const value = Number(whole) + Number(fraction) / Number(divisor);
+  if (!Number.isFinite(value)) return null;
+  return negative ? -value : value;
+}
+
+/**
+ * Amount in display units.
+ *
+ * Priority:
+ *   1. explicit base units (`amountRaw` / `valueRaw` / `tokenAmount.amount`)
+ *      scaled by an explicit exponent (payload decimals, else the asset table);
+ *   2. an explicit display value (`amount`, `uiAmountString`, ...) used as-is.
+ * No magnitude heuristics — an ambiguous payload yields the display value
+ * unchanged rather than a silently rescaled one.
+ */
 function readAmount(raw: any, symbol?: string | null): number {
   const value = raw?.amount ?? raw?.tokenAmount ?? raw?.value_decimal ?? raw?.value;
   const candidate = typeof value === "object"
     ? value?.uiAmountString ?? value?.uiAmount ?? value?.amount ?? value?.value
     : value;
-  const explicitAmount = typeof candidate === "string" && candidate.startsWith("0x")
-    ? parseInt(candidate, 16)
+  const explicitAmount = typeof candidate === "string" && candidate.trim().startsWith("0x")
+    ? Number(BigInt(candidate.trim()))
     : Number(candidate);
 
-  // The deposit monitor returns both:
-  //   amount    — display units, e.g. "0.00001" BTC
-  //   amountRaw — smallest units, e.g. "1000" satoshis
-  //
-  // Some deployed monitor versions put the raw value in `amount` while
-  // retaining `amountRaw`. Prefer the authoritative raw value when the two
-  // disagree so the activity sheet cannot show base units as whole coins.
   const rawValue = raw?.amountRaw
     ?? raw?.valueRaw
     ?? (typeof raw?.tokenAmount === "object" ? raw.tokenAmount?.amount : undefined);
 
-  // Decimals from the payload when present, otherwise the per-asset fallback.
   const payloadDecimals = Number(
     raw?.decimals ?? (typeof raw?.tokenAmount === "object" ? raw.tokenAmount?.decimals : undefined),
   );
   const assetDecimals = getAssetDecimals(symbol);
-  // Only trust payload decimals when they are plausible. Some monitor builds
-  // send `decimals: 0` alongside base units, which would leave 1000 satoshis
-  // rendered as "1,000 BTC".
+  // A base-unit payload with `decimals: 0` is a known monitor bug for 8/6/18
+  // decimal assets; fall back to the asset table rather than rendering
+  // satoshis as whole coins.
   const decimals = Number.isInteger(payloadDecimals) && payloadDecimals > 0 && payloadDecimals <= 36
     ? payloadDecimals
     : assetDecimals;
 
   if (rawValue != null) {
-    try {
-      const rawString = String(rawValue).trim();
-      const rawUnits = rawString.startsWith("0x")
-        ? BigInt(rawString)
-        : /^[+-]?\d+$/.test(rawString) ? BigInt(rawString) : null;
-      if (rawUnits !== null) {
-        const scaledAmount = Number(rawUnits) / Math.pow(10, decimals);
-        // Safety net: if the payload decimals were wrong, the result is still
-        // an integer in base units. Re-run unit inference for the asset.
-        if (Number.isFinite(scaledAmount)) return normalizeWalletDisplayAmount(scaledAmount, symbol);
-      }
-    } catch {
-      // Fall through to the display-unit value for malformed upstream data.
-    }
+    const scaled = fromBaseUnits(rawValue, decimals);
+    if (scaled !== null) return scaled;
   }
 
-  // No raw field: the monitor may still be handing us base units in `amount`.
-  return normalizeWalletDisplayAmount(
-    Number.isFinite(explicitAmount) ? explicitAmount : 0,
-    symbol,
-  );
+  return Number.isFinite(explicitAmount) ? explicitAmount : 0;
 }
 
 function readDate(raw: any): string {
@@ -316,21 +485,16 @@ function normalizeOnChainTransaction(
   const sameAddress = (left: string | null, right: string) =>
     !!left && left.toLowerCase() === right.toLowerCase();
   const isDeposit = sameAddress(to, target.address) && !sameAddress(from, target.address);
-  const type = isDeposit
-    ? "deposit"
-    : sameAddress(from, target.address)
-      ? "withdrawal"
-      : raw?.type === "swap" ? "swap" : "deposit";
+  const isWithdrawal = sameAddress(from, target.address) && !sameAddress(to, target.address);
 
-  const rawStatus = String(raw?.status ?? "").toLowerCase();
-  const confirmations = Number(raw?.confirmations);
-  const hasConfirmation = Number.isFinite(confirmations) && confirmations >= 1;
-  const status: WalletTransaction["status"] =
-    rawStatus === "failed" || raw?.success === false
-      ? "failed"
-      : rawStatus === "pending" || raw?.confirmed === false || !hasConfirmation
-        ? "pending"
-        : "completed";
+  let type: WalletTransaction["type"];
+  if (isDeposit) type = "deposit";
+  else if (isWithdrawal) type = "withdrawal";
+  else if (raw?.type === "swap") type = "swap";
+  else if (sameAddress(from, target.address) && sameAddress(to, target.address)) type = "swap"; // self-transfer
+  // Direction genuinely unknown: dropping the row is correct. Defaulting to
+  // "deposit" invented incoming money out of unparsable payloads.
+  else return null;
 
   const symbol = (
     readString(raw, "crypto_symbol", "cryptoSymbol", "symbol", "tokenSymbol", "asset") ??
@@ -342,8 +506,29 @@ function normalizeOnChainTransaction(
     )
   ).toUpperCase();
 
+  const rawStatus = String(raw?.status ?? "").toLowerCase();
+  const confirmations = Number(raw?.confirmations);
+  const confirmationCount = Number.isFinite(confirmations) ? confirmations : 0;
+  const requiredConfirmations = minConfirmationsForChain(target.chain);
+  // A transaction is final only at the chain's confirmation minimum — one
+  // confirmation is not enough on any chain in this table.
+  const isFinal = confirmationCount >= requiredConfirmations;
+  const status: WalletTransaction["status"] =
+    rawStatus === "failed" || raw?.success === false
+      ? "failed"
+      : rawStatus === "pending" || raw?.confirmed === false || !isFinal
+        ? "pending"
+        : "completed";
+
+  // A single transaction can contain several transfers of the same asset to
+  // the same address (batched sends, multi-output BTC). Without the transfer
+  // index they collapse into one row and deposits silently vanish.
+  const transferIndex =
+    readIndex(raw, "logIndex", "log_index", "vout", "outputIndex", "output_index", "index", "position", "traceId", "uniqueId") ??
+    "0";
+
   return {
-    id: `onchain:${target.chain}:${hash}:${symbol}`,
+    id: `onchain:${target.chain}:${hash}:${symbol}:${transferIndex}`,
     user_id: userId,
     wallet_id: `onchain:${target.chain}:${target.address}`,
     type,
@@ -356,7 +541,8 @@ function normalizeOnChainTransaction(
     to_address: to,
     reference_id: hash,
     notes: "On-chain transaction",
-    confirmations: Number.isFinite(confirmations) ? confirmations : 0,
+    confirmations: confirmationCount,
+    required_confirmations: requiredConfirmations,
     created_at: readDate(raw),
     completed_at: status === "completed" ? readDate(raw) : null,
   };
@@ -491,6 +677,7 @@ function readLocalWithdrawals(userId: string, limit: number): WalletTransaction[
       wallet_id: `withdrawal:${w.txHash}`,
       type: "withdrawal" as const,
       crypto_symbol: w.cryptoSymbol,
+      // Already stored in display units at broadcast time — no rescaling.
       amount: normalizeWalletDisplayAmount(w.amount, w.cryptoSymbol),
       fee: 0,
       status: "pending" as const,
@@ -500,6 +687,7 @@ function readLocalWithdrawals(userId: string, limit: number): WalletTransaction[
       reference_id: w.txHash,
       notes: "Broadcast from non-custodial wallet",
       confirmations: null,
+      required_confirmations: null,
       created_at: w.createdAt,
       completed_at: null,
     }));
@@ -507,9 +695,9 @@ function readLocalWithdrawals(userId: string, limit: number): WalletTransaction[
 
 /**
  * Read wallet activity from the same public-address monitor used for balances.
- * Deposits come from the chain scanner. Withdrawals are read from the user's
- * outbound activity index because the deposit scanner only searches transfers
- * into the wallet.
+ * Deposits come from the chain scanner. Withdrawals come from the chain too
+ * (outbound transfers the monitor reports) and are merged with the local
+ * broadcast index, which only covers the window before the chain indexes them.
  */
 export async function getOnChainTransactions(userId: string, limit: number = 200): Promise<WalletTransaction[]> {
   // Use the same awaited client initialization as balance reads. The lazy
@@ -555,10 +743,18 @@ export async function getOnChainTransactions(userId: string, limit: number = 200
   const unique = new Map<string, WalletTransaction>();
   results.flat().forEach((tx) => unique.set(tx.id, tx));
 
-  // Outbound transfers are not discoverable through monitor-deposits. Read
-  // the user's own rows to locate their tx hashes, then verify pending hashes
-  // through the dedicated withdrawal monitor.
+  // Outbound transfers may not be discoverable through monitor-deposits. Read
+  // the user's own broadcast index to locate their tx hashes, then verify
+  // pending hashes through the dedicated withdrawal monitor. A local entry is
+  // dropped once the chain has already produced a row for the same hash, so a
+  // confirmed withdrawal is never shown twice as "pending".
+  const chainHashes = new Set(
+    Array.from(unique.values())
+      .map((tx) => (tx.tx_hash ?? "").toLowerCase())
+      .filter(Boolean),
+  );
   for (const tx of readLocalWithdrawals(userId, limit)) {
+    if (tx.tx_hash && chainHashes.has(tx.tx_hash.toLowerCase())) continue;
     unique.set(`withdrawal:${tx.id}`, tx);
   }
 
@@ -590,6 +786,19 @@ export async function getOnChainTransactions(userId: string, limit: number = 200
     .slice(0, limit);
 }
 
+/**
+ * Total outbound value that has been broadcast but is not yet confirmed.
+ * The chain's balance endpoint still counts these coins on account-model
+ * chains until the tx is mined, so subtract this from the spendable amount
+ * before allowing another send.
+ */
+export function getPendingOutbound(userId: string, cryptoSymbol: string): number {
+  const symbol = cryptoSymbol.toUpperCase();
+  return readLocalWithdrawalCache()
+    .filter((w) => w.userId === userId && w.cryptoSymbol.toUpperCase() === symbol)
+    .reduce((sum, w) => sum + (Number.isFinite(Number(w.amount)) ? Number(w.amount) : 0), 0);
+}
+
 export async function sendCrypto(
   userId: string,
   cryptoSymbol: string,
@@ -598,31 +807,31 @@ export async function sendCrypto(
   notes?: string
 ): Promise<WalletTransaction> {
   // Custodial withdrawal replaced with local placeholder or signing logic
-  
+
   throw new Error("Withdrawal must be initiated via wallet signing");
 }
 
 export async function getDepositAddress(userId: string, cryptoSymbol: string): Promise<string> {
   const wallets = await getUserWallets(userId);
-  
+
   let wallet = wallets.find(w => w.crypto_symbol === cryptoSymbol);
-  
+
   if (wallet?.deposit_address) {
     return wallet.deposit_address;
   }
-  
+
   if ((cryptoSymbol === 'USDT' || cryptoSymbol === 'USDC') && !cryptoSymbol.includes('-')) {
     wallet = wallets.find(w => w.crypto_symbol.startsWith(`${cryptoSymbol}-`));
     if (wallet?.deposit_address) {
       return wallet.deposit_address;
     }
   }
-  
+
   const anyWallet = wallets.find(w => w.isNonCustodial);
   if (anyWallet?.deposit_address) {
     return anyWallet.deposit_address;
   }
-  
+
   throw new Error('No deposit address found for this wallet.');
 }
 
@@ -778,6 +987,7 @@ export async function monitorWithdrawals(userId: string): Promise<{
       transactionId: transaction.id,
       status: transaction.status,
       confirmations: transaction.confirmations,
+      requiredConfirmations: transaction.required_confirmations,
       txHash: transaction.tx_hash,
     }));
 
@@ -833,9 +1043,9 @@ export async function sendPexlyPayment(
 
     if (error) {
       console.error('❌ Edge function error:', error);
-      return { 
-        success: false, 
-        error: error.message || 'Failed to process transfer' 
+      return {
+        success: false,
+        error: error.message || 'Failed to process transfer'
       };
     }
 
