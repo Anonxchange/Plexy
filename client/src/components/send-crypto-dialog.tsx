@@ -397,11 +397,57 @@ export function SendCryptoDialog({
 
     if (selectedNetwork.includes("Bitcoin")) {
       const [feesResult, utxoResult] = await Promise.all([btcFees(), btcUtxos(fromAddress)]);
+      const feeRate = feesResult.fast || feesResult.normal || 10;
+      const amountSats = Math.floor(cryptoAmountNum * 1e8);
+      if (!Number.isSafeInteger(amountSats) || amountSats <= 0) {
+        throw new Error("Enter a valid Bitcoin amount.");
+      }
+
+      // Never spend mempool outputs. The gateway returns a dedicated
+      // spendableUtxos list, and the fallback still requires one confirmation.
+      const confirmedUtxos = (
+        Array.isArray(utxoResult.spendableUtxos)
+          ? utxoResult.spendableUtxos
+          : utxoResult.utxos.filter(
+              (u) => u.confirmed && (u.confirmations ?? 0) >= 1,
+            )
+      ).map((u) => ({
+        txid: u.txid,
+        vout: u.vout,
+        value: Number(u.value),
+      })).filter((u) => Number.isSafeInteger(u.value) && u.value > 0);
+
+      if (confirmedUtxos.length === 0) {
+        throw new Error("No confirmed Bitcoin funds are available yet. Wait for at least one confirmation.");
+      }
+
+      // Match the conservative SegWit signing estimate used by the worker:
+      // inputs*148 + two outputs + overhead. Select the fewest large confirmed
+      // UTXOs that can cover the amount and fee.
+      const selectedUtxos: typeof confirmedUtxos = [];
+      let selectedTotal = 0;
+      for (const utxo of [...confirmedUtxos].sort((a, b) => b.value - a.value)) {
+        selectedUtxos.push(utxo);
+        selectedTotal += utxo.value;
+        const estimatedFee = Math.ceil(
+          (selectedUtxos.length * 148 + 2 * 34 + 10) * feeRate,
+        );
+        if (selectedTotal >= amountSats + estimatedFee) break;
+      }
+
+      const selectedFee = Math.ceil(
+        (selectedUtxos.length * 148 + 2 * 34 + 10) * feeRate,
+      );
+      if (selectedTotal < amountSats + selectedFee) {
+        throw new Error("Insufficient confirmed Bitcoin funds for this amount and network fee.");
+      }
+
       const btcTxData = {
         to: toAddress,
-        amount: Math.floor(cryptoAmountNum * 1e8),
-        utxos: utxoResult.utxos.map((u) => ({ txid: u.txid, vout: u.vout, value: u.value })),
-        feeRate: feesResult.fast || feesResult.normal || 10,
+        // The signing worker accepts BTC units and converts to satoshis once.
+        amount: cryptoAmountNum,
+        utxos: selectedUtxos,
+        feeRate,
         fromAddress,
       };
       const result = await signBitcoinTransactionFromVault(vault, password, btcTxData) as any;
