@@ -6,8 +6,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Gift card service fee
-export const GIFT_CARD_FEE_RATE = 0.05;   // 5%  — change this to adjust the %
-export const GIFT_CARD_FEE_FLAT = 0.99;   // $0.99 flat — change this to adjust the flat portion
+export const GIFT_CARD_FEE_RATE = 0.065; // 6.5% — change this to adjust the %
+export const GIFT_CARD_FEE_FLAT = 0;     // No flat fee
 
 // Top-up / airtime service fee
 export const TOPUP_FEE_RATE = 0.03;       // 3%
