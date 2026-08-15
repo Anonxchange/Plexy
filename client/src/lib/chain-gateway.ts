@@ -136,7 +136,24 @@ export function btcFees(): Promise<{
 /** UTXO set for a Bitcoin address */
 export function btcUtxos(address: string): Promise<{
   address: string;
-  utxos: Array<{ txid: string; vout: number; value: number; confirmed: boolean; blockHeight: number | null }>;
+  utxos: Array<{
+    txid: string;
+    vout: number;
+    value: number | string;
+    confirmed: boolean;
+    confirmations?: number;
+    spendable?: boolean;
+    blockHeight: number | null;
+  }>;
+  spendableUtxos?: Array<{
+    txid: string;
+    vout: number;
+    value: number | string;
+    confirmed: boolean;
+    confirmations?: number;
+    spendable?: boolean;
+    blockHeight: number | null;
+  }>;
   total: number;
 }> {
   return gatewayPost({ action: 'btc_utxos', address });

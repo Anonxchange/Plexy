@@ -323,10 +323,12 @@ function normalizeOnChainTransaction(
       : raw?.type === "swap" ? "swap" : "deposit";
 
   const rawStatus = String(raw?.status ?? "").toLowerCase();
+  const confirmations = Number(raw?.confirmations);
+  const hasConfirmation = Number.isFinite(confirmations) && confirmations >= 1;
   const status: WalletTransaction["status"] =
     rawStatus === "failed" || raw?.success === false
       ? "failed"
-      : rawStatus === "pending" || raw?.confirmed === false
+      : rawStatus === "pending" || raw?.confirmed === false || !hasConfirmation
         ? "pending"
         : "completed";
 
@@ -354,7 +356,7 @@ function normalizeOnChainTransaction(
     to_address: to,
     reference_id: hash,
     notes: "On-chain transaction",
-    confirmations: Number(raw?.confirmations ?? 0) || null,
+    confirmations: Number.isFinite(confirmations) ? confirmations : 0,
     created_at: readDate(raw),
     completed_at: status === "completed" ? readDate(raw) : null,
   };

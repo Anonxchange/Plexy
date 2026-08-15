@@ -1168,6 +1168,9 @@ async function handleSignBitcoinTransaction(mnemonic: string, request: any): Pro
     const feeSats    = Math.ceil(txSize * request.feeRate);
     psbt.addOutputAddress(request.to, BigInt(amountSats), btc.NETWORK);
     const change = totalInput - amountSats - feeSats;
+    if (change < 0) {
+      throw new Error("Insufficient confirmed Bitcoin funds for the amount and network fee.");
+    }
     if (change > 546) psbt.addOutputAddress(changeAddr, BigInt(change), btc.NETWORK);
     psbt.sign(child.privateKey!);
     psbt.finalize();
