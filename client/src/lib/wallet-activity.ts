@@ -90,10 +90,17 @@ function readAmount(raw: any, symbol: string): number {
     ? display?.uiAmountString ?? display?.uiAmount ?? display?.amount ?? display?.value
     : display;
 
-  if (typeof candidate === "string" && (candidate.startsWith("0x") || /^\d+$/.test(candidate))) {
-    // A hex or plain-integer string here is base units for every chain the
-    // monitor supports; a display amount always carries a decimal point.
-    if (candidate.startsWith("0x") || decimals === 0) return fromBaseUnits(candidate, decimals);
+  if (typeof candidate === "string" && (candidate.startsWith("0x") || /^-?\d+$/.test(candidate.trim()))) {
+    // Older monitor responses exposed the raw integer in `amount`/`value`
+    // without the explicit `amountRaw` field. Treat that legacy shape as base
+    // units; the current monitor always includes amountRaw when it does so.
+    return fromBaseUnits(candidate, decimals);
+  }
+
+  if (typeof candidate === "number" && Number.isSafeInteger(candidate)) {
+    // Same compatibility path for providers that serialise the raw amount as
+    // a JSON number instead of a string (for example, BTC satoshis).
+    return fromBaseUnits(candidate, decimals);
   }
 
   const asNumber = Number(candidate);
