@@ -249,6 +249,7 @@ export function GiftCardDetail() {
   const [cardValue, setCardValue] = useState("");
   useEffect(() => { localStorage.removeItem("pexly_pending_order"); }, []);
 
+  const MAX_GIFT_CARD_QUANTITY = 999;
   const [numberOfCards, setNumberOfCards] = useState("1");
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showExternalWalletDialog, setShowExternalWalletDialog] = useState(false);
@@ -610,20 +611,37 @@ export function GiftCardDetail() {
                   </label>
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => setNumberOfCards((p) => String(Math.max(1, parseInt(p) - 1)))}
+                      onClick={() => setNumberOfCards((p) => String(Math.max(1, (parseInt(p, 10) || 1) - 1)))}
                       className="h-12 w-12 flex-shrink-0 rounded-xl border border-border bg-background hover:bg-secondary transition-colors text-lg font-bold"
                     >
                       −
                     </button>
                     <input
                       type="number"
+                      min={1}
+                      max={MAX_GIFT_CARD_QUANTITY}
                       value={numberOfCards}
-                      onChange={(e) => setNumberOfCards(e.target.value)}
+                      onChange={(e) => {
+                        const nextQuantity = e.target.value;
+                        if (nextQuantity === "") {
+                          setNumberOfCards("");
+                          return;
+                        }
+                        setNumberOfCards(String(Math.min(
+                          MAX_GIFT_CARD_QUANTITY,
+                          Math.max(1, parseInt(nextQuantity, 10) || 1),
+                        )));
+                      }}
                       className="flex-1 h-12 text-center text-base font-semibold bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30"
                     />
                     <button
-                      onClick={() => setNumberOfCards((p) => String(parseInt(p) + 1))}
-                      className="h-12 w-12 flex-shrink-0 rounded-xl border border-border bg-background hover:bg-secondary transition-colors text-lg font-bold"
+                      onClick={() => setNumberOfCards((p) => String(Math.min(
+                        MAX_GIFT_CARD_QUANTITY,
+                        (parseInt(p, 10) || 1) + 1,
+                      )))}
+                      disabled={parseInt(numberOfCards, 10) >= MAX_GIFT_CARD_QUANTITY}
+                      aria-label={`Increase quantity, maximum ${MAX_GIFT_CARD_QUANTITY}`}
+                      className="h-12 w-12 flex-shrink-0 rounded-xl border border-border bg-background hover:bg-secondary transition-colors text-lg font-bold disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       +
                     </button>
