@@ -235,6 +235,7 @@ function normalizeOnChainTransaction(
     reference_id: hash,
     notes: direction === "unknown" ? "On-chain transfer" : "On-chain transaction",
     confirmations,
+    required_confirmations: required,
     created_at: readDate(raw),
     completed_at: status === "completed" ? readDate(raw) : null,
   };
@@ -305,6 +306,7 @@ function readLocalWithdrawals(userId: string, limit: number): WalletTransaction[
       reference_id: w.txHash,
       notes: "Broadcast from this device, waiting for the chain",
       confirmations: 0,
+      required_confirmations: null,
       created_at: w.createdAt,
       completed_at: null,
     }));
