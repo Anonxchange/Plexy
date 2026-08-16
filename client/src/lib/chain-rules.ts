@@ -33,6 +33,16 @@ export const MIN_CONFIRMATIONS: Record<string, number> = {
   Tron: 19,
   TRX: 19,
   XRP: 1,
+  Avalanche: 20,
+  AVALANCHE: 20,
+  AVAX: 20,
+  // Uppercase aliases: callers pass either the monitor chain key ("Bitcoin")
+  // or an already-uppercased one ("BITCOIN"), and a miss here silently fell
+  // through to DEFAULT_MIN_CONFIRMATIONS.
+  BITCOIN: 1,
+  ETHEREUM: 12,
+  SOLANA: 32,
+  TRON: 19,
 };
 
 export const DEFAULT_MIN_CONFIRMATIONS = 6;
