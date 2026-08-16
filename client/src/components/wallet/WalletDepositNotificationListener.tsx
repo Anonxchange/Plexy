@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useWalletActivity } from "@/hooks/use-wallet-activity";
 import { useAuth } from "@/lib/auth-context";
 import { ToastAction } from "@/components/ui/toast";
-import { normalizeWalletDisplayAmount } from "@/lib/wallet-api";
+import { formatCryptoAmount } from "@/lib/wallet-api";
 
 const SEEN_KEY_PREFIX = "pexly_seen_wallet_deposits_v1";
 const MAX_SEEN_IDS = 200;
@@ -39,12 +39,7 @@ function saveSeenIds(userId: string, ids: Set<string>) {
 }
 
 function formatAmount(amount: number, symbol: string) {
-  const value = normalizeWalletDisplayAmount(amount, symbol);
-  if (!Number.isFinite(value)) return `— ${symbol.toUpperCase()}`;
-  const formatted = value < 0.0001
-    ? value.toExponential(4)
-    : value.toLocaleString("en-US", { maximumFractionDigits: 8, useGrouping: false });
-  return `${formatted} ${symbol.toUpperCase()}`;
+  return `${formatCryptoAmount(amount, symbol)} ${symbol.toUpperCase()}`;
 }
 
 /**
