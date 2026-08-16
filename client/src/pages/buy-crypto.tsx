@@ -81,6 +81,10 @@ const ALL_ASSETS: SupportedAsset[] = [
   { symbol: "USDT", name: "Tether",   price: "$1.00", change: "0.0%", up: true, network: "optimism", networkLabel: "Optimism" },
 ];
 
+const UNIQUE_ASSETS = ALL_ASSETS.filter(
+  (asset, index, assets) => assets.findIndex((candidate) => candidate.symbol === asset.symbol) === index,
+);
+
 const ASSET_ALIASES: Record<string, string> = {
   MATIC: "MATIC",
   POL: "MATIC",
@@ -173,7 +177,25 @@ function AssetSelectorSheet({
   onSelect: (asset: SupportedAsset) => void;
   onClose: () => void;
 }) {
+  const [networkChoiceSymbol, setNetworkChoiceSymbol] = useState<string | null>(null);
+  useEffect(() => {
+    if (!open) setNetworkChoiceSymbol(null);
+  }, [open]);
+
   if (!open) return null;
+
+  const groupedAssets = assets.reduce<Array<{ asset: SupportedAsset; networks: SupportedAsset[] }>>((groups, asset) => {
+    const existing = groups.find((group) => group.asset.symbol === asset.symbol);
+    if (existing) {
+      if (!existing.networks.some((network) => network.network === asset.network)) {
+        existing.networks.push(asset);
+      }
+    } else {
+      groups.push({ asset, networks: [asset] });
+    }
+    return groups;
+  }, []);
+  const selectedGroup = groupedAssets.find((group) => group.asset.symbol === networkChoiceSymbol);
 
   return (
     <div
@@ -190,21 +212,39 @@ function AssetSelectorSheet({
       >
         <div className="sticky top-0 flex items-center justify-between border-b border-border bg-card/95 px-5 py-4 backdrop-blur sm:px-6">
           <div>
-            <p id="asset-selector-title" className="text-base font-bold text-foreground">Select crypto</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">Choose an asset and its supported network.</p>
+            <p id="asset-selector-title" className="text-base font-bold text-foreground">
+              {selectedGroup ? `Choose ${selectedGroup.asset.symbol} network` : "Select crypto"}
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {selectedGroup ? "Select the network for this asset." : "Choose an asset. Network options appear when needed."}
+            </p>
           </div>
-          <button
-            type="button"
-            aria-label="Close crypto selector"
-            onClick={onClose}
-            className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            <XCircle className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            {selectedGroup && (
+              <button
+                type="button"
+                aria-label="Back to crypto selection"
+                onClick={() => setNetworkChoiceSymbol(null)}
+                className="rounded-full px-3 py-2 text-xs font-bold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                Back
+              </button>
+            )}
+            <button
+              type="button"
+              aria-label="Close crypto selector"
+              onClick={onClose}
+              className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <XCircle className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2 p-4 sm:grid-cols-3 sm:p-6">
-          {assets.map((asset) => {
+          {(selectedGroup ? selectedGroup.networks : groupedAssets.map((group) => group.asset)).map((asset) => {
+            const group = groupedAssets.find((item) => item.asset.symbol === asset.symbol);
+            const hasNetworkChoices = (group?.networks.length ?? 0) > 1;
             const isSelected = selectedSymbol === asset.symbol
               && (!selectedNetwork || selectedNetwork === asset.network);
 
@@ -212,7 +252,13 @@ function AssetSelectorSheet({
               <button
                 key={`${asset.symbol}-${asset.network}`}
                 type="button"
-                onClick={() => onSelect(asset)}
+                onClick={() => {
+                  if (!selectedGroup && hasNetworkChoices) {
+                    setNetworkChoiceSymbol(asset.symbol);
+                  } else {
+                    onSelect(asset);
+                  }
+                }}
                 className={`rounded-2xl border p-3 text-left transition-all ${
                   isSelected
                     ? "border-primary/70 bg-primary/10 shadow-[0_0_0_1px_hsl(var(--primary)/0.14)]"
@@ -223,7 +269,9 @@ function AssetSelectorSheet({
                   <CoinIcon symbol={asset.symbol} className="h-8 w-8 shrink-0" />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-bold text-foreground">{asset.name} <span className="text-muted-foreground">({asset.symbol})</span></p>
-                    <p className="truncate text-[11px] text-muted-foreground">{asset.networkLabel}</p>
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      {selectedGroup ? asset.networkLabel : hasNetworkChoices ? `${group?.networks.length} networks` : asset.networkLabel}
+                    </p>
                   </div>
                 </div>
               </button>
@@ -732,7 +780,7 @@ const BuyCryptoPage = () => {
     } catch (e: any) { toast({ title: "Error", description: e.message, variant: "destructive" }); }
   };
 
-  const assetsToShow = showAllAssets ? ALL_ASSETS : FEATURED_ASSETS;
+  const assetsToShow = showAllAssets ? UNIQUE_ASSETS : FEATURED_ASSETS;
 
   const Widget = (
     /* ── Ramp-style trade card (logged-in + logged-out) ─────────────── */
@@ -946,15 +994,6 @@ const BuyCryptoPage = () => {
             </button>
           ))}
         </div>
-      </div>
-
-      <div className={`mx-4 mb-4 flex items-center gap-2 rounded-2xl border px-3.5 py-3 text-xs ${
-        isOffline
-          ? "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-200"
-          : "border-primary/25 bg-primary/10 text-foreground"
-      }`}>
-        <span className={`h-2 w-2 rounded-full ${isOffline ? "bg-amber-500" : "bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.65)]"}`} />
-        <span>{isOffline ? "Offline — your details are kept locally" : "Secure quote connection active"}</span>
       </div>
 
       <div className="space-y-3 px-4">
@@ -1176,7 +1215,7 @@ const BuyCryptoPage = () => {
         /* ── LOGGED IN: widget-only view (no hero) ── */
         <section className="relative overflow-hidden bg-background pt-6 pb-10 px-4 lg:px-8">
           <div className="relative mx-auto w-full max-w-2xl">
-            <div className="rounded-[2rem] border border-border bg-card p-3 shadow-xl shadow-black/5 sm:p-5">
+            <div className="rounded-2xl border border-border bg-card p-3 shadow-xl shadow-black/5 sm:p-5">
               {LoggedInWidget}
             </div>
             <div className="mt-4 flex items-center justify-center gap-2 text-xs text-muted-foreground/70">
