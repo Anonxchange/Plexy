@@ -41,8 +41,8 @@ const QUICK_AMOUNTS = ["100", "250", "500", "1000"];
 
 /**
  * This list intentionally mirrors the asset/network matrix in the CDP edge
- * functions. Keep the ticker sent to CDP canonical: Polygon is POL (MATIC is
- * accepted as an input alias by the edge function, but is no longer shown).
+ * functions. Keep the ticker sent to CDP canonical: Polygon is shown as MATIC
+ * in the selector, while older wallet rows using POL are normalized below.
  */
 type SupportedAsset = {
   symbol: string;
@@ -59,21 +59,32 @@ const FEATURED_ASSETS: SupportedAsset[] = [
   { symbol: "ETH",  name: "Ethereum", price: "$2,650",  change: "+1.8%", up: true, network: "ethereum", networkLabel: "Ethereum" },
   { symbol: "USDC", name: "USD Coin", price: "$1.00",   change: "0.0%",  up: true, network: "ethereum", networkLabel: "Ethereum" },
   { symbol: "SOL",  name: "Solana",   price: "$138",    change: "+5.1%", up: true, network: "solana", networkLabel: "Solana" },
-  { symbol: "POL",  name: "Polygon",  price: "$0.72",   change: "+3.3%", up: true, network: "polygon", networkLabel: "Polygon" },
+  { symbol: "MATIC", name: "Polygon", price: "$0.72",   change: "+3.3%", up: true, network: "polygon", networkLabel: "Polygon" },
   { symbol: "XRP",  name: "XRP",      price: "$0.52",   change: "+0.9%", up: true, network: "ripple", networkLabel: "XRP Ledger" },
 ];
 
 const ALL_ASSETS: SupportedAsset[] = [
   ...FEATURED_ASSETS,
-  { symbol: "USDT", name: "Tether",    price: "$1.00", change: "0.0%",  up: true, network: "ethereum", networkLabel: "Ethereum" },
-  { symbol: "ARB",  name: "Arbitrum",  price: "$0.72",  change: "+2.1%", up: true, network: "arbitrum", networkLabel: "Arbitrum One" },
-  { symbol: "OP",   name: "Optimism",  price: "$1.64",  change: "+3.5%", up: true, network: "optimism", networkLabel: "Optimism" },
-  { symbol: "AVAX", name: "Avalanche", price: "$28",    change: "+4.2%", up: true, network: "avalanche-c-chain", networkLabel: "Avalanche C-Chain" },
+  { symbol: "ARB",  name: "Arbitrum",  price: "$0.72", change: "+2.1%", up: true, network: "arbitrum", networkLabel: "Arbitrum One" },
+  { symbol: "OP",   name: "Optimism",  price: "$1.64", change: "+3.5%", up: true, network: "optimism", networkLabel: "Optimism" },
+  { symbol: "AVAX", name: "Avalanche", price: "$28",   change: "+4.2%", up: true, network: "avalanche-c-chain", networkLabel: "Avalanche C-Chain" },
+  { symbol: "USDC", name: "USD Coin", price: "$1.00", change: "0.0%", up: true, network: "base", networkLabel: "Base" },
+  { symbol: "USDC", name: "USD Coin", price: "$1.00", change: "0.0%", up: true, network: "solana", networkLabel: "Solana" },
+  { symbol: "USDC", name: "USD Coin", price: "$1.00", change: "0.0%", up: true, network: "polygon", networkLabel: "Polygon" },
+  { symbol: "USDC", name: "USD Coin", price: "$1.00", change: "0.0%", up: true, network: "arbitrum", networkLabel: "Arbitrum One" },
+  { symbol: "USDC", name: "USD Coin", price: "$1.00", change: "0.0%", up: true, network: "optimism", networkLabel: "Optimism" },
+  { symbol: "USDT", name: "Tether",   price: "$1.00", change: "0.0%", up: true, network: "ethereum", networkLabel: "Ethereum" },
+  { symbol: "USDT", name: "Tether",   price: "$1.00", change: "0.0%", up: true, network: "base", networkLabel: "Base" },
+  { symbol: "USDT", name: "Tether",   price: "$1.00", change: "0.0%", up: true, network: "solana", networkLabel: "Solana" },
+  { symbol: "USDT", name: "Tether",   price: "$1.00", change: "0.0%", up: true, network: "polygon", networkLabel: "Polygon" },
+  { symbol: "USDT", name: "Tether",   price: "$1.00", change: "0.0%", up: true, network: "arbitrum", networkLabel: "Arbitrum One" },
+  { symbol: "USDT", name: "Tether",   price: "$1.00", change: "0.0%", up: true, network: "optimism", networkLabel: "Optimism" },
 ];
 
 const ASSET_ALIASES: Record<string, string> = {
-  MATIC: "POL",
-  POLYGON: "POL",
+  MATIC: "MATIC",
+  POL: "MATIC",
+  POLYGON: "MATIC",
 };
 
 const SUPPORTED_SYMBOLS = new Set(ALL_ASSETS.map((asset) => asset.symbol));
@@ -88,6 +99,7 @@ const ONRAMP_NETWORK_BY_CHAIN: Record<string, string> = {
   BTC: "bitcoin",
   ETH: "ethereum",
   SOL: "solana",
+  BASE: "base",
   POLYGON: "polygon",
   XRP: "ripple",
   ARBITRUM: "arbitrum",
@@ -144,6 +156,83 @@ function getUserBuyAssets(wallets: Wallet[]): UserBuyAsset[] {
       walletChainId: wallet.chain_id,
     }];
   });
+}
+
+function AssetSelectorSheet({
+  open,
+  assets,
+  selectedSymbol,
+  selectedNetwork,
+  onSelect,
+  onClose,
+}: {
+  open: boolean;
+  assets: SupportedAsset[];
+  selectedSymbol: string;
+  selectedNetwork?: string;
+  onSelect: (asset: SupportedAsset) => void;
+  onClose: () => void;
+}) {
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] bg-black/45 backdrop-blur-sm sm:flex sm:items-center sm:justify-center sm:p-6"
+      role="presentation"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="asset-selector-title"
+        className="fixed inset-x-0 bottom-0 max-h-[82vh] overflow-y-auto rounded-t-[2rem] border border-border bg-card shadow-2xl sm:static sm:max-h-[min(80vh,680px)] sm:w-full sm:max-w-2xl sm:rounded-[2rem]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="sticky top-0 flex items-center justify-between border-b border-border bg-card/95 px-5 py-4 backdrop-blur sm:px-6">
+          <div>
+            <p id="asset-selector-title" className="text-base font-bold text-foreground">Select crypto</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">Choose an asset and its supported network.</p>
+          </div>
+          <button
+            type="button"
+            aria-label="Close crypto selector"
+            onClick={onClose}
+            className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <XCircle className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 p-4 sm:grid-cols-3 sm:p-6">
+          {assets.map((asset) => {
+            const isSelected = selectedSymbol === asset.symbol
+              && (!selectedNetwork || selectedNetwork === asset.network);
+
+            return (
+              <button
+                key={`${asset.symbol}-${asset.network}`}
+                type="button"
+                onClick={() => onSelect(asset)}
+                className={`rounded-2xl border p-3 text-left transition-all ${
+                  isSelected
+                    ? "border-primary/70 bg-primary/10 shadow-[0_0_0_1px_hsl(var(--primary)/0.14)]"
+                    : "border-border bg-background hover:border-primary/40 hover:bg-muted"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <CoinIcon symbol={asset.symbol} className="h-8 w-8 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-foreground">{asset.name} <span className="text-muted-foreground">({asset.symbol})</span></p>
+                    <p className="truncate text-[11px] text-muted-foreground">{asset.networkLabel}</p>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 const HOW_TO_STEPS = [
@@ -498,7 +587,9 @@ const BuyCryptoPage = () => {
   const [amount, setAmount] = useState("100");
   const [fiat] = useState("USD");
   const [crypto, setCrypto] = useState("BTC");
+  const [selectedNetwork, setSelectedNetwork] = useState<string>();
   const [showAllAssets, setShowAllAssets] = useState(false);
+  const [showAssetSelector, setShowAssetSelector] = useState(false);
   // Valid onramp payment methods accepted by the edge fn.
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("CARD");
   const [showFees, setShowFees] = useState(false);
@@ -523,15 +614,22 @@ const BuyCryptoPage = () => {
   const { data: walletRows = [], isFetching: walletBalancesFetching } = useWalletBalances();
   const userBuyAssets = useMemo(() => getUserBuyAssets(walletRows), [walletRows]);
 
-  const selectedAsset = user
-    ? userBuyAssets.find((asset) => asset.symbol === crypto) ?? null
-    : ALL_ASSETS.find((asset) => asset.symbol === crypto) ?? FEATURED_ASSETS[0];
+  const selectedUserAsset = user
+    ? userBuyAssets.find((asset) => (
+      asset.symbol === crypto && (!selectedNetwork || asset.network === selectedNetwork)
+    )) ?? (selectedNetwork ? undefined : userBuyAssets.find((asset) => asset.symbol === crypto))
+    : undefined;
+  const selectedAsset = selectedUserAsset
+    ?? ALL_ASSETS.find((asset) => asset.symbol === crypto && (!selectedNetwork || asset.network === selectedNetwork))
+    ?? ALL_ASSETS.find((asset) => asset.symbol === crypto)
+    ?? FEATURED_ASSETS[0];
   const cryptoName = selectedAsset?.name ?? "crypto";
 
   useEffect(() => {
     if (!user || userBuyAssets.length === 0) return;
     if (!userBuyAssets.some((asset) => asset.symbol === crypto)) {
       setCrypto(userBuyAssets[0].symbol);
+      setSelectedNetwork(userBuyAssets[0].network);
     }
   }, [crypto, user, userBuyAssets]);
 
@@ -547,7 +645,7 @@ const BuyCryptoPage = () => {
   }, []);
 
   const estimatedCrypto = useMemo(() => {
-    const prices: Record<string, number> = { BTC: 76400, ETH: 2650, SOL: 138, XRP: 0.52, POL: 0.72, ARB: 0.72, OP: 1.64, USDC: 1, USDT: 1, AVAX: 28 };
+    const prices: Record<string, number> = { BTC: 76400, ETH: 2650, SOL: 138, XRP: 0.52, MATIC: 0.72, ARB: 0.72, OP: 1.64, USDC: 1, USDT: 1, AVAX: 28 };
     const result = (parseFloat(amount) || 0) / (prices[crypto] || 1);
     return result < 0.0001 ? result.toFixed(8) : result < 1 ? result.toFixed(5) : result.toFixed(4);
   }, [amount, crypto]);
@@ -567,7 +665,6 @@ const BuyCryptoPage = () => {
     }
     try {
       const canonicalCrypto = ASSET_ALIASES[crypto] ?? crypto;
-      const selectedUserAsset = userBuyAssets.find((asset) => asset.symbol === canonicalCrypto);
       if (!selectedUserAsset) {
         if (walletBalancesFetching) {
           toast({
@@ -582,6 +679,7 @@ const BuyCryptoPage = () => {
           });
         } else {
           setCrypto(userBuyAssets[0].symbol);
+          setSelectedNetwork(userBuyAssets[0].network);
           toast({
             title: "Asset updated",
             description: `Checkout switched to ${userBuyAssets[0].symbol}, the first supported asset in your wallet.`,
@@ -704,7 +802,7 @@ const BuyCryptoPage = () => {
         {/* Receive row */}
         <div className="flex items-center gap-3 p-4">
           <button
-            onClick={() => setShowAllAssets(true)}
+            onClick={() => setShowAssetSelector(true)}
             className="flex items-center gap-1.5 bg-background hover:bg-muted border border-border rounded-full px-3 py-2 text-[15px] font-semibold transition-colors text-foreground flex-shrink-0"
           >
             <CoinIcon symbol={crypto.toUpperCase()} className="w-5 h-5" />
@@ -799,6 +897,18 @@ const BuyCryptoPage = () => {
           <span className="text-[11px] font-semibold text-muted-foreground">Coinbase</span>
         </div>
       </div>
+      <AssetSelectorSheet
+        open={showAssetSelector}
+        assets={ALL_ASSETS}
+        selectedSymbol={crypto}
+        selectedNetwork={selectedNetwork}
+        onClose={() => setShowAssetSelector(false)}
+        onSelect={(asset) => {
+          setCrypto(asset.symbol);
+          setSelectedNetwork(asset.network);
+          setShowAssetSelector(false);
+        }}
+      />
     </div>
   );
 
@@ -873,7 +983,7 @@ const BuyCryptoPage = () => {
             <span className="text-xs font-medium text-muted-foreground">Receive</span>
             <button
               type="button"
-              onClick={() => setShowAllAssets((value) => !value)}
+              onClick={() => setShowAssetSelector(true)}
               className="flex items-center gap-2 rounded-lg bg-muted px-2.5 py-1 text-xs font-bold text-foreground transition-colors hover:bg-accent"
             >
               <CoinIcon symbol={crypto} className="h-4 w-4" />
@@ -885,46 +995,19 @@ const BuyCryptoPage = () => {
           <p className="mt-1 text-xs text-muted-foreground">Rate protected until checkout</p>
         </div>
 
-         {showAllAssets && (
-           <div className="rounded-2xl border border-border bg-card p-2">
-             {walletBalancesFetching ? (
-               <p className="px-2 py-3 text-xs text-muted-foreground">Checking your verified wallet assets…</p>
-             ) : userBuyAssets.length === 0 ? (
-               <p className="px-2 py-3 text-xs text-muted-foreground">
-                 No supported assets are available in your verified wallet yet.
-               </p>
-             ) : (
-               <div className="grid grid-cols-3 gap-2">
-                 {userBuyAssets.map((asset) => (
-                   <button
-                     key={`${asset.symbol}-${asset.network}-${asset.walletId}`}
-                     type="button"
-                     onClick={() => { setCrypto(asset.symbol); setShowAllAssets(false); }}
-                     className={`rounded-xl px-2 py-2 text-xs font-bold transition-colors ${
-                       crypto === asset.symbol ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                     }`}
-                   >
-                     {asset.symbol}
-                   </button>
-                 ))}
-               </div>
-             )}
-           </div>
-         )}
-
         <div className="space-y-2 pt-1">
            <p className="text-sm font-semibold text-foreground">Selected blockchain</p>
            <div className="rounded-2xl border border-border bg-card px-4 py-3.5 text-base font-semibold text-foreground">
              {selectedAsset?.networkLabel ?? "Waiting for a verified wallet asset"}
            </div>
-           {userBuyAssets.length > 0 ? (
+            {selectedUserAsset ? (
              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
                Crypto will be delivered to your verified {selectedAsset?.networkLabel ?? "wallet"} address.
              </p>
           ) : (
              <p className="text-xs text-muted-foreground">
-               Only live, supported wallet assets can be used for checkout.
+               Add this asset to your verified wallet before checkout.
              </p>
           )}
         </div>
@@ -976,13 +1059,25 @@ const BuyCryptoPage = () => {
 
         <Button
           onClick={handleAction}
-          disabled={cdpOnramp.isPending || cdpOfframp.isPending || !amount || !selectedAsset || (user && userBuyAssets.length === 0) || isOffline}
+          disabled={cdpOnramp.isPending || cdpOfframp.isPending || !amount || !selectedUserAsset || isOffline}
           className="h-14 w-full rounded-2xl border-none bg-primary text-base font-black text-primary-foreground shadow-lg shadow-primary/10 transition-all hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
         >
           {cdpOnramp.isPending || cdpOfframp.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : "Create order"}
         </Button>
         <p className="pb-1 text-center text-[11px] text-muted-foreground">Your checkout details stay protected while the quote reconnects.</p>
       </div>
+      <AssetSelectorSheet
+        open={showAssetSelector}
+        assets={ALL_ASSETS}
+        selectedSymbol={crypto}
+        selectedNetwork={selectedNetwork}
+        onClose={() => setShowAssetSelector(false)}
+        onSelect={(asset) => {
+          setCrypto(asset.symbol);
+          setSelectedNetwork(asset.network);
+          setShowAssetSelector(false);
+        }}
+      />
     </div>
   );
 
@@ -1080,17 +1175,15 @@ const BuyCryptoPage = () => {
       ) : (
         /* ── LOGGED IN: widget-only view (no hero) ── */
         <section className="relative overflow-hidden bg-background pt-6 pb-10 px-4 lg:px-8">
-          {/* Glow blobs */}
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/6 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-primary/3 rounded-full blur-3xl pointer-events-none" />
-
-           <div className="relative mx-auto w-full">
-             {LoggedInWidget}
-             <div className="mt-4 flex items-center justify-center gap-2 text-xs text-muted-foreground/70">
-                <CheckCircle2 className="h-4 w-4 text-primary" />
-               Protected checkout for signed-in users
-             </div>
-           </div>
+          <div className="relative mx-auto w-full max-w-2xl">
+            <div className="rounded-[2rem] border border-border bg-card p-3 shadow-xl shadow-black/5 sm:p-5">
+              {LoggedInWidget}
+            </div>
+            <div className="mt-4 flex items-center justify-center gap-2 text-xs text-muted-foreground/70">
+              <CheckCircle2 className="h-4 w-4 text-primary" />
+              Protected checkout for signed-in users
+            </div>
+          </div>
         </section>
       )}
 
