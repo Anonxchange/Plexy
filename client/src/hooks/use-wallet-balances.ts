@@ -3,6 +3,7 @@ import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-quer
 import { getSupabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
 import { resolveWalletChain } from '@/lib/wallet-chain-monitor';
+import { minConfirmationsFor } from '@/lib/chain-rules';
 
 /* =========================================
    TYPES
@@ -138,31 +139,16 @@ export function requestWalletRefresh(): void {
 /* =========================================
    CONFIRMATION POLICY
 
-   A deposit is only spendable once it has this
-   many confirmations. The chain balance endpoint
-   reports total value including 0-conf inbound,
-   so the unconfirmed slice is subtracted here.
-   This is the client-side mirror of the deposit
-   scanner's MIN_CONFIRMATIONS — keep both in sync.
+   Single source of truth: @/lib/chain-rules. This hook used to keep its own
+   table (BTC: 2) while the activity reader used chain-rules (BTC: 1), so the
+   same deposit was "confirmed" in one view and "pending" in the other.
+   Re-exported so existing importers keep working.
 ========================================= */
 
-export const MIN_CONFIRMATIONS: Record<string, number> = {
-  BTC: 2,
-  ETH: 12,
-  BSC: 15,
-  POLYGON: 128,
-  ARBITRUM: 20,
-  OPTIMISM: 20,
-  BASE: 20,
-  AVAX: 20,
-  SOL: 32,
-  TRX: 19,
-  XRP: 1,
-};
+export { MIN_CONFIRMATIONS, minConfirmationsFor } from '@/lib/chain-rules';
 
-export function minConfirmationsForChain(chain: string): number {
-  return MIN_CONFIRMATIONS[String(chain ?? '').toUpperCase()] ?? 12;
-}
+/** @deprecated Use `minConfirmationsFor` from @/lib/chain-rules. */
+export const minConfirmationsForChain = minConfirmationsFor;
 
 /* =========================================
    CHAIN RESOLVER
@@ -375,7 +361,7 @@ export async function getUserWallets(
           mode: 'balances',
           // Ask the monitor to split confirmed vs unconfirmed using the same
           // policy the deposit scanner applies.
-          minConfirmations: minConfirmationsForChain(entry.chain),
+          minConfirmations: minConfirmationsFor(entry.chain),
         },
       });
       if (res.error || !res.data?.success || !res.data?.native) {
