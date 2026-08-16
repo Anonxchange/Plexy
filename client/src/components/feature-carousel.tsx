@@ -10,7 +10,7 @@ export function FeatureCarousel() {
           {/* LEFT — IMAGE */}
           <div className="relative">
             <img
-              src="/assets/IMG_7269.webp"
+              src="/assets/IMG_7269.webp?v=2"
               alt={t('feature.title_line1')}
               className="w-full h-auto"
               width="600"
