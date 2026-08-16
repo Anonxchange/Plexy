@@ -34,6 +34,8 @@ import { useCdpOfframp } from "@/hooks/use-cdp-offramp";
 import { safeExternalRedirect, COINBASE_PAY_ORIGINS } from "@/lib/sanitize";
 import { PaymentMethodSelector } from "@/components/buy-crypto/PaymentMethodSelector";
 import { useCdpTransactions, type CdpTransaction } from "@/hooks/use-cdp-transactions";
+import { useWalletBalances, type Wallet } from "@/hooks/use-wallet-balances";
+import { resolveWalletChain } from "@/lib/wallet-chain-monitor";
 
 const QUICK_AMOUNTS = ["100", "250", "500", "1000"];
 
@@ -75,6 +77,74 @@ const ASSET_ALIASES: Record<string, string> = {
 };
 
 const SUPPORTED_SYMBOLS = new Set(ALL_ASSETS.map((asset) => asset.symbol));
+
+type UserBuyAsset = SupportedAsset & {
+  walletId: string;
+  walletAddress: string;
+  walletChainId: string;
+};
+
+const ONRAMP_NETWORK_BY_CHAIN: Record<string, string> = {
+  BTC: "bitcoin",
+  ETH: "ethereum",
+  SOL: "solana",
+  POLYGON: "polygon",
+  XRP: "ripple",
+  ARBITRUM: "arbitrum",
+  OPTIMISM: "optimism",
+  AVAX: "avalanche-c-chain",
+};
+
+function isAddressForNetwork(address: string | undefined, network: string): boolean {
+  if (!address) return false;
+  if (network === "bitcoin") {
+    return /^(bc1[02-9ac-hj-np-z]{11,71}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/.test(address);
+  }
+  if (network === "solana") return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address);
+  if (network === "ripple") return /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(address);
+  return /^0x[a-fA-F0-9]{40}$/.test(address);
+}
+
+function getUserBuyAssets(wallets: Wallet[]): UserBuyAsset[] {
+  const seen = new Set<string>();
+
+  return wallets.flatMap((wallet) => {
+    // Cached rows are explicitly marked stale by useWalletBalances. They may
+    // be shown elsewhere for continuity, but must never become a checkout
+    // destination until the live chain read verifies them again.
+    if (wallet.is_stale || !wallet.deposit_address) return [];
+
+    const rawSymbol = String(wallet.crypto_symbol ?? "").toUpperCase().trim();
+    const resolvedChain = resolveWalletChain(wallet.chain_id);
+    const rawAssetSymbol = rawSymbol.split("-")[0];
+    const symbol = ASSET_ALIASES[rawAssetSymbol] ?? rawAssetSymbol;
+    // For token rows, require the asset symbol to agree with the token
+    // encoded in chain_id. This prevents a mismatched row from pairing an
+    // address with a different asset/network at checkout.
+    if (resolvedChain.isToken && resolvedChain.tokenSymbol !== symbol) return [];
+    const network = ONRAMP_NETWORK_BY_CHAIN[resolvedChain.chain];
+    if (!network) return [];
+
+    // Keep the provider's supported asset/network matrix authoritative. A
+    // wallet row alone must not make an unsupported combination look buyable.
+    const supportedAsset = ALL_ASSETS.find(
+      (asset) => asset.symbol === symbol && asset.network === network,
+    );
+    if (!supportedAsset) return [];
+    if (!isAddressForNetwork(wallet.deposit_address, network)) return [];
+
+    const identity = `${symbol}:${network}:${wallet.deposit_address.toLowerCase()}`;
+    if (seen.has(identity)) return [];
+    seen.add(identity);
+
+    return [{
+      ...supportedAsset,
+      walletId: wallet.id,
+      walletAddress: wallet.deposit_address,
+      walletChainId: wallet.chain_id,
+    }];
+  });
+}
 
 const HOW_TO_STEPS = [
   {
@@ -432,8 +502,6 @@ const BuyCryptoPage = () => {
   // Valid onramp payment methods accepted by the edge fn.
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("CARD");
   const [showFees, setShowFees] = useState(false);
-  const [walletAddress, setWalletAddress] = useState("");
-  const [selectedNetwork, setSelectedNetwork] = useState("bitcoin");
   const [isOffline, setIsOffline] = useState(() => (
     typeof navigator !== "undefined" ? !navigator.onLine : false
   ));
@@ -452,13 +520,20 @@ const BuyCryptoPage = () => {
   const cdpOnramp = useCdpOnramp();
   const cdpOfframp = useCdpOfframp();
   const { data: txHistory = [], isLoading: txLoading } = useCdpTransactions(user?.id);
+  const { data: walletRows = [], isFetching: walletBalancesFetching } = useWalletBalances();
+  const userBuyAssets = useMemo(() => getUserBuyAssets(walletRows), [walletRows]);
 
-  const selectedAsset = ALL_ASSETS.find((asset) => asset.symbol === crypto) ?? FEATURED_ASSETS[0];
-  const cryptoName = selectedAsset.name;
+  const selectedAsset = user
+    ? userBuyAssets.find((asset) => asset.symbol === crypto) ?? null
+    : ALL_ASSETS.find((asset) => asset.symbol === crypto) ?? FEATURED_ASSETS[0];
+  const cryptoName = selectedAsset?.name ?? "crypto";
 
   useEffect(() => {
-    setSelectedNetwork(selectedAsset.network);
-  }, [selectedAsset.network]);
+    if (!user || userBuyAssets.length === 0) return;
+    if (!userBuyAssets.some((asset) => asset.symbol === crypto)) {
+      setCrypto(userBuyAssets[0].symbol);
+    }
+  }, [crypto, user, userBuyAssets]);
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
@@ -491,57 +566,35 @@ const BuyCryptoPage = () => {
       return;
     }
     try {
-      const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
-      const wallets = await nonCustodialWalletManager.getNonCustodialWallets(user.id);
-
       const canonicalCrypto = ASSET_ALIASES[crypto] ?? crypto;
-      const asset = ALL_ASSETS.find((candidate) => candidate.symbol === canonicalCrypto);
-      if (!asset) {
-        toast({
-          title: "Asset not supported",
-          description: "Choose an asset from the supported list to continue.",
-          variant: "destructive",
-        });
+      const selectedUserAsset = userBuyAssets.find((asset) => asset.symbol === canonicalCrypto);
+      if (!selectedUserAsset) {
+        if (walletBalancesFetching) {
+          toast({
+            title: "Checking your wallet",
+            description: "Your verified wallet assets are still loading. Please try again in a moment.",
+          });
+        } else if (userBuyAssets.length === 0) {
+          toast({
+            title: "No supported wallet assets",
+            description: "Add a supported wallet asset before starting checkout.",
+            variant: "destructive",
+          });
+        } else {
+          setCrypto(userBuyAssets[0].symbol);
+          toast({
+            title: "Asset updated",
+            description: `Checkout switched to ${userBuyAssets[0].symbol}, the first supported asset in your wallet.`,
+          });
+        }
         return;
       }
 
-      // CDP validates both the address family and asset/network pair. Match
-      // the wallet to the selected chain before creating a session.
-      const addressMatchesNetwork = (address: string | undefined) => {
-        if (!address) return false;
-        if (selectedNetwork === "bitcoin") {
-          return /^(bc1[02-9ac-hj-np-z]{11,71}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/.test(address);
-        }
-        if (selectedNetwork === "solana") return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address);
-        if (selectedNetwork === "ripple") return /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(address);
-        return /^0x[a-fA-F0-9]{40}$/.test(address);
-      };
-      const networkWords: Record<string, string[]> = {
-        bitcoin: ["bitcoin", "btc"],
-        ethereum: ["ethereum", "eth"],
-        polygon: ["polygon", "pol", "matic"],
-        arbitrum: ["arbitrum", "arb"],
-        optimism: ["optimism", "op"],
-        "avalanche-c-chain": ["avalanche", "avax"],
-        solana: ["solana", "sol"],
-        ripple: ["xrp", "ripple"],
-      };
-      const words = networkWords[selectedNetwork] ?? [];
-      const bestWallet = wallets.find((wallet) => {
-        const descriptor = `${wallet.chainId ?? ""} ${wallet.walletType ?? ""}`.toLowerCase();
-        return addressMatchesNetwork(wallet.address) && words.some((word) => descriptor.includes(word));
-      }) ?? wallets.find((wallet) => addressMatchesNetwork(wallet.address));
-      const profileAddresses = [
-        (user as any)?.walletAddress,
-        (user as any)?.wallet_address,
-        (user as any)?.user_metadata?.wallet_address,
-      ];
-      const addr = walletAddress.trim() || bestWallet?.address || profileAddresses.find(addressMatchesNetwork) || null;
-
-      if (!addr) {
+      const addr = selectedUserAsset.walletAddress;
+      if (!isAddressForNetwork(addr, selectedUserAsset.network)) {
         toast({
-          title: `${asset.networkLabel} wallet required`,
-          description: `Add a ${asset.networkLabel} wallet in your settings before starting this ${mode} flow.`,
+          title: "Wallet verification required",
+          description: "The selected wallet address could not be verified for this asset's network.",
           variant: "destructive",
         });
         return;
@@ -552,11 +605,11 @@ const BuyCryptoPage = () => {
       if (mode === "buy") {
         const data = await cdpOnramp.mutateAsync({
           address: addr,
-           purchaseCurrency: canonicalCrypto,
+          purchaseCurrency: canonicalCrypto,
           paymentAmount: amount,
           paymentCurrency: fiat,
-           paymentMethod: selectedPaymentMethod,
-           network: selectedNetwork,
+          paymentMethod: selectedPaymentMethod,
+          network: selectedUserAsset.network,
         });
         rawUrl = data.onrampUrl;
         // Session-token fallback for the Coinbase onramp widget URL.
@@ -566,9 +619,9 @@ const BuyCryptoPage = () => {
       } else {
         const data = await cdpOfframp.mutateAsync({
           address: addr,
-           sellCurrency: canonicalCrypto,
+          sellCurrency: canonicalCrypto,
           fiatCurrency: fiat,
-           network: selectedNetwork,
+          network: selectedUserAsset.network,
           // Edge fn accepts: BANK_ACCOUNT | ACH_BANK_ACCOUNT | PAYPAL | FIAT_WALLET
           cashoutMethod: "BANK_ACCOUNT",
         });
@@ -678,7 +731,7 @@ const BuyCryptoPage = () => {
             <ChevronDown className={`w-4 h-4 transition-transform ${showFees ? "rotate-180" : ""}`} />
           </button>
           <p className="text-[15px] font-medium text-foreground">
-            1.00 {crypto} ≈ {selectedAsset.price}
+            1.00 {crypto} ≈ {selectedAsset?.price ?? "—"}
           </p>
         </div>
         {showFees && (
@@ -748,17 +801,6 @@ const BuyCryptoPage = () => {
       </div>
     </div>
   );
-
-  const walletIsValid = useMemo(() => {
-    const value = walletAddress.trim();
-    if (!value) return false;
-    if (selectedNetwork === "bitcoin") {
-      return /^(bc1[02-9ac-hj-np-z]{11,71}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/.test(value);
-    }
-    if (selectedNetwork === "solana") return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(value);
-    if (selectedNetwork === "ripple") return /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(value);
-    return /^0x[a-fA-F0-9]{40}$/.test(value);
-  }, [selectedNetwork, walletAddress]);
 
   const loggedInPaymentMethods = [
     { id: "APPLE_PAY", label: "Apple Pay", fee: "Gateway Fee 1.99%", Icon: SiApplepay },
@@ -843,54 +885,47 @@ const BuyCryptoPage = () => {
           <p className="mt-1 text-xs text-muted-foreground">Rate protected until checkout</p>
         </div>
 
-        {showAllAssets && (
-          <div className="grid grid-cols-3 gap-2 rounded-2xl border border-border bg-card p-2">
-            {FEATURED_ASSETS.map((asset) => (
-              <button
-                key={asset.symbol}
-                type="button"
-                onClick={() => { setCrypto(asset.symbol); setShowAllAssets(false); }}
-                className={`rounded-xl px-2 py-2 text-xs font-bold transition-colors ${
-                  crypto === asset.symbol ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
-              >
-                {asset.symbol}
-              </button>
-            ))}
-          </div>
-        )}
+         {showAllAssets && (
+           <div className="rounded-2xl border border-border bg-card p-2">
+             {walletBalancesFetching ? (
+               <p className="px-2 py-3 text-xs text-muted-foreground">Checking your verified wallet assets…</p>
+             ) : userBuyAssets.length === 0 ? (
+               <p className="px-2 py-3 text-xs text-muted-foreground">
+                 No supported assets are available in your verified wallet yet.
+               </p>
+             ) : (
+               <div className="grid grid-cols-3 gap-2">
+                 {userBuyAssets.map((asset) => (
+                   <button
+                     key={`${asset.symbol}-${asset.network}-${asset.walletId}`}
+                     type="button"
+                     onClick={() => { setCrypto(asset.symbol); setShowAllAssets(false); }}
+                     className={`rounded-xl px-2 py-2 text-xs font-bold transition-colors ${
+                       crypto === asset.symbol ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                     }`}
+                   >
+                     {asset.symbol}
+                   </button>
+                 ))}
+               </div>
+             )}
+           </div>
+         )}
 
         <div className="space-y-2 pt-1">
-          <label htmlFor="buy-crypto-network" className="text-sm font-semibold text-foreground">Selected blockchain</label>
-          <div className="relative">
-            <select
-              id="buy-crypto-network"
-              value={selectedNetwork}
-              onChange={(event) => setSelectedNetwork(event.target.value)}
-              className="w-full appearance-none rounded-2xl border border-border bg-card px-4 py-3.5 text-base font-semibold text-foreground outline-none ring-1 ring-transparent transition focus:ring-primary/50"
-            >
-              <option value={selectedAsset.network}>{selectedAsset.networkLabel}</option>
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          </div>
-        </div>
-
-        <div className="space-y-2 pt-1">
-          <label htmlFor="buy-crypto-wallet" className="text-sm font-semibold text-foreground">Your wallet address</label>
-          <input
-            id="buy-crypto-wallet"
-            value={walletAddress}
-            onChange={(event) => setWalletAddress(event.target.value.trim())}
-            placeholder={`Enter your ${selectedAsset.networkLabel} wallet address`}
-            className={`w-full rounded-2xl border border-border bg-card px-4 py-3.5 text-sm text-foreground outline-none ring-1 transition placeholder:text-muted-foreground/60 ${
-              walletAddress && !walletIsValid ? "ring-destructive/70" : "ring-transparent focus:ring-primary/50"
-            }`}
-            autoComplete="off"
-          />
-          {walletAddress && !walletIsValid ? (
-            <p className="flex items-center gap-1.5 text-xs text-destructive"><XCircle className="h-3.5 w-3.5" /> Check the wallet format for {selectedAsset.networkLabel}.</p>
+           <p className="text-sm font-semibold text-foreground">Selected blockchain</p>
+           <div className="rounded-2xl border border-border bg-card px-4 py-3.5 text-base font-semibold text-foreground">
+             {selectedAsset?.networkLabel ?? "Waiting for a verified wallet asset"}
+           </div>
+           {userBuyAssets.length > 0 ? (
+             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+               <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+               Crypto will be delivered to your verified {selectedAsset?.networkLabel ?? "wallet"} address.
+             </p>
           ) : (
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Crypto is delivered directly to this address.</p>
+             <p className="text-xs text-muted-foreground">
+               Only live, supported wallet assets can be used for checkout.
+             </p>
           )}
         </div>
 
@@ -941,7 +976,7 @@ const BuyCryptoPage = () => {
 
         <Button
           onClick={handleAction}
-          disabled={cdpOnramp.isPending || cdpOfframp.isPending || !amount || !walletIsValid || isOffline}
+          disabled={cdpOnramp.isPending || cdpOfframp.isPending || !amount || !selectedAsset || (user && userBuyAssets.length === 0) || isOffline}
           className="h-14 w-full rounded-2xl border-none bg-primary text-base font-black text-primary-foreground shadow-lg shadow-primary/10 transition-all hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
         >
           {cdpOnramp.isPending || cdpOfframp.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : "Create order"}
@@ -1001,20 +1036,19 @@ const BuyCryptoPage = () => {
               {/* ── LOGGED IN: quick action links ── */}
               {user && (
                 <div className="flex flex-wrap gap-2 mb-8">
-                  {["Bitcoin", "Ethereum", "Solana", "Polygon"].map((n) => {
-                    const s = n === "Bitcoin" ? "BTC" : n === "Ethereum" ? "ETH" : n === "Solana" ? "SOL" : "POL";
+                  {userBuyAssets.slice(0, 4).map((asset) => {
                     return (
                       <button
-                        key={s}
-                        onClick={() => setCrypto(s)}
+                        key={`${asset.symbol}-${asset.network}-${asset.walletId}`}
+                        onClick={() => setCrypto(asset.symbol)}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
-                          crypto === s
+                          crypto === asset.symbol
                             ? "bg-primary/15 border-primary/30 text-primary"
                             : "bg-muted border-border text-muted-foreground hover:bg-muted/80 hover:text-foreground"
                         }`}
                       >
-                        <CoinIcon symbol={s.toUpperCase()} className="w-3.5 h-3.5" />
-                        {n}
+                        <CoinIcon symbol={asset.symbol.toUpperCase()} className="w-3.5 h-3.5" />
+                        {asset.name}
                       </button>
                     );
                   })}
