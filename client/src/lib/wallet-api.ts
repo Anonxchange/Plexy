@@ -2,7 +2,7 @@ import { nonCustodialWalletManager } from "./non-custodial-wallet";
 import { getSupabase, supabase } from "./supabase";
 import { getWalletMonitorTargets } from "./wallet-chain-monitor";
 import { monitorWithdrawal } from "./withdrawal-monitor";
-import { minConfirmationsFor } from "./chain-rules";
+import { getAssetDecimals, minConfirmationsFor } from "./chain-rules";
 import {
   addLocalWithdrawalHash,
   getOnChainTransactions as readOnChainActivity,
@@ -275,6 +275,25 @@ export function normalizeWalletDisplayAmount(
   // units. Real base-unit conversion happens in `fromBaseUnits` with an
   // explicit exponent (./chain-rules).
   return Number(amount) || 0;
+}
+
+/**
+ * Format a crypto amount without dropping leading fractional zeroes.
+ * The maximum precision follows the asset's protocol decimals so values such
+ * as 0.0000467 BTC stay readable instead of becoming scientific notation.
+ */
+export function formatCryptoAmount(
+  amount: number | string | null | undefined,
+  symbol?: string | null,
+): string {
+  const value = normalizeWalletDisplayAmount(amount, symbol);
+  if (!Number.isFinite(value)) return "—";
+
+  return value.toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: Math.min(getAssetDecimals(symbol), 18),
+    useGrouping: false,
+  });
 }
 
 /* Payload parsing (readAmount / readDate / extractOnChainTransactions /
