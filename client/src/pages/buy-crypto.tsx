@@ -121,14 +121,41 @@ function isAddressForNetwork(address: string | undefined, network: string): bool
   return /^0x[a-fA-F0-9]{40}$/.test(address);
 }
 
-function getUserBuyAssets(wallets: Wallet[]): UserBuyAsset[] {
-  const seen = new Set<string>();
+const EVM_ONRAMP_NETWORKS = new Set([
+  "ethereum",
+  "base",
+  "polygon",
+  "arbitrum",
+  "optimism",
+  "avalanche-c-chain",
+]);
 
-  return wallets.flatMap((wallet) => {
+type VerifiedWalletSource = {
+  wallet: Wallet;
+  network: string;
+};
+
+/**
+ * Build the list of buyable assets from the user's verified wallet rows.
+ *
+ * A wallet row proves ownership of an *address on a network*, not of a single
+ * ticker: every asset the provider supports on that network can be delivered
+ * to the same address (ERC-20/SPL tokens included). Matching row symbol to
+ * asset symbol 1:1 is why USDT, USDC and MATIC appeared unusable and the
+ * picker snapped back to the native coins (BTC/ETH/SOL/XRP) the user happened
+ * to have rows for.
+ *
+ * EVM networks additionally fall back to any other verified EVM address when
+ * no chain-specific row exists, since EVM addresses are shared across chains.
+ */
+function getUserBuyAssets(wallets: Wallet[]): UserBuyAsset[] {
+  const sources: VerifiedWalletSource[] = [];
+
+  for (const wallet of wallets) {
     // Cached rows are explicitly marked stale by useWalletBalances. They may
     // be shown elsewhere for continuity, but must never become a checkout
     // destination until the live chain read verifies them again.
-    if (wallet.is_stale || !wallet.deposit_address) return [];
+    if (wallet.is_stale || !wallet.deposit_address) continue;
 
     const rawSymbol = String(wallet.crypto_symbol ?? "").toUpperCase().trim();
     const resolvedChain = resolveWalletChain(wallet.chain_id);
@@ -137,27 +164,34 @@ function getUserBuyAssets(wallets: Wallet[]): UserBuyAsset[] {
     // For token rows, require the asset symbol to agree with the token
     // encoded in chain_id. This prevents a mismatched row from pairing an
     // address with a different asset/network at checkout.
-    if (resolvedChain.isToken && resolvedChain.tokenSymbol !== symbol) return [];
+    if (resolvedChain.isToken && resolvedChain.tokenSymbol !== symbol) continue;
+
     const network = ONRAMP_NETWORK_BY_CHAIN[resolvedChain.chain];
-    if (!network) return [];
+    if (!network) continue;
+    if (!isAddressForNetwork(wallet.deposit_address, network)) continue;
 
-    // Keep the provider's supported asset/network matrix authoritative. A
-    // wallet row alone must not make an unsupported combination look buyable.
-    const supportedAsset = ALL_ASSETS.find(
-      (asset) => asset.symbol === symbol && asset.network === network,
-    );
-    if (!supportedAsset) return [];
-    if (!isAddressForNetwork(wallet.deposit_address, network)) return [];
+    sources.push({ wallet, network });
+  }
 
-    const identity = `${symbol}:${network}:${wallet.deposit_address.toLowerCase()}`;
+  const evmFallback = sources.find((source) => EVM_ONRAMP_NETWORKS.has(source.network));
+  const seen = new Set<string>();
+
+  return ALL_ASSETS.flatMap((asset) => {
+    // Keep the provider's supported asset/network matrix authoritative: we only
+    // ever expand across assets that ALL_ASSETS already lists for the network.
+    let source = sources.find((candidate) => candidate.network === asset.network);
+    if (!source && EVM_ONRAMP_NETWORKS.has(asset.network)) source = evmFallback;
+    if (!source) return [];
+
+    const identity = `${asset.symbol}:${asset.network}`;
     if (seen.has(identity)) return [];
     seen.add(identity);
 
     return [{
-      ...supportedAsset,
-      walletId: wallet.id,
-      walletAddress: wallet.deposit_address,
-      walletChainId: wallet.chain_id,
+      ...asset,
+      walletId: source.wallet.id,
+      walletAddress: source.wallet.deposit_address as string,
+      walletChainId: source.wallet.chain_id,
     }];
   });
 }
@@ -676,10 +710,12 @@ const BuyCryptoPage = () => {
   useEffect(() => {
     if (!user || userBuyAssets.length === 0) return;
     const matchingAssets = userBuyAssets.filter((asset) => asset.symbol === crypto);
-    if (matchingAssets.length === 0) {
-      setCrypto(userBuyAssets[0].symbol);
-      setSelectedNetwork(userBuyAssets[0].network);
-    } else if (!matchingAssets.some((asset) => asset.network === selectedNetwork)) {
+    // Never rewrite the user's asset choice: only realign the network when the
+    // chosen network isn't deliverable for that asset. If the asset has no
+    // verified destination at all, leave the selection alone and let
+    // handleAction surface the reason at checkout.
+    if (matchingAssets.length === 0) return;
+    if (!matchingAssets.some((asset) => asset.network === selectedNetwork)) {
       setSelectedNetwork(matchingAssets[0].network);
     }
   }, [crypto, selectedNetwork, user, userBuyAssets]);
@@ -729,11 +765,10 @@ const BuyCryptoPage = () => {
             variant: "destructive",
           });
         } else {
-          setCrypto(userBuyAssets[0].symbol);
-          setSelectedNetwork(userBuyAssets[0].network);
           toast({
-            title: "Asset updated",
-            description: `Checkout switched to ${userBuyAssets[0].symbol}, the first supported asset in your wallet.`,
+            title: "No verified address for this asset",
+            description: `Add a verified ${selectedAsset?.networkLabel ?? "network"} wallet address to buy ${crypto}.`,
+            variant: "destructive",
           });
         }
         return;
