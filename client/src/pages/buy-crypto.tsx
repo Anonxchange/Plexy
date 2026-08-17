@@ -665,7 +665,7 @@ const BuyCryptoPage = () => {
   const selectedUserAsset = user
     ? userBuyAssets.find((asset) => (
       asset.symbol === crypto && (!selectedNetwork || asset.network === selectedNetwork)
-    )) ?? (selectedNetwork ? undefined : userBuyAssets.find((asset) => asset.symbol === crypto))
+    )) ?? userBuyAssets.find((asset) => asset.symbol === crypto)
     : undefined;
   const selectedAsset = selectedUserAsset
     ?? ALL_ASSETS.find((asset) => asset.symbol === crypto && (!selectedNetwork || asset.network === selectedNetwork))
@@ -675,11 +675,14 @@ const BuyCryptoPage = () => {
 
   useEffect(() => {
     if (!user || userBuyAssets.length === 0) return;
-    if (!userBuyAssets.some((asset) => asset.symbol === crypto)) {
+    const matchingAssets = userBuyAssets.filter((asset) => asset.symbol === crypto);
+    if (matchingAssets.length === 0) {
       setCrypto(userBuyAssets[0].symbol);
       setSelectedNetwork(userBuyAssets[0].network);
+    } else if (!matchingAssets.some((asset) => asset.network === selectedNetwork)) {
+      setSelectedNetwork(matchingAssets[0].network);
     }
-  }, [crypto, user, userBuyAssets]);
+  }, [crypto, selectedNetwork, user, userBuyAssets]);
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
@@ -792,10 +795,12 @@ const BuyCryptoPage = () => {
             <button
               key={m}
               onClick={() => setMode(m)}
-              className={`flex-1 rounded-full py-2.5 text-[15px] font-semibold capitalize transition-all ${
+              className={`flex-1 rounded-full py-2.5 text-[15px] font-bold capitalize transition-all ${
                 mode === m
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? m === "buy"
+                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                    : "bg-violet-500 text-white shadow-lg shadow-violet-500/20"
+                  : "text-muted-foreground hover:bg-background/70 hover:text-foreground"
               }`}
             >
               {m}
@@ -929,7 +934,11 @@ const BuyCryptoPage = () => {
         <Button
           onClick={handleAction}
           disabled={cdpOnramp.isPending || cdpOfframp.isPending || !amount}
-          className="w-full h-14 bg-primary hover:bg-primary/90 text-black rounded-full text-lg font-bold border-none shadow-md shadow-primary/20 transition-all"
+          className={`w-full h-14 rounded-full text-lg font-bold border-none shadow-md transition-all ${
+            mode === "buy"
+              ? "bg-primary text-primary-foreground shadow-primary/20 hover:bg-primary/90"
+              : "bg-violet-500 text-white shadow-violet-500/20 hover:bg-violet-600"
+          }`}
         >
           {cdpOnramp.isPending || cdpOfframp.isPending ? (
             <Loader2 className="w-5 h-5 animate-spin" />
@@ -987,7 +996,11 @@ const BuyCryptoPage = () => {
               type="button"
               onClick={() => setMode(item)}
               className={`flex-1 rounded-xl py-3 text-sm font-bold capitalize transition-all ${
-                mode === item ? "bg-primary text-primary-foreground shadow-lg shadow-primary/10" : "text-muted-foreground hover:text-foreground"
+                mode === item
+                  ? item === "buy"
+                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                    : "bg-violet-500 text-white shadow-lg shadow-violet-500/20"
+                  : "text-muted-foreground hover:bg-background/70 hover:text-foreground"
               }`}
             >
               {item === "buy" ? "Buy coins" : "Sell coins"}
@@ -1099,7 +1112,11 @@ const BuyCryptoPage = () => {
         <Button
           onClick={handleAction}
           disabled={cdpOnramp.isPending || cdpOfframp.isPending || !amount || !selectedUserAsset || isOffline}
-          className="h-14 w-full rounded-2xl border-none bg-primary text-base font-black text-primary-foreground shadow-lg shadow-primary/10 transition-all hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
+          className={`h-14 w-full rounded-2xl border-none text-base font-black shadow-lg transition-all disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none ${
+            mode === "buy"
+              ? "bg-primary text-primary-foreground shadow-primary/20 hover:bg-primary/90"
+              : "bg-violet-500 text-white shadow-violet-500/20 hover:bg-violet-600"
+          }`}
         >
           {cdpOnramp.isPending || cdpOfframp.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : "Create order"}
         </Button>
@@ -1174,7 +1191,10 @@ const BuyCryptoPage = () => {
                     return (
                       <button
                         key={`${asset.symbol}-${asset.network}-${asset.walletId}`}
-                        onClick={() => setCrypto(asset.symbol)}
+                        onClick={() => {
+                          setCrypto(asset.symbol);
+                          setSelectedNetwork(asset.network);
+                        }}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
                           crypto === asset.symbol
                             ? "bg-primary/15 border-primary/30 text-primary"
@@ -1288,7 +1308,11 @@ const BuyCryptoPage = () => {
               className={`flex md:grid md:grid-cols-[2fr_1fr_1fr_1fr] items-center gap-4 px-5 py-5 hover:bg-muted/50 transition-colors cursor-pointer group ${
                 i < assetsToShow.length - 1 ? "border-b border-border" : ""
               }`}
-              onClick={() => { setCrypto(asset.symbol); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+              onClick={() => {
+                setCrypto(asset.symbol);
+                setSelectedNetwork(asset.network);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
             >
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <CoinIcon symbol={asset.symbol.toUpperCase()} className="w-10 h-10 lg:w-12 lg:h-12 flex-shrink-0" />
@@ -1304,6 +1328,7 @@ const BuyCryptoPage = () => {
                   onClick={(event) => {
                     event.stopPropagation();
                     setCrypto(asset.symbol);
+                    setSelectedNetwork(asset.network);
                     window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
                   className="text-sm font-bold bg-primary/10 hover:bg-primary/20 text-primary px-4 py-2 rounded-xl transition-colors"
