@@ -92,7 +92,7 @@ export function AppFooter() {
             <div className="w-9 h-9 rounded-xl bg-[#B4F22E] flex items-center justify-center">
               <PexlyIcon className="h-5 w-5 text-black" />
             </div>
-            <span className="text-xl font-bold text-white tracking-tight">RETAIL ROVER</span>
+            <span className="text-xl font-bold text-white tracking-tight">PEXLY</span>
           </div>
 
           <div className="flex items-center gap-2">
