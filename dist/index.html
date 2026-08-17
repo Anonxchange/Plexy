@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- Cloudflare Worker stamps the per-request CSP nonce onto this tag's `nonce`
+         attribute at the edge. main.tsx reads it and calls setNonce() so that
+         react-style-singleton (used by Radix Dialog, Dropdown, Popover, etc.)
+         automatically carries the nonce on every <style> it injects at runtime. -->
+    <meta property="csp-nonce" />
+    <!-- Cloudflare Worker stamps the user's ISO country code (e.g. "US") here at the
+         edge. Client code reads this via getCountryCode() in lib/geo.ts so no external
+         IP-geolocation API call is needed in production. -->
+    <meta name="cf-country" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Sets theme class before first paint so ThemeProvider has nothing to change,
+         eliminating the full-document style recalculation on initial load.
+         Inlined to avoid a blocking network round-trip for a 180-byte file. -->
+    <script>try{var t=localStorage.getItem('pexly-theme');if(t==='dark'||t==='light')document.documentElement.classList.add(t);else document.documentElement.classList.add('light');}catch(e){}</script>
+    <title>Pexly - Non-Custodial Decentralized Crypto Software</title>
+    <meta name="description" content="Pexly is your all-in-one decentralized market. Swap crypto, earn yield through staking, buy gift cards, top up mobile credit, pay utility bills, shop with crypto, and explore blockchain data — all without giving up custody of your assets." />
+    
+    <!-- Supabase preconnect hints are injected here at build time by vite.config.ts
+         when VITE_SUPABASE_URL is defined. No placeholder needed in source HTML. -->
+    <!--SUPABASE_PRECONNECT-->
+   <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    
+    <!-- Open Graph / Social Media -->
+    <meta property="og:title" content="Pexly - Non-Custodial Decentralized Crypto Software" />
+    <meta property="og:description" content="Pexly is your all-in-one decentralized market. Swap crypto, stake for yield, buy gift cards, pay bills, shop, and explore the blockchain — all non-custodial. Your keys, your assets." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.pexly.app/" />
+    <meta property="og:image" content="https://www.pexly.app/hero-bg.webp" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Pexly - Non-Custodial Decentralized Crypto Software" />
+    <meta property="og:site_name" content="Pexly" />
+    <!-- Twitter / WhatsApp card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Pexly - Non-Custodial Decentralized Crypto Software" />
+    <meta name="twitter:description" content="Pexly is your all-in-one decentralized market. Swap crypto, stake for yield, buy gift cards, pay bills, shop, and explore the blockchain — all non-custodial. Your keys, your assets." />
+    <meta name="twitter:image" content="https://www.pexly.app/hero-bg.webp" />
+    <meta name="twitter:image:alt" content="Pexly - Non-Custodial Decentralized Crypto Software" />
+    
+    <!--
+      LCP hero image preload — tells the browser to fetch the hero background
+      before React even starts, eliminating the JS-render delay from LCP.
+      Two hints mirror the two <picture> elements in hero-section.tsx:
+        • mobile  (max-width: 1023px) — image fills 100vw
+        • desktop (min-width: 1024px) — image fills ~50vw (right panel)
+      imagesrcset/imagesizes must match the <source> in hero-section.tsx exactly
+      so the browser picks the same variant for the preload as for the render.
+    -->
+    <link
+      rel="preload"
+      as="image"
+      href="/hero-bg-640.webp"
+      imagesrcset="/hero-bg-640.webp 640w, /hero-bg-1024.webp 1024w, /hero-bg.webp 1408w"
+      imagesizes="100vw"
+      media="(max-width: 1023px)"
+      fetchpriority="high"
+    />
+    <link
+      rel="preload"
+      as="image"
+      href="/hero-bg-1024.webp"
+      imagesrcset="/hero-bg-640.webp 640w, /hero-bg-1024.webp 1024w, /hero-bg.webp 1408w"
+      imagesizes="50vw"
+      media="(min-width: 1024px)"
+      fetchpriority="high"
+    />
+
+  
+    <!-- Global JSON-LD Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://www.pexly.app/#organization",
+          "name": "Pexly",
+          "alternateName": "Pexly Software",
+          "url": "https://www.pexly.app/",
+          "description": "Pexly is a non-custodial decentralized software platform offering tools for crypto swaps, staking, gift cards, mobile top-ups, utility payments, blockchain exploration, and more. Pexly does not hold, control, or transmit user funds.",
+          "foundingDate": "2024",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://www.pexly.app/favicon.svg",
+            "width": "512",
+            "height": "512"
+          },
+          "contactPoint": [
+            {
+              "@type": "ContactPoint",
+              "contactType": "technical support",
+              "availableLanguage": ["English"],
+              "areaServed": "Worldwide"
+            }
+          ],
+          "sameAs": [],
+          "knowsAbout": ["Software Development", "Decentralized Technology", "Blockchain Technology", "Cryptocurrency Software"],
+          "slogan": "Non-Custodial Decentralized Software"
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://www.pexly.app/#website",
+          "url": "https://www.pexly.app/",
+          "name": "Pexly",
+          "description": "Pexly is an all-in-one non-custodial decentralized market. Users can swap crypto, earn staking yield, buy gift cards, pay bills, shop with crypto, and explore on-chain data — all while retaining full custody of their assets.",
+          "publisher": {
+            "@id": "https://www.pexly.app/#organization"
+          },
+          "inLanguage": "en-US",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://www.pexly.app/search?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://www.pexly.app/#software",
+          "name": "Pexly Decentralized Software",
+          "description": "Pexly is a non-custodial decentralized software application. It provides tools for crypto swaps, yield staking, gift card purchases, mobile top-ups, utility bill payments, and on-chain exploration. Pexly does not hold funds or act as an intermediary.",
+          "provider": {
+            "@id": "https://www.pexly.app/#organization"
+          },
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          }
+        }
+      ]
+    }
+    </script>
+    <script type="module" crossorigin src="/assets/index-DVf1o-a8.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/rolldown-runtime-B0Z9INg1.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-react-CP8EwsxZ.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-ui-d4EOMonS.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-utils-C-U7P6ZS.js">
+    <link rel="modulepreload" crossorigin href="/assets/useTranslation-E5QJWqZs.js">
+    <link rel="modulepreload" crossorigin href="/assets/i18n-w7Qz4o4d.js">
+    <link rel="modulepreload" crossorigin href="/assets/defineProperty-qq7MVrGV.js">
+    <link rel="modulepreload" crossorigin href="/assets/dist-Bmv0v8ye.js">
+    <link rel="modulepreload" crossorigin href="/assets/preload-helper-Czpn1I53.js">
+    <link rel="modulepreload" crossorigin href="/assets/supabase-v2nzZD9U.js">
+    <link rel="modulepreload" crossorigin href="/assets/utils-DojpP95n.js">
+    <link rel="modulepreload" crossorigin href="/assets/tooltip-BcF3hm0a.js">
+    <link rel="modulepreload" crossorigin href="/assets/theme-provider-DSdiUeOv.js">
+    <link rel="modulepreload" crossorigin href="/assets/dev-logger-3-mZ5PSq.js">
+    <link rel="modulepreload" crossorigin href="/assets/utils-CHyMwXjL.js">
+    <link rel="modulepreload" crossorigin href="/assets/sha3-D2Ms_Fzz.js">
+    <link rel="modulepreload" crossorigin href="/assets/asterdex-service-vGPdsPmP.js">
+    <link rel="modulepreload" crossorigin href="/assets/auth-context-C6Mey5Uv.js">
+    <link rel="modulepreload" crossorigin href="/assets/dist-C6W9pCdO.js">
+    <link rel="modulepreload" crossorigin href="/assets/shopify-service-B-I-QMd9.js">
+    <link rel="modulepreload" crossorigin href="/assets/use-shopify-cart-CnlG5A8b.js">
+    <link rel="modulepreload" crossorigin href="/assets/dist-rYY0ay2T.js">
+    <link rel="modulepreload" crossorigin href="/assets/button-G7mnW8S5.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-icons-D7vQZMvn.js">
+    <link rel="modulepreload" crossorigin href="/assets/icons-D0mLx3MP.js">
+    <link rel="modulepreload" crossorigin href="/assets/theme-toggle-DaUFqHiD.js">
+    <link rel="modulepreload" crossorigin href="/assets/badge-iqh4gGIR.js">
+    <link rel="modulepreload" crossorigin href="/assets/pexly-icon-CPCo34kl.js">
+    <link rel="modulepreload" crossorigin href="/assets/sheet-CaW0SmMi.js">
+    <link rel="modulepreload" crossorigin href="/assets/dropdown-menu-DhuV1ynw.js">
+    <link rel="modulepreload" crossorigin href="/assets/sanitize-Byy-UX14.js">
+    <link rel="modulepreload" crossorigin href="/assets/iconBase-B2UBn2_E.js">
+    <link rel="modulepreload" crossorigin href="/assets/si-D-kCMYw3.js">
+    <link rel="modulepreload" crossorigin href="/assets/fa-j54Fj-zR.js">
+    <link rel="modulepreload" crossorigin href="/assets/app-footer-BkX1DlF-.js">
+    <link rel="modulepreload" crossorigin href="/assets/skeleton-HDxWu8S4.js">
+    <link rel="modulepreload" crossorigin href="/assets/page-skeleton-5qCHn8_S.js">
+    <link rel="modulepreload" crossorigin href="/assets/use-schema-DVtTkE-U.js">
+    <link rel="modulepreload" crossorigin href="/assets/card-C9AkWkrE.js">
+    <link rel="modulepreload" crossorigin href="/assets/use-gift-card-cart-CqoBV33v.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-BXRaRSin.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

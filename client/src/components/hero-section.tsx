@@ -152,7 +152,7 @@ export function HeroSection() {
             style={{ background: "#B4F22E", boxShadow: "0 4px 36px rgba(180,242,46,0.42)" }}
           >
             {t('hero.cta')}
-            <ArrowDown className="w-4 h-4" strokeWidth={3} />
+            <ArrowDown className="w-4 h-4" strokeWidth={3} aria-hidden="true" />
           </button>
         </Link>
 

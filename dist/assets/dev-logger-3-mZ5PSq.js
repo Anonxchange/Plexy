@@ -1,0 +1,1 @@
+var e={error:(...e)=>{},warn:(...e)=>{},info:(...e)=>{}};export{e as t};

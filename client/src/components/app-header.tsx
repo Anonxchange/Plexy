@@ -16,6 +16,7 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth-context";
+import { isSafeExternalUrl } from "@/lib/sanitize";
 
 // Mega menus — only rendered on hover/open, never on initial paint.
 // Lazy-loading moves the entire nav-mega-dropdown module (539 lines + SVGs)
@@ -268,7 +269,14 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar, onPreloadSide
               >
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground pb-3">Support</p>
                 <Suspense fallback={null}>
-                  <SupportMegaMenu onNavigate={(href) => { if (href.startsWith('http')) window.open(href, '_blank'); else navigate(href); setActiveDropdown(null); }} onClose={() => setActiveDropdown(null)} />
+                  <SupportMegaMenu onNavigate={(href) => {
+                    if (href.startsWith('http') && isSafeExternalUrl(href)) {
+                      window.open(href, '_blank', 'noopener,noreferrer');
+                    } else {
+                      navigate(href);
+                    }
+                    setActiveDropdown(null);
+                  }} onClose={() => setActiveDropdown(null)} />
                 </Suspense>
               </DropdownMenuContent>
             </div>

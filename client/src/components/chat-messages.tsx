@@ -1,4 +1,5 @@
 import { File, Download, XCircle } from '@/lib/icons';
+import { sanitizeImageUrl, sanitizeUrl } from '@/lib/sanitize';
 
 interface TradeMessage {
   id: string;
@@ -23,7 +24,10 @@ export function ChatMessages({ messages, currentUserProfileId, trade }: ChatMess
     <div className="space-y-3 mb-4">
       {messages.map((message) => {
         const isOwnMessage = message.sender_id === currentUserProfileId;
-        const hasAttachment = message.attachment_url && message.attachment_url.trim() !== '';
+        const rawAttachment = message.attachment_url?.trim() || '';
+        const safeAttachmentUrl = rawAttachment ? sanitizeImageUrl(rawAttachment) : '';
+        const safeFileUrl = rawAttachment ? sanitizeUrl(rawAttachment) : '';
+        const hasAttachment = !!safeAttachmentUrl || !!safeFileUrl;
 
         return (
           <div
@@ -33,32 +37,32 @@ export function ChatMessages({ messages, currentUserProfileId, trade }: ChatMess
             <div className="max-w-[80%]">
               {hasAttachment && (
                 <div className="mb-2">
-                  {message.attachment_type === 'image' ? (
+                  {message.attachment_type === 'image' && safeAttachmentUrl ? (
                     <div className="relative">
                       <img 
-                        src={message.attachment_url || ''} 
+                        src={safeAttachmentUrl} 
                         alt={message.attachment_filename || 'Uploaded image'} 
                         className="rounded max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
-                        onClick={() => window.open(message.attachment_url!, '_blank')}
+                        onClick={() => window.open(safeAttachmentUrl, '_blank', 'noopener,noreferrer')}
                         onError={(e) => {
-                          console.error('Image failed to load:', message.attachment_url);
+                          console.error('Image failed to load:', safeAttachmentUrl);
                           e.currentTarget.style.display = 'none';
                         }}
                         loading="lazy"
                       />
                     </div>
-                  ) : message.attachment_type === 'video' ? (
+                  ) : message.attachment_type === 'video' && safeAttachmentUrl ? (
                     <video 
-                      src={message.attachment_url || ''} 
+                      src={safeAttachmentUrl} 
                       controls 
                       className="rounded max-w-full h-auto"
                       onError={(e) => {
-                        console.error('Video failed to load:', message.attachment_url);
+                        console.error('Video failed to load:', safeAttachmentUrl);
                       }}
                     />
-                  ) : (
+                  ) : safeFileUrl ? (
                     <a 
-                      href={message.attachment_url || '#'} 
+                      href={safeFileUrl} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className={`flex items-center gap-2 p-3 rounded-lg hover:opacity-90 transition-all shadow-xs inline-flex ${
@@ -71,7 +75,7 @@ export function ChatMessages({ messages, currentUserProfileId, trade }: ChatMess
                       <span className="text-sm font-medium truncate max-w-[200px]">{message.attachment_filename || 'Download file'}</span>
                       <Download className="w-5 h-5 ml-2" />
                     </a>
-                  )}
+                  ) : null}
                 </div>
               )}
               {message.content && message.content.trim() !== '' && (

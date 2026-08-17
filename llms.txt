@@ -1,0 +1,41 @@
+# Pexly - Non-Custodial Crypto Marketplace
+
+Pexly is a digital marketplace that connects users to trade value using cryptocurrency and digital gift cards in a non-custodial way. Users always remain in control of their funds through their own external wallets.
+
+## Key Features
+
+### Gift Card Marketplace
+- Buy digital gift cards using cryptocurrency
+- Sell unused or unwanted gift cards for crypto
+- Trade gift cards directly with other users
+
+### Crypto Trading (Non-Custodial)
+- Trade cryptocurrency peer-to-peer with other users
+- Transactions executed directly from user wallets
+- Pexly never holds private keys or user funds
+
+### Third-Party Crypto Purchase Links
+Pexly displays links to independent third-party services for cryptocurrency acquisition without processing payments or acting as a broker.
+
+## Platform Architecture
+
+- **Non-Custodial**: Users connect their own external wallets
+- **Secure**: Pexly never generates or stores wallet seed phrases
+- **Transparent**: All transactions require explicit user wallet approval
+- **Smart Contracts**: Transaction rules are enforced automatically where applicable
+
+## Getting Started
+
+- [Home Page](https://pexly.io)
+- [About Pexly](https://pexly.io/about)
+- [How It Works](https://pexly.io#how-it-works)
+- [Support Center](https://pexly.io/support)
+- [Privacy Policy](https://pexly.io/privacy)
+- [Terms of Service](https://pexly.io/terms)
+- [Contact Us](https://pexly.io/contact)
+
+## Important Disclaimers
+
+Pexly does not operate as a wallet, bank, or financial institution. The platform facilitates peer-to-peer transactions and third-party integrations. Users interact with these services at their own discretion.
+
+For more information, visit https://pexly.io

@@ -57,6 +57,12 @@ export function sanitizeUrl(url: string): string {
   }
 }
 
+export function isSafeExternalUrl(url: string | null | undefined): boolean {
+  if (!url || !url.trim()) return false;
+  const sanitized = sanitizeUrl(url);
+  return !!sanitized && /^https?:\/\//i.test(sanitized);
+}
+
 export function sanitizeImageUrl(url: string | null | undefined): string {
   if (!url) return "";
   try {

@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { ArrowRight } from '@/lib/icons';
+import { isSafeExternalUrl } from "@/lib/sanitize";
 
 // ─── SVG Illustrations ─────────────────────────────────────────────────────────
 
@@ -297,11 +298,12 @@ interface MegaPanelProps {
 // ─── Feature card ──────────────────────────────────────────────────────────────
 function Card({ card, onNavigate, onClose }: { card: FeatureCard; onNavigate: (h: string) => void; onClose: () => void }) {
   const isExternal = card.href.startsWith("http");
+  const safeExternalHref = isExternal ? (isSafeExternalUrl(card.href) ? card.href : "") : "";
   return (
     <button
       onClick={() => {
-        if (isExternal) window.open(card.href, "_blank");
-        else onNavigate(card.href);
+        if (safeExternalHref) window.open(safeExternalHref, "_blank", "noopener,noreferrer");
+        else if (!isExternal) onNavigate(card.href);
         onClose();
       }}
       className="group flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-accent focus:outline-none"
@@ -344,8 +346,8 @@ export function MegaPanel({ cards, cols = 2, side, onNavigate, onClose }: MegaPa
                     <li key={link.label}>
                       <button
                         onClick={() => {
-                          if (link.external) window.open(link.href, "_blank");
-                          else onNavigate(link.href);
+                          if (link.external && isSafeExternalUrl(link.href)) window.open(link.href, "_blank", "noopener,noreferrer");
+                          else if (!link.external) onNavigate(link.href);
                           onClose();
                         }}
                         className="w-full text-left text-xs font-medium text-foreground transition-colors hover:text-primary"
