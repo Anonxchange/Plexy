@@ -198,18 +198,33 @@ type IconProps = SVGProps<SVGSVGElement> & {
 
 function makeIcon(iconData: object, displayName: string) {
   const Comp = forwardRef<SVGSVGElement, IconProps>(
-    ({ size = 24, color, strokeWidth = 1.5, absoluteStrokeWidth: _abs, className, style, ...rest }, ref) => (
-      <HugeiconsIcon
-        ref={ref as React.RefObject<SVGSVGElement>}
-        icon={iconData}
-        size={size}
-        strokeWidth={strokeWidth}
-        color={color}
-        className={className}
-        style={style}
-        {...(rest as object)}
-      />
-    )
+    ({ size = 24, color, strokeWidth = 1.5, absoluteStrokeWidth: _abs, className, style, ...rest }, ref) => {
+      const {
+        'aria-label': ariaLabel,
+        'aria-labelledby': ariaLabelledBy,
+        title,
+        'aria-hidden': ariaHidden,
+        focusable,
+        ...svgProps
+      } = rest;
+
+      const hasAccessibleName = Boolean(ariaLabel || ariaLabelledBy || title);
+
+      return (
+        <HugeiconsIcon
+          ref={ref as React.RefObject<SVGSVGElement>}
+          icon={iconData}
+          size={size}
+          strokeWidth={strokeWidth}
+          color={color}
+          className={className}
+          style={style}
+          {...svgProps}
+          aria-hidden={ariaHidden ?? (!hasAccessibleName ? true : undefined)}
+          focusable={focusable ?? (!hasAccessibleName ? false : undefined)}
+        />
+      );
+    }
   );
   Comp.displayName = displayName;
   return Comp;

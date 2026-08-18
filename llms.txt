@@ -1,30 +1,30 @@
-# Pexly - Non-Custodial Crypto Marketplace
+# Pexly
 
-Pexly is a digital marketplace that connects users to trade value using cryptocurrency and digital gift cards in a non-custodial way. Users always remain in control of their funds through their own external wallets.
+Pexly is a non-custodial crypto marketplace that connects users to trade digital value using cryptocurrency and digital gift cards while keeping custody in the user's own wallet.
 
 ## Key Features
 
 ### Gift Card Marketplace
-- Buy digital gift cards using cryptocurrency
+- Buy digital gift cards with cryptocurrency
 - Sell unused or unwanted gift cards for crypto
 - Trade gift cards directly with other users
 
 ### Crypto Trading (Non-Custodial)
 - Trade cryptocurrency peer-to-peer with other users
-- Transactions executed directly from user wallets
+- Transactions execute directly from user wallets
 - Pexly never holds private keys or user funds
 
 ### Third-Party Crypto Purchase Links
-Pexly displays links to independent third-party services for cryptocurrency acquisition without processing payments or acting as a broker.
+Pexly may display links to independent third-party services for cryptocurrency acquisition without processing payments or acting as a broker.
 
 ## Platform Architecture
 
 - **Non-Custodial**: Users connect their own external wallets
 - **Secure**: Pexly never generates or stores wallet seed phrases
-- **Transparent**: All transactions require explicit user wallet approval
+- **Transparent**: All transactions require explicit wallet approval
 - **Smart Contracts**: Transaction rules are enforced automatically where applicable
 
-## Getting Started
+## Links
 
 - [Home Page](https://pexly.io)
 - [About Pexly](https://pexly.io/about)
@@ -38,4 +38,4 @@ Pexly displays links to independent third-party services for cryptocurrency acqu
 
 Pexly does not operate as a wallet, bank, or financial institution. The platform facilitates peer-to-peer transactions and third-party integrations. Users interact with these services at their own discretion.
 
-For more information, visit https://pexly.io
+For more information, visit [Pexly](https://pexly.io).
