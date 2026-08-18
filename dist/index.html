@@ -181,9 +181,10 @@
     <link rel="modulepreload" crossorigin href="/assets/use-schema-DVtTkE-U.js">
     <link rel="modulepreload" crossorigin href="/assets/card-C9AkWkrE.js">
     <link rel="modulepreload" crossorigin href="/assets/use-gift-card-cart-CqoBV33v.js">
-    <link rel="stylesheet" crossorigin href="/assets/index--20Vguoi.css">
+    <link rel="preload" as="style" href="/assets/index--20Vguoi.css" fetchpriority="high" /><link rel="stylesheet" href="/assets/index--20Vguoi.css" media="print" data-defer-css="true" />
   </head>
   <body>
     <div id="root"></div>
   </body>
 </html>
+<script>window.addEventListener("DOMContentLoaded", function () { document.querySelectorAll("link[data-defer-css]").forEach(function (link) { link.media = "all"; }); });</script>

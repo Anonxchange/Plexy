@@ -25,13 +25,29 @@ import path from "path";
 
 const LAZY_CHUNKS = ["vendor-ui-x", "vendor-charts", "vendor-canvas", "vendor-motion"];
 
+function deferCssPlugin() {
+  return {
+    name: "defer-index-css",
+    transformIndexHtml(html) {
+      const cssMatch = html.match(/<link[^>]+rel=["']stylesheet["'][^>]*href=["']([^"']+\.css)["'][^>]*>/i);
+      if (!cssMatch) return html;
+
+      const href = cssMatch[1];
+      const deferredCss = `<link rel="preload" as="style" href="${href}" fetchpriority="high" /><link rel="stylesheet" href="${href}" media="print" data-defer-css="true" />`;
+      const deferredScript = `<script>window.addEventListener("DOMContentLoaded", function () { document.querySelectorAll("link[data-defer-css]").forEach(function (link) { link.media = "all"; }); });</script>`;
+
+      return html.replace(cssMatch[0], deferredCss).concat(deferredScript);
+    },
+  };
+}
+
 export default defineConfig({
   root: path.resolve(import.meta.dirname, "client"),
   envDir: path.resolve(import.meta.dirname),
   envPrefix: "VITE_",
   base: "/",
 
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), deferCssPlugin()],
 
   define: {
     global: "globalThis",
