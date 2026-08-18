@@ -25,25 +25,13 @@ import path from "path";
 
 const LAZY_CHUNKS = ["vendor-ui-x", "vendor-charts", "vendor-canvas", "vendor-motion"];
 
-function deferCriticalCss() {
-  return {
-    name: "defer-critical-css",
-    transformIndexHtml(html) {
-      return html.replace(
-        /<link\s+([^>]*?)rel=["']stylesheet["']([^>]*?)href=["']([^"']+\.css)["']([^>]*)>/i,
-        '<link rel="preload" as="style" href="$3" onload="this.rel=\'stylesheet\';this.onload=null;" /><link rel="stylesheet" href="$3" media="print" onload="this.media=\'all\';this.onload=null;" />'
-      );
-    },
-  };
-}
-
 export default defineConfig({
   root: path.resolve(import.meta.dirname, "client"),
   envDir: path.resolve(import.meta.dirname),
   envPrefix: "VITE_",
   base: "/",
 
-  plugins: [react(), tailwindcss(), deferCriticalCss()],
+  plugins: [react(), tailwindcss()],
 
   define: {
     global: "globalThis",
