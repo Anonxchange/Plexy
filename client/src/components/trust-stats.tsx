@@ -1,10 +1,10 @@
 import { useTranslation } from "react-i18next";
 
 const personMeta = [
-  { image: "/images/trust-person-1.webp", nameKey: "trust.p1_name", quoteKey: "trust.p1_quote", descKey: "trust.p1_desc" },
-  { image: "/images/trust-person-2.webp", nameKey: "trust.p2_name", quoteKey: "trust.p2_quote", descKey: "trust.p2_desc" },
-  { image: "/images/trust-person-3.webp", nameKey: "trust.p3_name", quoteKey: "trust.p3_quote", descKey: "trust.p3_desc" },
-  { image: "/images/trust-person-4.webp", nameKey: "trust.p4_name", quoteKey: "trust.p4_quote", descKey: "trust.p4_desc" },
+  { image: "/images/trust-person-1.webp", smallImage: "/images/trust-person-1-380.webp", nameKey: "trust.p1_name", quoteKey: "trust.p1_quote", descKey: "trust.p1_desc" },
+  { image: "/images/trust-person-2.webp", smallImage: "/images/trust-person-2-380.webp", nameKey: "trust.p2_name", quoteKey: "trust.p2_quote", descKey: "trust.p2_desc" },
+  { image: "/images/trust-person-3.webp", smallImage: "/images/trust-person-3-380.webp", nameKey: "trust.p3_name", quoteKey: "trust.p3_quote", descKey: "trust.p3_desc" },
+  { image: "/images/trust-person-4.webp", smallImage: "/images/trust-person-4-380.webp", nameKey: "trust.p4_name", quoteKey: "trust.p4_quote", descKey: "trust.p4_desc" },
 ];
 
 export const TrustStats = () => {
@@ -60,7 +60,9 @@ export const TrustStats = () => {
                 className="rounded-[32px] overflow-hidden relative h-[480px] lg:h-[560px] xl:h-[640px] 2xl:h-[720px]"
               >
                 <img
-                  src={item.image}
+                  src={item.smallImage}
+                  srcSet={`${item.smallImage} 380w, ${item.image} 600w`}
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                   alt={name}
                   loading="lazy"
                   decoding="async"

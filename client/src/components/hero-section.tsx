@@ -200,7 +200,7 @@ export function HeroSection() {
           <source
             type="image/webp"
             srcSet="/hero-bg-640.webp 640w, /hero-bg-1024.webp 1024w, /hero-bg.webp 1408w"
-            sizes="100vw"
+            sizes="(max-width: 1023px) 100vw, (max-width: 1280px) 46vw, 42vw"
           />
           <img
             src="/hero-bg.webp"
@@ -280,7 +280,7 @@ export function HeroSection() {
           <source
             type="image/webp"
             srcSet="/hero-bg-640.webp 640w, /hero-bg-1024.webp 1024w, /hero-bg.webp 1408w"
-            sizes="50vw"
+            sizes="(max-width: 1280px) 46vw, 42vw"
           />
           <img
             src="/hero-bg.webp"
