@@ -27,10 +27,13 @@ interface BottomSheetProps {
   open: boolean;
   onClose: () => void;
   title: string;
+  /** "center" = big centered title (margin / leverage / asset mode sheets),
+   *  "left"   = small muted label (order type & unit sheets) */
+  align?: "center" | "left";
   children: ReactNode;
 }
 
-const BottomSheet = ({ open, onClose, title, children }: BottomSheetProps) => {
+const BottomSheet = ({ open, onClose, title, align = "center", children }: BottomSheetProps) => {
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -57,13 +60,16 @@ const BottomSheet = ({ open, onClose, title, children }: BottomSheetProps) => {
         className="relative w-full max-h-[85vh] overflow-y-auto rounded-t-2xl border-t border-border bg-popover px-4 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" />
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-[15px] font-semibold text-foreground">{title}</h3>
+        <div className="relative mb-4 flex items-center">
+          {align === "center" ? (
+            <h3 className="w-full text-center text-[17px] font-semibold text-foreground">{title}</h3>
+          ) : (
+            <h3 className="text-[13px] font-normal text-muted-foreground">{title}</h3>
+          )}
           <button
             onClick={onClose}
             aria-label="Close"
-            className="text-muted-foreground transition-colors hover:text-foreground text-lg leading-none px-1"
+            className="absolute right-0 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground text-xl leading-none px-1"
           >
             ✕
           </button>
@@ -74,8 +80,58 @@ const BottomSheet = ({ open, onClose, title, children }: BottomSheetProps) => {
   );
 };
 
-/* Simple full-width option row used inside sheets */
-const SheetOption = ({
+/* Pill choice used side-by-side in the margin-mode sheet, with the
+   little check badge tucked into the top-right corner (screenshot 1) */
+const PillChoice = ({
+  active,
+  onClick,
+  label,
+}: { active: boolean; onClick: () => void; label: string }) => (
+  <button
+    onClick={onClick}
+    className={`relative w-full overflow-hidden rounded-xl border py-3.5 text-[15px] transition-colors ${
+      active
+        ? "border-primary bg-primary/10 text-primary"
+        : "border-border bg-secondary/60 text-foreground hover:bg-accent"
+    }`}
+  >
+    {label}
+    {active && (
+      <span className="absolute right-0 top-0 flex h-5 w-5 items-end justify-end rounded-bl-xl bg-primary pr-[3px] pb-[1px] text-[10px] font-bold leading-none text-primary-foreground">
+        ✓
+      </span>
+    )}
+  </button>
+);
+
+/* Radio row: circle + title, then one muted line per sentence (screenshot 2) */
+const RadioChoice = ({
+  active,
+  onClick,
+  label,
+  lines,
+}: { active: boolean; onClick: () => void; label: string; lines: string[] }) => (
+  <button onClick={onClick} className="w-full text-left">
+    <div className="flex items-center gap-3">
+      <span
+        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors ${
+          active ? "border-primary bg-primary" : "border-border bg-secondary"
+        }`}
+      >
+        {active && <span className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />}
+      </span>
+      <span className="text-[16px] font-medium text-foreground">{label}</span>
+    </div>
+    <div className="mt-2 flex flex-col gap-1 pl-8">
+      {lines.map((line) => (
+        <p key={line} className="text-[12px] leading-snug text-muted-foreground">{line}</p>
+      ))}
+    </div>
+  </button>
+);
+
+/* Flat list row with a trailing check — order type & unit sheets (screenshot 4) */
+const ListChoice = ({
   active,
   onClick,
   label,
@@ -83,17 +139,31 @@ const SheetOption = ({
 }: { active: boolean; onClick: () => void; label: string; sub?: string }) => (
   <button
     onClick={onClick}
-    className={`w-full rounded-xl border px-4 py-3 text-left transition-colors ${
-      active
-        ? "border-primary bg-primary/10 text-foreground"
-        : "border-border bg-secondary/40 text-foreground hover:bg-accent"
-    }`}
+    className="flex w-full items-center justify-between border-b border-border/60 py-3.5 text-left last:border-b-0"
   >
-    <div className="flex items-center justify-between">
-      <span className="text-[14px] font-medium">{label}</span>
-      {active && <span className="text-[12px] font-semibold text-primary">✓</span>}
-    </div>
-    {sub && <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{sub}</p>}
+    <span>
+      <span className={`block text-[15px] ${active ? "font-semibold text-foreground" : "text-foreground/90"}`}>
+        {label}
+      </span>
+      {sub && <span className="mt-0.5 block text-[11px] text-muted-foreground">{sub}</span>}
+    </span>
+    {active && <span className="text-[15px] font-bold text-foreground">✓</span>}
+  </button>
+);
+
+/* Full-width rounded CTA pinned to the bottom of a sheet */
+const SheetCta = ({
+  label,
+  onClick,
+  loading,
+}: { label: string; onClick: () => void; loading?: boolean }) => (
+  <button
+    onClick={onClick}
+    disabled={loading}
+    className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3.5 text-[16px] font-bold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
+  >
+    {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+    {label}
   </button>
 );
 
@@ -166,6 +236,7 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
     ? sizeNum
     : priceNum > 0 ? sizeNum * priceNum : 0;
   const estMargin = leverageNum > 0 ? notional / leverageNum : 0;
+  const maxNotional = (availableBalance * leverageNum).toLocaleString(undefined, { maximumFractionDigits: 2 });
   const maxOrderSize = priceNum > 0
     ? ((availableBalance * leverageNum) / priceNum).toFixed(4)
     : "--";
@@ -541,82 +612,127 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
 
       {/* ══════════ Bottom sheets ══════════ */}
 
-      {/* Margin mode */}
+      {/* Margin mode — screenshot 1 arrangement */}
       <BottomSheet open={marginSheet} onClose={() => setMarginSheet(false)} title={`${apiSymbol} Margin mode`}>
-        <p className="mb-4 text-[12px] leading-snug text-muted-foreground">
+        <p className="text-[14px] leading-snug text-foreground">
           Switching of margin mode only applies to the selected contract
         </p>
-        <div className="grid grid-cols-2 gap-3">
-          <SheetOption
-            active={marginMode === "cross"}
-            label="Cross"
-            onClick={() => { if (marginMode === "cross") { setMarginSheet(false); return; } marginMutation.mutate("cross"); }}
-          />
-          <SheetOption
-            active={marginMode === "isolated"}
-            label="Isolated"
-            onClick={() => { if (marginMode === "isolated") { setMarginSheet(false); return; } marginMutation.mutate("isolated"); }}
-          />
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <PillChoice active={marginMode === "cross"} label="Cross" onClick={() => setMarginMode("cross")} />
+          <PillChoice active={marginMode === "isolated"} label="Isolated" onClick={() => setMarginMode("isolated")} />
         </div>
-        <h4 className="mt-5 text-[14px] font-medium text-foreground">What are cross and isolated modes?</h4>
-        <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground">
-          The margin assigned to a position is restricted to a certain amount. If the margin falls below the
-          maintenance margin level, the position is liquidated. However, you can add and remove margin at will
-          under isolated mode. Cross mode shares your whole balance as margin across positions.
+        <h4 className="mt-6 text-[15px] font-medium text-foreground">What are cross and isolated modes?</h4>
+        <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">
+          The Margin assigned to a position is restricted to a certain amount. If the Margin falls below the
+          Maintenance Margin level, the position is liquidated. However, you can add and remove Margin at will
+          under this mode.
         </p>
-        {marginMutation.isPending && (
-          <div className="mt-4 flex items-center justify-center gap-2 text-[12px] text-muted-foreground">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Updating…
-          </div>
-        )}
+        <SheetCta
+          label={user ? "Confirm" : "Connect"}
+          loading={marginMutation.isPending}
+          onClick={() => { if (!user) { navigate("/signin"); return; } marginMutation.mutate(marginMode); }}
+        />
       </BottomSheet>
 
-      {/* Leverage */}
-      <BottomSheet open={leverageSheet} onClose={() => setLeverageSheet(false)} title="Adjust Leverage">
-        <div className="grid grid-cols-3 gap-2">
-          {leverageOptions.map((lev) => (
+      {/* Adjust leverage — screenshot 3 arrangement */}
+      <BottomSheet open={leverageSheet} onClose={() => setLeverageSheet(false)} title={`${apiSymbol} Adjust leverage`}>
+        <p className="text-[13px] text-muted-foreground">Leverage</p>
+        <div className="mt-2 flex items-center justify-between rounded-xl border border-border px-4 py-3">
+          <button
+            onClick={() => setLeverage(String(Math.max(1, leverageNum - 1)))}
+            aria-label="Decrease leverage"
+            className="text-[20px] leading-none text-muted-foreground hover:text-foreground"
+          >
+            −
+          </button>
+          <span className="text-[17px] font-semibold text-foreground font-mono-num">{leverage}</span>
+          <button
+            onClick={() => setLeverage(String(Math.min(200, leverageNum + 1)))}
+            aria-label="Increase leverage"
+            className="text-[20px] leading-none text-muted-foreground hover:text-foreground"
+          >
+            +
+          </button>
+        </div>
+        <input
+          type="range"
+          min={1}
+          max={200}
+          step={1}
+          value={leverageNum}
+          onChange={(e) => setLeverage(e.target.value)}
+          className="mt-4 h-1 w-full cursor-pointer appearance-none rounded-full bg-border accent-primary"
+        />
+        <div className="mt-2 flex justify-between">
+          {[1, 40, 80, 120, 160, 200].map((tick) => (
             <button
-              key={lev}
-              onClick={() => { setLeverage(lev); setLeverageSheet(false); }}
-              className={`rounded-xl border py-3 text-[14px] font-semibold transition-colors ${
-                leverage === lev
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border bg-secondary/40 text-foreground hover:bg-accent"
-              }`}
+              key={tick}
+              onClick={() => setLeverage(String(tick))}
+              className="text-[12px] text-muted-foreground hover:text-foreground"
             >
-              {lev}x
+              {tick}x
             </button>
           ))}
         </div>
-        <p className="mt-4 flex items-start gap-1.5 text-[11px] leading-snug text-muted-foreground">
-          <Info className="mt-[1px] h-3 w-3 shrink-0" />
-          Selecting higher leverage increases liquidation risk.
+        <div className="mt-6 rounded-xl border border-border px-4 py-4 text-center">
+          <p className="text-[14px] text-foreground">Remaining openable notional value</p>
+          <p className="mt-1.5 text-[15px] font-semibold text-foreground font-mono-num">
+            {maxNotional} {quoteCoin}
+          </p>
+          <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground">
+            The maximum notional value you can open under your current leverage and system risk control limits.{" "}
+            <span className="text-primary">Learn more</span>
+          </p>
+        </div>
+        <p className="mt-4 text-[13px] leading-relaxed text-muted-foreground">
+          Please note that leverage changing will also apply for open positions and open orders.
+          <br />
+          Selecting higher leverage (such as 10x) increases your chances of liquidation.
         </p>
+        <SheetCta
+          label={user ? "Confirm" : "Connect"}
+          onClick={() => { if (!user) { navigate("/signin"); return; } setLeverageSheet(false); }}
+        />
       </BottomSheet>
 
-      {/* Asset mode */}
+      {/* Asset mode — screenshot 2 arrangement */}
       <BottomSheet open={assetSheet} onClose={() => setAssetSheet(false)} title="Asset Mode">
-        <div className="flex flex-col gap-3">
-          <SheetOption
+        <div className="flex flex-col gap-6">
+          <RadioChoice
             active={assetMode === "single"}
             label="Single-Asset Mode"
-            sub="Use pair's settlement currency as margin. PnL offsets across Cross positions of the same currency. Supports Cross and Isolated margin."
-            onClick={() => { setAssetMode("single"); setAssetSheet(false); }}
+            lines={[
+              "Use pair's settlement currency as margin.",
+              "PnL offsets across Cross positions of the same currency.",
+              "Supports Cross and Isolated margin.",
+            ]}
+            onClick={() => setAssetMode("single")}
           />
-          <SheetOption
+          <RadioChoice
             active={assetMode === "multi"}
             label="Multi-Asset Mode"
-            sub="Contracts can be traded across margin assets. Profits and losses of positions with different margin assets can offset one another. Supports cross margin."
-            onClick={() => { setAssetMode("multi"); setAssetSheet(false); }}
+            lines={[
+              "Contracts can be traded across margin assets",
+              "The profits and losses of positions with different margin assets can offset one another",
+              "Supports cross margin",
+            ]}
+            onClick={() => setAssetMode("multi")}
           />
         </div>
+        <p className="mt-6 text-[13px] text-muted-foreground">
+          Read about <span className="text-primary">Multi-Asset Mode</span> to better manage risk.
+        </p>
+        <SheetCta
+          label={user ? "Confirm" : "Enable Trading"}
+          onClick={() => { if (!user) { navigate("/signin"); return; } setAssetSheet(false); }}
+        />
       </BottomSheet>
 
-      {/* Order type */}
-      <BottomSheet open={orderTypeSheet} onClose={() => setOrderTypeSheet(false)} title="Order Type">
-        <div className="flex flex-col gap-2">
+      {/* Order type — screenshot 4 arrangement */}
+      <BottomSheet open={orderTypeSheet} onClose={() => setOrderTypeSheet(false)} title="Order Type" align="left">
+        <div className="flex flex-col">
           {orderTypes.map((type) => (
-            <SheetOption
+            <ListChoice
               key={type}
               active={orderType === type}
               label={type}
@@ -627,44 +743,44 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
       </BottomSheet>
 
       {/* Size unit */}
-      <BottomSheet open={sizeUnitSheet} onClose={() => setSizeUnitSheet(false)} title="Size Unit">
+      <BottomSheet open={sizeUnitSheet} onClose={() => setSizeUnitSheet(false)} title="Size Unit" align="left">
         <div className="flex flex-col gap-2">
           {[quoteCoin, baseCoin].map((unit) => (
-            <SheetOption key={unit} active={sizeUnit === unit} label={unit}
+            <ListChoice key={unit} active={sizeUnit === unit} label={unit}
               onClick={() => { setSizeUnit(unit); setSizeUnitSheet(false); }} />
           ))}
         </div>
       </BottomSheet>
 
       {/* Price unit */}
-      <BottomSheet open={priceUnitSheet} onClose={() => setPriceUnitSheet(false)} title="Price Unit">
+      <BottomSheet open={priceUnitSheet} onClose={() => setPriceUnitSheet(false)} title="Price Unit" align="left">
         <div className="flex flex-col gap-2">
           {[quoteCoin, baseCoin].map((unit) => (
-            <SheetOption key={unit} active={priceUnit === unit} label={unit}
+            <ListChoice key={unit} active={priceUnit === unit} label={unit}
               onClick={() => { setPriceUnit(unit); setPriceUnitSheet(false); }} />
           ))}
         </div>
       </BottomSheet>
 
       {/* Stop price unit */}
-      <BottomSheet open={stopUnitSheet} onClose={() => setStopUnitSheet(false)} title="Stop Price Unit">
+      <BottomSheet open={stopUnitSheet} onClose={() => setStopUnitSheet(false)} title="Stop Price Unit" align="left">
         <div className="flex flex-col gap-2">
           {[quoteCoin, baseCoin].map((unit) => (
-            <SheetOption key={unit} active={stopPriceUnit === unit} label={unit}
+            <ListChoice key={unit} active={stopPriceUnit === unit} label={unit}
               onClick={() => { setStopPriceUnit(unit); setStopUnitSheet(false); }} />
           ))}
         </div>
       </BottomSheet>
 
       {/* Time in force */}
-      <BottomSheet open={tifSheet} onClose={() => setTifSheet(false)} title="Time in Force">
+      <BottomSheet open={tifSheet} onClose={() => setTifSheet(false)} title="Time in Force" align="left">
         <div className="flex flex-col gap-2">
           {[
             { value: "GTC", label: "GTC", sub: "Good Till Canceled" },
             { value: "FOK", label: "FOK", sub: "Fill or Kill" },
             { value: "IOC", label: "IOC", sub: "Immediate or Cancel" },
           ].map((opt) => (
-            <SheetOption
+            <ListChoice
               key={opt.value}
               active={timeInForce === opt.value}
               label={opt.label}
