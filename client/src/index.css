@@ -66,6 +66,11 @@
   --color-chart-4: hsl(var(--chart-4));
   --color-chart-5: hsl(var(--chart-5));
 
+  /* Trading colors used by the order book, charts, and Buy/Sell controls. */
+  --color-trading-green: hsl(var(--trading-green));
+  --color-trading-red: hsl(var(--trading-red));
+  --color-trading-amber: hsl(var(--trading-amber));
+
   --color-hero: hsl(var(--hero));
   --color-hero-curve: hsl(var(--hero-curve));
 
@@ -139,6 +144,10 @@
   --chart-3: 25 95% 53%;
   --chart-4: 280 65% 55%;
   --chart-5: 190 75% 45%;
+
+  --trading-green: 142 71% 45%;
+  --trading-red: 0 84% 60%;
+  --trading-amber: 38 92% 50%;
 
   --hero: 62 100% 50%;
   --hero-curve: 240 100% 50%;
@@ -226,6 +235,10 @@
   --chart-3: 25 95% 62%;
   --chart-4: 280 65% 68%;
   --chart-5: 190 75% 58%;
+
+  --trading-green: 142 71% 52%;
+  --trading-red: 0 84% 65%;
+  --trading-amber: 38 92% 58%;
 
   --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.25);
   --shadow-xs: 0px 1px 3px 0px hsl(0 0% 0% / 0.3);
