@@ -436,9 +436,9 @@ export default function AsterLightweightChart({
       const up  = chg >= 0;
       const col = up ? "#26a69a" : "#ef5350";
       const bg  = up ? "rgba(38,166,154,0.12)" : "rgba(239,83,80,0.12)";
-      const txt = isDark ? "#e5e7eb" : "#111827";
+      const txt = isDark ? "#e5e7eb" : "#374151";
       el.innerHTML =
-        `<span style="color:${txt};font-weight:600;font-size:13px;letter-spacing:-0.01em">${c.toFixed(dp)}</span>` +
+        `<span style="color:${col};font-weight:500;font-size:12px;letter-spacing:-0.01em">${c.toFixed(dp)}</span>` +
         `<span style="display:inline-flex;align-items:center;margin-left:6px;padding:1px 5px;border-radius:4px;background:${bg};color:${col};font-size:10.5px;font-weight:500">${up ? "▲" : "▼"} ${up ? "+" : ""}${chg.toFixed(dp)}&nbsp;(${up ? "+" : ""}${pct.toFixed(2)}%)</span>`;
     }
 

@@ -647,11 +647,11 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
   const [loaded,          setLoaded]          = useState(false);
 
   const [candleColors, setCandleColors] = useState<CandleColors>({
-    bullBody:   "#26a69a",
+    bullBody:   "#16a085",
     bearBody:   "#ef5350",
-    bullBorder: "#26a69a",
+    bullBorder: "#16a085",
     bearBorder: "#ef5350",
-    bullWick:   "#26a69a",
+    bullWick:   "#16a085",
     bearWick:   "#ef5350",
   });
 
