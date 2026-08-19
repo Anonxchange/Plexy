@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
 import { ChevronDown, ChevronUp, PlusCircle, Info, Loader2 } from '@/lib/icons';
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
@@ -18,6 +18,85 @@ const UI_TO_FUTURES_TYPE: Record<string, string> = {
   "Maker Only":  "LIMIT_MAKER",
 };
 
+/* ────────────────────────────────────────────────────────────
+   Bottom sheet — slides up from the bottom of the screen.
+   Used for every selector on mobile (margin mode, leverage,
+   asset mode, order type, units, time-in-force).
+   ──────────────────────────────────────────────────────────── */
+interface BottomSheetProps {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
+}
+
+const BottomSheet = ({ open, onClose, title, children }: BottomSheetProps) => {
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-end">
+      {/* backdrop */}
+      <div
+        onClick={onClose}
+        className="absolute inset-0 bg-black/60 animate-in fade-in duration-150"
+      />
+      {/* panel */}
+      <div
+        className="relative w-full max-h-[85vh] overflow-y-auto rounded-t-2xl border-t border-border bg-popover px-4 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" />
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-[15px] font-semibold text-foreground">{title}</h3>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="text-muted-foreground transition-colors hover:text-foreground text-lg leading-none px-1"
+          >
+            ✕
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+};
+
+/* Simple full-width option row used inside sheets */
+const SheetOption = ({
+  active,
+  onClick,
+  label,
+  sub,
+}: { active: boolean; onClick: () => void; label: string; sub?: string }) => (
+  <button
+    onClick={onClick}
+    className={`w-full rounded-xl border px-4 py-3 text-left transition-colors ${
+      active
+        ? "border-primary bg-primary/10 text-foreground"
+        : "border-border bg-secondary/40 text-foreground hover:bg-accent"
+    }`}
+  >
+    <div className="flex items-center justify-between">
+      <span className="text-[14px] font-medium">{label}</span>
+      {active && <span className="text-[12px] font-semibold text-primary">✓</span>}
+    </div>
+    {sub && <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{sub}</p>}
+  </button>
+);
+
 interface FuturesTradePanelProps {
   symbol?: string;
 }
@@ -26,9 +105,7 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [marginMode, setMarginMode] = useState<"cross" | "isolated">("cross");
   const [leverage, setLeverage] = useState("20");
-  const [leverageOpen, setLeverageOpen] = useState(false);
   const [orderType, setOrderType] = useState("Market");
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [size, setSize] = useState("");
   const [price, setPrice] = useState("");
   const [stopPrice, setStopPrice] = useState("");
@@ -42,18 +119,19 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
   const [sizeUnit, setSizeUnit] = useState<"USDT" | string>("USDT");
   const [stopPriceUnit, setStopPriceUnit] = useState<"USDT" | string>("USDT");
   const [priceUnit, setPriceUnit] = useState<"USDT" | string>("USDT");
-  const [unitDropdownOpen, setUnitDropdownOpen] = useState(false);
-  const [stopUnitDropdownOpen, setStopUnitDropdownOpen] = useState(false);
-  const [priceUnitDropdownOpen, setPriceUnitDropdownOpen] = useState(false);
   const [timeInForce, setTimeInForce] = useState("GTC");
-  const [tifDropdownOpen, setTifDropdownOpen] = useState(false);
+  const [assetMode, setAssetMode] = useState<"single" | "multi">("single");
 
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const unitDropdownRef = useRef<HTMLDivElement>(null);
-  const stopUnitRef = useRef<HTMLDivElement>(null);
-  const priceUnitRef = useRef<HTMLDivElement>(null);
-  const tifRef = useRef<HTMLDivElement>(null);
-  const leverageRef = useRef<HTMLDivElement>(null);
+  // Bottom-sheet visibility
+  const [marginSheet, setMarginSheet] = useState(false);
+  const [leverageSheet, setLeverageSheet] = useState(false);
+  const [assetSheet, setAssetSheet] = useState(false);
+  const [orderTypeSheet, setOrderTypeSheet] = useState(false);
+  const [sizeUnitSheet, setSizeUnitSheet] = useState(false);
+  const [priceUnitSheet, setPriceUnitSheet] = useState(false);
+  const [stopUnitSheet, setStopUnitSheet] = useState(false);
+  const [tifSheet, setTifSheet] = useState(false);
+
   const sliderRef = useRef<HTMLDivElement>(null);
 
   const { user } = useAuth();
@@ -120,12 +198,15 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
   const showPriceField = isLimit || isMakerOnly || isStopLimit;
   const showStopPrice = isStopLimit || isStopMarket;
   const showTotalValue = isLimit || isStopLimit || isMakerOnly;
+  // Time in force now applies to Limit, Maker Only and Stop Limit
+  const showTif = isLimit || isStopLimit || isMakerOnly;
 
   const marginMutation = useMutation({
     mutationFn: (mode: "cross" | "isolated") =>
       asterTrading.futuresSetMarginType(apiSymbol, mode === "isolated" ? "ISOLATED" : "CROSSED"),
     onSuccess: (_data, mode) => {
       setMarginMode(mode);
+      setMarginSheet(false);
       toast({ title: `Margin mode set to ${mode === "isolated" ? "Isolated" : "Cross"}` });
     },
     onError: (err: Error) => {
@@ -170,63 +251,32 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
     },
   });
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setDropdownOpen(false);
-      if (unitDropdownRef.current && !unitDropdownRef.current.contains(e.target as Node)) setUnitDropdownOpen(false);
-      if (stopUnitRef.current && !stopUnitRef.current.contains(e.target as Node)) setStopUnitDropdownOpen(false);
-      if (priceUnitRef.current && !priceUnitRef.current.contains(e.target as Node)) setPriceUnitDropdownOpen(false);
-      if (tifRef.current && !tifRef.current.contains(e.target as Node)) setTifDropdownOpen(false);
-      if (leverageRef.current && !leverageRef.current.contains(e.target as Node)) setLeverageOpen(false);
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
   return (
     <div className="flex flex-col w-full bg-background">
 
-      {/* ── Cross / Isolated + Leverage ── */}
-      <div className="grid grid-cols-2 gap-1 px-2 pt-1.5 pb-0.5">
-        <div className="flex items-center bg-secondary rounded overflow-hidden">
-          <button
-            onClick={() => { if (marginMode !== "cross") marginMutation.mutate("cross"); }}
-            disabled={marginMutation.isPending}
-            className={`flex-1 py-1 text-[11px] font-medium transition-colors ${marginMode === "cross" ? "bg-accent text-foreground" : "text-muted-foreground"}`}
-          >
-            Cross
-          </button>
-          <button
-            onClick={() => { if (marginMode !== "isolated") marginMutation.mutate("isolated"); }}
-            disabled={marginMutation.isPending}
-            className={`flex-1 py-1 text-[11px] font-medium transition-colors ${marginMode === "isolated" ? "bg-accent text-foreground" : "text-muted-foreground"}`}
-          >
-            Isolated
-          </button>
-        </div>
-
-        <div className="relative" ref={leverageRef}>
-          <button
-            onClick={() => setLeverageOpen(!leverageOpen)}
-            className="w-full py-1 text-[11px] font-semibold bg-secondary rounded text-foreground flex items-center justify-center gap-0.5"
-          >
-            {leverage}x
-            {leverageOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          </button>
-          {leverageOpen && (
-            <div className="absolute z-50 mt-0.5 w-full rounded border border-border bg-secondary shadow-lg">
-              {leverageOptions.map((lev) => (
-                <button
-                  key={lev}
-                  onClick={() => { setLeverage(lev); setLeverageOpen(false); }}
-                  className={`w-full text-left px-2 py-1 text-[11px] transition-colors ${leverage === lev ? "text-trading-green" : "text-foreground hover:bg-accent"}`}
-                >
-                  {lev}x
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+      {/* ── Cross | 20x | M ── */}
+      <div className="grid grid-cols-3 gap-1 px-2 pt-1.5 pb-0.5">
+        <button
+          onClick={() => setMarginSheet(true)}
+          className="flex items-center justify-center gap-0.5 rounded bg-secondary py-1.5 text-[11px] font-medium text-foreground"
+        >
+          {marginMode === "cross" ? "Cross" : "Isolated"}
+          <ChevronDown className="w-3 h-3 text-muted-foreground" />
+        </button>
+        <button
+          onClick={() => setLeverageSheet(true)}
+          className="flex items-center justify-center gap-0.5 rounded bg-secondary py-1.5 text-[11px] font-semibold text-foreground"
+        >
+          {leverage}x
+          <ChevronDown className="w-3 h-3 text-muted-foreground" />
+        </button>
+        <button
+          onClick={() => setAssetSheet(true)}
+          className="flex items-center justify-center gap-0.5 rounded bg-secondary py-1.5 text-[11px] font-medium text-foreground"
+        >
+          {assetMode === "single" ? "S" : "M"}
+          <ChevronDown className="w-3 h-3 text-muted-foreground" />
+        </button>
       </div>
 
       {/* ── Buy / Sell toggle ── */}
@@ -248,29 +298,14 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
       {/* ── Form body ── */}
       <div className="flex flex-col gap-1.5 px-2 pb-2">
 
-        {/* Order type */}
-        <div className="relative" ref={dropdownRef}>
-          <button
-            onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex items-center justify-between w-full px-2 py-1.5 rounded border border-border bg-transparent text-[11px] text-foreground hover:border-muted-foreground transition-colors"
-          >
-            <span>{orderType}</span>
-            <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
-          </button>
-          {dropdownOpen && (
-            <div className="absolute z-50 w-full mt-0.5 rounded border border-border bg-popover shadow-lg overflow-hidden">
-              {orderTypes.map((type) => (
-                <button
-                  key={type}
-                  onClick={() => { setOrderType(type); setDropdownOpen(false); }}
-                  className={`w-full text-left px-2 py-1.5 text-[11px] transition-colors ${orderType === type ? "text-trading-green bg-trading-green/5" : "text-foreground hover:bg-accent"}`}
-                >
-                  {type}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Order type → bottom sheet */}
+        <button
+          onClick={() => setOrderTypeSheet(true)}
+          className="flex items-center justify-between w-full px-2 py-1.5 rounded border border-border bg-transparent text-[11px] text-foreground hover:border-muted-foreground transition-colors"
+        >
+          <span>{orderType}</span>
+          <ChevronDown className="w-3 h-3 text-muted-foreground" />
+        </button>
 
         {/* Available balance */}
         <div className="flex items-center justify-between">
@@ -285,70 +320,46 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
 
         {/* Stop Price */}
         {showStopPrice && (
-          <div ref={stopUnitRef}>
+          <div>
             <label className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Stop Price</label>
-            <div className="relative">
-              <div className="flex items-center rounded border border-border bg-transparent px-2 py-[5px] focus-within:border-muted-foreground transition-colors overflow-hidden">
-                <input
-                  type="number"
-                  value={stopPrice}
-                  onChange={(e) => setStopPrice(e.target.value)}
-                  placeholder="0.00"
-                  className="flex-1 bg-transparent text-[11px] text-foreground outline-none placeholder:text-muted-foreground min-w-0 font-mono-num"
-                />
-                <button
-                  onClick={() => setStopUnitDropdownOpen(!stopUnitDropdownOpen)}
-                  className="flex items-center gap-0.5 text-[11px] text-muted-foreground ml-1.5 shrink-0"
-                >
-                  {stopPriceUnit}
-                  <ChevronDown className="w-3 h-3" />
-                </button>
-              </div>
-              {stopUnitDropdownOpen && (
-                <div className="absolute right-0 z-50 mt-0.5 rounded border border-border bg-popover shadow-lg min-w-[80px]">
-                  {[quoteCoin, baseCoin].map((unit) => (
-                    <button key={unit} onClick={() => { setStopPriceUnit(unit); setStopUnitDropdownOpen(false); }}
-                      className={`w-full text-left px-2 py-1 text-[11px] transition-colors ${stopPriceUnit === unit ? "text-trading-green" : "text-foreground hover:bg-accent"}`}>
-                      {unit}
-                    </button>
-                  ))}
-                </div>
-              )}
+            <div className="flex items-center rounded border border-border bg-transparent px-2 py-[5px] focus-within:border-muted-foreground transition-colors overflow-hidden">
+              <input
+                type="number"
+                value={stopPrice}
+                onChange={(e) => setStopPrice(e.target.value)}
+                placeholder="0.00"
+                className="flex-1 bg-transparent text-[11px] text-foreground outline-none placeholder:text-muted-foreground min-w-0 font-mono-num"
+              />
+              <button
+                onClick={() => setStopUnitSheet(true)}
+                className="flex items-center gap-0.5 text-[11px] text-muted-foreground ml-1.5 shrink-0"
+              >
+                {stopPriceUnit}
+                <ChevronDown className="w-3 h-3" />
+              </button>
             </div>
           </div>
         )}
 
         {/* Price field */}
         {showPriceField && (
-          <div ref={priceUnitRef}>
+          <div>
             <label className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5 block">
               {isMakerOnly ? "Maker Price" : "Price"}
             </label>
-            <div className="relative">
-              <div className="flex items-center rounded border border-border bg-transparent overflow-hidden divide-x divide-border focus-within:border-muted-foreground transition-colors">
-                <input
-                  type="number"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="0.00"
-                  className="flex-1 px-2 py-[5px] bg-transparent text-[11px] text-foreground outline-none placeholder:text-muted-foreground min-w-0 font-mono-num"
-                />
-                <button onClick={() => setPriceUnitDropdownOpen(!priceUnitDropdownOpen)}
-                  className="flex items-center gap-0.5 px-1.5 py-[5px] text-[11px] text-muted-foreground shrink-0">
-                  {priceUnit} <ChevronDown className="w-3 h-3" />
-                </button>
-                <button className="px-1.5 py-[5px] text-[11px] text-trading-amber font-semibold shrink-0">BBO</button>
-              </div>
-              {priceUnitDropdownOpen && (
-                <div className="absolute right-0 z-50 mt-0.5 rounded border border-border bg-popover shadow-lg min-w-[80px]">
-                  {[quoteCoin, baseCoin].map((unit) => (
-                    <button key={unit} onClick={() => { setPriceUnit(unit); setPriceUnitDropdownOpen(false); }}
-                      className={`w-full text-left px-2 py-1 text-[11px] transition-colors ${priceUnit === unit ? "text-trading-green" : "text-foreground hover:bg-accent"}`}>
-                      {unit}
-                    </button>
-                  ))}
-                </div>
-              )}
+            <div className="flex items-center rounded border border-border bg-transparent overflow-hidden divide-x divide-border focus-within:border-muted-foreground transition-colors">
+              <input
+                type="number"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="0.00"
+                className="flex-1 px-2 py-[5px] bg-transparent text-[11px] text-foreground outline-none placeholder:text-muted-foreground min-w-0 font-mono-num"
+              />
+              <button onClick={() => setPriceUnitSheet(true)}
+                className="flex items-center gap-0.5 px-1.5 py-[5px] text-[11px] text-muted-foreground shrink-0">
+                {priceUnit} <ChevronDown className="w-3 h-3" />
+              </button>
+              <button className="px-1.5 py-[5px] text-[11px] text-trading-amber font-semibold shrink-0">BBO</button>
             </div>
           </div>
         )}
@@ -366,30 +377,18 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
         {/* Size input */}
         <div>
           <label className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Size</label>
-          <div className="relative" ref={unitDropdownRef}>
-            <div className="flex items-center rounded border border-border bg-transparent overflow-hidden divide-x divide-border focus-within:border-muted-foreground transition-colors">
-              <input
-                type="number"
-                value={size}
-                onChange={(e) => { setSize(e.target.value); setSliderValue(0); }}
-                placeholder="0.00"
-                className="flex-1 px-2 py-[5px] bg-transparent text-[11px] text-foreground outline-none placeholder:text-muted-foreground min-w-0 font-mono-num"
-              />
-              <button onClick={() => setUnitDropdownOpen(!unitDropdownOpen)}
-                className="flex items-center gap-0.5 px-1.5 py-[5px] text-[11px] text-muted-foreground shrink-0">
-                {sizeUnit} <ChevronDown className="w-3 h-3" />
-              </button>
-            </div>
-            {unitDropdownOpen && (
-              <div className="absolute right-0 z-50 mt-0.5 rounded border border-border bg-popover shadow-lg min-w-[80px]">
-                {[quoteCoin, baseCoin].map((unit) => (
-                  <button key={unit} onClick={() => { setSizeUnit(unit); setUnitDropdownOpen(false); }}
-                    className={`w-full text-left px-2 py-1 text-[11px] transition-colors ${sizeUnit === unit ? "text-trading-green" : "text-foreground hover:bg-accent"}`}>
-                    {unit}
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="flex items-center rounded border border-border bg-transparent overflow-hidden divide-x divide-border focus-within:border-muted-foreground transition-colors">
+            <input
+              type="number"
+              value={size}
+              onChange={(e) => { setSize(e.target.value); setSliderValue(0); }}
+              placeholder="0.00"
+              className="flex-1 px-2 py-[5px] bg-transparent text-[11px] text-foreground outline-none placeholder:text-muted-foreground min-w-0 font-mono-num"
+            />
+            <button onClick={() => setSizeUnitSheet(true)}
+              className="flex items-center gap-0.5 px-1.5 py-[5px] text-[11px] text-muted-foreground shrink-0">
+              {sizeUnit} <ChevronDown className="w-3 h-3" />
+            </button>
           </div>
         </div>
 
@@ -492,28 +491,12 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
                 className="w-3 h-3 rounded accent-primary" />
               <span className="border-b border-dashed border-muted-foreground/50 whitespace-nowrap">Reduce-Only</span>
             </label>
-            {isLimit && (
-              <div className="relative" ref={tifRef}>
-                <button onClick={() => setTifDropdownOpen(!tifDropdownOpen)}
-                  className="flex items-center gap-0.5 text-[11px] text-foreground">
-                  {timeInForce}
-                  <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform ${tifDropdownOpen ? "rotate-180" : ""}`} />
-                </button>
-                {tifDropdownOpen && (
-                  <div className="absolute right-0 bottom-full mb-1 z-50 rounded border border-border bg-popover shadow-lg min-w-[210px] overflow-hidden">
-                    {[
-                      { value: "GTC", label: "GTC — Good Till Canceled" },
-                      { value: "FOK", label: "FOK — Fill or Kill" },
-                      { value: "IOC", label: "IOC — Immediate or Cancel" },
-                    ].map(opt => (
-                      <button key={opt.value} onClick={() => { setTimeInForce(opt.value); setTifDropdownOpen(false); }}
-                        className={`w-full text-left px-2 py-1.5 text-[11px] transition-colors ${timeInForce === opt.value ? "text-trading-green bg-trading-green/5" : "text-foreground hover:bg-accent"}`}>
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+            {showTif && (
+              <button onClick={() => setTifSheet(true)}
+                className="flex items-center gap-0.5 text-[11px] text-foreground">
+                {timeInForce}
+                <ChevronDown className="w-3 h-3 text-muted-foreground" />
+              </button>
             )}
           </div>
         </div>
@@ -555,6 +538,142 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
           </button>
         )}
       </div>
+
+      {/* ══════════ Bottom sheets ══════════ */}
+
+      {/* Margin mode */}
+      <BottomSheet open={marginSheet} onClose={() => setMarginSheet(false)} title={`${apiSymbol} Margin mode`}>
+        <p className="mb-4 text-[12px] leading-snug text-muted-foreground">
+          Switching of margin mode only applies to the selected contract
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <SheetOption
+            active={marginMode === "cross"}
+            label="Cross"
+            onClick={() => { if (marginMode === "cross") { setMarginSheet(false); return; } marginMutation.mutate("cross"); }}
+          />
+          <SheetOption
+            active={marginMode === "isolated"}
+            label="Isolated"
+            onClick={() => { if (marginMode === "isolated") { setMarginSheet(false); return; } marginMutation.mutate("isolated"); }}
+          />
+        </div>
+        <h4 className="mt-5 text-[14px] font-medium text-foreground">What are cross and isolated modes?</h4>
+        <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground">
+          The margin assigned to a position is restricted to a certain amount. If the margin falls below the
+          maintenance margin level, the position is liquidated. However, you can add and remove margin at will
+          under isolated mode. Cross mode shares your whole balance as margin across positions.
+        </p>
+        {marginMutation.isPending && (
+          <div className="mt-4 flex items-center justify-center gap-2 text-[12px] text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Updating…
+          </div>
+        )}
+      </BottomSheet>
+
+      {/* Leverage */}
+      <BottomSheet open={leverageSheet} onClose={() => setLeverageSheet(false)} title="Adjust Leverage">
+        <div className="grid grid-cols-3 gap-2">
+          {leverageOptions.map((lev) => (
+            <button
+              key={lev}
+              onClick={() => { setLeverage(lev); setLeverageSheet(false); }}
+              className={`rounded-xl border py-3 text-[14px] font-semibold transition-colors ${
+                leverage === lev
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border bg-secondary/40 text-foreground hover:bg-accent"
+              }`}
+            >
+              {lev}x
+            </button>
+          ))}
+        </div>
+        <p className="mt-4 flex items-start gap-1.5 text-[11px] leading-snug text-muted-foreground">
+          <Info className="mt-[1px] h-3 w-3 shrink-0" />
+          Selecting higher leverage increases liquidation risk.
+        </p>
+      </BottomSheet>
+
+      {/* Asset mode */}
+      <BottomSheet open={assetSheet} onClose={() => setAssetSheet(false)} title="Asset Mode">
+        <div className="flex flex-col gap-3">
+          <SheetOption
+            active={assetMode === "single"}
+            label="Single-Asset Mode"
+            sub="Use pair's settlement currency as margin. PnL offsets across Cross positions of the same currency. Supports Cross and Isolated margin."
+            onClick={() => { setAssetMode("single"); setAssetSheet(false); }}
+          />
+          <SheetOption
+            active={assetMode === "multi"}
+            label="Multi-Asset Mode"
+            sub="Contracts can be traded across margin assets. Profits and losses of positions with different margin assets can offset one another. Supports cross margin."
+            onClick={() => { setAssetMode("multi"); setAssetSheet(false); }}
+          />
+        </div>
+      </BottomSheet>
+
+      {/* Order type */}
+      <BottomSheet open={orderTypeSheet} onClose={() => setOrderTypeSheet(false)} title="Order Type">
+        <div className="flex flex-col gap-2">
+          {orderTypes.map((type) => (
+            <SheetOption
+              key={type}
+              active={orderType === type}
+              label={type}
+              onClick={() => { setOrderType(type); setOrderTypeSheet(false); }}
+            />
+          ))}
+        </div>
+      </BottomSheet>
+
+      {/* Size unit */}
+      <BottomSheet open={sizeUnitSheet} onClose={() => setSizeUnitSheet(false)} title="Size Unit">
+        <div className="flex flex-col gap-2">
+          {[quoteCoin, baseCoin].map((unit) => (
+            <SheetOption key={unit} active={sizeUnit === unit} label={unit}
+              onClick={() => { setSizeUnit(unit); setSizeUnitSheet(false); }} />
+          ))}
+        </div>
+      </BottomSheet>
+
+      {/* Price unit */}
+      <BottomSheet open={priceUnitSheet} onClose={() => setPriceUnitSheet(false)} title="Price Unit">
+        <div className="flex flex-col gap-2">
+          {[quoteCoin, baseCoin].map((unit) => (
+            <SheetOption key={unit} active={priceUnit === unit} label={unit}
+              onClick={() => { setPriceUnit(unit); setPriceUnitSheet(false); }} />
+          ))}
+        </div>
+      </BottomSheet>
+
+      {/* Stop price unit */}
+      <BottomSheet open={stopUnitSheet} onClose={() => setStopUnitSheet(false)} title="Stop Price Unit">
+        <div className="flex flex-col gap-2">
+          {[quoteCoin, baseCoin].map((unit) => (
+            <SheetOption key={unit} active={stopPriceUnit === unit} label={unit}
+              onClick={() => { setStopPriceUnit(unit); setStopUnitSheet(false); }} />
+          ))}
+        </div>
+      </BottomSheet>
+
+      {/* Time in force */}
+      <BottomSheet open={tifSheet} onClose={() => setTifSheet(false)} title="Time in Force">
+        <div className="flex flex-col gap-2">
+          {[
+            { value: "GTC", label: "GTC", sub: "Good Till Canceled" },
+            { value: "FOK", label: "FOK", sub: "Fill or Kill" },
+            { value: "IOC", label: "IOC", sub: "Immediate or Cancel" },
+          ].map((opt) => (
+            <SheetOption
+              key={opt.value}
+              active={timeInForce === opt.value}
+              label={opt.label}
+              sub={opt.sub}
+              onClick={() => { setTimeInForce(opt.value); setTifSheet(false); }}
+            />
+          ))}
+        </div>
+      </BottomSheet>
     </div>
   );
 };
