@@ -282,10 +282,10 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
         {/* ── Order type ── */}
         <button
           onClick={() => setOrderTypeSheet(true)}
-          className="flex items-center justify-between w-full px-3 py-2 rounded-lg border border-border bg-transparent text-[13px] text-foreground hover:border-muted-foreground transition-colors"
+          className="relative flex items-center justify-center w-full px-3 py-2 rounded-lg border border-border bg-transparent text-[13px] text-foreground hover:border-muted-foreground transition-colors"
         >
           <span>{orderType}</span>
-          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          <ChevronDown className="absolute right-3 w-4 h-4 text-muted-foreground" />
         </button>
 
         {/* ── Stop Price ── */}
