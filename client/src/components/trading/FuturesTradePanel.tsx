@@ -433,22 +433,22 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
           <ChevronDown className="absolute right-3 w-4 h-4 text-muted-foreground" />
         </button>
 
-        {/* Stop Price — label sits inside the field container */}
+        {/* Stop Price — compact like Size */}
         {showStopPrice && (
           <div className="flex items-stretch rounded-lg border border-border bg-transparent overflow-hidden divide-x divide-border focus-within:border-muted-foreground transition-colors">
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-3 py-2">
-              <span className="text-[11px] leading-tight text-muted-foreground">Stop price</span>
+            <div className="flex min-w-0 flex-1 flex-col px-2.5 py-1.5">
+              <span className="text-[10px] leading-tight text-muted-foreground">Stop price</span>
               <input
                 type="number"
                 value={stopPrice}
                 onChange={(e) => setStopPrice(e.target.value)}
                 placeholder="0.00"
-                className="w-full bg-transparent text-[16px] leading-tight text-foreground outline-none placeholder:text-muted-foreground/60 min-w-0 font-mono-num"
+                className="w-full bg-transparent text-[14px] leading-tight text-foreground outline-none placeholder:text-muted-foreground/60 min-w-0 font-mono-num"
               />
             </div>
             <button
               onClick={() => setStopUnitSheet(true)}
-              className="flex shrink-0 items-center gap-1 px-3 text-[14px] text-muted-foreground"
+              className="flex shrink-0 items-center gap-1 px-2.5 text-[12px] text-muted-foreground"
             >
               {stopPriceUnit}
               <ChevronDown className="w-3.5 h-3.5" />
@@ -456,11 +456,11 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
           </div>
         )}
 
-        {/* Price field — label inside the container (see reference) */}
+        {/* Price field — number section gets more vertical space so values don't hide */}
         {showPriceField && (
           <div className="flex items-stretch rounded-lg border border-border bg-transparent overflow-hidden divide-x divide-border focus-within:border-muted-foreground transition-colors">
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-3 py-2">
-              <span className="text-[11px] leading-tight text-muted-foreground">
+            <div className="flex min-w-0 flex-1 flex-col px-2.5 py-2">
+              <span className="text-[10px] leading-tight text-muted-foreground">
                 {isMakerOnly ? "Maker price" : "Order price"}
               </span>
               <input
@@ -468,31 +468,31 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="0.00"
-                className="w-full bg-transparent text-[16px] leading-tight text-foreground outline-none placeholder:text-muted-foreground/60 min-w-0 font-mono-num"
+                className="w-full bg-transparent text-[15px] leading-tight text-foreground outline-none placeholder:text-muted-foreground/60 min-w-0 font-mono-num"
               />
             </div>
             <button onClick={() => setPriceUnitSheet(true)}
-              className="flex shrink-0 items-center gap-1 px-3 text-[14px] text-muted-foreground">
+              className="flex shrink-0 items-center gap-1 px-2.5 text-[12px] text-muted-foreground">
               {priceUnit} <ChevronDown className="w-3.5 h-3.5" />
             </button>
-            <button className="shrink-0 px-3 text-[14px] text-trading-amber font-semibold">BBO</button>
+            <button className="shrink-0 px-2.5 text-[12px] text-trading-amber font-semibold">BBO</button>
           </div>
         )}
 
-        {/* Size input */}
+        {/* Size input — compact */}
         <div className="flex items-stretch rounded-lg border border-border bg-transparent overflow-hidden divide-x divide-border focus-within:border-muted-foreground transition-colors">
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-3 py-2">
-            <span className="text-[11px] leading-tight text-muted-foreground">Size</span>
+          <div className="flex min-w-0 flex-1 flex-col px-2.5 py-1.5">
+            <span className="text-[10px] leading-tight text-muted-foreground">Size</span>
             <input
               type="number"
               value={size}
               onChange={(e) => { setSize(e.target.value); setSliderValue(0); }}
               placeholder="0.00"
-              className="w-full bg-transparent text-[16px] leading-tight text-foreground outline-none placeholder:text-muted-foreground/60 min-w-0 font-mono-num"
+              className="w-full bg-transparent text-[14px] leading-tight text-foreground outline-none placeholder:text-muted-foreground/60 min-w-0 font-mono-num"
             />
           </div>
           <button onClick={() => setSizeUnitSheet(true)}
-            className="flex shrink-0 items-center gap-1 px-3 text-[14px] text-muted-foreground">
+            className="flex shrink-0 items-center gap-1 px-2.5 text-[12px] text-muted-foreground">
             {sizeUnit} <ChevronDown className="w-3.5 h-3.5" />
           </button>
         </div>
