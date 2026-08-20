@@ -241,10 +241,12 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
     ? ((availableBalance * leverageNum) / priceNum).toFixed(4)
     : "--";
 
+  /* Size slider — fully flexible: any percentage 0-100, ticks are just shortcuts */
   const applySlider = (pct: number) => {
-    setSliderValue(pct);
-    if (pct === 0) { setSize(""); return; }
-    const avbl = availableBalance * (pct / 100) * leverageNum;
+    const clamped = Math.max(0, Math.min(100, Math.round(pct)));
+    setSliderValue(clamped);
+    if (clamped === 0) { setSize(""); return; }
+    const avbl = availableBalance * (clamped / 100) * leverageNum;
     if (sizeUnit === quoteCoin) {
       setSize(avbl.toFixed(2));
     } else {
@@ -252,12 +254,21 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
     }
   };
 
-  const handleSliderClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!sliderRef.current) return;
+  const pctFromClientX = (clientX: number) => {
+    if (!sliderRef.current) return 0;
     const rect = sliderRef.current.getBoundingClientRect();
-    const pct = Math.round(((e.clientX - rect.left) / rect.width) * 100);
-    const snapped = percentages.reduce((a, b) => Math.abs(b - pct) < Math.abs(a - pct) ? b : a);
-    applySlider(snapped);
+    if (rect.width === 0) return 0;
+    return ((clientX - rect.left) / rect.width) * 100;
+  };
+
+  const handleSliderPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    applySlider(pctFromClientX(e.clientX));
+  };
+
+  const handleSliderPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.buttons === 0) return;
+    applySlider(pctFromClientX(e.clientX));
   };
 
   const asterType = UI_TO_FUTURES_TYPE[orderType] as any;
@@ -272,11 +283,21 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
   // Time in force now applies to Limit, Maker Only and Stop Limit
   const showTif = isLimit || isStopLimit || isMakerOnly;
 
+  // Multi-asset mode only supports cross margin; isolated needs Single-Asset Mode.
+  const isolatedAllowed = assetMode === "single";
+
   // Draft selection inside the margin sheet — only committed on Confirm.
   const [draftMarginMode, setDraftMarginMode] = useState<"cross" | "isolated">(marginMode);
   const openMarginSheet = () => {
     setDraftMarginMode(marginMode);
     setMarginSheet(true);
+  };
+
+  // Draft selection inside the asset-mode sheet — only committed on Confirm.
+  const [draftAssetMode, setDraftAssetMode] = useState<"single" | "multi">(assetMode);
+  const openAssetSheet = () => {
+    setDraftAssetMode(assetMode);
+    setAssetSheet(true);
   };
 
   const marginMutation = useMutation({
@@ -291,6 +312,32 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
       toast({ title: "Margin mode change failed", description: err.message, variant: "destructive" });
     },
   });
+
+  const assetMutation = useMutation({
+    mutationFn: async (mode: "single" | "multi") => {
+      const svc = asterTrading as any;
+      const fn = svc.futuresSetMultiAssetsMargin ?? svc.futuresMultiAssetsMargin;
+      if (typeof fn === "function") {
+        return fn.call(svc, mode === "multi");
+      }
+      return null;
+    },
+    onSuccess: (_data, mode) => {
+      setAssetMode(mode);
+      // Multi-asset mode is cross-only — fall back to cross if isolated was selected.
+      if (mode === "multi" && marginMode === "isolated") {
+        setMarginMode("cross");
+        setDraftMarginMode("cross");
+      }
+      setAssetSheet(false);
+      toast({ title: `Asset mode set to ${mode === "multi" ? "Multi-Asset" : "Single-Asset"}` });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Asset mode change failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+
 
 
   const orderMutation = useMutation({
@@ -334,254 +381,262 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
     <div className="flex flex-col w-full bg-background">
 
       {/* ── Cross | 20x | M ── */}
-      <div className="grid grid-cols-3 gap-1 px-2 pt-1.5 pb-0.5">
+      <div className="grid grid-cols-3 gap-2 px-3 pt-3 pb-1">
         <button
           onClick={openMarginSheet}
-          className="flex items-center justify-center gap-0.5 rounded bg-secondary py-1.5 text-[11px] font-medium text-foreground"
+          className="flex items-center justify-center gap-1 rounded-lg bg-secondary py-2.5 text-[13px] font-medium text-foreground"
         >
           {marginMode === "cross" ? "Cross" : "Isolated"}
-          <ChevronDown className="w-3 h-3 text-muted-foreground" />
+          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
         </button>
         <button
           onClick={() => setLeverageSheet(true)}
-          className="flex items-center justify-center gap-0.5 rounded bg-secondary py-1.5 text-[11px] font-semibold text-foreground"
+          className="flex items-center justify-center gap-1 rounded-lg bg-secondary py-2.5 text-[13px] font-semibold text-foreground"
         >
           {leverage}x
-          <ChevronDown className="w-3 h-3 text-muted-foreground" />
+          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
         </button>
         <button
-          onClick={() => setAssetSheet(true)}
-          className="flex items-center justify-center gap-0.5 rounded bg-secondary py-1.5 text-[11px] font-medium text-foreground"
+          onClick={openAssetSheet}
+          className="flex items-center justify-center gap-1 rounded-lg bg-secondary py-2.5 text-[13px] font-medium text-foreground"
         >
           {assetMode === "single" ? "S" : "M"}
-          <ChevronDown className="w-3 h-3 text-muted-foreground" />
+          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
         </button>
       </div>
 
       {/* ── Buy / Sell toggle ── */}
-      <div className="flex gap-1 px-2 pb-0.5">
+      <div className="flex gap-2 px-3 pb-1">
         <button
           onClick={() => setSide("buy")}
-          className={`flex-1 py-[7px] text-[11px] font-semibold rounded-md transition-colors ${side === "buy" ? "bg-trading-green text-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
+          className={`flex-1 py-2.5 text-[13px] font-semibold rounded-lg transition-colors ${side === "buy" ? "bg-trading-green text-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
         >
           Buy / Long
         </button>
         <button
           onClick={() => setSide("sell")}
-          className={`flex-1 py-[7px] text-[11px] font-semibold rounded-md transition-colors ${side === "sell" ? "bg-trading-red text-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
+          className={`flex-1 py-2.5 text-[13px] font-semibold rounded-lg transition-colors ${side === "sell" ? "bg-trading-red text-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
         >
           Sell / Short
         </button>
       </div>
 
       {/* ── Form body ── */}
-      <div className="flex flex-col gap-1.5 px-2 pb-2">
+      <div className="flex flex-col gap-2.5 px-3 pb-3">
 
         {/* Order type → bottom sheet */}
         <button
           onClick={() => setOrderTypeSheet(true)}
-          className="flex items-center justify-between w-full px-2 py-1.5 rounded border border-border bg-transparent text-[11px] text-foreground hover:border-muted-foreground transition-colors"
+          className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg border border-border bg-transparent text-[14px] text-foreground hover:border-muted-foreground transition-colors"
         >
           <span>{orderType}</span>
-          <ChevronDown className="w-3 h-3 text-muted-foreground" />
+          <ChevronDown className="w-4 h-4 text-muted-foreground" />
         </button>
 
         {/* Available balance */}
         <div className="flex items-center justify-between">
-          <span className="text-[11px] text-muted-foreground">Available</span>
-          <div className="flex items-center gap-1">
-            <span className="text-[11px] font-mono-num text-foreground">
+          <span className="text-[13px] text-muted-foreground">Available</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[13px] font-mono-num text-foreground">
               {user ? `${availableBalance.toFixed(2)} ${quoteCoin}` : `0.00 ${quoteCoin}`}
             </span>
-            {user && <PlusCircle className="w-3 h-3 text-trading-amber" />}
+            {user && <PlusCircle className="w-4 h-4 text-trading-amber" />}
           </div>
         </div>
 
-        {/* Stop Price */}
+        {/* Stop Price — label sits inside the field container */}
         {showStopPrice && (
-          <div>
-            <label className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Stop Price</label>
-            <div className="flex items-center rounded border border-border bg-transparent px-2 py-[5px] focus-within:border-muted-foreground transition-colors overflow-hidden">
+          <div className="flex items-stretch rounded-lg border border-border bg-transparent overflow-hidden divide-x divide-border focus-within:border-muted-foreground transition-colors">
+            <div className="flex min-w-0 flex-1 flex-col px-3 py-2">
+              <span className="text-[11px] leading-tight text-muted-foreground">Stop price</span>
               <input
                 type="number"
                 value={stopPrice}
                 onChange={(e) => setStopPrice(e.target.value)}
                 placeholder="0.00"
-                className="flex-1 bg-transparent text-[11px] text-foreground outline-none placeholder:text-muted-foreground min-w-0 font-mono-num"
+                className="w-full bg-transparent text-[15px] text-foreground outline-none placeholder:text-muted-foreground/60 min-w-0 font-mono-num"
               />
-              <button
-                onClick={() => setStopUnitSheet(true)}
-                className="flex items-center gap-0.5 text-[11px] text-muted-foreground ml-1.5 shrink-0"
-              >
-                {stopPriceUnit}
-                <ChevronDown className="w-3 h-3" />
-              </button>
             </div>
+            <button
+              onClick={() => setStopUnitSheet(true)}
+              className="flex shrink-0 items-center gap-1 px-3 text-[14px] text-muted-foreground"
+            >
+              {stopPriceUnit}
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
           </div>
         )}
 
-        {/* Price field */}
+        {/* Price field — label inside the container (see reference) */}
         {showPriceField && (
-          <div>
-            <label className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5 block">
-              {isMakerOnly ? "Maker Price" : "Price"}
-            </label>
-            <div className="flex items-center rounded border border-border bg-transparent overflow-hidden divide-x divide-border focus-within:border-muted-foreground transition-colors">
+          <div className="flex items-stretch rounded-lg border border-border bg-transparent overflow-hidden divide-x divide-border focus-within:border-muted-foreground transition-colors">
+            <div className="flex min-w-0 flex-1 flex-col px-3 py-2">
+              <span className="text-[11px] leading-tight text-muted-foreground">
+                {isMakerOnly ? "Maker price" : "Order price"}
+              </span>
               <input
                 type="number"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="0.00"
-                className="flex-1 px-2 py-[5px] bg-transparent text-[11px] text-foreground outline-none placeholder:text-muted-foreground min-w-0 font-mono-num"
+                className="w-full bg-transparent text-[15px] text-foreground outline-none placeholder:text-muted-foreground/60 min-w-0 font-mono-num"
               />
-              <button onClick={() => setPriceUnitSheet(true)}
-                className="flex items-center gap-0.5 px-1.5 py-[5px] text-[11px] text-muted-foreground shrink-0">
-                {priceUnit} <ChevronDown className="w-3 h-3" />
-              </button>
-              <button className="px-1.5 py-[5px] text-[11px] text-trading-amber font-semibold shrink-0">BBO</button>
             </div>
+            <button onClick={() => setPriceUnitSheet(true)}
+              className="flex shrink-0 items-center gap-1 px-3 text-[14px] text-muted-foreground">
+              {priceUnit} <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+            <button className="shrink-0 px-3 text-[14px] text-trading-amber font-semibold">BBO</button>
           </div>
         )}
 
         {/* Market Price placeholder */}
         {isMarket && (
-          <div>
-            <label className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Price</label>
-            <div className="flex items-center rounded border border-border bg-accent/30 px-2 py-[5px]">
-              <span className="flex-1 text-[11px] text-muted-foreground">Market Price</span>
+          <div className="flex items-stretch rounded-lg border border-border bg-accent/30 overflow-hidden">
+            <div className="flex min-w-0 flex-1 flex-col px-3 py-2">
+              <span className="text-[11px] leading-tight text-muted-foreground">Order price</span>
+              <span className="text-[15px] text-muted-foreground">Market Price</span>
             </div>
           </div>
         )}
 
         {/* Size input */}
-        <div>
-          <label className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Size</label>
-          <div className="flex items-center rounded border border-border bg-transparent overflow-hidden divide-x divide-border focus-within:border-muted-foreground transition-colors">
+        <div className="flex items-stretch rounded-lg border border-border bg-transparent overflow-hidden divide-x divide-border focus-within:border-muted-foreground transition-colors">
+          <div className="flex min-w-0 flex-1 flex-col px-3 py-2">
+            <span className="text-[11px] leading-tight text-muted-foreground">Size</span>
             <input
               type="number"
               value={size}
               onChange={(e) => { setSize(e.target.value); setSliderValue(0); }}
               placeholder="0.00"
-              className="flex-1 px-2 py-[5px] bg-transparent text-[11px] text-foreground outline-none placeholder:text-muted-foreground min-w-0 font-mono-num"
+              className="w-full bg-transparent text-[15px] text-foreground outline-none placeholder:text-muted-foreground/60 min-w-0 font-mono-num"
             />
-            <button onClick={() => setSizeUnitSheet(true)}
-              className="flex items-center gap-0.5 px-1.5 py-[5px] text-[11px] text-muted-foreground shrink-0">
-              {sizeUnit} <ChevronDown className="w-3 h-3" />
-            </button>
           </div>
+          <button onClick={() => setSizeUnitSheet(true)}
+            className="flex shrink-0 items-center gap-1 px-3 text-[14px] text-muted-foreground">
+            {sizeUnit} <ChevronDown className="w-3.5 h-3.5" />
+          </button>
         </div>
 
-        {/* Percentage slider */}
-        <div className="px-0.5">
+        {/* Percentage slider — drag anywhere, any value */}
+        <div className="px-1 pt-1">
           <div
             ref={sliderRef}
-            onClick={handleSliderClick}
-            className="relative h-[3px] rounded-full bg-border cursor-pointer"
+            onPointerDown={handleSliderPointerDown}
+            onPointerMove={handleSliderPointerMove}
+            className="relative h-1 rounded-full bg-border cursor-pointer touch-none"
           >
             <div
-              className={`absolute left-0 top-0 h-full rounded-full transition-all duration-150 ${side === "buy" ? "bg-trading-green" : "bg-trading-red"}`}
+              className={`absolute left-0 top-0 h-full rounded-full ${side === "buy" ? "bg-trading-green" : "bg-trading-red"}`}
               style={{ width: `${sliderValue}%` }}
             />
             {percentages.map((pct) => (
-              <button
+              <span
                 key={pct}
-                onClick={(e) => { e.stopPropagation(); applySlider(pct); }}
-                className={`absolute w-2.5 h-2.5 rounded-full border-2 -translate-y-1/2 top-1/2 -translate-x-1/2 transition-all duration-150 ${
+                className={`pointer-events-none absolute h-1.5 w-1.5 rounded-full -translate-y-1/2 top-1/2 -translate-x-1/2 ${
                   sliderValue >= pct
-                    ? side === "buy" ? "bg-trading-green border-trading-green" : "bg-trading-red border-trading-red"
-                    : "bg-background border-border hover:border-muted-foreground"
+                    ? side === "buy" ? "bg-trading-green" : "bg-trading-red"
+                    : "bg-muted-foreground/50"
                 }`}
                 style={{ left: `${pct}%` }}
               />
             ))}
+            {/* draggable thumb */}
+            <span
+              className={`pointer-events-none absolute h-4 w-4 rounded-full border-2 border-background -translate-y-1/2 top-1/2 -translate-x-1/2 shadow ${
+                side === "buy" ? "bg-trading-green" : "bg-trading-red"
+              }`}
+              style={{ left: `${sliderValue}%` }}
+            />
           </div>
-          <div className="flex justify-between mt-1">
+          <div className="flex justify-between mt-2">
             {percentages.map((pct) => (
               <button key={pct} onClick={() => applySlider(pct)}
-                className={`text-[10px] transition-colors ${sliderValue === pct
+                className={`text-[12px] transition-colors ${sliderValue === pct
                   ? side === "buy" ? "text-trading-green font-semibold" : "text-trading-red font-semibold"
                   : "text-muted-foreground hover:text-foreground"}`}>
                 {pct}%
               </button>
             ))}
           </div>
+          <p className="mt-1 text-right text-[12px] font-mono-num text-muted-foreground">{sliderValue}%</p>
         </div>
 
         {/* Total Value */}
         {showTotalValue && (
-          <div>
-            <label className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Total</label>
-            <div className="flex items-center rounded border border-border bg-transparent px-2 py-[5px] focus-within:border-muted-foreground transition-colors">
+          <div className="flex items-stretch rounded-lg border border-border bg-transparent overflow-hidden focus-within:border-muted-foreground transition-colors">
+            <div className="flex min-w-0 flex-1 flex-col px-3 py-2">
+              <span className="text-[11px] leading-tight text-muted-foreground">Total</span>
               <input
                 type="number"
                 value={totalValue}
                 onChange={(e) => setTotalValue(e.target.value)}
                 placeholder="0.00"
-                className="flex-1 bg-transparent text-[11px] text-foreground outline-none placeholder:text-muted-foreground min-w-0 font-mono-num"
+                className="w-full bg-transparent text-[15px] text-foreground outline-none placeholder:text-muted-foreground/60 min-w-0 font-mono-num"
               />
-              <span className="text-[11px] text-muted-foreground ml-1.5 shrink-0">{quoteCoin}</span>
             </div>
+            <span className="flex shrink-0 items-center px-3 text-[14px] text-muted-foreground">{quoteCoin}</span>
           </div>
         )}
 
         {/* Checkboxes + TIF */}
-        <div className="flex flex-col gap-1">
-          <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none">
+        <div className="flex flex-col gap-2">
+          <label className="flex items-center gap-2 text-[13px] text-muted-foreground cursor-pointer select-none">
             <input type="checkbox" checked={tpsl} onChange={(e) => { setTpsl(e.target.checked); if (!e.target.checked) { setTakeProfit(""); setStopLoss(""); } }}
-              className="w-3 h-3 rounded accent-primary" />
+              className="w-3.5 h-3.5 rounded accent-primary" />
             <span className="border-b border-dashed border-muted-foreground/50 whitespace-nowrap">TP/SL</span>
           </label>
           {tpsl && (
-            <div className="flex flex-col gap-1 pl-0.5">
-              <div className="flex items-center gap-1.5 rounded border border-border bg-secondary/40 px-2 py-1">
-                <span className="text-[10px] text-trading-green font-medium w-6 shrink-0">TP</span>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary/40 px-3 py-2">
+                <span className="text-[12px] text-trading-green font-medium w-6 shrink-0">TP</span>
                 <input
                   type="number"
                   placeholder="Take Profit Price"
                   value={takeProfit}
                   onChange={e => setTakeProfit(e.target.value)}
-                  className="flex-1 bg-transparent text-[11px] text-foreground placeholder:text-muted-foreground/50 outline-none min-w-0"
+                  className="flex-1 bg-transparent text-[14px] text-foreground placeholder:text-muted-foreground/50 outline-none min-w-0"
                 />
-                <span className="text-[10px] text-muted-foreground shrink-0">{quoteCoin}</span>
+                <span className="text-[12px] text-muted-foreground shrink-0">{quoteCoin}</span>
               </div>
-              <div className="flex items-center gap-1.5 rounded border border-border bg-secondary/40 px-2 py-1">
-                <span className="text-[10px] text-trading-red font-medium w-6 shrink-0">SL</span>
+              <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary/40 px-3 py-2">
+                <span className="text-[12px] text-trading-red font-medium w-6 shrink-0">SL</span>
                 <input
                   type="number"
                   placeholder="Stop Loss Price"
                   value={stopLoss}
                   onChange={e => setStopLoss(e.target.value)}
-                  className="flex-1 bg-transparent text-[11px] text-foreground placeholder:text-muted-foreground/50 outline-none min-w-0"
+                  className="flex-1 bg-transparent text-[14px] text-foreground placeholder:text-muted-foreground/50 outline-none min-w-0"
                 />
-                <span className="text-[10px] text-muted-foreground shrink-0">{quoteCoin}</span>
+                <span className="text-[12px] text-muted-foreground shrink-0">{quoteCoin}</span>
               </div>
             </div>
           )}
           {isLimit && (
-            <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none">
+            <label className="flex items-center gap-2 text-[13px] text-muted-foreground cursor-pointer select-none">
               <input type="checkbox" checked={hiddenOrder} onChange={(e) => setHiddenOrder(e.target.checked)}
-                className="w-3 h-3 rounded accent-primary" />
+                className="w-3.5 h-3.5 rounded accent-primary" />
               <span className="whitespace-nowrap">Hidden Order</span>
             </label>
           )}
           <div className="flex items-center justify-between">
-            <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none">
+            <label className="flex items-center gap-2 text-[13px] text-muted-foreground cursor-pointer select-none">
               <input type="checkbox" checked={reduceOnly} onChange={(e) => setReduceOnly(e.target.checked)}
-                className="w-3 h-3 rounded accent-primary" />
+                className="w-3.5 h-3.5 rounded accent-primary" />
               <span className="border-b border-dashed border-muted-foreground/50 whitespace-nowrap">Reduce-Only</span>
             </label>
             {showTif && (
               <button onClick={() => setTifSheet(true)}
-                className="flex items-center gap-0.5 text-[11px] text-foreground">
+                className="flex items-center gap-1 text-[13px] text-foreground">
                 {timeInForce}
-                <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
               </button>
             )}
           </div>
         </div>
 
         {/* Info rows */}
-        <div className="flex flex-col gap-0.5 text-[11px]">
+        <div className="flex flex-col gap-1.5 text-[13px]">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Est. liq. price</span>
             <span className="text-foreground font-mono-num">-- {quoteCoin}</span>
@@ -601,22 +656,23 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
           <button
             onClick={() => orderMutation.mutate()}
             disabled={!size || orderMutation.isPending}
-            className={`w-full py-[7px] rounded text-[11px] font-bold flex items-center justify-center gap-1.5 transition-opacity disabled:opacity-50 ${
+            className={`w-full py-3 rounded-lg text-[14px] font-bold flex items-center justify-center gap-2 transition-opacity disabled:opacity-50 ${
               side === "buy" ? "bg-trading-green text-black hover:opacity-90" : "bg-trading-red text-white hover:opacity-90"
             }`}
           >
-            {orderMutation.isPending && <Loader2 className="h-3 w-3 animate-spin" />}
+            {orderMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
             {side === "buy" ? `Long ${baseCoin}` : `Short ${baseCoin}`}
           </button>
         ) : (
           <button
             onClick={() => navigate("/signin")}
-            className="w-full py-2.5 rounded text-sm font-bold bg-primary text-primary-foreground transition-opacity hover:opacity-90"
+            className="w-full py-3 rounded-lg text-[14px] font-bold bg-primary text-primary-foreground transition-opacity hover:opacity-90"
           >
             Connect
           </button>
         )}
       </div>
+
 
       {/* ══════════ Bottom sheets ══════════ */}
 
