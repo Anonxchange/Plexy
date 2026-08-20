@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { ChevronDown, PlusCircle, Loader2, Info } from '@/lib/icons';
+import { useState, useRef, useEffect, type ReactNode } from "react";
+import { ChevronDown, PlusCircle, Loader2, Info, X, Check } from '@/lib/icons';
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -8,17 +8,91 @@ import { useToast } from "@/hooks/use-toast";
 import { completeTask } from "@/lib/rewards-api";
 import { getSubscribedTaskIds } from "@/hooks/use-task-subscriptions";
 
-const orderTypes = ["Market", "Limit", "Stop Limit", "Stop Market", "Maker Only"];
+const orderTypes = ["Market", "Limit", "Stop Limit", "Stop Market", "Post Only"];
 
 const UI_TO_SPOT_TYPE: Record<string, string> = {
   "Market":      "MARKET",
   "Limit":       "LIMIT",
   "Stop Limit":  "STOP_LOSS_LIMIT",
   "Stop Market": "STOP_LOSS",
-  "Maker Only":  "LIMIT_MAKER",
+  "Post Only":   "LIMIT_MAKER",
 };
 
 const PCT_STEPS = [0, 25, 50, 75, 100];
+
+/* ────────────────────────────────────────────────────────────
+   Bottom sheet — slides up from the bottom of the screen.
+   Same style as the futures trade panel sheets.
+   ──────────────────────────────────────────────────────────── */
+interface BottomSheetProps {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
+}
+
+const BottomSheet = ({ open, onClose, title, children }: BottomSheetProps) => {
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100]">
+      {/* backdrop */}
+      <div
+        onClick={onClose}
+        className="absolute inset-0 bg-black/60 animate-in fade-in duration-150"
+      />
+      {/* panel */}
+      <div
+        className="fixed inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl border-t border-border bg-popover px-4 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="relative mb-4 flex items-center">
+          <h3 className="w-full text-center text-[17px] font-semibold text-foreground">{title}</h3>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="absolute right-0 top-1/2 -translate-y-1/2 px-1 text-xl leading-none text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+};
+
+const ListChoice = ({
+  active,
+  onClick,
+  label,
+  sub,
+}: { active: boolean; onClick: () => void; label: string; sub?: string }) => (
+  <button
+    onClick={onClick}
+    className="flex w-full items-center justify-between border-b border-border/60 py-3.5 text-left last:border-b-0"
+  >
+    <span>
+      <span className={`block text-[15px] ${active ? "font-semibold text-foreground" : "text-foreground/90"}`}>
+        {label}
+      </span>
+      {sub && <span className="mt-0.5 block text-[11px] text-muted-foreground">{sub}</span>}
+    </span>
+    {active && <Check className="h-4 w-4 text-foreground" />}
+  </button>
+);
 
 interface TradePanelProps {
   symbol?: string;
@@ -27,7 +101,7 @@ interface TradePanelProps {
 const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [orderType, setOrderType] = useState("Market");
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [orderTypeSheet, setOrderTypeSheet] = useState(false);
   const [amount, setAmount] = useState("");
   const [price, setPrice] = useState("");
   const [stopPrice, setStopPrice] = useState("");
@@ -35,27 +109,14 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
   const [sliderPct, setSliderPct] = useState(0);
   const [hiddenOrder, setHiddenOrder] = useState(false);
   const [timeInForce, setTimeInForce] = useState("GTC");
-  const [tifDropdownOpen, setTifDropdownOpen] = useState(false);
-  const [unitDropdownOpen, setUnitDropdownOpen] = useState(false);
+  const [tifSheet, setTifSheet] = useState(false);
+  const [unitSheet, setUnitSheet] = useState(false);
 
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
 
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const tifRef = useRef<HTMLDivElement>(null);
-  const unitRef = useRef<HTMLDivElement>(null);
   const sliderRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setDropdownOpen(false);
-      if (tifRef.current && !tifRef.current.contains(e.target as Node)) setTifDropdownOpen(false);
-      if (unitRef.current && !unitRef.current.contains(e.target as Node)) setUnitDropdownOpen(false);
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   const apiSymbol = symbol.replace("/", "");
   const baseCoin = symbol.split("/")[0];
@@ -138,10 +199,11 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
   const isLimit = orderType === "Limit";
   const isStopLimit = orderType === "Stop Limit";
   const isStopMarket = orderType === "Stop Market";
-  const isMakerOnly = orderType === "Maker Only";
-  const showPriceField = isLimit || isMakerOnly;
+  const isPostOnly = orderType === "Post Only";
+  const canPickUnit = isMarket || isStopMarket;
+  const showPriceField = isLimit || isPostOnly;
   const showStopPrice = isStopLimit || isStopMarket;
-  const showTotalValue = isLimit || isStopLimit || isMakerOnly;
+  const showTotalValue = isLimit || isStopLimit || isPostOnly;
 
   const orderMutation = useMutation({
     mutationFn: () => {
@@ -198,7 +260,7 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
         <div className="grid grid-cols-2 gap-1 rounded-lg bg-secondary p-1">
           <button
             onClick={() => { setSide("buy"); setSliderPct(0); }}
-            className={`py-2.5 text-[14px] font-semibold rounded-md transition-colors ${
+            className={`py-2 text-[13px] font-semibold rounded-md transition-colors ${
               side === "buy" ? "bg-trading-green text-black" : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -206,7 +268,7 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
           </button>
           <button
             onClick={() => { setSide("sell"); setSliderPct(0); }}
-            className={`py-2.5 text-[14px] font-semibold rounded-md transition-colors ${
+            className={`py-2 text-[13px] font-semibold rounded-md transition-colors ${
               side === "sell" ? "bg-trading-red text-white" : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -218,32 +280,13 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
       <div className="flex flex-col gap-2.5 px-3 pb-3 flex-1 overflow-y-auto">
 
         {/* ── Order type ── */}
-        <div className="relative" ref={dropdownRef}>
-          <button
-            onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex items-center justify-between w-full px-3 py-2 rounded-lg border border-border bg-transparent text-[13px] text-foreground hover:border-muted-foreground transition-colors"
-          >
-            <span>{orderType}</span>
-            <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
-          </button>
-          {dropdownOpen && (
-            <div className="absolute z-50 w-full mt-1 rounded-lg border border-border bg-popover shadow-lg overflow-hidden">
-              {orderTypes.map((type) => (
-                <button
-                  key={type}
-                  onClick={() => { setOrderType(type); setDropdownOpen(false); }}
-                  className={`w-full text-left px-3 py-2 text-[13px] transition-colors ${
-                    orderType === type
-                      ? "text-trading-green bg-trading-green/5"
-                      : "text-foreground hover:bg-accent"
-                  }`}
-                >
-                  {type}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <button
+          onClick={() => setOrderTypeSheet(true)}
+          className="flex items-center justify-between w-full px-3 py-2 rounded-lg border border-border bg-transparent text-[13px] text-foreground hover:border-muted-foreground transition-colors"
+        >
+          <span>{orderType}</span>
+          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+        </button>
 
         {/* ── Stop Price ── */}
         {showStopPrice && (
@@ -267,7 +310,7 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
           <div className="flex items-stretch rounded-lg border border-border bg-transparent overflow-hidden divide-x divide-border focus-within:border-muted-foreground transition-colors">
             <div className="flex min-w-0 flex-1 flex-col px-2.5 py-2">
               <span className="text-[11px] leading-tight text-muted-foreground">
-                {isMakerOnly ? "Maker price" : "Order price"}
+                {isPostOnly ? "Post only price" : "Order price"}
               </span>
               <input
                 type="number"
@@ -282,40 +325,29 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
         )}
 
         {/* ── Amount (two-column container with unit selector) ── */}
-        <div className="relative" ref={unitRef}>
-          <div className="flex items-stretch rounded-lg border border-border bg-transparent overflow-hidden divide-x divide-border focus-within:border-muted-foreground transition-colors">
-            <div className="flex min-w-0 flex-1 flex-col px-2.5 py-1.5">
-              <span className="text-[11px] leading-tight text-muted-foreground">Amount</span>
-              <input
-                type="number"
-                value={amount}
-                onChange={e => { setAmount(e.target.value); setSliderPct(0); }}
-                placeholder="0.00"
-                className="w-full bg-transparent text-[14px] leading-tight text-foreground outline-none placeholder:text-muted-foreground/60 min-w-0 font-mono-num"
-              />
-            </div>
+        <div className="flex items-stretch rounded-lg border border-border bg-transparent overflow-hidden divide-x divide-border focus-within:border-muted-foreground transition-colors">
+          <div className="flex min-w-0 flex-1 flex-col px-2.5 py-1.5">
+            <span className="text-[11px] leading-tight text-muted-foreground">Amount</span>
+            <input
+              type="number"
+              value={amount}
+              onChange={e => { setAmount(e.target.value); setSliderPct(0); }}
+              placeholder="0.00"
+              className="w-full bg-transparent text-[14px] leading-tight text-foreground outline-none placeholder:text-muted-foreground/60 min-w-0 font-mono-num"
+            />
+          </div>
+          {canPickUnit ? (
             <button
-              onClick={() => setUnitDropdownOpen(!unitDropdownOpen)}
+              onClick={() => setUnitSheet(true)}
               className="flex shrink-0 items-center gap-1 px-2.5 text-[12px] text-muted-foreground"
             >
               {amountUnit}
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${unitDropdownOpen ? "rotate-180" : ""}`} />
+              <ChevronDown className="w-3.5 h-3.5" />
             </button>
-          </div>
-          {unitDropdownOpen && (
-            <div className="absolute left-0 right-0 z-50 mt-1 w-full rounded-lg border border-border bg-popover shadow-lg overflow-hidden">
-              {[baseCoin, quoteCoin].map((unit) => (
-                <button
-                  key={unit}
-                  onClick={() => { setAmountUnit(unit); setUnitDropdownOpen(false); }}
-                  className={`w-full text-left px-3 py-2 text-[13px] transition-colors ${
-                    amountUnit === unit ? "text-trading-green bg-trading-green/5" : "text-foreground hover:bg-accent"
-                  }`}
-                >
-                  {unit}
-                </button>
-              ))}
-            </div>
+          ) : (
+            <span className="flex shrink-0 items-center px-2.5 text-[12px] text-muted-foreground">
+              {amountUnit}
+            </span>
           )}
         </div>
 
@@ -399,36 +431,13 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
               />
               Hidden
             </label>
-            <div className="relative" ref={tifRef}>
-              <button
-                onClick={() => setTifDropdownOpen(!tifDropdownOpen)}
-                className="flex items-center gap-1 text-[13px] text-foreground"
-              >
-                {timeInForce}
-                <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${tifDropdownOpen ? "rotate-180" : ""}`} />
-              </button>
-              {tifDropdownOpen && (
-                <div className="absolute right-0 bottom-full mb-1 z-50 rounded-lg border border-border bg-popover shadow-lg min-w-[210px] overflow-hidden">
-                  {[
-                    { value: "GTC", label: "GTC — Good Till Canceled" },
-                    { value: "FOK", label: "FOK — Fill or Kill" },
-                    { value: "IOC", label: "IOC — Immediate or Cancel" },
-                  ].map(opt => (
-                    <button
-                      key={opt.value}
-                      onClick={() => { setTimeInForce(opt.value); setTifDropdownOpen(false); }}
-                      className={`w-full text-left px-3 py-2 text-[13px] transition-colors ${
-                        timeInForce === opt.value
-                          ? "text-trading-green bg-trading-green/5"
-                          : "text-foreground hover:bg-accent"
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <button
+              onClick={() => setTifSheet(true)}
+              className="flex items-center gap-1 text-[13px] text-foreground"
+            >
+              {timeInForce}
+              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+            </button>
           </div>
         )}
 
@@ -471,6 +480,53 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
           </button>
         )}
       </div>
+
+      {/* ── Order type sheet ── */}
+      <BottomSheet open={orderTypeSheet} onClose={() => setOrderTypeSheet(false)} title="Order Type">
+        <div className="flex flex-col">
+          {orderTypes.map((type) => (
+            <ListChoice
+              key={type}
+              active={orderType === type}
+              label={type}
+              onClick={() => { setOrderType(type); setOrderTypeSheet(false); }}
+            />
+          ))}
+        </div>
+      </BottomSheet>
+
+      {/* ── Amount unit sheet ── */}
+      <BottomSheet open={unitSheet} onClose={() => setUnitSheet(false)} title="Amount Unit">
+        <div className="flex flex-col">
+          {[baseCoin, quoteCoin].map((unit) => (
+            <ListChoice
+              key={unit}
+              active={amountUnit === unit}
+              label={unit}
+              onClick={() => { setAmountUnit(unit); setUnitSheet(false); }}
+            />
+          ))}
+        </div>
+      </BottomSheet>
+
+      {/* ── Time in force sheet ── */}
+      <BottomSheet open={tifSheet} onClose={() => setTifSheet(false)} title="Time in Force">
+        <div className="flex flex-col">
+          {[
+            { value: "GTC", label: "GTC", sub: "Good Till Canceled" },
+            { value: "FOK", label: "FOK", sub: "Fill or Kill" },
+            { value: "IOC", label: "IOC", sub: "Immediate or Cancel" },
+          ].map((opt) => (
+            <ListChoice
+              key={opt.value}
+              active={timeInForce === opt.value}
+              label={opt.label}
+              sub={opt.sub}
+              onClick={() => { setTimeInForce(opt.value); setTifSheet(false); }}
+            />
+          ))}
+        </div>
+      </BottomSheet>
     </div>
   );
 };
