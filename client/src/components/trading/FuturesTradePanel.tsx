@@ -490,13 +490,6 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
               className="w-full bg-transparent text-[14px] leading-tight text-foreground outline-none placeholder:text-muted-foreground/60 min-w-0 font-mono-num"
             />
           </div>
-          {sliderValue > 0 && (
-            <span className={`flex shrink-0 items-center px-2 text-[12px] font-semibold font-mono-num ${
-              side === "buy" ? "text-trading-green" : "text-trading-red"
-            }`}>
-              {sliderValue}%
-            </span>
-          )}
           <button onClick={() => setSizeUnitSheet(true)}
             className="flex shrink-0 items-center gap-1 px-2.5 text-[12px] text-muted-foreground">
             {sizeUnit} <ChevronDown className="w-3.5 h-3.5" />
