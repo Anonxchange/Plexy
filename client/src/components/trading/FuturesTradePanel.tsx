@@ -181,6 +181,7 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
   const [stopPrice, setStopPrice] = useState("");
   const [totalValue, setTotalValue] = useState("");
   const [sliderValue, setSliderValue] = useState(0);
+  const [slippage, setSlippage] = useState(false);
   const [tpsl, setTpsl] = useState(false);
   const [takeProfit, setTakeProfit] = useState("");
   const [stopLoss, setStopLoss] = useState("");
@@ -279,7 +280,6 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
   const isMakerOnly = orderType === "Maker Only";
   const showPriceField = isLimit || isMakerOnly || isStopLimit;
   const showStopPrice = isStopLimit || isStopMarket;
-  const showTotalValue = isLimit || isStopLimit || isMakerOnly;
   // Time in force now applies to Limit, Maker Only and Stop Limit
   const showTif = isLimit || isStopLimit || isMakerOnly;
 
@@ -490,16 +490,6 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
           </div>
         )}
 
-        {/* Market Price placeholder */}
-        {isMarket && (
-          <div className="flex items-stretch rounded-lg border border-border bg-accent/30 overflow-hidden">
-            <div className="flex min-w-0 flex-1 flex-col px-3 py-2">
-              <span className="text-[11px] leading-tight text-muted-foreground">Order price</span>
-              <span className="text-[15px] text-muted-foreground">Market Price</span>
-            </div>
-          </div>
-        )}
-
         {/* Size input */}
         <div className="flex items-stretch rounded-lg border border-border bg-transparent overflow-hidden divide-x divide-border focus-within:border-muted-foreground transition-colors">
           <div className="flex min-w-0 flex-1 flex-col px-3 py-2">
@@ -562,25 +552,15 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
           <p className="mt-1 text-right text-[12px] font-mono-num text-muted-foreground">{sliderValue}%</p>
         </div>
 
-        {/* Total Value */}
-        {showTotalValue && (
-          <div className="flex items-stretch rounded-lg border border-border bg-transparent overflow-hidden focus-within:border-muted-foreground transition-colors">
-            <div className="flex min-w-0 flex-1 flex-col px-3 py-2">
-              <span className="text-[11px] leading-tight text-muted-foreground">Total</span>
-              <input
-                type="number"
-                value={totalValue}
-                onChange={(e) => setTotalValue(e.target.value)}
-                placeholder="0.00"
-                className="w-full bg-transparent text-[15px] text-foreground outline-none placeholder:text-muted-foreground/60 min-w-0 font-mono-num"
-              />
-            </div>
-            <span className="flex shrink-0 items-center px-3 text-[14px] text-muted-foreground">{quoteCoin}</span>
-          </div>
-        )}
-
         {/* Checkboxes + TIF */}
         <div className="flex flex-col gap-2">
+          {(isMarket || isStopMarket) && (
+            <label className="flex items-center gap-2 text-[13px] text-muted-foreground cursor-pointer select-none">
+              <input type="checkbox" checked={slippage} onChange={(e) => setSlippage(e.target.checked)}
+                className="w-3.5 h-3.5 rounded accent-primary" />
+              <span className="border-b border-dashed border-muted-foreground/50 whitespace-nowrap">Slippage Tolerance</span>
+            </label>
+          )}
           <label className="flex items-center gap-2 text-[13px] text-muted-foreground cursor-pointer select-none">
             <input type="checkbox" checked={tpsl} onChange={(e) => { setTpsl(e.target.checked); if (!e.target.checked) { setTakeProfit(""); setStopLoss(""); } }}
               className="w-3.5 h-3.5 rounded accent-primary" />
