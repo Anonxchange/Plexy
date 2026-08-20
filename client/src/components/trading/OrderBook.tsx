@@ -234,9 +234,9 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
     <div className="flex flex-col bg-background h-full select-none">
 
       {mode === "futures" && isMobile && (
-        <div className="px-2 pt-1 pb-0.5 flex-shrink-0">
-          <span className="text-[11px] text-muted-foreground leading-none block">Funding (8h) / Countdown</span>
-          <span className="text-[12px] font-mono-num text-foreground leading-tight font-medium">
+        <div className="px-2 pt-1 pb-0.5 flex-shrink-0 flex items-baseline gap-1 whitespace-nowrap overflow-hidden">
+          <span className="text-[10px] text-muted-foreground leading-none shrink-0">Funding/Countdown</span>
+          <span className="text-[11px] font-mono-num text-foreground leading-none font-medium truncate">
             {fundingRate} / {countdown || "—"}
           </span>
         </div>
