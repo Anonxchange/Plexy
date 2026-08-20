@@ -86,12 +86,37 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
   const [countdown, setCd]          = useState("");
   const [displayMode, setDisplay]   = useState<DisplayMode>("both");
   const [sheetOpen, setSheetOpen]   = useState(false);
+  /* futures only: how many rows physically fit in the column */
+  const [rowsFit, setRowsFit]       = useState(0);
 
   const loopRef      = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const tickRef      = useRef<HTMLDivElement>(null);
+  const bodyRef      = useRef<HTMLDivElement>(null);
+  const midRef       = useRef<HTMLDivElement>(null);
 
   const apiSymbol = toApiSym(symbol);
+
+  /* ── Futures: fill the whole column so the book always ends level with the
+        trade panel, no matter which order type is selected. Spot untouched. ── */
+  const isFutures = mode === "futures";
+  const ROW_H = 18; // px — matches the fixed-height futures row below
+
+  useEffect(() => {
+    if (!isFutures) return;
+    const el = bodyRef.current;
+    if (!el) return;
+    const measure = () => {
+      const midH = midRef.current?.offsetHeight ?? 0;
+      const avail = el.clientHeight - midH;
+      setRowsFit(Math.max(2, Math.floor(avail / ROW_H)));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    if (midRef.current) ro.observe(midRef.current);
+    return () => ro.disconnect();
+  }, [isFutures, displayMode]);
 
   const { data: markPriceData } = useQuery({
     queryKey: ["mark-price", apiSymbol],
@@ -130,7 +155,7 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
 
     setAsks([]); setBids([]); setMid(""); setMidRaw(0);
 
-    const maxRows = count * 2;
+    const maxRows = 50;
 
     const loop = async () => {
       if (cancelled) return;
@@ -183,9 +208,20 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
 
   const quote = symbol.split("/")[1] || "USDT";
 
-  const effectiveCount = displayMode === "both" ? count : count * 2;
-  const displayAsks = asks.slice(0, effectiveCount);
-  const displayBids = bids.slice(0, effectiveCount);
+  /* spot keeps its original fixed count; futures fills the available height */
+  const askCount = isFutures && rowsFit > 0
+    ? (displayMode === "both" ? Math.floor(rowsFit / 2) : rowsFit)
+    : (displayMode === "both" ? count : count * 2);
+  const bidCount = isFutures && rowsFit > 0
+    ? (displayMode === "both" ? rowsFit - Math.floor(rowsFit / 2) : rowsFit)
+    : (displayMode === "both" ? count : count * 2);
+
+  const displayAsks = asks.slice(-askCount);
+  const displayBids = bids.slice(0, bidCount);
+
+  const rowClass = isFutures
+    ? "relative flex items-center justify-between px-2 h-[18px] shrink-0"
+    : "relative flex items-center justify-between px-2 py-[3px]";
 
   return (
     <div className="flex flex-col bg-background h-full select-none">
@@ -206,11 +242,12 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
         </button>
       </div>
 
+      <div ref={bodyRef} className="flex-1 flex flex-col min-h-0 overflow-hidden">
       {/* ── Asks (only shown in "both" or "asks" mode) ── */}
       {displayMode !== "bids" && (
         <div className="flex-1 flex flex-col justify-end overflow-hidden">
           {displayAsks.map((o, i) => (
-            <div key={`a${i}`} className="relative flex items-center justify-between px-2 py-[3px]">
+            <div key={`a${i}`} className={rowClass}>
               <div className="absolute right-0 top-0 bottom-0 bg-trading-red/10" style={{ width: `${o.percent}%` }} />
               <span className="relative font-mono-num text-[11px] font-medium text-trading-red leading-tight">{o.price}</span>
               <span className="relative font-mono-num text-[11px] text-muted-foreground leading-tight">{o.size}</span>
@@ -220,7 +257,7 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
       )}
 
       {/* ── Mid price ── */}
-      <div className="flex flex-col px-2 py-1 border-y border-border/40 flex-shrink-0">
+      <div ref={midRef} className="flex flex-col px-2 py-1 border-y border-border/40 flex-shrink-0">
         <span className="font-mono-num text-[13px] font-bold text-foreground leading-tight">{midPrice || "—"}</span>
         {midRaw > 0 && (
           <span className="font-mono-num text-[9px] text-muted-foreground leading-tight">${fmtPrice(midRaw)}</span>
@@ -231,7 +268,7 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
       {displayMode !== "asks" && (
         <div className="flex-1 flex flex-col overflow-hidden">
           {displayBids.map((o, i) => (
-            <div key={`b${i}`} className="relative flex items-center justify-between px-2 py-[3px]">
+            <div key={`b${i}`} className={rowClass}>
               <div className="absolute right-0 top-0 bottom-0 bg-trading-green/10" style={{ width: `${o.percent}%` }} />
               <span className="relative font-mono-num text-[11px] font-medium text-trading-green leading-tight">{o.price}</span>
               <span className="relative font-mono-num text-[11px] text-muted-foreground leading-tight">{o.size}</span>
@@ -239,6 +276,8 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
           ))}
         </div>
       )}
+
+      </div>
 
       {/* ── Bottom bar: display mode trigger + tick size ── */}
       <div className="flex items-center justify-between px-2 py-1 border-t border-border/40 flex-shrink-0 relative" ref={tickRef}>
