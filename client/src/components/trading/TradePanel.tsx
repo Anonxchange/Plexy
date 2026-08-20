@@ -81,6 +81,18 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
 
   const priceNum = parseFloat(price);
 
+  const maxDisplay = (() => {
+    if (!user) return `0.00 ${amountUnit}`;
+    if (side === "buy") {
+      if (amountUnit === quoteCoin) return `${usdtBalance.toFixed(2)} ${quoteCoin}`;
+      return priceNum > 0 ? `${(usdtBalance / priceNum).toFixed(4)} ${baseCoin}` : `-- ${baseCoin}`;
+    }
+    if (amountUnit === quoteCoin) {
+      return priceNum > 0 ? `${(baseBalance * priceNum).toFixed(2)} ${quoteCoin}` : `-- ${quoteCoin}`;
+    }
+    return `${baseBalance.toFixed(4)} ${baseCoin}`;
+  })();
+
   /* Fully flexible slider — any percentage 0-100, ticks are just shortcuts */
   const applySlider = (pct: number) => {
     const clamped = Math.max(0, Math.min(100, Math.round(pct)));
@@ -162,6 +174,22 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
     },
   });
 
+  const availableRow = (
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+      <span className="truncate text-[13px] text-muted-foreground">Available</span>
+      <div className="flex shrink-0 items-center gap-1.5">
+        <span className="text-[13px] font-mono-num text-foreground">
+          {user ? avblDisplay : `0.00 ${side === "buy" ? quoteCoin : baseCoin}`}
+        </span>
+        {user && (
+          <button className="text-primary hover:opacity-70">
+            <PlusCircle className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="flex flex-col w-full bg-background h-full">
 
@@ -170,7 +198,7 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
         <div className="grid grid-cols-2 gap-1 rounded-lg bg-secondary p-1">
           <button
             onClick={() => { setSide("buy"); setSliderPct(0); }}
-            className={`py-1.5 text-[13px] font-semibold rounded-md transition-colors ${
+            className={`py-2.5 text-[14px] font-semibold rounded-md transition-colors ${
               side === "buy" ? "bg-trading-green text-black" : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -178,7 +206,7 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
           </button>
           <button
             onClick={() => { setSide("sell"); setSliderPct(0); }}
-            className={`py-1.5 text-[13px] font-semibold rounded-md transition-colors ${
+            className={`py-2.5 text-[14px] font-semibold rounded-md transition-colors ${
               side === "sell" ? "bg-trading-red text-white" : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -253,11 +281,11 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
           </div>
         )}
 
-        {/* ── Size (two-column container with unit selector) ── */}
+        {/* ── Amount (two-column container with unit selector) ── */}
         <div className="relative" ref={unitRef}>
           <div className="flex items-stretch rounded-lg border border-border bg-transparent overflow-hidden divide-x divide-border focus-within:border-muted-foreground transition-colors">
             <div className="flex min-w-0 flex-1 flex-col px-2.5 py-1.5">
-              <span className="text-[11px] leading-tight text-muted-foreground">Size</span>
+              <span className="text-[11px] leading-tight text-muted-foreground">Amount</span>
               <input
                 type="number"
                 value={amount}
@@ -275,7 +303,7 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
             </button>
           </div>
           {unitDropdownOpen && (
-            <div className="absolute right-0 z-50 mt-1 min-w-[110px] rounded-lg border border-border bg-popover shadow-lg overflow-hidden">
+            <div className="absolute left-0 right-0 z-50 mt-1 w-full rounded-lg border border-border bg-popover shadow-lg overflow-hidden">
               {[baseCoin, quoteCoin].map((unit) => (
                 <button
                   key={unit}
@@ -338,20 +366,7 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
           </div>
         </div>
 
-        {/* ── Available balance ── */}
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-          <span className="truncate text-[13px] text-muted-foreground">Available</span>
-          <div className="flex shrink-0 items-center gap-1.5">
-            <span className="text-[13px] font-mono-num text-foreground">
-              {user ? avblDisplay : `0.00 ${side === "buy" ? quoteCoin : baseCoin}`}
-            </span>
-            {user && (
-              <button className="text-primary hover:opacity-70">
-                <PlusCircle className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        </div>
+        {!showTotalValue && availableRow}
 
         {/* ── Total Value ── */}
         {showTotalValue && (
@@ -369,6 +384,8 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
             <span className="flex shrink-0 items-center px-2.5 text-[12px] text-muted-foreground">{quoteCoin}</span>
           </div>
         )}
+
+        {showTotalValue && availableRow}
 
         {/* ── Limit options row ── */}
         {isLimit && (
@@ -414,6 +431,12 @@ const TradePanel = ({ symbol = "ASTER/USDT" }: TradePanelProps) => {
             </div>
           </div>
         )}
+
+        {/* ── Max ── */}
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+          <span className="truncate text-[13px] text-muted-foreground">Max</span>
+          <span className="shrink-0 text-[13px] font-mono-num text-foreground">{maxDisplay}</span>
+        </div>
 
         {/* ── Fee estimate ── */}
         <div className="flex items-center justify-between">
