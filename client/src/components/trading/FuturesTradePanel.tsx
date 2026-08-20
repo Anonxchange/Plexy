@@ -427,34 +427,23 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
         {/* Order type → bottom sheet */}
         <button
           onClick={() => setOrderTypeSheet(true)}
-          className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg border border-border bg-transparent text-[14px] text-foreground hover:border-muted-foreground transition-colors"
+          className="relative flex items-center justify-center w-full px-3 py-2 rounded-lg border border-border bg-transparent text-[13px] text-foreground hover:border-muted-foreground transition-colors"
         >
-          <span>{orderType}</span>
-          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          <span className="text-center">{orderType}</span>
+          <ChevronDown className="absolute right-3 w-4 h-4 text-muted-foreground" />
         </button>
-
-        {/* Available balance */}
-        <div className="flex items-center justify-between">
-          <span className="text-[13px] text-muted-foreground">Available</span>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[13px] font-mono-num text-foreground">
-              {user ? `${availableBalance.toFixed(2)} ${quoteCoin}` : `0.00 ${quoteCoin}`}
-            </span>
-            {user && <PlusCircle className="w-4 h-4 text-trading-amber" />}
-          </div>
-        </div>
 
         {/* Stop Price — label sits inside the field container */}
         {showStopPrice && (
           <div className="flex items-stretch rounded-lg border border-border bg-transparent overflow-hidden divide-x divide-border focus-within:border-muted-foreground transition-colors">
-            <div className="flex min-w-0 flex-1 flex-col px-3 py-2">
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-3 py-2">
               <span className="text-[11px] leading-tight text-muted-foreground">Stop price</span>
               <input
                 type="number"
                 value={stopPrice}
                 onChange={(e) => setStopPrice(e.target.value)}
                 placeholder="0.00"
-                className="w-full bg-transparent text-[15px] text-foreground outline-none placeholder:text-muted-foreground/60 min-w-0 font-mono-num"
+                className="w-full bg-transparent text-[16px] leading-tight text-foreground outline-none placeholder:text-muted-foreground/60 min-w-0 font-mono-num"
               />
             </div>
             <button
@@ -470,7 +459,7 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
         {/* Price field — label inside the container (see reference) */}
         {showPriceField && (
           <div className="flex items-stretch rounded-lg border border-border bg-transparent overflow-hidden divide-x divide-border focus-within:border-muted-foreground transition-colors">
-            <div className="flex min-w-0 flex-1 flex-col px-3 py-2">
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-3 py-2">
               <span className="text-[11px] leading-tight text-muted-foreground">
                 {isMakerOnly ? "Maker price" : "Order price"}
               </span>
@@ -479,7 +468,7 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="0.00"
-                className="w-full bg-transparent text-[15px] text-foreground outline-none placeholder:text-muted-foreground/60 min-w-0 font-mono-num"
+                className="w-full bg-transparent text-[16px] leading-tight text-foreground outline-none placeholder:text-muted-foreground/60 min-w-0 font-mono-num"
               />
             </div>
             <button onClick={() => setPriceUnitSheet(true)}
@@ -492,14 +481,14 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
 
         {/* Size input */}
         <div className="flex items-stretch rounded-lg border border-border bg-transparent overflow-hidden divide-x divide-border focus-within:border-muted-foreground transition-colors">
-          <div className="flex min-w-0 flex-1 flex-col px-3 py-2">
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-3 py-2">
             <span className="text-[11px] leading-tight text-muted-foreground">Size</span>
             <input
               type="number"
               value={size}
               onChange={(e) => { setSize(e.target.value); setSliderValue(0); }}
               placeholder="0.00"
-              className="w-full bg-transparent text-[15px] text-foreground outline-none placeholder:text-muted-foreground/60 min-w-0 font-mono-num"
+              className="w-full bg-transparent text-[16px] leading-tight text-foreground outline-none placeholder:text-muted-foreground/60 min-w-0 font-mono-num"
             />
           </div>
           <button onClick={() => setSizeUnitSheet(true)}
@@ -550,6 +539,17 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
             ))}
           </div>
           <p className="mt-1 text-right text-[12px] font-mono-num text-muted-foreground">{sliderValue}%</p>
+        </div>
+
+        {/* Available balance — sits under the slider */}
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+          <span className="truncate text-[13px] text-muted-foreground">Available</span>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <span className="text-[13px] font-mono-num text-foreground">
+              {user ? `${availableBalance.toFixed(2)} ${quoteCoin}` : `0.00 ${quoteCoin}`}
+            </span>
+            {user && <PlusCircle className="w-4 h-4 text-trading-amber" />}
+          </div>
         </div>
 
         {/* Checkboxes + TIF */}
