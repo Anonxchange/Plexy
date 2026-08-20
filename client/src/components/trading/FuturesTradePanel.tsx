@@ -340,11 +340,12 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
 
 
   const orderMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (orderSide: "buy" | "sell") => {
+      setSide(orderSide);
       await asterTrading.futuresSetLeverage(apiSymbol, leverage);
       return asterTrading.futuresPlaceOrder({
         symbol: apiSymbol,
-        side: side === "buy" ? "BUY" : "SELL",
+        side: orderSide === "buy" ? "BUY" : "SELL",
         type: asterType,
         quantity: size || "0",
         ...(showPriceField && price ? { price } : {}),
@@ -355,10 +356,10 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
         ...(tpsl && stopLoss   ? { stopLoss:   JSON.stringify({ type: "STOP_MARKET", price: stopLoss, workingType: "CONTRACT_PRICE", priceProtect: "FALSE" }) } : {}),
       });
     },
-    onSuccess: (data) => {
+    onSuccess: (data, orderSide) => {
       toast({
         title: "Order placed",
-        description: `${side === "buy" ? "Long" : "Short"} ${size} ${baseCoin} submitted (ID: ${data?.orderId ?? "—"})`,
+        description: `${orderSide === "buy" ? "Long" : "Short"} ${size} ${baseCoin} submitted (ID: ${data?.orderId ?? "—"})`,
       });
       setSize(""); setTotalValue(""); setSliderValue(0); setTakeProfit(""); setStopLoss("");
       const subs = getSubscribedTaskIds();
@@ -401,22 +402,6 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
         >
           {assetMode === "single" ? "S" : "M"}
           <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
-        </button>
-      </div>
-
-      {/* ── Buy / Sell toggle ── */}
-      <div className="flex gap-2 px-3 pb-1">
-        <button
-          onClick={() => setSide("buy")}
-          className={`flex-1 py-2.5 text-[13px] font-semibold rounded-lg transition-colors ${side === "buy" ? "bg-trading-green text-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
-        >
-          Buy / Long
-        </button>
-        <button
-          onClick={() => setSide("sell")}
-          className={`flex-1 py-2.5 text-[13px] font-semibold rounded-lg transition-colors ${side === "sell" ? "bg-trading-red text-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
-        >
-          Sell / Short
         </button>
       </div>
 
@@ -632,16 +617,24 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
 
         {/* CTA */}
         {user ? (
-          <button
-            onClick={() => orderMutation.mutate()}
-            disabled={!size || orderMutation.isPending}
-            className={`w-full py-3 rounded-lg text-[14px] font-bold flex items-center justify-center gap-2 transition-opacity disabled:opacity-50 ${
-              side === "buy" ? "bg-trading-green text-black hover:opacity-90" : "bg-trading-red text-white hover:opacity-90"
-            }`}
-          >
-            {orderMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            {side === "buy" ? `Long ${baseCoin}` : `Short ${baseCoin}`}
-          </button>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => orderMutation.mutate("buy")}
+              disabled={!size || orderMutation.isPending}
+              className="w-full py-3 rounded-lg text-[14px] font-bold flex items-center justify-center gap-2 bg-trading-green text-black transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              {orderMutation.isPending && orderMutation.variables === "buy" && <Loader2 className="h-4 w-4 animate-spin" />}
+              Long
+            </button>
+            <button
+              onClick={() => orderMutation.mutate("sell")}
+              disabled={!size || orderMutation.isPending}
+              className="w-full py-3 rounded-lg text-[14px] font-bold flex items-center justify-center gap-2 bg-trading-red text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              {orderMutation.isPending && orderMutation.variables === "sell" && <Loader2 className="h-4 w-4 animate-spin" />}
+              Short
+            </button>
+          </div>
         ) : (
           <button
             onClick={() => navigate("/signin")}
