@@ -272,6 +272,13 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
   // Time in force now applies to Limit, Maker Only and Stop Limit
   const showTif = isLimit || isStopLimit || isMakerOnly;
 
+  // Draft selection inside the margin sheet — only committed on Confirm.
+  const [draftMarginMode, setDraftMarginMode] = useState<"cross" | "isolated">(marginMode);
+  const openMarginSheet = () => {
+    setDraftMarginMode(marginMode);
+    setMarginSheet(true);
+  };
+
   const marginMutation = useMutation({
     mutationFn: (mode: "cross" | "isolated") =>
       asterTrading.futuresSetMarginType(apiSymbol, mode === "isolated" ? "ISOLATED" : "CROSSED"),
@@ -284,6 +291,7 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
       toast({ title: "Margin mode change failed", description: err.message, variant: "destructive" });
     },
   });
+
 
   const orderMutation = useMutation({
     mutationFn: async () => {
@@ -328,7 +336,7 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
       {/* ── Cross | 20x | M ── */}
       <div className="grid grid-cols-3 gap-1 px-2 pt-1.5 pb-0.5">
         <button
-          onClick={() => setMarginSheet(true)}
+          onClick={openMarginSheet}
           className="flex items-center justify-center gap-0.5 rounded bg-secondary py-1.5 text-[11px] font-medium text-foreground"
         >
           {marginMode === "cross" ? "Cross" : "Isolated"}
@@ -618,8 +626,8 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
           Switching of margin mode only applies to the selected contract
         </p>
         <div className="mt-4 grid grid-cols-2 gap-3">
-          <PillChoice active={marginMode === "cross"} label="Cross" onClick={() => setMarginMode("cross")} />
-          <PillChoice active={marginMode === "isolated"} label="Isolated" onClick={() => setMarginMode("isolated")} />
+          <PillChoice active={draftMarginMode === "cross"} label="Cross" onClick={() => setDraftMarginMode("cross")} />
+          <PillChoice active={draftMarginMode === "isolated"} label="Isolated" onClick={() => setDraftMarginMode("isolated")} />
         </div>
         <h4 className="mt-6 text-[15px] font-medium text-foreground">What are cross and isolated modes?</h4>
         <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">
@@ -630,7 +638,7 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
         <SheetCta
           label={user ? "Confirm" : "Connect"}
           loading={marginMutation.isPending}
-          onClick={() => { if (!user) { navigate("/signin"); return; } marginMutation.mutate(marginMode); }}
+          onClick={() => { if (!user) { navigate("/signin"); return; } marginMutation.mutate(draftMarginMode); }}
         />
       </BottomSheet>
 
