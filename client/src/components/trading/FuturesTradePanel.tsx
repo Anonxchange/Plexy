@@ -199,7 +199,6 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
   const [assetSheet, setAssetSheet] = useState(false);
   const [orderTypeSheet, setOrderTypeSheet] = useState(false);
   const [sizeUnitSheet, setSizeUnitSheet] = useState(false);
-  const [priceUnitSheet, setPriceUnitSheet] = useState(false);
   const [stopUnitSheet, setStopUnitSheet] = useState(false);
   const [tifSheet, setTifSheet] = useState(false);
 
@@ -471,11 +470,11 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
                 className="w-full bg-transparent text-[15px] leading-tight text-foreground outline-none placeholder:text-muted-foreground/60 min-w-0 font-mono-num"
               />
             </div>
-            <button onClick={() => setPriceUnitSheet(true)}
-              className="flex shrink-0 items-center gap-1 px-2.5 text-[12px] text-muted-foreground">
-              {priceUnit} <ChevronDown className="w-3.5 h-3.5" />
-            </button>
-            <button className="shrink-0 px-2.5 text-[12px] text-trading-amber font-semibold">BBO</button>
+            <span className="flex shrink-0 items-center px-1.5 text-[11px] leading-none text-muted-foreground">
+              {priceUnit}
+            </span>
+            <button className="shrink-0 px-2 text-[12px] text-trading-amber font-semibold">BBO</button>
+
           </div>
         )}
 
@@ -538,7 +537,7 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
               </button>
             ))}
           </div>
-          <p className="mt-1 text-right text-[12px] font-mono-num text-muted-foreground">{sliderValue}%</p>
+
         </div>
 
         {/* Available balance — sits under the slider */}
@@ -796,15 +795,8 @@ const FuturesTradePanel = ({ symbol = "ASTER/USDT" }: FuturesTradePanelProps) =>
         </div>
       </BottomSheet>
 
-      {/* Price unit */}
-      <BottomSheet open={priceUnitSheet} onClose={() => setPriceUnitSheet(false)} title="Price Unit" align="left">
-        <div className="flex flex-col gap-2">
-          {[quoteCoin, baseCoin].map((unit) => (
-            <ListChoice key={unit} active={priceUnit === unit} label={unit}
-              onClick={() => { setPriceUnit(unit); setPriceUnitSheet(false); }} />
-          ))}
-        </div>
-      </BottomSheet>
+
+
 
       {/* Stop price unit */}
       <BottomSheet open={stopUnitSheet} onClose={() => setStopUnitSheet(false)} title="Stop Price Unit" align="left">
