@@ -5,7 +5,7 @@ import { asterMarket } from "@/lib/asterdex-service";
 import { useQuery } from "@tanstack/react-query";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
-const TICK_OPTIONS = ["0.1", "1", "10", "50", "100"];
+const TICK_OPTIONS = ["0.01", "0.1", "1", "10"];
 
 type DisplayMode = "both" | "bids" | "asks";
 
@@ -86,7 +86,6 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
   const [countdown, setCd]          = useState("");
   const [displayMode, setDisplay]   = useState<DisplayMode>("both");
   const [sheetOpen, setSheetOpen]   = useState(false);
-  const [tickSheet, setTickSheet]   = useState(false);
   /* futures only: how many rows physically fit in the column */
   const [rowsFit, setRowsFit]       = useState(0);
 
@@ -101,7 +100,7 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
   /* ── Futures: fill the whole column so the book always ends level with the
         trade panel, no matter which order type is selected. Spot untouched. ── */
   const isFutures = mode === "futures";
-  const ROW_H = 20; // px — matches the fixed-height futures row below
+  const ROW_H = 18; // px — matches the fixed-height futures row below
 
   useEffect(() => {
     if (!isFutures) return;
@@ -221,7 +220,7 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
   const displayBids = bids.slice(0, bidCount);
 
   const rowClass = isFutures
-    ? "relative flex items-center justify-between px-2 h-[20px] shrink-0"
+    ? "relative flex items-center justify-between px-2 h-[18px] shrink-0"
     : "relative flex items-center justify-between px-2 py-[3px]";
 
   return (
@@ -229,16 +228,16 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
 
       {mode === "futures" && isMobile && (
         <div className="px-2 pt-1 pb-0.5 flex-shrink-0">
-          <span className="text-[11px] text-muted-foreground leading-none block">Funding (8h) / Countdown</span>
-          <span className="text-[12px] font-mono-num text-foreground leading-none font-medium">
+          <span className="text-[9px] text-muted-foreground leading-none block">Funding (8h) / Countdown</span>
+          <span className="text-[10px] font-mono-num text-foreground leading-none font-medium">
             {fundingRate} / {countdown || "—"}
           </span>
         </div>
       )}
 
       <div className="flex items-center justify-between px-2 pt-1 pb-0.5 flex-shrink-0">
-        <span className="text-[11px] text-muted-foreground leading-none">Price ({quote})</span>
-        <button className="flex items-center gap-0.5 text-[11px] text-muted-foreground leading-none">
+        <span className="text-[9px] text-muted-foreground leading-none">Price ({quote})</span>
+        <button className="flex items-center gap-0.5 text-[9px] text-muted-foreground leading-none">
           Qty <ChevronDown className="w-2.5 h-2.5" />
         </button>
       </div>
@@ -250,8 +249,8 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
           {displayAsks.map((o, i) => (
             <div key={`a${i}`} className={rowClass}>
               <div className="absolute right-0 top-0 bottom-0 bg-trading-red/10" style={{ width: `${o.percent}%` }} />
-              <span className="relative font-mono-num text-[13px] font-medium text-trading-red leading-tight">{o.price}</span>
-              <span className="relative font-mono-num text-[13px] text-muted-foreground leading-tight">{o.size}</span>
+              <span className="relative font-mono-num text-[11px] font-medium text-trading-red leading-tight">{o.price}</span>
+              <span className="relative font-mono-num text-[11px] text-muted-foreground leading-tight">{o.size}</span>
             </div>
           ))}
         </div>
@@ -259,9 +258,9 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
 
       {/* ── Mid price ── */}
       <div ref={midRef} className="flex flex-col px-2 py-1 border-y border-border/40 flex-shrink-0">
-        <span className="font-mono-num text-[15px] font-bold text-foreground leading-tight">{midPrice || "—"}</span>
+        <span className="font-mono-num text-[13px] font-bold text-foreground leading-tight">{midPrice || "—"}</span>
         {midRaw > 0 && (
-          <span className="font-mono-num text-[11px] text-muted-foreground leading-tight">${fmtPrice(midRaw)}</span>
+          <span className="font-mono-num text-[9px] text-muted-foreground leading-tight">${fmtPrice(midRaw)}</span>
         )}
       </div>
 
@@ -271,8 +270,8 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
           {displayBids.map((o, i) => (
             <div key={`b${i}`} className={rowClass}>
               <div className="absolute right-0 top-0 bottom-0 bg-trading-green/10" style={{ width: `${o.percent}%` }} />
-              <span className="relative font-mono-num text-[13px] font-medium text-trading-green leading-tight">{o.price}</span>
-              <span className="relative font-mono-num text-[13px] text-muted-foreground leading-tight">{o.size}</span>
+              <span className="relative font-mono-num text-[11px] font-medium text-trading-green leading-tight">{o.price}</span>
+              <span className="relative font-mono-num text-[11px] text-muted-foreground leading-tight">{o.size}</span>
             </div>
           ))}
         </div>
@@ -291,13 +290,13 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
         </button>
 
         <button
-          onClick={() => (isMobile ? setTickSheet(true) : setTickO(o => !o))}
-          className="flex items-center gap-0.5 text-[12px] text-foreground font-mono-num hover:text-muted-foreground transition-colors"
+          onClick={() => setTickO(o => !o)}
+          className="flex items-center gap-0.5 text-[10px] text-foreground font-mono-num hover:text-muted-foreground transition-colors"
         >
           {tickSize}
           <ChevronDown className={`w-2.5 h-2.5 text-muted-foreground transition-transform ${tickOpen ? "rotate-180" : ""}`} />
         </button>
-        {tickOpen && !isMobile && (
+        {tickOpen && (
           <div className="absolute right-0 bottom-full mb-1 z-50 rounded-md border border-border bg-popover shadow-lg overflow-hidden min-w-[70px]">
             {TICK_OPTIONS.map(opt => (
               <button
@@ -313,33 +312,6 @@ const OrderBook = ({ symbol, mode = "spot", count: countProp }: OrderBookProps) 
           </div>
         )}
       </div>
-
-      {/* ── Tick size sheet (mobile, spot + futures) ── */}
-      <Sheet open={tickSheet} onOpenChange={setTickSheet}>
-        <SheetContent side="bottom" className="p-0 rounded-t-2xl">
-          <SheetHeader className="px-4 pt-5 pb-3 border-b border-border">
-            <SheetTitle className="text-sm font-semibold text-center">Tick Size</SheetTitle>
-          </SheetHeader>
-          <div className="flex flex-col py-2">
-            {TICK_OPTIONS.map(opt => (
-              <button
-                key={opt}
-                onClick={() => { setTick(opt); setTickSheet(false); }}
-                className="flex items-center gap-3 px-5 py-3.5 hover:bg-accent transition-colors"
-              >
-                <span className={`flex-1 text-left text-sm font-mono-num ${tickSize === opt ? "text-trading-amber" : "text-foreground"}`}>{opt}</span>
-                {tickSize === opt && <Check className="w-4 h-4 text-trading-amber" />}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={() => setTickSheet(false)}
-            className="w-full py-4 text-sm text-muted-foreground border-t border-border hover:bg-accent transition-colors"
-          >
-            Cancel
-          </button>
-        </SheetContent>
-      </Sheet>
 
       {/* ── Order Book Display sheet ── */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
