@@ -947,10 +947,13 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
       </div>
 
       {/* ══ Body ══ */}
-      <div className="relative flex-1 min-h-0 max-h-[42vh] sm:max-h-none">
+      <div className="relative flex-1 min-h-[320px] max-h-[56vh] sm:min-h-0 sm:max-h-none">
 
         {/* Aster Lightweight Chart */}
-        <div className={`absolute inset-0 ${view === "chart" ? "block" : "hidden"}`}>
+        <div
+          className={`absolute inset-0 ${view === "chart" ? "block" : "hidden"}`}
+          aria-hidden={view !== "chart"}
+        >
 
           {/* Drawing toolbar — 28px wide strip on the left */}
           {toolsVisible && (
