@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   createChart,
   CandlestickSeries,
@@ -190,6 +190,7 @@ export default function AsterLightweightChart({
   const pendingLineRef     = useRef<IPriceLine | null>(null);
   const drawingsRef        = useRef<AnyDrawing[]>([]);
   const overlayDivRef      = useRef<HTMLDivElement | null>(null);
+  const [needsTvBadge, setNeedsTvBadge] = useState(false);
 
   /* Keep refs in sync with props */
   useEffect(() => { activeToolRef.current   = activeTool   ?? null; }, [activeTool]);
@@ -272,7 +273,10 @@ export default function AsterLightweightChart({
         textColor:   textCol,
         fontFamily:  "Inter, system-ui, sans-serif",
         fontSize:    isSmallScreen() ? 10 : 11,
-      },
+        // TradingView attribution logo (lightweight-charts v5). Kept on so the
+        // badge shows; a CSP-safe fallback badge renders if the lib omits it.
+        attributionLogo: true,
+      } as any,
       grid: {
         vertLines: { color: gridCol },
         horzLines: { color: gridCol },
@@ -292,15 +296,16 @@ export default function AsterLightweightChart({
         minimumWidth: isSmallScreen() ? 44 : 52,
         autoScale: true,
         scaleMargins: isSmallScreen()
-          ? { top: 0.14, bottom: 0.26 }
+          ? { top: 0.10, bottom: 0.24 }
           : { top: 0.08, bottom: 0.14 },
       },
       timeScale: {
         borderColor: borderCol,
         timeVisible: true,
         secondsVisible: false,
-        barSpacing:    isSmallScreen() ? 3.5 : 7,
-        minBarSpacing: 0.5,
+        // Wider bars = readable candles instead of a tiny joined-up blob.
+        barSpacing:    isSmallScreen() ? 10 : 9,
+        minBarSpacing: 2,
         rightOffset:   isSmallScreen() ? 2 : 4,
         fixLeftEdge:   false,
       },
@@ -310,6 +315,13 @@ export default function AsterLightweightChart({
 
     const chart = createChart(containerRef.current, chartOptions);
     chartRef.current = chart;
+
+    /* If the library did not render its own attribution logo (older version
+       or hidden), show our own CSP-safe inline-SVG badge instead. */
+    const logoTimer = setTimeout(() => {
+      const has = containerRef.current?.querySelector('#tv-attr-logo, a[id*="attr-logo"]');
+      setNeedsTvBadge(!has);
+    }, 400);
 
     /* ── ResizeObserver ──────────────────────────────────────────────── */
     const ro = new ResizeObserver(entries => {
@@ -430,7 +442,7 @@ export default function AsterLightweightChart({
         lastValueVisible: false,
         priceLineVisible: false,
       } as any);
-      volSeries.priceScale().applyOptions({ scaleMargins: { top: isSmallScreen() ? 0.80 : 0.80, bottom: 0 } });
+      volSeries.priceScale().applyOptions({ scaleMargins: { top: isSmallScreen() ? 0.82 : 0.80, bottom: 0 } });
       volRef.current = volSeries;
     }
 
@@ -776,7 +788,7 @@ export default function AsterLightweightChart({
         }
 
         if (candles.length > 0) {
-          const visible = isSmallScreen() ? 150 : 90;
+          const visible = isSmallScreen() ? 34 : 80;
           const from = candles[Math.max(0, candles.length - visible)].time;
           const to   = candles[candles.length - 1].time;
           chart.timeScale().setVisibleRange({ from, to });
@@ -824,6 +836,7 @@ export default function AsterLightweightChart({
     pollRef.current = setInterval(updateLatest, 5000);
 
     return () => {
+      clearTimeout(logoTimer);
       cancelled = true;
       if (pollRef.current) clearInterval(pollRef.current);
       ro.disconnect();
@@ -878,6 +891,23 @@ export default function AsterLightweightChart({
         className="absolute inset-0 pointer-events-none overflow-hidden z-20"
       />
       <div ref={containerRef} className="h-full w-full" />
+
+      {/* TradingView attribution badge (fallback, inline SVG — CSP safe) */}
+      {needsTvBadge && (
+        <a
+          href="https://www.tradingview.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Charts by TradingView"
+          className="absolute bottom-8 left-2 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-background/70 backdrop-blur-sm opacity-70 hover:opacity-100 transition-opacity"
+        >
+          <svg viewBox="0 0 36 28" className="h-4 w-4" fill="currentColor" aria-hidden="true">
+            <path d="M0 0h14v5H9.5v14H4.5V5H0V0z" />
+            <path d="M18.5 0h5l4 9 4-9h4.5l-6.5 14h-4L18.5 0z" />
+            <circle cx="17" cy="22" r="4" />
+          </svg>
+        </a>
+      )}
     </div>
   );
 }
