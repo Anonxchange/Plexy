@@ -46,6 +46,18 @@ const INTERVALS = [
   { label: "1W",  value: "W"   },
 ];
 
+/* Extra intervals shown in the chevron dropdown */
+const MORE_INTERVALS = [
+  { label: "1m",  value: "1"   },
+  { label: "3m",  value: "3"   },
+  { label: "30m", value: "30"  },
+  { label: "2H",  value: "120" },
+  { label: "6H",  value: "360" },
+  { label: "8H",  value: "480" },
+  { label: "12H", value: "720" },
+  { label: "1M",  value: "M"   },
+];
+
 const PRICE_TYPES = ["Last Price", "Mark Price", "Index Price"];
 
 
@@ -641,6 +653,7 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
   const [priceType,       setPriceType]       = useState("Last Price");
   const [showPriceMenu,   setShowPriceMenu]   = useState(false);
   const [showLineType,    setShowLineType]    = useState(false);
+  const [showIntervalMenu, setShowIntervalMenu] = useState(false);
   const [showSettings,    setShowSettings]    = useState(false);
   const [chartStyle,      setChartStyle]      = useState(1);
   const [showVolume,      setShowVolume]      = useState(true);
@@ -666,8 +679,8 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
   const [showLegend,        setShowLegend]        = useState(true);
   const [logScale,          setLogScale]          = useState(false);
   const [invertScale,       setInvertScale]       = useState(false);
-  const [scaleMarginTop,    setScaleMarginTop]    = useState(0.04);
-  const [scaleMarginBottom, setScaleMarginBottom] = useState(0.1);
+  const [scaleMarginTop,    setScaleMarginTop]    = useState(() => (typeof window !== "undefined" && window.innerWidth < 768) ? 0.02 : 0.04);
+  const [scaleMarginBottom, setScaleMarginBottom] = useState(() => (typeof window !== "undefined" && window.innerWidth < 768) ? 0.04 : 0.08);
   const [showHorzGrid,      setShowHorzGrid]      = useState(true);
   const [showVertGrid,      setShowVertGrid]      = useState(true);
   const [showCrosshair,     setShowCrosshair]     = useState(true);
@@ -678,7 +691,7 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
 
   /* close toolbar dropdowns on outside click */
   useEffect(() => {
-    const handler = () => { setShowLineType(false); setShowPriceMenu(false); setShowOrdersMenu(false); };
+    const handler = () => { setShowLineType(false); setShowPriceMenu(false); setShowOrdersMenu(false); setShowIntervalMenu(false); };
     document.addEventListener("click", handler);
     return () => document.removeEventListener("click", handler);
   }, []);
@@ -708,14 +721,14 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
     <div ref={wrapperRef} className={`flex flex-col min-h-0 h-full bg-background ${fullscreen ? "" : className || ""}`}>
 
       {/* ══ Toolbar ══ */}
-      <div className="flex items-center h-10 px-2 gap-0.5 border-b border-panel-border bg-card flex-shrink-0 min-w-0">
+      <div className="flex items-center h-9 md:h-10 px-1.5 md:px-2 gap-0.5 border-b border-panel-border bg-card flex-shrink-0 min-w-0">
 
         {/* Timeframe buttons */}
-        <div className="flex items-center flex-shrink-0">
+        <div className="relative flex items-center flex-shrink-0" onClick={e => e.stopPropagation()}>
           {INTERVALS.map(({ label, value }) => (
             <button key={value}
-              onClick={() => { setInterval(value); setView("chart"); }}
-              className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
+              onClick={() => { setInterval(value); setView("chart"); setShowIntervalMenu(false); }}
+              className={`px-1.5 md:px-2 py-1 text-xs font-medium rounded transition-colors ${
                 interval === value && view === "chart"
                   ? "bg-primary/15 text-primary font-semibold"
                   : "text-muted-foreground hover:text-foreground hover:bg-accent"
@@ -724,9 +737,51 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
               {label}
             </button>
           ))}
-          <button className="p-1 text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors ml-0.5">
-            <ChevronDown className="w-4 h-4" />
+          {/* active interval coming from the "more" list */}
+          {MORE_INTERVALS.some(i => i.value === interval) && (
+            <button
+              onClick={() => setShowIntervalMenu(v => !v)}
+              className="px-1.5 md:px-2 py-1 text-xs font-semibold rounded bg-primary/15 text-primary transition-colors"
+            >
+              {MORE_INTERVALS.find(i => i.value === interval)?.label}
+            </button>
+          )}
+          <button
+            onClick={() => { setShowIntervalMenu(v => !v); setShowLineType(false); setShowPriceMenu(false); setShowOrdersMenu(false); }}
+            className={`p-1 rounded transition-colors ml-0.5 ${
+              showIntervalMenu ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-accent"
+            }`}
+            aria-label="More intervals"
+          >
+            <ChevronDown className={`w-4 h-4 transition-transform ${showIntervalMenu ? "rotate-180" : ""}`} />
           </button>
+
+          {/* ── More intervals — translucent floating panel ── */}
+          {showIntervalMenu && (
+            <div className="absolute top-full left-0 mt-1.5 z-50 w-[min(92vw,22rem)] rounded-2xl border border-border/40 bg-card/60 backdrop-blur-xl shadow-2xl p-2.5">
+              <div className="grid grid-cols-4 gap-2">
+                {MORE_INTERVALS.map(({ label, value }) => (
+                  <button
+                    key={value}
+                    onClick={() => { setInterval(value); setView("chart"); setShowIntervalMenu(false); }}
+                    className={`h-9 rounded-xl text-xs font-medium transition-colors ${
+                      interval === value
+                        ? "bg-primary/20 text-primary font-semibold"
+                        : "bg-foreground/5 text-foreground/80 hover:bg-foreground/10"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setShowIntervalMenu(false)}
+                className="mt-2 w-full h-9 rounded-xl bg-foreground/5 text-xs font-medium text-foreground/80 hover:bg-foreground/10 transition-colors"
+              >
+                Pin intervals
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="w-px h-5 bg-border mx-2 flex-shrink-0" />
