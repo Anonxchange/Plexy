@@ -329,7 +329,7 @@ export default function AsterLightweightChart({
         minimumWidth: isSmallScreen() ? 44 : 52,
         autoScale: true,
         scaleMargins: isSmallScreen()
-          ? { top: 0.05, bottom: 0.10 }
+          ? { top: 0.04, bottom: 0.08 }
           : { top: 0.08, bottom: 0.14 },
       },
       timeScale: {
@@ -337,7 +337,7 @@ export default function AsterLightweightChart({
         timeVisible: true,
         secondsVisible: false,
         // Wider bars = readable candles instead of a tiny joined-up blob.
-        barSpacing:    isSmallScreen() ? 8 : 9,
+        barSpacing:    isSmallScreen() ? 11 : 9,
         minBarSpacing: 2,
         rightOffset:   isSmallScreen() ? 1 : 3,
         fixLeftEdge:   false,
@@ -786,7 +786,14 @@ export default function AsterLightweightChart({
         const rows = await fetchKlines(symbol, interval, mode, 500);
         if (cancelled || !chartRef.current) return;
 
-        let candles = sanitizeCandles(rows.map(rowToCandle));
+        /* Illiquid pairs return long stretches of zero-volume filler bars
+           (open==high==low==close). They flatten the autoscale and squash
+           the real candles into dots, so drop the leading dead history. */
+        let usableRows = rows;
+        const firstTraded = rows.findIndex(r => parseFloat(r[5]) > 0);
+        if (firstTraded > 0) usableRows = rows.slice(Math.max(0, firstTraded - 2));
+
+        let candles = sanitizeCandles(usableRows.map(rowToCandle));
         if (chartStyle === 8) candles = sanitizeCandles(heikinAshi(candles));
 
         /* Illiquid markets can return an (almost) flat series. Without a
@@ -815,7 +822,7 @@ export default function AsterLightweightChart({
 
         if (showVolume && volRef.current) {
           volRef.current.setData(
-            sanitizePoints(rows.map(row => ({
+            sanitizePoints(usableRows.map(row => ({
               time:  toSecond(row[0]),
               value: parseFloat(row[5]),
               color: parseFloat(row[4]) >= parseFloat(row[1])
@@ -836,9 +843,9 @@ export default function AsterLightweightChart({
           /* Use a LOGICAL range, not a time range. Low-trade markets have
              gaps in their kline history, so a time range maps to far fewer
              bars than expected and the chart looks empty / stretched. */
-          const wanted  = isSmallScreen() ? 40 : INITIAL_VISIBLE + 20;
+          const wanted  = isSmallScreen() ? 34 : INITIAL_VISIBLE + 20;
           const visible = Math.min(wanted, candles.length);
-          if (candles.length <= 5) {
+          if (candles.length <= wanted) {
             chart.timeScale().fitContent();
           } else {
             chart.timeScale().setVisibleLogicalRange({
@@ -936,7 +943,7 @@ export default function AsterLightweightChart({
   }, [activeTool]);
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full max-h-[300px] sm:max-h-none">
       {/* OHLC legend */}
       <div
         ref={legendRef}
