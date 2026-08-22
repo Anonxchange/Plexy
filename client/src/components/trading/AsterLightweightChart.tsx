@@ -304,19 +304,30 @@ export default function AsterLightweightChart({
         rightOffset:   isSmallScreen() ? 2 : 4,
         fixLeftEdge:   false,
       },
-      handleScroll: true,
-      handleScale: true,
+      /* Let lightweight-charts own its sizing: it measures the parent element
+         and re-measures on every layout change. This is what stops the chart
+         from locking to a fallback size on mobile. */
+      autoSize: true,
+      /* Mobile: allow horizontal drag/pinch on the chart, but let a vertical
+         swipe scroll the page instead of dragging the price scale. */
+      handleScroll: {
+        mouseWheel: true,
+        pressedMouseMove: true,
+        horzTouchDrag: true,
+        vertTouchDrag: false,
+      },
+      handleScale: {
+        axisPressedMouseMove: { time: true, price: true },
+        mouseWheel: true,
+        pinch: true,
+      },
     };
 
     const chart = createChart(containerRef.current, chartOptions);
     chartRef.current = chart;
 
-    /* ── ResizeObserver ──────────────────────────────────────────────── */
-    const ro = new ResizeObserver(entries => {
-      const e = entries[0];
-      if (e) chart.resize(e.contentRect.width, e.contentRect.height);
-    });
-    ro.observe(containerRef.current);
+    /* Sizing is handled by autoSize above — a manual ResizeObserver here
+       fights it and causes the chart to freeze at a stale width/height. */
 
     /* ── bull/bear colors ────────────────────────────────────────────── */
     const bullColor = candleToggles.body ? candleColors.bullBody : "transparent";
@@ -776,10 +787,17 @@ export default function AsterLightweightChart({
         }
 
         if (candles.length > 0) {
-          const visible = isSmallScreen() ? 110 : INITIAL_VISIBLE;
-          const from = candles[Math.max(0, candles.length - visible)].time;
-          const to   = candles[candles.length - 1].time;
-          chart.timeScale().setVisibleRange({ from, to });
+          /* Fill the container: how many bars actually fit at the current
+             bar spacing, rather than a fixed count that leaves dead space
+             (or over-compresses) depending on screen width. */
+          const width   = containerRef.current?.clientWidth ?? 0;
+          const spacing = isSmallScreen() ? 5 : 8;
+          const fits    = width > 0 ? Math.round(width / spacing) : INITIAL_VISIBLE;
+          const visible = Math.min(candles.length, Math.max(40, Math.min(fits, 400)));
+          chart.timeScale().setVisibleLogicalRange({
+            from: candles.length - visible,
+            to:   candles.length - 1 + (isSmallScreen() ? 2 : 4),
+          });
         }
 
         onReady?.();
@@ -826,7 +844,6 @@ export default function AsterLightweightChart({
     return () => {
       cancelled = true;
       if (pollRef.current) clearInterval(pollRef.current);
-      ro.disconnect();
       chart.remove();
       chartRef.current = null;
       priceRef.current = null;
@@ -865,7 +882,7 @@ export default function AsterLightweightChart({
   }, [activeTool]);
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full min-h-0 overflow-hidden">
       {/* OHLC legend */}
       <div
         ref={legendRef}
@@ -877,7 +894,7 @@ export default function AsterLightweightChart({
         ref={overlayDivRef}
         className="absolute inset-0 pointer-events-none overflow-hidden z-20"
       />
-      <div ref={containerRef} className="h-full w-full" />
+      <div ref={containerRef} className="absolute inset-0" />
     </div>
   );
 }
