@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import {
   createChart,
   CandlestickSeries,
@@ -29,7 +29,7 @@ const TV_TO_ASTER: Record<string, string> = {
 };
 
 /* ── How many candles to show initially ───────────────────────────── */
-const INITIAL_VISIBLE = 70;
+const INITIAL_VISIBLE = 30;
 
 /* Mobile screens get more candles + tighter spacing so the chart
    doesn't look stretched on narrow viewports. */
@@ -190,7 +190,6 @@ export default function AsterLightweightChart({
   const pendingLineRef     = useRef<IPriceLine | null>(null);
   const drawingsRef        = useRef<AnyDrawing[]>([]);
   const overlayDivRef      = useRef<HTMLDivElement | null>(null);
-  const [needsTvBadge, setNeedsTvBadge] = useState(false);
 
   /* Keep refs in sync with props */
   useEffect(() => { activeToolRef.current   = activeTool   ?? null; }, [activeTool]);
@@ -296,7 +295,7 @@ export default function AsterLightweightChart({
         minimumWidth: isSmallScreen() ? 44 : 52,
         autoScale: true,
         scaleMargins: isSmallScreen()
-          ? { top: 0.10, bottom: 0.24 }
+          ? { top: 0.06, bottom: 0.12 }
           : { top: 0.08, bottom: 0.14 },
       },
       timeScale: {
@@ -304,7 +303,7 @@ export default function AsterLightweightChart({
         timeVisible: true,
         secondsVisible: false,
         // Wider bars = readable candles instead of a tiny joined-up blob.
-        barSpacing:    isSmallScreen() ? 10 : 9,
+        barSpacing:    isSmallScreen() ? 15 : 9,
         minBarSpacing: 2,
         rightOffset:   isSmallScreen() ? 2 : 4,
         fixLeftEdge:   false,
@@ -315,13 +314,6 @@ export default function AsterLightweightChart({
 
     const chart = createChart(containerRef.current, chartOptions);
     chartRef.current = chart;
-
-    /* If the library did not render its own attribution logo (older version
-       or hidden), show our own CSP-safe inline-SVG badge instead. */
-    const logoTimer = setTimeout(() => {
-      const has = containerRef.current?.querySelector('#tv-attr-logo, a[id*="attr-logo"]');
-      setNeedsTvBadge(!has);
-    }, 400);
 
     /* ── ResizeObserver ──────────────────────────────────────────────── */
     const ro = new ResizeObserver(entries => {
@@ -442,7 +434,7 @@ export default function AsterLightweightChart({
         lastValueVisible: false,
         priceLineVisible: false,
       } as any);
-      volSeries.priceScale().applyOptions({ scaleMargins: { top: isSmallScreen() ? 0.82 : 0.80, bottom: 0 } });
+      volSeries.priceScale().applyOptions({ scaleMargins: { top: isSmallScreen() ? 0.88 : 0.80, bottom: 0 } });
       volRef.current = volSeries;
     }
 
@@ -836,7 +828,6 @@ export default function AsterLightweightChart({
     pollRef.current = setInterval(updateLatest, 5000);
 
     return () => {
-      clearTimeout(logoTimer);
       cancelled = true;
       if (pollRef.current) clearInterval(pollRef.current);
       ro.disconnect();
@@ -892,22 +883,26 @@ export default function AsterLightweightChart({
       />
       <div ref={containerRef} className="h-full w-full" />
 
-      {/* TradingView attribution badge (fallback, inline SVG — CSP safe) */}
-      {needsTvBadge && (
-        <a
-          href="https://www.tradingview.com/"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Charts by TradingView"
-          className="absolute bottom-8 left-2 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-background/70 backdrop-blur-sm opacity-70 hover:opacity-100 transition-opacity"
-        >
-          <svg viewBox="0 0 36 28" className="h-4 w-4" fill="currentColor" aria-hidden="true">
-            <path d="M0 0h14v5H9.5v14H4.5V5H0V0z" />
-            <path d="M18.5 0h5l4 9 4-9h4.5l-6.5 14h-4L18.5 0z" />
-            <circle cx="17" cy="22" r="4" />
-          </svg>
-        </a>
-      )}
+      {/* TradingView attribution badge (always on, inline SVG — CSP safe) */}
+      <a
+        href="https://www.tradingview.com/"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Charts by TradingView"
+        className="absolute bottom-8 left-2 z-20 flex items-center justify-center rounded-full opacity-80 hover:opacity-100 transition-opacity"
+        style={{
+          height: 48,
+          width: 48,
+          backgroundColor: "rgba(15,17,20,0.55)",
+          backdropFilter: "blur(2px)",
+        }}
+      >
+        <svg viewBox="0 0 36 28" style={{ height: 22, width: 22, color: "#ffffff" }} fill="currentColor" aria-hidden="true">
+          <path d="M0 0h14v5H9.5v14H4.5V5H0V0z" />
+          <path d="M18.5 0h5l4 9 4-9h4.5l-6.5 14h-4L18.5 0z" />
+          <circle cx="17" cy="22" r="4" />
+        </svg>
+      </a>
     </div>
   );
 }
