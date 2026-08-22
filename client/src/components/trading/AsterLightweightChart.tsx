@@ -29,7 +29,7 @@ const TV_TO_ASTER: Record<string, string> = {
 };
 
 /* ── How many candles to show initially ───────────────────────────── */
-const INITIAL_VISIBLE = 30;
+const INITIAL_VISIBLE = 60;
 
 /* Mobile screens get more candles + tighter spacing so the chart
    doesn't look stretched on narrow viewports. */
@@ -91,6 +91,41 @@ function rowToCandle(row: any[]): CandlestickData<UTCTimestamp> {
     low:   parseFloat(row[3]),
     close: parseFloat(row[4]),
   };
+}
+
+/* ── Data hygiene ─────────────────────────────────────────────────────
+   Illiquid / low-trade markets return sparse rows: nulls, NaNs, repeated
+   timestamps or out-of-order rows. lightweight-charts throws
+   ("value is null", "data must be asc ordered", "Cannot update oldest data")
+   and the chart appears "broken". Clean the series before it ever
+   reaches setData(). */
+function sanitizeCandles(
+  candles: CandlestickData<UTCTimestamp>[],
+): CandlestickData<UTCTimestamp>[] {
+  const byTime = new Map<number, CandlestickData<UTCTimestamp>>();
+  for (const c of candles) {
+    if (
+      !Number.isFinite(c.time as number) ||
+      !Number.isFinite(c.open) || !Number.isFinite(c.high) ||
+      !Number.isFinite(c.low)  || !Number.isFinite(c.close)
+    ) continue;
+    // last write wins → dedupes repeated timestamps
+    byTime.set(c.time as number, {
+      ...c,
+      high: Math.max(c.open, c.high, c.low, c.close),
+      low:  Math.min(c.open, c.high, c.low, c.close),
+    });
+  }
+  return [...byTime.values()].sort((a, b) => (a.time as number) - (b.time as number));
+}
+
+function sanitizePoints<T extends { time: UTCTimestamp; value: number }>(pts: T[]): T[] {
+  const byTime = new Map<number, T>();
+  for (const p of pts) {
+    if (!Number.isFinite(p.time as number) || !Number.isFinite(p.value)) continue;
+    byTime.set(p.time as number, p);
+  }
+  return [...byTime.values()].sort((a, b) => (a.time as number) - (b.time as number));
 }
 
 function heikinAshi(candles: CandlestickData<UTCTimestamp>[]): CandlestickData<UTCTimestamp>[] {
@@ -272,9 +307,8 @@ export default function AsterLightweightChart({
         textColor:   textCol,
         fontFamily:  "Inter, system-ui, sans-serif",
         fontSize:    isSmallScreen() ? 10 : 11,
-        // TradingView attribution logo (lightweight-charts v5). Kept on so the
-        // badge shows; a CSP-safe fallback badge renders if the lib omits it.
-        attributionLogo: true,
+        // No TradingView watermark/logo on the plot area.
+        attributionLogo: false,
       } as any,
       grid: {
         vertLines: { color: gridCol },
@@ -295,7 +329,7 @@ export default function AsterLightweightChart({
         minimumWidth: isSmallScreen() ? 44 : 52,
         autoScale: true,
         scaleMargins: isSmallScreen()
-          ? { top: 0.06, bottom: 0.12 }
+          ? { top: 0.05, bottom: 0.10 }
           : { top: 0.08, bottom: 0.14 },
       },
       timeScale: {
@@ -303,9 +337,9 @@ export default function AsterLightweightChart({
         timeVisible: true,
         secondsVisible: false,
         // Wider bars = readable candles instead of a tiny joined-up blob.
-        barSpacing:    isSmallScreen() ? 15 : 9,
+        barSpacing:    isSmallScreen() ? 8 : 9,
         minBarSpacing: 2,
-        rightOffset:   isSmallScreen() ? 2 : 4,
+        rightOffset:   isSmallScreen() ? 1 : 3,
         fixLeftEdge:   false,
       },
       handleScroll: true,
@@ -434,12 +468,13 @@ export default function AsterLightweightChart({
         lastValueVisible: false,
         priceLineVisible: false,
       } as any);
-      volSeries.priceScale().applyOptions({ scaleMargins: { top: isSmallScreen() ? 0.88 : 0.80, bottom: 0 } });
+      volSeries.priceScale().applyOptions({ scaleMargins: { top: isSmallScreen() ? 0.86 : 0.80, bottom: 0 } });
       volRef.current = volSeries;
     }
 
     /* ── OHLC legend ─────────────────────────────────────────────────── */
     let lastOHLC = { o: 0, h: 0, l: 0, c: 0 };
+    let lastBarTime: number | null = null;
 
     function updateLegend(o: number, h: number, l: number, c: number) {
       const el = legendRef.current;
@@ -751,8 +786,25 @@ export default function AsterLightweightChart({
         const rows = await fetchKlines(symbol, interval, mode, 500);
         if (cancelled || !chartRef.current) return;
 
-        let candles = rows.map(rowToCandle);
-        if (chartStyle === 8) candles = heikinAshi(candles);
+        let candles = sanitizeCandles(rows.map(rowToCandle));
+        if (chartStyle === 8) candles = sanitizeCandles(heikinAshi(candles));
+
+        /* Illiquid markets can return an (almost) flat series. Without a
+           minimum range the auto-scale collapses and every candle renders
+           as a hairline. Give the price scale a synthetic ±0.5% window. */
+        const finiteHighs = candles.map(c => c.high);
+        const finiteLows  = candles.map(c => c.low);
+        const hi = finiteHighs.length ? Math.max(...finiteHighs) : 0;
+        const lo = finiteLows.length  ? Math.min(...finiteLows)  : 0;
+        const flat = hi > 0 && (hi - lo) / hi < 0.0005;
+        if (flat) {
+          const pad = Math.max(hi * 0.005, Number.EPSILON);
+          (priceSeries as any).applyOptions({
+            autoscaleInfoProvider: () => ({
+              priceRange: { minValue: lo - pad, maxValue: hi + pad },
+            }),
+          });
+        }
 
         const isOHLC = chartStyle === 1 || chartStyle === 8 || chartStyle === 0 || chartStyle === 9;
         if (isOHLC) {
@@ -763,27 +815,37 @@ export default function AsterLightweightChart({
 
         if (showVolume && volRef.current) {
           volRef.current.setData(
-            rows.map(row => ({
+            sanitizePoints(rows.map(row => ({
               time:  toSecond(row[0]),
               value: parseFloat(row[5]),
               color: parseFloat(row[4]) >= parseFloat(row[1])
                 ? (isDark ? "rgba(38,166,154,0.55)" : "rgba(38,166,154,0.45)")
                 : (isDark ? "rgba(239,83,80,0.55)"  : "rgba(239,83,80,0.45)"),
-            })) as any,
+            }))) as any,
           );
         }
 
         if (candles.length > 0) {
           const last = candles[candles.length - 1];
           lastOHLC = { o: last.open, h: last.high, l: last.low, c: last.close };
+          lastBarTime = last.time as number;
           updateLegend(last.open, last.high, last.low, last.close);
         }
 
         if (candles.length > 0) {
-          const visible = isSmallScreen() ? 34 : 80;
-          const from = candles[Math.max(0, candles.length - visible)].time;
-          const to   = candles[candles.length - 1].time;
-          chart.timeScale().setVisibleRange({ from, to });
+          /* Use a LOGICAL range, not a time range. Low-trade markets have
+             gaps in their kline history, so a time range maps to far fewer
+             bars than expected and the chart looks empty / stretched. */
+          const wanted  = isSmallScreen() ? 40 : INITIAL_VISIBLE + 20;
+          const visible = Math.min(wanted, candles.length);
+          if (candles.length <= 5) {
+            chart.timeScale().fitContent();
+          } else {
+            chart.timeScale().setVisibleLogicalRange({
+              from: candles.length - visible - 0.5,
+              to:   candles.length - 0.5 + (isSmallScreen() ? 1 : 3),
+            });
+          }
         }
 
         onReady?.();
@@ -799,7 +861,11 @@ export default function AsterLightweightChart({
         if (cancelled || !rows.length || !priceRef.current) return;
 
         const latest = rows[rows.length - 1];
-        const candle = rowToCandle(latest);
+        const [candle] = sanitizeCandles([rowToCandle(latest)]);
+        /* Guard: updating with a bar older than the last one throws
+           "Cannot update oldest data". Thin markets replay stale klines. */
+        if (!candle || (lastBarTime !== null && (candle.time as number) < lastBarTime)) return;
+        lastBarTime = candle.time as number;
         const isOHLC = chartStyle === 1 || chartStyle === 8 || chartStyle === 0 || chartStyle === 9;
 
         if (isOHLC) {
@@ -811,9 +877,10 @@ export default function AsterLightweightChart({
         lastOHLC = { o: candle.open, h: candle.high, l: candle.low, c: candle.close };
 
         if (showVolume && volRef.current) {
-          volRef.current.update({
+          const vol = parseFloat(latest[5]);
+          if (Number.isFinite(vol)) volRef.current.update({
             time:  toSecond(latest[0]),
-            value: parseFloat(latest[5]),
+            value: vol,
             color: parseFloat(latest[4]) >= parseFloat(latest[1])
               ? (isDark ? "rgba(38,166,154,0.55)" : "rgba(38,166,154,0.45)")
               : (isDark ? "rgba(239,83,80,0.55)"  : "rgba(239,83,80,0.45)"),
@@ -883,26 +950,6 @@ export default function AsterLightweightChart({
       />
       <div ref={containerRef} className="h-full w-full" />
 
-      {/* TradingView attribution badge (always on, inline SVG — CSP safe) */}
-      <a
-        href="https://www.tradingview.com/"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Charts by TradingView"
-        className="absolute bottom-8 left-2 z-20 flex items-center justify-center rounded-full opacity-80 hover:opacity-100 transition-opacity"
-        style={{
-          height: 48,
-          width: 48,
-          backgroundColor: "rgba(15,17,20,0.55)",
-          backdropFilter: "blur(2px)",
-        }}
-      >
-        <svg viewBox="0 0 36 28" style={{ height: 22, width: 22, color: "#ffffff" }} fill="currentColor" aria-hidden="true">
-          <path d="M0 0h14v5H9.5v14H4.5V5H0V0z" />
-          <path d="M18.5 0h5l4 9 4-9h4.5l-6.5 14h-4L18.5 0z" />
-          <circle cx="17" cy="22" r="4" />
-        </svg>
-      </a>
     </div>
   );
 }
