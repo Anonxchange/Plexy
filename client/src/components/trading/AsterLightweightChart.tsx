@@ -31,6 +31,10 @@ const TV_TO_ASTER: Record<string, string> = {
 /* ── How many candles to show initially ───────────────────────────── */
 const INITIAL_VISIBLE = 70;
 
+/* Mobile screens get more candles + tighter spacing so the chart
+   doesn't look stretched on narrow viewports. */
+const isSmallScreen = () => typeof window !== "undefined" && window.innerWidth < 768;
+
 export interface CandleColors {
   bullBody:   string;
   bearBody:   string;
@@ -267,7 +271,7 @@ export default function AsterLightweightChart({
         background:  { color: bg },
         textColor:   textCol,
         fontFamily:  "Inter, system-ui, sans-serif",
-        fontSize:    11,
+        fontSize:    isSmallScreen() ? 10 : 11,
       },
       grid: {
         vertLines: { color: gridCol },
@@ -285,14 +289,20 @@ export default function AsterLightweightChart({
       },
       rightPriceScale: {
         borderColor: borderCol,
-        minimumWidth: 52,
+        minimumWidth: isSmallScreen() ? 44 : 52,
         autoScale: true,
-        scaleMargins: { top: 0.04, bottom: 0.1 },
+        scaleMargins: isSmallScreen()
+          ? { top: 0.02, bottom: 0.04 }
+          : { top: 0.04, bottom: 0.08 },
       },
       timeScale: {
         borderColor: borderCol,
         timeVisible: true,
         secondsVisible: false,
+        barSpacing:    isSmallScreen() ? 5 : 8,
+        minBarSpacing: 0.5,
+        rightOffset:   isSmallScreen() ? 2 : 4,
+        fixLeftEdge:   false,
       },
       handleScroll: true,
       handleScale: true,
@@ -420,7 +430,7 @@ export default function AsterLightweightChart({
         lastValueVisible: false,
         priceLineVisible: false,
       } as any);
-      volSeries.priceScale().applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+      volSeries.priceScale().applyOptions({ scaleMargins: { top: isSmallScreen() ? 0.86 : 0.82, bottom: 0 } });
       volRef.current = volSeries;
     }
 
@@ -766,7 +776,8 @@ export default function AsterLightweightChart({
         }
 
         if (candles.length > 0) {
-          const from = candles[Math.max(0, candles.length - INITIAL_VISIBLE)].time;
+          const visible = isSmallScreen() ? 110 : INITIAL_VISIBLE;
+          const from = candles[Math.max(0, candles.length - visible)].time;
           const to   = candles[candles.length - 1].time;
           chart.timeScale().setVisibleRange({ from, to });
         }
