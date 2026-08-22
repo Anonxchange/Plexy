@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   createChart,
   CandlestickSeries,
@@ -8,6 +8,7 @@ import {
   BarSeries,
   BaselineSeries,
   LineStyle,
+  createTextWatermark,
 } from "lightweight-charts";
 import type {
   IChartApi,
@@ -33,7 +34,7 @@ const INITIAL_VISIBLE = 60;
 
 /* Mobile screens get more candles + tighter spacing so the chart
    doesn't look stretched on narrow viewports. */
-const isSmallScreen = () => typeof window !== "undefined" && window.innerWidth < 768;
+const SMALL_SCREEN_QUERY = "(max-width: 767px)";
 
 export interface CandleColors {
   bullBody:   string;
@@ -225,6 +226,18 @@ export default function AsterLightweightChart({
   const pendingLineRef     = useRef<IPriceLine | null>(null);
   const drawingsRef        = useRef<AnyDrawing[]>([]);
   const overlayDivRef      = useRef<HTMLDivElement | null>(null);
+  const watermarkRef       = useRef<{ applyOptions: (o: any) => void; detach: () => void } | null>(null);
+
+  /* Breakpoint as reactive state: starts false so SSR and the first client
+     render agree, then corrects after mount and on every resize/rotate. */
+  const [isSmall, setIsSmall] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia(SMALL_SCREEN_QUERY);
+    const sync = () => setIsSmall(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
 
   /* Keep refs in sync with props */
   useEffect(() => { activeToolRef.current   = activeTool   ?? null; }, [activeTool]);
@@ -263,11 +276,13 @@ export default function AsterLightweightChart({
       mode:          logScale ? 1 : 0,
       invertScale:   invertScale ?? false,
       scaleMargins: {
-        top:    scaleMarginTop    ?? 0.04,
-        bottom: scaleMarginBottom ?? 0.1,
+        top:    scaleMarginTop    ?? 0.06,
+        /* Must stay >= the volume pane's top margin, otherwise wicks are
+           drawn straight through the volume bars. */
+        bottom: scaleMarginBottom ?? (showVolume ? 0.22 : 0.08),
       },
     });
-  }, [logScale, invertScale, scaleMarginTop, scaleMarginBottom]);
+  }, [logScale, invertScale, scaleMarginTop, scaleMarginBottom, showVolume]);
 
   useEffect(() => {
     if (legendRef.current) {
@@ -279,16 +294,13 @@ export default function AsterLightweightChart({
     chartRef.current?.priceScale("right").applyOptions({ visible: showPriceScale ?? true });
   }, [showPriceScale]);
 
+  /* v5 removed layout.watermark; it is a pane primitive now. */
   useEffect(() => {
-    chartRef.current?.applyOptions({
-      watermark: {
-        visible:    showWatermark ?? false,
-        text:       symbol,
-        fontSize:   48,
-        horzAlign:  "center",
-        vertAlign:  "center",
-        color:      "rgba(128,128,128,0.06)",
-      },
+    watermarkRef.current?.applyOptions({
+      visible: showWatermark ?? false,
+      horzAlign: "center",
+      vertAlign: "center",
+      lines: [{ text: symbol, color: "rgba(128,128,128,0.06)", fontSize: 48 }],
     });
   }, [showWatermark, symbol]);
 
@@ -296,6 +308,7 @@ export default function AsterLightweightChart({
   useEffect(() => {
     if (!containerRef.current) return;
 
+    const sm        = isSmall;
     const bg        = isDark ? "#111111" : "#ffffff";
     const textCol   = isDark ? "#9ca3af" : "#6b7280";
     const gridCol   = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.05)";
@@ -306,7 +319,7 @@ export default function AsterLightweightChart({
         background:  { color: bg },
         textColor:   textCol,
         fontFamily:  "Inter, system-ui, sans-serif",
-        fontSize:    isSmallScreen() ? 10 : 11,
+        fontSize:    sm ? 10 : 11,
         // No TradingView watermark/logo on the plot area.
         attributionLogo: false,
       } as any,
@@ -326,35 +339,41 @@ export default function AsterLightweightChart({
       },
       rightPriceScale: {
         borderColor: borderCol,
-        minimumWidth: isSmallScreen() ? 44 : 52,
+        minimumWidth: sm ? 40 : 52,
         autoScale: true,
-        scaleMargins: isSmallScreen()
-          ? { top: 0.04, bottom: 0.08 }
-          : { top: 0.08, bottom: 0.14 },
+        /* bottom margin reserves the volume pane so the two never overlap */
+        scaleMargins: showVolume
+          ? { top: 0.06, bottom: 0.22 }
+          : { top: 0.06, bottom: 0.08 },
       },
       timeScale: {
         borderColor: borderCol,
         timeVisible: true,
         secondsVisible: false,
         // Wider bars = readable candles instead of a tiny joined-up blob.
-        barSpacing:    isSmallScreen() ? 11 : 9,
+        barSpacing:    sm ? 11 : 9,
         minBarSpacing: 2,
-        rightOffset:   isSmallScreen() ? 1 : 3,
+        rightOffset:   sm ? 1 : 3,
         fixLeftEdge:   false,
       },
       handleScroll: true,
       handleScale: true,
+      /* Let the library own sizing. Without this the chart falls back to its
+         default 300x300 whenever the container measures 0 at mount, which is
+         what leaves dead space under the canvas. */
+      autoSize: true,
     };
 
     const chart = createChart(containerRef.current, chartOptions);
     chartRef.current = chart;
 
-    /* ── ResizeObserver ──────────────────────────────────────────────── */
-    const ro = new ResizeObserver(entries => {
-      const e = entries[0];
-      if (e) chart.resize(e.contentRect.width, e.contentRect.height);
-    });
-    ro.observe(containerRef.current);
+    /* Sizing is handled by autoSize above. */
+    watermarkRef.current = createTextWatermark(chart.panes()[0], {
+      visible: showWatermark ?? false,
+      horzAlign: "center",
+      vertAlign: "center",
+      lines: [{ text: symbol, color: "rgba(128,128,128,0.06)", fontSize: 48 }],
+    }) as any;
 
     /* ── bull/bear colors ────────────────────────────────────────────── */
     const bullColor = candleToggles.body ? candleColors.bullBody : "transparent";
@@ -468,7 +487,7 @@ export default function AsterLightweightChart({
         lastValueVisible: false,
         priceLineVisible: false,
       } as any);
-      volSeries.priceScale().applyOptions({ scaleMargins: { top: isSmallScreen() ? 0.86 : 0.80, bottom: 0 } });
+      volSeries.priceScale().applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
       volRef.current = volSeries;
     }
 
@@ -571,12 +590,18 @@ export default function AsterLightweightChart({
           title:            "",
         });
         drawingsRef.current.push({ kind: "hline", ref: pl });
-        addVlineOverlay(time, chart, overlayDivRef);
+        {
+          const vEl = addVlineOverlay(time, chart, overlayDivRef);
+          if (vEl) drawingsRef.current.push({ kind: "overlay", el: vEl });
+        }
         return;
       }
 
       if (tool === "vline") {
-        addVlineOverlay(time, chart, overlayDivRef);
+        {
+          const vEl = addVlineOverlay(time, chart, overlayDivRef);
+          if (vEl) drawingsRef.current.push({ kind: "overlay", el: vEl });
+        }
         return;
       }
 
@@ -710,8 +735,10 @@ export default function AsterLightweightChart({
         }
 
         if (tool === "daterange") {
-          addVlineOverlay(p1.time, chart, overlayDivRef);
-          addVlineOverlay(p2.time, chart, overlayDivRef);
+          for (const t of [p1.time, p2.time]) {
+            const vEl = addVlineOverlay(t, chart, overlayDivRef);
+            if (vEl) drawingsRef.current.push({ kind: "overlay", el: vEl });
+          }
           return;
         }
 
@@ -766,11 +793,15 @@ export default function AsterLightweightChart({
           } else if (d.kind === "series") {
             try { chart.removeSeries(d.ref); } catch {}
           } else if (d.kind === "overlay") {
+            (d.el as any).__unsub?.();
             d.el.remove();
           }
         });
         drawingsRef.current = [];
-        overlayDivRef.current?.querySelectorAll(".draw-vline").forEach(el => el.remove());
+        overlayDivRef.current?.querySelectorAll(".draw-vline").forEach(el => {
+          (el as any).__unsub?.();
+          el.remove();
+        });
         pendingPt.current = null;
         if (pendingLineRef.current) {
           try { pendingLineRef.current = null; } catch {}
@@ -843,16 +874,15 @@ export default function AsterLightweightChart({
           /* Use a LOGICAL range, not a time range. Low-trade markets have
              gaps in their kline history, so a time range maps to far fewer
              bars than expected and the chart looks empty / stretched. */
-          const wanted  = isSmallScreen() ? 34 : INITIAL_VISIBLE + 20;
+          const wanted  = sm ? 40 : INITIAL_VISIBLE + 20;
           const visible = Math.min(wanted, candles.length);
-          if (candles.length <= wanted) {
-            chart.timeScale().fitContent();
-          } else {
-            chart.timeScale().setVisibleLogicalRange({
-              from: candles.length - visible - 0.5,
-              to:   candles.length - 0.5 + (isSmallScreen() ? 1 : 3),
-            });
-          }
+          /* Always use a logical range. fitContent() discards barSpacing and
+             makes bar width depend on how much history the pair happens to
+             have, which is why thin markets rendered stretched/scattered. */
+          chart.timeScale().setVisibleLogicalRange({
+            from: candles.length - visible - 0.5,
+            to:   candles.length - 0.5 + (sm ? 1 : 3),
+          });
         }
 
         onReady?.();
@@ -904,7 +934,8 @@ export default function AsterLightweightChart({
     return () => {
       cancelled = true;
       if (pollRef.current) clearInterval(pollRef.current);
-      ro.disconnect();
+      watermarkRef.current?.detach();
+      watermarkRef.current = null;
       chart.remove();
       chartRef.current = null;
       priceRef.current = null;
@@ -912,7 +943,7 @@ export default function AsterLightweightChart({
       drawingsRef.current = [];
       pendingPt.current   = null;
     };
-  }, [symbol, interval, mode, chartStyle, showVolume, isDark,
+  }, [symbol, interval, mode, chartStyle, showVolume, isDark, isSmall,
       candleColors.bullBody, candleColors.bearBody,
       candleColors.bullBorder, candleColors.bearBorder,
       candleColors.bullWick, candleColors.bearWick,
@@ -943,7 +974,7 @@ export default function AsterLightweightChart({
   }, [activeTool]);
 
   return (
-    <div className="relative h-full w-full max-h-[300px] sm:max-h-none">
+    <div className="relative h-full w-full">
       {/* OHLC legend */}
       <div
         ref={legendRef}
@@ -966,9 +997,9 @@ function addVlineOverlay(
   time: UTCTimestamp,
   chart: IChartApi,
   overlayRef: React.MutableRefObject<HTMLDivElement | null>,
-) {
+): HTMLElement | null {
   const overlay = overlayRef.current;
-  if (!overlay) return;
+  if (!overlay) return null;
 
   const el = document.createElement("div");
   el.className = "draw-vline absolute top-0 bottom-0 w-px bg-blue-400/80";
@@ -984,4 +1015,9 @@ function addVlineOverlay(
 
   updatePos();
   chart.timeScale().subscribeVisibleTimeRangeChange(updatePos);
+  /* Without this the subscription outlives the element. */
+  (el as any).__unsub = () => {
+    try { chart.timeScale().unsubscribeVisibleTimeRangeChange(updatePos); } catch {}
+  };
+  return el;
 }
