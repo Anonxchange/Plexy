@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 
 /* ── Tool types ─────────────────────────────────────────────────────── */
@@ -17,7 +17,7 @@ export type DrawingTool =
   // Gann
   | "gann_box" | "gann_sq" | "gann_fan"
   // Shapes
-  | "rectangle" | "rotatedrect" | "circle" | "ellipse" | "tri_shape" | "arc"
+  | "rectangle" | "rotatedrect" | "circle" | "ellipse" | "triangle_shape" | "arc"
   // Text / annotations
   | "text" | "note" | "callout" | "pricelabel" | "anchored_note"
   // Positions
@@ -432,13 +432,15 @@ function ToolBtn({
   const works = WORKING_TOOLS.has(tool);
   return (
     <button
+      type="button"
       title={label + (!works ? " (coming soon)" : "")}
-      onClick={() => onSelect(tool)}
+      disabled={!works}
+      onClick={() => { if (works) onSelect(tool); }}
       className={`w-full flex items-center gap-2 px-2 py-1.5 text-[11px] rounded transition-colors ${
         isActive
           ? "bg-primary/15 text-primary"
           : "text-muted-foreground hover:text-foreground hover:bg-accent"
-      } ${!works ? "opacity-60" : ""}`}
+      } ${!works ? "opacity-60 cursor-not-allowed" : ""}`}
     >
       <span className="flex-shrink-0">{icons[tool] ?? icons["trendline"]}</span>
       <span className="truncate">{label}</span>
@@ -461,20 +463,67 @@ function GroupBtn({
   const anchorRef           = useRef<HTMLDivElement>(null);
   const closeTimer          = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const flyoutRef           = useRef<HTMLDivElement>(null);
+  /* Hover-to-open is desktop-only; on touch it left the flyout stuck open. */
+  const isTouch = typeof window !== "undefined" &&
+    (("ontouchstart" in window) || navigator.maxTouchPoints > 0);
+
   const scheduleClose = () => {
+    if (isTouch) return;
+    cancelClose();
     closeTimer.current = setTimeout(() => setOpen(false), 80);
   };
   const cancelClose = () => {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  };
+  const positionFlyout = () => {
+    if (!anchorRef.current) return;
+    const r  = anchorRef.current.getBoundingClientRect();
+    /* Clamp inside the viewport so the flyout can't open off-screen on mobile. */
+    const w  = 176; // w-44
+    const h  = Math.min(group.items.length * 30 + 8, window.innerHeight - 16);
+    const left = Math.min(r.right + 2, window.innerWidth  - w - 8);
+    const top  = Math.min(Math.max(8, r.top), window.innerHeight - h - 8);
+    setFlyPos({ top, left });
   };
   const openFlyout = () => {
     cancelClose();
-    if (anchorRef.current) {
-      const r = anchorRef.current.getBoundingClientRect();
-      setFlyPos({ top: r.top, left: r.right + 2 });
-    }
+    positionFlyout();
     setOpen(true);
   };
+  const toggleFlyout = () => {
+    if (open) { setOpen(false); return; }
+    openFlyout();
+  };
+
+  /* Close on outside tap, Escape, scroll or resize — without this the flyout
+     stayed open on touch and blocked the chart underneath. */
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (anchorRef.current?.contains(t) || flyoutRef.current?.contains(t)) return;
+      setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    const onMove = () => setOpen(false);
+    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("resize", onMove);
+    window.addEventListener("scroll", onMove, true);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", onMove);
+      window.removeEventListener("scroll", onMove, true);
+    };
+  }, [open]);
+
+  /* Never fire a close timer after unmount. */
+  useEffect(() => () => cancelClose(), []);
 
   const primaryId     = (primaryOverrides[group.primary] ?? group.primary) as DrawingTool;
   const isGroupActive = group.items.some(i => i.id === activeTool);
@@ -482,8 +531,10 @@ function GroupBtn({
   if (group.items.length === 1) {
     return (
       <button
-        title={group.items[0].label}
-        onClick={() => onSelect(group.items[0].id)}
+        type="button"
+        title={group.items[0].label + (WORKING_TOOLS.has(group.items[0].id) ? "" : " (coming soon)")}
+        disabled={!WORKING_TOOLS.has(group.items[0].id)}
+        onClick={() => { if (WORKING_TOOLS.has(group.items[0].id)) onSelect(group.items[0].id); }}
         className={`relative flex items-center justify-center w-7 h-7 rounded transition-colors ${
           isGroupActive ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-accent"
         }`}
@@ -507,15 +558,22 @@ function GroupBtn({
           }`}
         >
           <button
+            type="button"
             title={group.items.find(i => i.id === primaryId)?.label}
-            onClick={() => onSelect(primaryId)}
-            className="flex-1 flex items-center justify-center h-full pl-0.5"
+            disabled={!WORKING_TOOLS.has(primaryId)}
+            onClick={() => { if (WORKING_TOOLS.has(primaryId)) onSelect(primaryId); }}
+            className={`flex-1 flex items-center justify-center h-full pl-0.5 ${
+              WORKING_TOOLS.has(primaryId) ? "" : "opacity-60 cursor-not-allowed"
+            }`}
           >
             {icons[primaryId] ?? icons["trendline"]}
           </button>
           <button
-            onClick={openFlyout}
-            onMouseEnter={openFlyout}
+            type="button"
+            aria-label="More tools"
+            aria-expanded={open}
+            onClick={(e) => { e.stopPropagation(); toggleFlyout(); }}
+            onMouseEnter={() => { if (!isTouch) openFlyout(); }}
             className="flex items-center justify-center w-3.5 h-full opacity-50 hover:opacity-100"
           >
             <svg width="5" height="8" viewBox="0 0 5 8" fill="currentColor">
@@ -527,15 +585,19 @@ function GroupBtn({
 
       {open && createPortal(
         <div
+          ref={flyoutRef}
           style={{ position: "fixed", top: flyPos.top, left: flyPos.left, zIndex: 9999 }}
-          className="w-44 bg-popover border border-border rounded-lg shadow-xl overflow-hidden py-1"
+          className="w-44 max-h-[70vh] overflow-y-auto bg-popover border border-border rounded-lg shadow-xl py-1"
           onMouseEnter={cancelClose}
           onMouseLeave={scheduleClose}
         >
           {group.items.map(item => (
             <button
               key={item.id}
+              type="button"
+              disabled={!WORKING_TOOLS.has(item.id)}
               onClick={() => {
+                if (!WORKING_TOOLS.has(item.id)) return;
                 onPrimaryChange(group.primary, item.id);
                 onSelect(item.id);
                 setOpen(false);
@@ -544,7 +606,7 @@ function GroupBtn({
                 activeTool === item.id
                   ? "bg-primary/10 text-primary"
                   : "text-foreground hover:bg-accent"
-              } ${!WORKING_TOOLS.has(item.id) ? "opacity-60" : ""}`}
+              } ${!WORKING_TOOLS.has(item.id) ? "opacity-60 cursor-not-allowed" : ""}`}
             >
               <span className="flex-shrink-0">{icons[item.id] ?? icons["trendline"]}</span>
               <span className="flex-1">{item.label}</span>
@@ -592,10 +654,11 @@ export default function DrawingToolbar({
   };
 
   return (
-    <div className="absolute left-0 top-0 bottom-0 z-40 flex flex-col items-center w-10 bg-card border-r-2 border-border py-1 overflow-y-auto overflow-x-visible select-none" style={{ borderRightColor: "hsl(var(--border) / 0.9)" }}>
+    <div className="absolute left-0 top-0 bottom-0 z-40 flex flex-col items-center w-10 bg-card border-r-2 border-border py-1 overflow-y-auto overflow-x-visible select-none touch-pan-y [-webkit-overflow-scrolling:touch]" style={{ borderRightColor: "hsl(var(--border) / 0.9)" }}>
 
       {/* Cursor */}
       <button
+        type="button"
         title="Cursor"
         onClick={() => onToolSelect("cursor")}
         className={`flex items-center justify-center w-7 h-7 rounded transition-colors ${
@@ -641,6 +704,7 @@ export default function DrawingToolbar({
 
       {/* Zoom */}
       <button
+        type="button"
         title="Zoom In"
         onClick={() => onToolSelect("zoom")}
         className={`flex items-center justify-center w-7 h-7 rounded transition-colors ${
@@ -654,6 +718,7 @@ export default function DrawingToolbar({
 
       {/* Magnet mode toggle */}
       <button
+        type="button"
         title={magnetMode ? "Magnet On (click to disable)" : "Magnet Off (click to enable)"}
         onClick={onMagnetToggle}
         className={`flex items-center justify-center w-7 h-7 rounded transition-colors ${
@@ -665,6 +730,7 @@ export default function DrawingToolbar({
 
       {/* Lock all */}
       <button
+        type="button"
         title={lockMode ? "Unlock All" : "Lock All"}
         onClick={onLockToggle}
         className={`flex items-center justify-center w-7 h-7 rounded transition-colors ${
@@ -676,6 +742,7 @@ export default function DrawingToolbar({
 
       {/* Show/Hide all */}
       <button
+        type="button"
         title={hiddenMode ? "Show All Drawings" : "Hide All Drawings"}
         onClick={onHiddenToggle}
         className={`flex items-center justify-center w-7 h-7 rounded transition-colors ${
@@ -687,6 +754,7 @@ export default function DrawingToolbar({
 
       {/* Erase all */}
       <button
+        type="button"
         title="Erase All Drawings"
         onClick={() => onToolSelect("eraseall")}
         className="flex items-center justify-center w-7 h-7 rounded transition-colors text-muted-foreground hover:text-trading-red hover:bg-trading-red/10"
