@@ -947,16 +947,34 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
       </div>
 
       {/* ══ Body ══ */}
-      {/* min-h on mobile: without it a flex parent can hand the chart a 0px
-          box, and lightweight-charts then falls back to a fixed size. */}
-      <div className="relative flex-1 min-h-[320px] md:min-h-0">
+      <div className="relative flex-1 min-h-0 max-h-[42vh] sm:max-h-none">
 
         {/* Aster Lightweight Chart */}
         <div className={`absolute inset-0 ${view === "chart" ? "block" : "hidden"}`}>
 
-          {/* Chart area — rendered FIRST and kept at z-0 so the drawing
-              toolbar above it actually receives clicks. */}
-          <div className="absolute inset-0 z-0">
+          {/* Drawing toolbar — 28px wide strip on the left */}
+          {toolsVisible && (
+            <DrawingToolbar
+              activeTool={activeTool}
+              onToolSelect={(tool) => {
+                if (tool === "eraseall") {
+                  clearAllRef.current?.();
+                  setActiveTool("cursor");
+                  return;
+                }
+                setActiveTool(tool);
+              }}
+              magnetMode={magnetMode}
+              onMagnetToggle={() => setMagnetMode(v => !v)}
+              lockMode={lockMode}
+              onLockToggle={() => setLockMode(v => !v)}
+              hiddenMode={hiddenMode}
+              onHiddenToggle={() => setHiddenMode(v => !v)}
+            />
+          )}
+
+          {/* Chart area — full width, toolbar overlays left edge */}
+          <div className="absolute inset-0">
             <AsterLightweightChart
               symbol={apiSymbol}
               interval={interval}
@@ -984,30 +1002,8 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
             />
           </div>
 
-          {/* Drawing toolbar — 28px strip overlaying the chart's left edge.
-              Rendered after the chart (its own z-40) so it always receives clicks. */}
-          {toolsVisible && (
-            <DrawingToolbar
-              activeTool={activeTool}
-              onToolSelect={(tool) => {
-                if (tool === "eraseall") {
-                  clearAllRef.current?.();
-                  setActiveTool("cursor");
-                  return;
-                }
-                setActiveTool(tool);
-              }}
-              magnetMode={magnetMode}
-              onMagnetToggle={() => setMagnetMode(v => !v)}
-              lockMode={lockMode}
-              onLockToggle={() => setLockMode(v => !v)}
-              hiddenMode={hiddenMode}
-              onHiddenToggle={() => setHiddenMode(v => !v)}
-            />
-          )}
-
           {!loaded && view === "chart" && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background pointer-events-none">
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-background pointer-events-none">
               <LoadingSpinner size={40} color="hsl(var(--primary))" />
             </div>
           )}
