@@ -947,7 +947,7 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
       </div>
 
       {/* ══ Body ══ */}
-      <div className="relative flex-1 min-h-[320px] max-h-[56vh] sm:min-h-0 sm:max-h-none">
+      <div className="relative h-[300px] max-h-[300px] shrink-0 sm:h-auto sm:max-h-[42vh] sm:flex-1 sm:shrink">
 
         {/* Aster Lightweight Chart */}
         <div
