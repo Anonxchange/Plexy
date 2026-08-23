@@ -956,7 +956,7 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
         >
 
           {/* Drawing toolbar — 28px wide strip on the left */}
-          {!isMobile && toolsVisible && (
+          {toolsVisible && (
             <DrawingToolbar
               activeTool={activeTool}
               onToolSelect={(tool) => {
@@ -1012,16 +1012,13 @@ const CandlestickChart = ({ pair = "BTC/USDT", className, mode = "spot" }: Candl
           )}
           {/* Orders overlay */}
           {orderOverlays.order && <OrdersOverlay symbol={apiSymbol} mode={mode} />}
-          {/* Side tools toggle tab — desktop only; on mobile it floated over
-              the chart and swallowed taps meant for the panel underneath */}
-          {!isMobile && (
-            <button
-              onClick={() => setToolsVisible(v => !v)}
-              className={`absolute top-1/2 -translate-y-1/2 z-30 bg-card border-y border-r border-border rounded-r-md py-5 px-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-all duration-150 shadow-sm ${toolsVisible ? "left-10 border-l-0" : "left-0"}`}
-            >
-              {toolsVisible ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-            </button>
-          )}
+          {/* Side tools toggle tab */}
+          <button
+            onClick={() => setToolsVisible(v => !v)}
+            className={`absolute top-1/2 -translate-y-1/2 z-50 bg-card border-y border-r border-border rounded-r-md py-5 px-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-all duration-150 shadow-sm ${toolsVisible ? "left-10 border-l-0" : "left-0"}`}
+          >
+            {toolsVisible ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+          </button>
         </div>
 
         {/* Depth view */}
