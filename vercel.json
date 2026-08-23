@@ -15,14 +15,6 @@
   ],
   "rewrites": [
     {
-      "source": "/api/edge-gate",
-      "destination": "/api/edge-gate.js"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/api/edge-gate"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
