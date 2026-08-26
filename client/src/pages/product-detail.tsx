@@ -515,9 +515,9 @@ export function ProductDetail() {
     });
   };
 
-  const [isBuyingWithPayPal, setIsBuyingWithPayPal] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
-  const handleBuyWithPayPal = async () => {
+  const handleCheckout = async () => {
     if (!product) return;
     if (product.user_id !== 'shopify') {
       toast.info("Marketplace checkout coming soon.");
@@ -534,7 +534,7 @@ export function ProductDetail() {
       return;
     }
 
-    setIsBuyingWithPayPal(true);
+    setIsCheckingOut(true);
     try {
       const result = await shopifyService.createCart({ variantId: targetVariantId, quantity });
       if (result?.checkoutUrl) {
@@ -545,7 +545,7 @@ export function ProductDetail() {
     } catch {
       toast.error("Could not initiate checkout. Please try again.");
     } finally {
-      setIsBuyingWithPayPal(false);
+      setIsCheckingOut(false);
     }
   };
 
@@ -616,7 +616,10 @@ export function ProductDetail() {
                       controls
                       autoPlay={false}
                       playsInline
+                      crossOrigin="anonymous"
+                      referrerPolicy="no-referrer"
                       poster={selected.previewUrl}
+                      onError={() => devLog?.("Video failed to load", selected.sources)}
                     >
                       {selected.sources.map((s, i) => (
                         <source key={i} src={s.url} type={s.mimeType} />
@@ -825,31 +828,52 @@ export function ProductDetail() {
                   </Button>
                 </div>
 
-                {/* PayPal button — only for Shopify products */}
+                {/* Checkout button — only for Shopify products. Card marks are inline SVG
+                    (no external image hosts) so they render even with a strict CSP. */}
                 {product.user_id === 'shopify' && isAvailable && (
                   <div className="space-y-2">
                     <button
-                      onClick={handleBuyWithPayPal}
-                      disabled={isBuyingWithPayPal || !isAvailable}
-                      className="w-full h-12 rounded-lg bg-[#FFC439] hover:bg-[#f0b429] active:bg-[#e0a420] transition-colors flex items-center justify-center gap-2 font-semibold text-[#003087] disabled:opacity-60 disabled:cursor-not-allowed"
-                      aria-label="Pay with PayPal"
+                      onClick={handleCheckout}
+                      disabled={isCheckingOut || !isAvailable}
+                      className="w-full h-12 rounded-lg bg-foreground hover:bg-foreground/90 active:bg-foreground/80 transition-colors flex items-center justify-center gap-2 font-semibold text-background disabled:opacity-60 disabled:cursor-not-allowed"
+                      aria-label="Checkout"
                     >
-                      {isBuyingWithPayPal ? (
-                        <Loader2 className="h-5 w-5 animate-spin text-[#003087]" />
+                      {isCheckingOut ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
                       ) : (
                         <>
-                          <svg viewBox="0 0 101 32" className="h-5" aria-hidden="true" fill="none">
-                            <path fill="#003087" d="M12.237 2.6h-8.5a1.2 1.2 0 0 0-1.19 1.02L.01 25.16a.72.72 0 0 0 .712.834h4.059a1.2 1.2 0 0 0 1.19-1.02l.678-4.3a1.2 1.2 0 0 1 1.187-1.02h2.69c5.59 0 8.81-2.705 9.652-8.065.38-2.347.016-4.19-1.08-5.482C17.86 3.36 15.41 2.6 12.237 2.6Z"/>
-                            <path fill="#009CDE" d="M36.297 2.6h-8.5a1.2 1.2 0 0 0-1.19 1.02L23.07 25.16a.72.72 0 0 0 .712.834h4.348a.84.84 0 0 0 .833-.714l.713-4.522a1.2 1.2 0 0 1 1.187-1.02h2.69c5.59 0 8.81-2.705 9.652-8.065.38-2.347.016-4.19-1.08-5.482C40.92 3.36 38.47 2.6 36.297 2.6Z"/>
-                            <path fill="#012069" d="M19.347 10.14c-.097.635-.556 1.138-1.18 1.376a2.63 2.63 0 0 1-.946.175h-3.805a.36.36 0 0 0-.356.305l-.484 3.065-.138.874a.24.24 0 0 0 .237.278h2.665a.84.84 0 0 0 .832-.713l.034-.178.66-4.184.043-.23a.84.84 0 0 1 .832-.712h.523c3.398 0 6.057-1.38 6.832-5.374.325-1.665.157-3.054-.698-4.034a3.47 3.47 0 0 0-.98-.773c-.272 2.748-1.146 4.6-3.071 5.93Z"/>
-                          </svg>
-                          <span>Pay with PayPal</span>
+                          <span>Checkout</span>
+                          <div className="flex items-center gap-1">
+                            {/* Visa */}
+                            <svg viewBox="0 0 48 32" className="h-5 w-8" aria-label="Visa" role="img">
+                              <rect width="48" height="32" rx="4" fill="#fff" />
+                              <path d="M20.5 21.5h-2.9l1.8-11h2.9l-1.8 11Zm-6.9-11-2.8 7.6-.3-1.6-1-5.1s-.1-.9-1.2-.9H4l-.1.3s1.5.3 3.2 1.3l2.5 9.4h3l4.6-11H14.1Zm23.1 11H40l-2.4-11h-2.6c-1.1 0-1.4.9-1.4.9l-4.3 10.1h3l.6-1.7h3.7l.4 1.7Zm-4.2-4 1.5-4.2.9 4.2h-2.4Zm-8.6-3.7c0-1 .8-1.3 2.1-1.3.9 0 1.9.2 1.9.2l.5-2.3s-1.1-.4-2.3-.4c-2.7 0-4.6 1.4-4.6 3.5 0 1.9 1.7 2.4 2.8 3 1.1.6 1.5.9 1.5 1.4 0 .8-1 1.1-1.8 1.1-1.3 0-2.6-.5-2.6-.5l-.5 2.3s1.3.5 3 .5c2.7 0 4.7-1.3 4.7-3.6 0-2.7-3.7-2.8-3.7-4Z" fill="#1434CB"/>
+                            </svg>
+                            {/* Mastercard */}
+                            <svg viewBox="0 0 48 32" className="h-5 w-8" aria-label="Mastercard" role="img">
+                              <rect width="48" height="32" rx="4" fill="#fff" />
+                              <circle cx="20" cy="16" r="9" fill="#EB001B" />
+                              <circle cx="28" cy="16" r="9" fill="#F79E1B" />
+                              <path d="M24 9.5a9 9 0 0 1 0 13 9 9 0 0 1 0-13Z" fill="#FF5F00" />
+                            </svg>
+                            {/* American Express */}
+                            <svg viewBox="0 0 48 32" className="h-5 w-8" aria-label="American Express" role="img">
+                              <rect width="48" height="32" rx="4" fill="#016FD0" />
+                              <text x="24" y="20" textAnchor="middle" fontSize="9.5" fontWeight="700" fontFamily="Arial, sans-serif" fill="#fff">AMEX</text>
+                            </svg>
+                            {/* Discover */}
+                            <svg viewBox="0 0 48 32" className="h-5 w-8" aria-label="Discover" role="img">
+                              <rect width="48" height="32" rx="4" fill="#1a1a1a" />
+                              <text x="21" y="20" textAnchor="middle" fontSize="8" fontWeight="700" fontFamily="Arial, sans-serif" fill="#fff">DISC</text>
+                              <circle cx="40" cy="16" r="6" fill="#FF6600" />
+                            </svg>
+                          </div>
                         </>
                       )}
                     </button>
                     <button
-                      onClick={handleBuyWithPayPal}
-                      disabled={isBuyingWithPayPal}
+                      onClick={handleCheckout}
+                      disabled={isCheckingOut}
                       className="w-full text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
                     >
                       More payment options
