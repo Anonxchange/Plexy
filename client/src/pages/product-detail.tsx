@@ -616,14 +616,17 @@ export function ProductDetail() {
                       controls
                       autoPlay={false}
                       playsInline
-                      crossOrigin="anonymous"
                       referrerPolicy="no-referrer"
                       poster={selected.previewUrl}
-                      onError={() => devLog?.("Video failed to load", selected.sources)}
+                      onError={(e) => {
+                        const err = (e.currentTarget as HTMLVideoElement).error;
+                        devLog?.("Video failed to load", { code: err?.code, message: err?.message, sources: selected.sources });
+                      }}
                     >
                       {selected.sources.map((s, i) => (
                         <source key={i} src={s.url} type={s.mimeType} />
                       ))}
+                      Your browser doesn't support embedded videos.
                     </video>
                   ) : selected?.type === 'external' ? (
                     <iframe
@@ -835,11 +838,11 @@ export function ProductDetail() {
                     <button
                       onClick={handleCheckout}
                       disabled={isCheckingOut || !isAvailable}
-                      className="w-full h-12 rounded-lg bg-foreground hover:bg-foreground/90 active:bg-foreground/80 transition-colors flex items-center justify-center gap-2 font-semibold text-background disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="w-full h-12 rounded-lg bg-[#FFC439] hover:bg-[#f0b429] active:bg-[#e0a420] transition-colors flex items-center justify-center gap-2 font-semibold text-[#003087] disabled:opacity-60 disabled:cursor-not-allowed"
                       aria-label="Checkout"
                     >
                       {isCheckingOut ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <Loader2 className="h-5 w-5 animate-spin text-[#003087]" />
                       ) : (
                         <>
                           <span>Checkout</span>
