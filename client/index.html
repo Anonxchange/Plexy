@@ -18,13 +18,13 @@
     <script>try{var t=localStorage.getItem('pexly-theme');if(t==='dark'||t==='light')document.documentElement.classList.add(t);else document.documentElement.classList.add('light');}catch(e){}</script>
     <title>Pexly - Non-Custodial Decentralized Crypto Software</title>
     <meta name="description" content="Pexly is your all-in-one decentralized market. Swap crypto, earn yield through staking, buy gift cards, top up mobile credit, pay utility bills, shop with crypto, and explore blockchain data — all without giving up custody of your assets." />
-    
+
     <!-- Supabase preconnect hints are injected here at build time by vite.config.ts
          when VITE_SUPABASE_URL is defined. No placeholder needed in source HTML. -->
     <!--SUPABASE_PRECONNECT-->
    <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    
+
     <!-- Open Graph / Social Media -->
     <meta property="og:title" content="Pexly - Non-Custodial Decentralized Crypto Software" />
     <meta property="og:description" content="Pexly is your all-in-one decentralized market. Swap crypto, stake for yield, buy gift cards, pay bills, shop, and explore the blockchain — all non-custodial. Your keys, your assets." />
@@ -41,7 +41,7 @@
     <meta name="twitter:description" content="Pexly is your all-in-one decentralized market. Swap crypto, stake for yield, buy gift cards, pay bills, shop, and explore the blockchain — all non-custodial. Your keys, your assets." />
     <meta name="twitter:image" content="https://www.pexly.app/hero-bg.webp" />
     <meta name="twitter:image:alt" content="Pexly - Non-Custodial Decentralized Crypto Software" />
-    
+
     <!--
       LCP hero image preload — tells the browser to fetch the hero background
       before React even starts, eliminating the JS-render delay from LCP.
@@ -70,7 +70,24 @@
       fetchpriority="high"
     />
 
-  
+    <!-- Meta Pixel Code -->
+    <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '1772743050707752');
+    fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=1772743050707752&ev=PageView&noscript=1"
+    /></noscript>
+    <!-- End Meta Pixel Code -->
+
     <!-- Global JSON-LD Schema -->
     <script type="application/ld+json">
     {
