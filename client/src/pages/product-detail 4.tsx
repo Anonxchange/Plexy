@@ -1,0 +1,1178 @@
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useParams, useLocation } from "wouter";
+import { useHead } from "@unhead/react";
+import { useSchema, createProductSchema } from "@/hooks/use-schema";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import parse from "html-react-parser";
+import { 
+  ArrowLeft,
+  ShoppingCart, 
+  Star, 
+  Package, 
+  Store, 
+  Loader2,
+  Share2,
+  Heart,
+  PlayCircle,
+  Flag,
+  Minus,
+  Plus,
+} from '@/lib/icons';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { getSupabase } from "@/lib/supabase";
+import { shopifyService } from "@/lib/shopify-service";
+import { devLog } from "@/lib/dev-logger";
+import { resolveCjVid } from "@/lib/cj-vid";
+import { useCart } from "@/hooks/use-shopify-cart";
+import { useAuth } from "@/lib/auth-context";
+import { toast } from "sonner";
+import { PexlyFooter } from "@/components/pexly-footer";
+import { CartSheet } from "@/components/shop/CartSheet";
+import { ShippingEstimator } from "@/components/shop/ShippingEstimator";
+import { ReviewSection } from "@/components/shop/ReviewSection";
+import { ShopItemCard } from "@/components/shop/ShopItemCard";
+import type { ShippingInfo } from "@/components/shop/shipping-types";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+
+/** Strip <img> tags and CJ "Product Image:" label from description HTML.
+ *  Images are shown in the full-width showcase below, not inline. */
+function stripImgTags(html: string): string {
+  return html
+    // Remove all img tags
+    .replace(/<img\b[^>]*\/?>/gi, '')
+    // Remove standalone "Product Image:" label paragraphs (CJ/Alibaba boilerplate)
+    .replace(/<(p|div|span)[^>]*>\s*(?:<(?:strong|b|em|u)[^>]*>)?\s*Product\s+Image\s*:?\s*(?:<\/(?:strong|b|em|u)>)?\s*<\/\1>/gi, '')
+    // Collapse 3+ consecutive <br> tags into two
+    .replace(/(<br\s*\/?>\s*){3,}/gi, '<br /><br />')
+    // Collapse 3+ consecutive empty <p> tags into one
+    .replace(/(<p[^>]*>\s*<\/p>\s*){3,}/gi, '<p></p>');
+}
+
+function shuffleArray<T>(items: T[]): T[] {
+  const shuffled = [...items];
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+type MediaItem =
+  | { type: 'image'; url: string; altText?: string }
+  | { type: 'video'; sources: { url: string; mimeType: string }[]; previewUrl?: string }
+  | { type: 'external'; embedUrl: string; previewUrl?: string };
+
+interface Listing {
+  id: string;
+  title: string;
+  description: string;
+  descriptionHtml?: string;
+  price: number;
+  currency: string;
+  category: string;
+  images: string[];
+  media?: MediaItem[];
+  location: string;
+  user_id: string;
+  status: string;
+  tags?: string[];
+  variantId?: string;
+  availableForSale?: boolean;
+  inventoryQuantity?: number;
+  shipping?: ShippingInfo;
+  cjVid?: string;
+}
+
+function parseMedia(p: any): MediaItem[] | undefined {
+  const edges = p?.media?.edges;
+  if (!Array.isArray(edges) || edges.length === 0) return undefined;
+  const items: MediaItem[] = [];
+  for (const edge of edges) {
+    const node = edge?.node;
+    if (!node) continue;
+    const contentType: string = node.mediaContentType || '';
+    if (contentType === 'IMAGE' && node.image?.url) {
+      items.push({ type: 'image', url: node.image.url, altText: node.image.altText ?? undefined });
+    } else if (contentType === 'VIDEO') {
+      // Shopify's Video type returns sources on the node itself, but depending on
+      // how the query was written this can also come back nested (e.g. node.video.sources)
+      // or as a single object instead of an array. Accept all of those shapes so a
+      // video isn't silently dropped just because the query result shape differs.
+      const rawSources = node.sources ?? node.video?.sources ?? node.file?.sources;
+      const sources = Array.isArray(rawSources)
+        ? rawSources
+        : rawSources
+          ? [rawSources]
+          : [];
+      if (sources.length > 0) {
+        items.push({ type: 'video', sources, previewUrl: node.previewImage?.url });
+      } else {
+        // No usable source URLs came back for this video node at all — this almost
+        // always means the GraphQL query fetching this product isn't requesting
+        // `sources { url mimeType }` on VIDEO media, not a player bug.
+        devLog?.warn?.('[parseMedia] VIDEO media node has no sources — check that the product query requests `sources { url mimeType }`.', node);
+      }
+    } else if (contentType === 'EXTERNAL_VIDEO' && node.embeddedUrl) {
+      items.push({ type: 'external', embedUrl: node.embeddedUrl, previewUrl: node.previewImage?.url });
+    }
+  }
+  return items.length > 0 ? items : undefined;
+}
+
+const DEFAULT_SHIPPING_INFO: ShippingInfo = {
+  shipTo: "Worldwide",
+  shipsFrom: "China",
+  method: "Standard Shipping",
+  processingTime: "1–3 business days",
+  deliveryTime: "7–20 business days",
+  fee: "Calculated at checkout",
+};
+
+function getMetafieldValue(productData: any, keys: string[]) {
+  const metafields = Array.isArray(productData?.metafields) ? productData.metafields : [];
+  const keySet = new Set(keys);
+  const match = metafields.find((field: any) => {
+    if (!field) return false;
+    if (!keySet.has(field.key)) return false;
+    if (typeof field.value !== "string" || !field.value.trim()) return false;
+    // Skip metaobject references — their value is a Shopify GID, not the actual content.
+    // Use a plain single_line_text_field metafield instead.
+    if (field.value.startsWith("gid://shopify/") || field.type === "metaobject_reference" || field.type === "list.metaobject_reference") return false;
+    return true;
+  });
+  return match?.value?.trim();
+}
+
+function buildShippingInfo(productData: any, fallback?: Partial<ShippingInfo>): ShippingInfo {
+  return {
+    shipTo: getMetafieldValue(productData, ["ship_to", "ships_to"]) || fallback?.shipTo || DEFAULT_SHIPPING_INFO.shipTo,
+    shipsFrom: getMetafieldValue(productData, ["ships_from", "shipping_from", "origin"]) || fallback?.shipsFrom || DEFAULT_SHIPPING_INFO.shipsFrom,
+    method: getMetafieldValue(productData, ["shipping_method", "method"]) || fallback?.method || DEFAULT_SHIPPING_INFO.method,
+    processingTime: getMetafieldValue(productData, ["processing_time", "estimate_processing_time"]) || fallback?.processingTime || DEFAULT_SHIPPING_INFO.processingTime,
+    deliveryTime: getMetafieldValue(productData, ["delivery_time", "estimated_delivery", "estimate_delivery"]) || fallback?.deliveryTime || DEFAULT_SHIPPING_INFO.deliveryTime,
+    fee: getMetafieldValue(productData, ["shipping_fee", "fee"]) || fallback?.fee || DEFAULT_SHIPPING_INFO.fee,
+  };
+}
+
+export function ProductDetail() {
+  const { id } = useParams<{ id: string }>();
+  const [, navigate] = useLocation();
+  const [product, setProduct] = useState<Listing | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState(0);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("counterfeit");
+  const [reportDetails, setReportDetails] = useState("");
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const [productOptions, setProductOptions] = useState<{ name: string; values: string[] }[]>([]);
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
+  const [relatedProducts, setRelatedProducts] = useState<Listing[]>([]);
+  const [quantity, setQuantity] = useState(1);
+  
+  // Store the raw Shopify product data so we don't re-fetch on add-to-cart
+  const shopifyDataRef = useRef<any>(null);
+  
+  const { addToCart, isLoading: isAddingToCart } = useCart();
+  const { user } = useAuth();
+
+  const productUrl = `https://www.pexly.app/shop/product/${id}`;
+  const productDescription = product?.description
+    ? product.description.replace(/<[^>]+>/g, '').trim().slice(0, 155)
+    : "View this product in the Pexly shop and complete your purchase using cryptocurrency.";
+
+  useHead({
+    title: product ? `${product.title} | Pexly Shop` : "Product | Pexly Shop",
+    meta: [
+      { name: "description", content: productDescription },
+      { property: "og:type", content: "product" },
+      { property: "og:title", content: product ? `${product.title} | Pexly Shop` : "Product | Pexly Shop" },
+      { property: "og:description", content: productDescription },
+      { property: "og:image", content: product?.images?.[0] || "" },
+      { property: "og:url", content: productUrl },
+    ],
+    link: [{ rel: "canonical", href: productUrl }],
+  });
+
+  const productSchema = useMemo(
+    () => product ? createProductSchema(product, id || '') : {},
+    [product, id]
+  );
+  useSchema(productSchema, 'product-schema');
+
+  useEffect(() => {
+    if (id) {
+      fetchProduct();
+    }
+    // Cleanup: if id changes mid-fetch, the stale flag prevents state updates
+    return () => {
+      shopifyDataRef.current = null;
+    };
+  }, [id]);
+
+  // Record view in shop history for authenticated users
+  useEffect(() => {
+    if (!user || !product) return;
+    const record = async () => {
+      try {
+        const supabase = await getSupabase();
+        await supabase.from("shop_history").insert({
+          user_id: user.id,
+          product_id: product.id,
+          product_title: product.title,
+          product_image: product.images[0] || null,
+          price: product.price,
+          currency: product.currency,
+        });
+      } catch {
+        // silently ignore — history is non-critical
+      }
+    };
+    record();
+  }, [user?.id, product?.id]);
+
+  // Derive the selected variant from cached Shopify data + selected options
+  const selectedVariant = useMemo(() => {
+    const shopifyProduct = shopifyDataRef.current;
+    if (!shopifyProduct) return null;
+
+    const variants = shopifyProduct.variants?.edges || [];
+
+    // If no options to select, return first variant
+    if (productOptions.length === 0) {
+      return variants[0]?.node || null;
+    }
+
+    const match = variants.find((edge: any) => {
+      const opts: { name: string; value: string }[] = edge.node.selectedOptions || [];
+      return opts.every(opt => {
+        const chosen = selectedOptions[opt.name];
+        return !chosen || chosen === opt.value;
+      });
+    });
+
+    return match?.node || null;
+  }, [selectedOptions, productOptions]);
+
+  // Resolve cjVid safely: variant metafield → product-level fallback → variant SKU.
+  // Never passes an empty string to the shipping estimator.
+  const resolvedCjVid = useMemo(
+    () => resolveCjVid(selectedVariant, product?.cjVid),
+    [selectedVariant, product?.cjVid]
+  );
+
+  // Update price and availability when variant changes
+  const currentPrice = selectedVariant
+    ? parseFloat(selectedVariant.price.amount)
+    : product?.price ?? 0;
+  const currentCurrency = selectedVariant
+    ? selectedVariant.price.currencyCode
+    : product?.currency ?? 'USD';
+  const isAvailable = selectedVariant
+    ? selectedVariant.availableForSale
+    : product?.availableForSale ?? true;
+
+  const applyShopifyProduct = (p: any) => {
+    shopifyDataRef.current = p;
+
+    const options: { name: string; values: string[] }[] = (p.options || []).filter(
+      (opt: any) => Array.isArray(opt.values) && opt.values.length > 0 &&
+        !(opt.values.length === 1 && opt.values[0] === 'Default Title')
+    );
+
+    setProductOptions(options);
+    // Pre-select first value for each option
+    const defaults: Record<string, string> = {};
+    options.forEach((opt) => { defaults[opt.name] = opt.values[0]; });
+    setSelectedOptions(defaults);
+
+    setProduct({
+      id: p.id,
+      title: p.title,
+      description: p.descriptionHtml || p.description,
+      descriptionHtml: p.descriptionHtml,
+      price: parseFloat(p.priceRange.minVariantPrice.amount),
+      currency: p.priceRange.minVariantPrice.currencyCode,
+      category: p.productType || "Shopify",
+      tags: Array.isArray(p.tags) ? p.tags.filter((t: string) => t.trim().length > 0) : [],
+      images: p.images.edges.map((e: any) => e.node.url),
+      media: parseMedia(p),
+      location: "Online",
+      user_id: "shopify",
+      status: "active",
+      variantId: p.variants.edges[0]?.node?.id,
+      availableForSale: p.variants.edges[0]?.node?.availableForSale,
+      shipping: buildShippingInfo(p),
+      cjVid: getMetafieldValue(p, ["cj_vid", "cj_variant_id", "cj_sku"]),
+    });
+  };
+
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  const fetchProduct = async () => {
+    setIsLoading(true);
+    shopifyDataRef.current = null;
+    
+    // Stale closure guard
+    const fetchId = id;
+    // Always decode — URL params may be percent-encoded (e.g. gid%3A%2F%2F...)
+    const decodedId = decodeURIComponent(fetchId || '');
+
+    try {
+      // --- Path 1: Shopify handle (preferred, most efficient) ---
+      if (!decodedId.startsWith('gid://') && !UUID_RE.test(decodedId)) {
+        const p = await shopifyService.getProductByHandle(decodedId);
+
+        if (fetchId !== id) return;
+
+        if (p) {
+          applyShopifyProduct(p);
+          setIsLoading(false);
+
+          // Fetch related products in the background (same product type for relevance)
+          const typeQuery = p.productType ? `product_type:${p.productType}` : undefined;
+          shopifyService.getProducts(8, undefined, typeQuery).then(({ products }) => {
+            if (fetchId !== id) return;
+            const related = shuffleArray(
+              products.filter((edge: any) => edge.node.handle !== decodedId)
+            )
+              .slice(0, 6)
+              .map((edge: any) => {
+                const rp = edge.node;
+                return {
+                  id: rp.handle ?? rp.id,
+                  title: rp.title,
+                  description: rp.description,
+                  price: parseFloat(rp.priceRange.minVariantPrice.amount),
+                  currency: rp.priceRange.minVariantPrice.currencyCode,
+                  category: "Shopify",
+                  images: rp.images.edges.map((e: any) => e.node.url),
+                  location: "Online",
+                  user_id: "shopify",
+                  status: "active",
+                  variantId: rp.variants.edges[0]?.node?.id,
+                };
+              });
+            setRelatedProducts(related);
+          }).catch(() => { /* non-critical — silently ignore */ });
+
+          return;
+        }
+
+        toast.error("Product not found");
+        navigate("/shop");
+        return;
+      }
+
+      // --- Path 2: Legacy Shopify GID (backward compat for old URLs) ---
+      if (decodedId.startsWith('gid://shopify/Product/')) {
+        const result = await shopifyService.getProducts(250);
+
+        if (fetchId !== id) return;
+
+        const found = result.products.find((edge: any) => edge.node.id === decodedId);
+
+        if (found) {
+          applyShopifyProduct(found.node);
+
+          const related = shuffleArray(result.products.filter((edge: any) => edge.node.id !== decodedId))
+            .slice(0, 6)
+            .map((edge: any) => {
+              const rp = edge.node;
+              return {
+                id: rp.id,
+                title: rp.title,
+                description: rp.description,
+                price: parseFloat(rp.priceRange.minVariantPrice.amount),
+                currency: rp.priceRange.minVariantPrice.currencyCode,
+                category: "Shopify",
+                images: rp.images.edges.map((e: any) => e.node.url),
+                location: "Online",
+                user_id: "shopify",
+                status: "active",
+                variantId: rp.variants.edges[0]?.node?.id,
+              };
+            });
+          setRelatedProducts(related);
+          setIsLoading(false);
+          return;
+        }
+
+        // GID not found in first 250 — don't fall through to Supabase
+        toast.error("Product not found");
+        navigate("/shop");
+        return;
+      }
+
+      // --- Path 3: Supabase marketplace listing (UUID) ---
+      if (fetchId !== id) return;
+
+      const supabase = await getSupabase();
+      const { data, error } = await supabase
+        .from('shop_listings')
+        .select('*')
+        .eq('id', fetchId)
+        .maybeSingle();
+
+      if (fetchId !== id) return;
+      if (error) throw error;
+
+      if (data) {
+        let imageUrls: string[] = [];
+        if (Array.isArray(data.images)) {
+          imageUrls = data.images.filter((img: any) => typeof img === 'string' && img.startsWith('http'));
+        } else if (typeof data.images === 'string') {
+          try {
+            const parsed = JSON.parse(data.images);
+            imageUrls = Array.isArray(parsed) ? parsed : [data.images];
+          } catch {
+            imageUrls = [data.images];
+          }
+        }
+        setProduct({ ...data, images: imageUrls, shipping: buildShippingInfo(data, data.shipping) });
+      } else {
+        toast.error("Product not found");
+        navigate("/shop");
+      }
+    } catch (error) {
+      devLog.error('Error fetching product:', error);
+      if (fetchId === id) {
+        toast.error("Error loading product");
+        navigate("/shop");
+      }
+    } finally {
+      if (fetchId === id) {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  const handleShare = async () => {
+    const url = typeof window !== "undefined" ? window.location.href : "";
+    const title = product?.title ? `${product.title} on Pexly` : "Pexly product";
+    const text = product?.title ? `Check out ${product.title} on Pexly` : "Check out this product on Pexly";
+    try {
+      if (typeof navigator !== "undefined" && (navigator as any).share) {
+        await (navigator as any).share({ title, text, url });
+        return;
+      }
+    } catch (err: any) {
+      if (err?.name === "AbortError") return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Product link copied to clipboard");
+    } catch {
+      toast.error("Could not copy link");
+    }
+  };
+
+  const handleSubmitReport = async () => {
+    if (!product) return;
+    setIsSubmittingReport(true);
+    try {
+      devLog.info("[product-report] submitted", {
+        productId: product.id,
+        reason: reportReason,
+        details: reportDetails,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      toast.success("Report submitted. Our team will review this listing.");
+      setReportOpen(false);
+      setReportDetails("");
+      setReportReason("counterfeit");
+    } catch {
+      toast.error("Could not submit report. Please try again.");
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
+
+  const handleAddToCart = async () => {
+    if (!product) return;
+    if (product.user_id !== 'shopify') {
+      toast.info("Marketplace checkout coming soon.");
+      return;
+    }
+
+    // Use cached variant data instead of re-fetching
+    const targetVariantId = selectedVariant?.id || product.variantId;
+
+    if (!targetVariantId) {
+      toast.error("Please select all required options");
+      return;
+    }
+
+    if (selectedVariant && !selectedVariant.availableForSale) {
+      toast.error("This item is currently out of stock");
+      return;
+    }
+
+    const optionLabel = Object.values(selectedOptions).filter(Boolean).join(' / ');
+
+    await addToCart(targetVariantId, {
+      variantId: targetVariantId,
+      title: product.title + (optionLabel ? ` - ${optionLabel}` : ''),
+      price: currentPrice,
+      currency: currentCurrency,
+      image: product.images[0],
+    });
+  };
+
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+
+  const handleCheckout = async () => {
+    if (!product) return;
+    if (product.user_id !== 'shopify') {
+      toast.info("Marketplace checkout coming soon.");
+      return;
+    }
+
+    const targetVariantId = selectedVariant?.id || product.variantId;
+    if (!targetVariantId) {
+      toast.error("Please select all required options");
+      return;
+    }
+    if (selectedVariant && !selectedVariant.availableForSale) {
+      toast.error("This item is currently out of stock");
+      return;
+    }
+
+    setIsCheckingOut(true);
+    try {
+      const result = await shopifyService.createCart({ variantId: targetVariantId, quantity });
+      if (result?.checkoutUrl) {
+        window.location.href = result.checkoutUrl;
+      } else {
+        toast.error("Could not initiate checkout. Please try again.");
+      }
+    } catch {
+      toast.error("Could not initiate checkout. Please try again.");
+    } finally {
+      setIsCheckingOut(false);
+    }
+  };
+
+  return (
+    <div>
+      <div className="container mx-auto pt-3 pb-8 md:py-8 max-w-6xl px-4">
+        {/* Top bar — always visible */}
+        <div className="flex items-center justify-between mb-6">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/shop")}
+            aria-label="Back to shop"
+            title="Back to shop"
+            className="group h-10 w-10 rounded-full border border-border/70 bg-background/90 shadow-sm transition-all hover:-translate-x-0.5 hover:border-primary/40 hover:bg-primary/10 hover:shadow-md"
+          >
+            <ArrowLeft className="h-5 w-5 transition-transform duration-200 group-hover:-translate-x-0.5" />
+          </Button>
+          <div className="flex items-center gap-1.5">
+            <CartSheet />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleShare}
+              aria-label="Share product"
+              title="Share product"
+            >
+              <Share2 className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setReportOpen(true)}
+              aria-label="Report product"
+              title="Report product"
+            >
+              <Flag className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Loading state */}
+        {isLoading && (
+          <div className="flex items-center justify-center min-h-[50vh]">
+            <LoadingSpinner size={40} color="hsl(var(--primary))" />
+          </div>
+        )}
+
+        {!isLoading && product && <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+          {/* Left: Media (images + video) */}
+          {(() => {
+            const mediaItems: MediaItem[] = product.media && product.media.length > 0
+              ? product.media
+              : product.images.map(url => ({ type: 'image' as const, url }));
+            const selected = mediaItems[selectedImage] ?? mediaItems[0];
+
+            return (
+              <div className="space-y-4">
+                <div className="relative aspect-square rounded-xl overflow-hidden bg-muted">
+                  {mediaItems.length === 0 ? (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Package className="h-16 w-16 text-muted-foreground" />
+                    </div>
+                  ) : selected?.type === 'video' ? (
+                    <video
+                      key={selectedImage}
+                      className="w-full h-full object-cover"
+                      controls
+                      autoPlay={false}
+                      playsInline
+                      poster={selected.previewUrl}
+                      onError={(e) => {
+                        const err = (e.currentTarget as HTMLVideoElement).error;
+                        devLog?.("Video failed to load", { code: err?.code, message: err?.message, sources: selected.sources });
+                      }}
+                    >
+                      {selected.sources.map((s, i) => (
+                        <source key={i} src={s.url} type={s.mimeType} />
+                      ))}
+                      Your browser doesn't support embedded videos.
+                    </video>
+                  ) : selected?.type === 'external' ? (
+                    <iframe
+                      key={selectedImage}
+                      src={selected.embedUrl}
+                      className="w-full h-full"
+                      allow="autoplay; encrypted-media"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <img
+                      src={(selected as any).url ?? product.images[selectedImage]}
+                      alt={product.title}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                  <Button variant="ghost" size="icon" className="absolute top-3 right-3 bg-background/80 backdrop-blur-sm">
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {mediaItems.length > 1 && (
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {mediaItems.map((item, idx) => {
+                      const thumbSrc = item.type === 'image' ? item.url
+                        : item.type === 'video' ? item.previewUrl
+                        : item.type === 'external' ? item.previewUrl
+                        : undefined;
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => setSelectedImage(idx)}
+                          className={`relative w-20 aspect-square rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${
+                            selectedImage === idx ? 'border-primary' : 'border-transparent opacity-70 hover:opacity-100'
+                          }`}
+                        >
+                          {thumbSrc ? (
+                            <img src={thumbSrc} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-muted flex items-center justify-center">
+                              <Package className="h-6 w-6 text-muted-foreground" />
+                            </div>
+                          )}
+                          {(item.type === 'video' || item.type === 'external') && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                              <PlayCircle className="h-6 w-6 text-white" />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+              {/* Description + store — desktop only, lives under images in col 1 */}
+              <div className="hidden md:block space-y-4 pt-2">
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold">Description</p>
+                  <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground">
+                    {product.description
+                      ? parse(stripImgTags(product.description))
+                      : "No description provided for this item."}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Store className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">Store</p>
+                      <p className="text-muted-foreground">{product.user_id === 'shopify' ? 'Verified Store' : 'Marketplace'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">Shipping</p>
+                      <p className="text-muted-foreground">Fast Delivery</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            );
+          })()}
+
+
+          {/* Right: Info */}
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Badge variant="secondary">{product.category}</Badge>
+                <Button variant="ghost" size="icon">
+                  <Heart className="h-4 w-4" />
+                </Button>
+              </div>
+              {product.tags && product.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {product.tags.map(tag => (
+                    <Badge key={tag} variant="outline" className="text-xs font-normal text-muted-foreground">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              <h1 className="text-2xl md:text-3xl font-bold">{product.title}</h1>
+
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                ))}
+              </div>
+
+              <div className="flex items-baseline gap-3">
+                <span className="text-3xl font-bold">
+                  {currentCurrency} {currentPrice.toLocaleString()}
+                </span>
+                {product.user_id === 'shopify' && (
+                  <span className="text-lg text-muted-foreground line-through">
+                    {currentCurrency} {(currentPrice * 1.2).toLocaleString()}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-5">
+              {/* Options selection — all product options rendered generically */}
+              {productOptions.length > 0 && (
+                <div className="space-y-4">
+                  {productOptions.map((opt) => {
+                    const isSizeOption = opt.name.toLowerCase().includes('size') || opt.name.toLowerCase() === 'taille';
+                    return (
+                      <div key={opt.name} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-semibold">{opt.name}</p>
+                          {isSizeOption && (
+                            <span className="text-xs text-muted-foreground cursor-pointer hover:underline">Size Guide</span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {opt.values.map((val) => (
+                            <button
+                              key={val}
+                              onClick={() => setSelectedOptions(prev => ({ ...prev, [opt.name]: val }))}
+                              className={`h-10 min-w-[3rem] px-3 rounded-lg text-sm font-bold border-2 transition-all ${
+                                selectedOptions[opt.name] === val
+                                  ? 'bg-foreground text-background border-foreground shadow-md'
+                                  : 'bg-background text-foreground border-border/40 hover:border-primary/50'
+                              }`}
+                            >
+                              {val}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="space-y-3">
+                {/* Quantity selector + Add to Cart */}
+                <div className="flex gap-3 items-stretch">
+                  <div className="flex items-center border border-border rounded-lg overflow-hidden h-12 shrink-0">
+                    <button
+                      className="px-3 h-full flex items-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-40"
+                      onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                      disabled={quantity <= 1}
+                      aria-label="Decrease quantity"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </button>
+                    <span className="w-10 text-center text-sm font-semibold tabular-nums select-none">
+                      {quantity}
+                    </span>
+                    <button
+                      className="px-3 h-full flex items-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      onClick={() => setQuantity(q => q + 1)}
+                      aria-label="Increase quantity"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <Button
+                    className="flex-1 h-12 text-base"
+                    size="lg"
+                    onClick={handleAddToCart}
+                    disabled={isAddingToCart || !isAvailable}
+                  >
+                    {isAddingToCart ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : !isAvailable ? (
+                      "Out of Stock"
+                    ) : (
+                      <>
+                        <ShoppingCart className="h-5 w-5 mr-2" />
+                        Add to Cart
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {/* Checkout button — only for Shopify products. Card marks are inline SVG
+                    (no external image hosts) so they render even with a strict CSP. */}
+                {product.user_id === 'shopify' && isAvailable && (
+                  <div className="space-y-2">
+                    <button
+                      onClick={handleCheckout}
+                      disabled={isCheckingOut || !isAvailable}
+                      className="w-full h-12 rounded-lg bg-[#FFC439] hover:bg-[#f0b429] active:bg-[#e0a420] transition-colors flex items-center justify-center gap-2 font-semibold text-[#003087] disabled:opacity-60 disabled:cursor-not-allowed"
+                      aria-label="Checkout"
+                    >
+                      {isCheckingOut ? (
+                        <Loader2 className="h-5 w-5 animate-spin text-[#003087]" />
+                      ) : (
+                        <>
+                          <span>Checkout</span>
+                          <div className="flex items-center gap-1">
+                            {/* Visa */}
+                            <svg viewBox="0 0 48 32" className="h-5 w-8" aria-label="Visa" role="img">
+                              <rect width="48" height="32" rx="4" fill="#fff" />
+                              <path d="M20.5 21.5h-2.9l1.8-11h2.9l-1.8 11Zm-6.9-11-2.8 7.6-.3-1.6-1-5.1s-.1-.9-1.2-.9H4l-.1.3s1.5.3 3.2 1.3l2.5 9.4h3l4.6-11H14.1Zm23.1 11H40l-2.4-11h-2.6c-1.1 0-1.4.9-1.4.9l-4.3 10.1h3l.6-1.7h3.7l.4 1.7Zm-4.2-4 1.5-4.2.9 4.2h-2.4Zm-8.6-3.7c0-1 .8-1.3 2.1-1.3.9 0 1.9.2 1.9.2l.5-2.3s-1.1-.4-2.3-.4c-2.7 0-4.6 1.4-4.6 3.5 0 1.9 1.7 2.4 2.8 3 1.1.6 1.5.9 1.5 1.4 0 .8-1 1.1-1.8 1.1-1.3 0-2.6-.5-2.6-.5l-.5 2.3s1.3.5 3 .5c2.7 0 4.7-1.3 4.7-3.6 0-2.7-3.7-2.8-3.7-4Z" fill="#1434CB"/>
+                            </svg>
+                            {/* Mastercard */}
+                            <svg viewBox="0 0 48 32" className="h-5 w-8" aria-label="Mastercard" role="img">
+                              <rect width="48" height="32" rx="4" fill="#fff" />
+                              <circle cx="20" cy="16" r="9" fill="#EB001B" />
+                              <circle cx="28" cy="16" r="9" fill="#F79E1B" />
+                              <path d="M24 9.5a9 9 0 0 1 0 13 9 9 0 0 1 0-13Z" fill="#FF5F00" />
+                            </svg>
+                            {/* American Express */}
+                            <svg viewBox="0 0 48 32" className="h-5 w-8" aria-label="American Express" role="img">
+                              <rect width="48" height="32" rx="4" fill="#016FD0" />
+                              <text x="24" y="20" textAnchor="middle" fontSize="9.5" fontWeight="700" fontFamily="Arial, sans-serif" fill="#fff">AMEX</text>
+                            </svg>
+                            {/* Discover */}
+                            <svg viewBox="0 0 48 32" className="h-5 w-8" aria-label="Discover" role="img">
+                              <rect width="48" height="32" rx="4" fill="#1a1a1a" />
+                              <text x="21" y="20" textAnchor="middle" fontSize="8" fontWeight="700" fontFamily="Arial, sans-serif" fill="#fff">DISC</text>
+                              <circle cx="40" cy="16" r="6" fill="#FF6600" />
+                            </svg>
+                          </div>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={handleCheckout}
+                      disabled={isCheckingOut}
+                      className="w-full text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                    >
+                      More payment options
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2 text-sm">
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                  <span className={isAvailable ? 'text-green-600' : 'text-destructive'}>
+                    {isAvailable ? 'In Stock & Ready to Deliver' : 'Out of Stock'}
+                  </span>
+                </div>
+              </div>
+
+              <Separator />
+
+              {product.user_id === 'shopify' ? (
+                <ShippingEstimator
+                  shipping={product.shipping}
+                  productPrice={currentPrice}
+                  currency={currentCurrency}
+                  variantId={selectedVariant?.id || product.variantId}
+                  productTitle={product.title}
+                  productImage={product.images[0]}
+                  cjVid={resolvedCjVid}
+                />
+              ) : (
+                <div className="rounded-2xl border border-border/70 bg-card/60 overflow-hidden">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border/60">
+                    <div className="p-4 space-y-1">
+                      <p className="text-xs font-semibold text-muted-foreground">Processing</p>
+                      <p className="text-sm font-semibold">{product.shipping?.processingTime || DEFAULT_SHIPPING_INFO.processingTime}</p>
+                    </div>
+                    <div className="p-4 space-y-1">
+                      <p className="text-xs font-semibold text-muted-foreground">Delivery</p>
+                      <p className="text-sm font-semibold">{product.shipping?.deliveryTime || DEFAULT_SHIPPING_INFO.deliveryTime}</p>
+                    </div>
+                    <div className="p-4 space-y-1">
+                      <p className="text-xs font-semibold text-muted-foreground">Shipping fee</p>
+                      <p className="text-sm font-semibold">{product.shipping?.fee || DEFAULT_SHIPPING_INFO.fee}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Description + store — mobile only (desktop version is in col 1 under images) */}
+              <div className="space-y-2 md:hidden">
+                <p className="text-sm font-semibold">Description</p>
+                <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground">
+                  {product.description
+                    ? parse(stripImgTags(product.description))
+                    : "No description provided for this item."}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-sm md:hidden">
+                <div className="flex items-center gap-2">
+                  <Store className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">Store</p>
+                    <p className="text-muted-foreground">{product.user_id === 'shopify' ? 'Verified Store' : 'Marketplace'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">Shipping</p>
+                    <p className="text-muted-foreground">Fast Delivery</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>}
+
+        {/* Full-width product image showcase */}
+        {!isLoading && product && (() => {
+          const seen = new Set<string>();
+          const descImages: string[] = [];
+
+          // Helper: normalise a raw src — force https, skip blanks/data URIs
+          const normSrc = (raw: string): string | null => {
+            if (!raw || raw.startsWith('data:') || raw.length < 8) return null;
+            return raw.startsWith('http://') ? raw.replace('http://', 'https://') : raw;
+          };
+
+          // 1. Extract images from descriptionHtml
+          //    Check both src AND data-src (CJ uses lazy-load data-src in some themes)
+          if (product.descriptionHtml) {
+            const tagRe = /<img[^>]+>/gi;
+            let tagMatch: RegExpExecArray | null;
+            while ((tagMatch = tagRe.exec(product.descriptionHtml)) !== null) {
+              const tag = tagMatch[0];
+              // Prefer data-src (lazy-load real URL) over src (may be placeholder)
+              const dataSrcMatch = /data-src=["']([^"']+)["']/i.exec(tag);
+              const srcMatch = /\bsrc=["']([^"']+)["']/i.exec(tag);
+              const raw = dataSrcMatch?.[1] || srcMatch?.[1] || '';
+              const src = normSrc(raw);
+              if (src && !seen.has(src)) {
+                seen.add(src);
+                descImages.push(src);
+              }
+            }
+          }
+
+          // 2. Carousel images (Shopify CDN — always load reliably)
+          const carouselImages: string[] = [];
+          const candidates = product.media && product.media.length > 0
+            ? product.media.filter(m => m.type === 'image').map(m => (m as any).url as string)
+            : product.images;
+          for (const url of candidates) {
+            const src = normSrc(url);
+            if (src && !seen.has(src)) {
+              seen.add(src);
+              carouselImages.push(src);
+            }
+          }
+
+          // 3. Decide what to show:
+          //    - If description images exist → show ONLY those
+          //    - If no description images → show carousel images full-width
+          const hasDescImages = descImages.length > 0;
+          const showcaseImages = hasDescImages ? descImages : carouselImages;
+
+          if (showcaseImages.length === 0) return null;
+
+          const sectionLabel = hasDescImages ? 'Product Details' : 'Product Images';
+
+          return (
+            <div className="mt-14">
+              <div className="flex items-center gap-4 mb-0">
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+                <div className="flex items-center gap-2 px-4">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  <span className="text-xs font-semibold tracking-[0.18em] uppercase text-muted-foreground">
+                    {sectionLabel}
+                  </span>
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                </div>
+                <div className="h-px flex-1 bg-gradient-to-l from-transparent via-border to-transparent" />
+              </div>
+
+              {/* Edge-to-edge image stack */}
+              <div className="-mx-4 sm:-mx-6 md:-mx-8 lg:-mx-0 overflow-hidden rounded-none lg:rounded-2xl mt-5">
+                {showcaseImages.map((url, idx) => (
+                  <div
+                    key={idx}
+                    className="w-full"
+                    style={{ lineHeight: 0 }}
+                  >
+                    <img
+                      src={url}
+                      alt={`${product.title} – detail ${idx + 1}`}
+                      className="w-full h-auto block select-none"
+                      loading={idx === 0 ? "eager" : "lazy"}
+                      draggable={false}
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        // Hide this image's wrapper on failure — don't leave empty space
+                        const wrapper = (e.currentTarget as HTMLImageElement).parentElement;
+                        if (wrapper) wrapper.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Decorative end mark */}
+              <div className="flex items-center justify-center gap-2 mt-5">
+                <div className="w-8 h-px bg-border/60" />
+                <div className="w-1 h-1 rounded-full bg-primary/50" />
+                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                <div className="w-1 h-1 rounded-full bg-primary/50" />
+                <div className="w-8 h-px bg-border/60" />
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Related Products */}
+        {relatedProducts.length > 0 && (
+          <div className="mt-16 space-y-6">
+            <h2 className="text-xl font-bold">You may also like</h2>
+            {/* Match the shop's Pinterest-style flow:
+                natural-height images on mobile, regular grid on desktop. */}
+            <div className="flex gap-0.5 -mx-4 lg:grid lg:grid-cols-4 xl:grid-cols-5 lg:gap-4 lg:mx-0">
+              <div className="flex flex-col gap-0.5 flex-1 lg:contents">
+                {relatedProducts
+                  .filter((_, index) => index % 2 === 0)
+                  .map((related) => (
+                    <ShopItemCard
+                      key={related.id}
+                      product={related}
+                      onViewDetails={() => navigate(`/shop/product/${encodeURIComponent(related.id)}`)}
+                    />
+                  ))}
+              </div>
+              <div className="flex flex-col gap-0.5 flex-1 lg:contents">
+                {relatedProducts
+                  .filter((_, index) => index % 2 === 1)
+                  .map((related) => (
+                    <ShopItemCard
+                      key={related.id}
+                      product={related}
+                      onViewDetails={() => navigate(`/shop/product/${encodeURIComponent(related.id)}`)}
+                    />
+                  ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reviews */}
+        {!isLoading && product && (
+          <ReviewSection productId={product.id} />
+        )}
+      </div>
+
+      {/* Report listing dialog */}
+      <AlertDialog open={reportOpen} onOpenChange={setReportOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Report this listing</AlertDialogTitle>
+            <AlertDialogDescription>
+              Help us keep Pexly safe. Tell us what's wrong with this product and our trust &amp; safety team will review it.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-4">
+            <RadioGroup value={reportReason} onValueChange={setReportReason} className="space-y-2">
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="counterfeit" id="report-counterfeit" />
+                <Label htmlFor="report-counterfeit" className="font-normal cursor-pointer">Counterfeit or fake item</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="prohibited" id="report-prohibited" />
+                <Label htmlFor="report-prohibited" className="font-normal cursor-pointer">Prohibited or illegal item</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="misleading" id="report-misleading" />
+                <Label htmlFor="report-misleading" className="font-normal cursor-pointer">Misleading description or images</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="scam" id="report-scam" />
+                <Label htmlFor="report-scam" className="font-normal cursor-pointer">Scam or fraudulent seller</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="ip" id="report-ip" />
+                <Label htmlFor="report-ip" className="font-normal cursor-pointer">Intellectual property infringement</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="other" id="report-other" />
+                <Label htmlFor="report-other" className="font-normal cursor-pointer">Other</Label>
+              </div>
+            </RadioGroup>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="report-details" className="text-sm">Additional details (optional)</Label>
+              <Textarea
+                id="report-details"
+                value={reportDetails}
+                onChange={(e) => setReportDetails(e.target.value)}
+                placeholder="Add any context that will help us review this listing…"
+                rows={4}
+                maxLength={1000}
+              />
+            </div>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmittingReport}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSubmitReport} disabled={isSubmittingReport}>
+              {isSubmittingReport ? "Submitting…" : "Submit report"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <PexlyFooter />
+    </div>
+  );
+}
