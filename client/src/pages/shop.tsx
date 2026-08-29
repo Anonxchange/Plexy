@@ -832,9 +832,6 @@ export function Shop() {
             }`}
           >
             All
-            {productCountByCategory["All"] ? (
-              <span className="ml-1 text-xs opacity-60">({productCountByCategory["All"]})</span>
-            ) : null}
           </button>
           {categoryTree.map(node => (
             <button
@@ -847,9 +844,6 @@ export function Shop() {
               }`}
             >
               {node.name}
-              {productCountByCategory[node.fullPath] ? (
-                <span className="ml-1 text-xs opacity-60">({productCountByCategory[node.fullPath]})</span>
-              ) : null}
             </button>
           ))}
         </div>
@@ -878,11 +872,6 @@ export function Shop() {
                     <LayoutGrid className="h-3.5 w-3.5 flex-shrink-0" />
                     All
                   </span>
-                  {productCountByCategory["All"] ? (
-                    <span className={`text-xs ${selectedCategory === "All" ? "opacity-70" : "text-muted-foreground"}`}>
-                      {productCountByCategory["All"]}
-                    </span>
-                  ) : null}
                 </button>
 
                 {/* L1 categories — click opens modal */}
@@ -902,11 +891,6 @@ export function Shop() {
                         <ChevronRight className="h-3 w-3 flex-shrink-0 opacity-50" />
                         {node.name}
                       </span>
-                      {productCountByCategory[node.fullPath] ? (
-                        <span className={`text-xs flex-shrink-0 ml-1 ${isSelected ? "opacity-70" : "text-muted-foreground"}`}>
-                          {productCountByCategory[node.fullPath]}
-                        </span>
-                      ) : null}
                     </button>
                   );
                 })}
