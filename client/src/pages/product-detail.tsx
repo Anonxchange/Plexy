@@ -107,8 +107,25 @@ function parseMedia(p: any): MediaItem[] | undefined {
     const contentType: string = node.mediaContentType || '';
     if (contentType === 'IMAGE' && node.image?.url) {
       items.push({ type: 'image', url: node.image.url, altText: node.image.altText ?? undefined });
-    } else if (contentType === 'VIDEO' && Array.isArray(node.sources) && node.sources.length > 0) {
-      items.push({ type: 'video', sources: node.sources, previewUrl: node.previewImage?.url });
+    } else if (contentType === 'VIDEO') {
+      // Shopify's Video type returns sources on the node itself, but depending on
+      // how the query was written this can also come back nested (e.g. node.video.sources)
+      // or as a single object instead of an array. Accept all of those shapes so a
+      // video isn't silently dropped just because the query result shape differs.
+      const rawSources = node.sources ?? node.video?.sources ?? node.file?.sources;
+      const sources = Array.isArray(rawSources)
+        ? rawSources
+        : rawSources
+          ? [rawSources]
+          : [];
+      if (sources.length > 0) {
+        items.push({ type: 'video', sources, previewUrl: node.previewImage?.url });
+      } else {
+        // No usable source URLs came back for this video node at all — this almost
+        // always means the GraphQL query fetching this product isn't requesting
+        // `sources { url mimeType }` on VIDEO media, not a player bug.
+        devLog?.warn?.('[parseMedia] VIDEO media node has no sources — check that the product query requests `sources { url mimeType }`.', node);
+      }
     } else if (contentType === 'EXTERNAL_VIDEO' && node.embeddedUrl) {
       items.push({ type: 'external', embedUrl: node.embeddedUrl, previewUrl: node.previewImage?.url });
     }
@@ -616,7 +633,6 @@ export function ProductDetail() {
                       controls
                       autoPlay={false}
                       playsInline
-                      referrerPolicy="no-referrer"
                       poster={selected.previewUrl}
                       onError={(e) => {
                         const err = (e.currentTarget as HTMLVideoElement).error;
