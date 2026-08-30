@@ -102,20 +102,6 @@ const ReceiveIllustration = () => (
   </svg>
 );
 
-const LightningIllustration = () => (
-  <svg width="84" height="84" viewBox="0 0 84 84" fill="none" aria-hidden>
-    <circle cx="42" cy="42" r="32" fill="white" fillOpacity="0.1" />
-    <path d="M46 14 L28 46 H40 L38 70 L58 36 H46 Z" fill="white" fillOpacity="0.9" />
-    <path d="M46 14 L28 46 H40 L38 70 L58 36 H46 Z" fill="url(#zap-glow)" fillOpacity="0.4" />
-    <defs>
-      <radialGradient id="zap-glow" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stopColor="#FCD34D" stopOpacity="0.8" />
-        <stop offset="100%" stopColor="#F59E0B" stopOpacity="0" />
-      </radialGradient>
-    </defs>
-  </svg>
-);
-
 const PhoneIllustration = () => (
   <svg width="72" height="88" viewBox="0 0 72 88" fill="none" aria-hidden>
     <rect x="16" y="6" width="40" height="76" rx="8" fill="white" fillOpacity="0.12" />
@@ -373,13 +359,6 @@ export function WalletMegaMenu({ onNavigate, onClose }: { onNavigate: (h: string
       href: "/wallet/receive",
       bg: "bg-gradient-to-br from-[#14532d] to-[#16a34a]",
       illustration: <ReceiveIllustration />,
-    },
-    {
-      label: t("wallet.lightning"),
-      sub: t("wallet.lightning_desc"),
-      href: "/wallet/lightning",
-      bg: "bg-gradient-to-br from-[#78350f] to-[#d97706]",
-      illustration: <LightningIllustration />,
     },
     {
       label: t("wallet.mobile_topup"),
