@@ -1,4 +1,3 @@
-
 import { useHead } from "@unhead/react";
 import { FileText, Shield, AlertCircle, ChevronDown } from '@/lib/icons';
 import { AppFooter } from "@/components/app-footer";
@@ -10,11 +9,17 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-
 export default function Terms() {
-  useHead({ title: "Terms of Service | Pexly", meta: [{ name: "description", content: "The terms of service governing your use of the Pexly platform." }] });
+  useHead({
+    title: "Terms of Service | Pexly",
+    meta: [
+      {
+        name: "description",
+        content: "The terms of service governing your use of the Pexly platform.",
+      },
+    ],
+  });
   const [openLegal, setOpenLegal] = useState(false);
-
   const legalSections = [
     {
       category: "Agreements",
@@ -39,7 +44,6 @@ export default function Terms() {
       ]
     }
   ];
-
   return (
     <div className="min-h-screen bg-background">
       <LegalPageHero
@@ -47,29 +51,40 @@ export default function Terms() {
         subtitle="Please read these terms and conditions carefully before using Pexly services"
         lastUpdated="February 26, 2025"
       />
-
       {/* Content — overlaps hero above and footer below */}
       <section className="relative z-10 -mt-20 pb-0">
         <div className="w-full bg-background rounded-3xl shadow-2xl px-6 md:px-12 py-10 -mb-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-
             {/* Column 1: Legal Documents sidebar */}
             <div className="md:col-span-1">
               <div className="sticky top-24">
-                <Collapsible open={openLegal} onOpenChange={setOpenLegal} className="md:hidden">
+                <Collapsible
+                  open={openLegal}
+                  onOpenChange={setOpenLegal}
+                  className="md:hidden"
+                >
                   <CollapsibleTrigger className="flex items-center justify-between w-full p-4 rounded-lg border-2 border-primary/30 hover:border-primary/50 hover:bg-primary/5 transition-colors mb-6">
                     <h3 className="text-lg font-semibold">Legal Documents</h3>
-                    <ChevronDown className={`h-5 w-5 text-primary transition-transform ${openLegal ? "rotate-180" : ""}`} />
+                    <ChevronDown
+                      className={`h-5 w-5 text-primary transition-transform ${
+                        openLegal ? "rotate-180" : ""
+                      }`}
+                    />
                   </CollapsibleTrigger>
                   <CollapsibleContent className="mb-6">
                     <div className="bg-muted/30 rounded-lg p-4 space-y-4 mt-2">
                       {legalSections.map((section) => (
                         <div key={section.category}>
-                          <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase">{section.category}</h4>
+                          <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase">
+                            {section.category}
+                          </h4>
                           <div className="space-y-2 ml-2">
                             {section.links.map((link) => (
                               <div key={link.text}>
-                                <Link to={link.href} className="text-foreground hover:text-primary hover:underline font-medium text-sm">
+                                <Link
+                                  to={link.href}
+                                  className="text-foreground hover:text-primary hover:underline font-medium text-sm"
+                                >
                                   {link.text}
                                 </Link>
                               </div>
@@ -80,7 +95,6 @@ export default function Terms() {
                     </div>
                   </CollapsibleContent>
                 </Collapsible>
-
                 <div className="hidden md:block">
                   <div className="rounded-xl border border-primary/20 bg-background/70 backdrop-blur-md shadow-md overflow-hidden">
                     <div className="px-3 py-2.5 border-b border-primary/15 bg-primary/5">
@@ -89,11 +103,16 @@ export default function Terms() {
                     <div className="p-3 space-y-3">
                       {legalSections.map((section) => (
                         <div key={section.category}>
-                          <h4 className="text-sm font-semibold text-muted-foreground mb-2 uppercase">{section.category}</h4>
+                          <h4 className="text-sm font-semibold text-muted-foreground mb-2 uppercase">
+                            {section.category}
+                          </h4>
                           <div className="space-y-1.5 ml-2">
                             {section.links.map((link) => (
                               <div key={link.text}>
-                                <Link to={link.href} className="text-foreground hover:text-primary hover:underline font-medium text-sm block">
+                                <Link
+                                  to={link.href}
+                                  className="text-foreground hover:text-primary hover:underline font-medium text-sm block"
+                                >
                                   {link.text}
                                 </Link>
                               </div>
@@ -106,26 +125,22 @@ export default function Terms() {
                 </div>
               </div>
             </div>
-
             {/* Column 2: Terms Content */}
             <div className="md:col-span-3 space-y-8">
-
               <div className="bg-slate-50 dark:bg-slate-900/30 p-6 rounded-lg border border-slate-200 dark:border-slate-800">
                 <p className="text-muted-foreground leading-relaxed text-sm">
                   The English version of legal agreements and policies is considered as the only current and valid version of this document. Any translated version is provided for your convenience only. Translated versions are not legally binding and cannot replace the English versions. In the event of disagreement or conflict, the English language legal agreements and policies shall prevail.
                 </p>
               </div>
-
               <div>
                 <p className="text-muted-foreground leading-relaxed">
                   You agree and understand that by signing up to Pexly and using the interface, you are agreeing to enter into this user agreement (the "Agreement") by and between you and Pexly.app, and be legally bound by its terms and conditions. By accessing and using Pexly, you are entering into a legally binding contract. If any term or condition of this User Agreement is unacceptable to you, please do not visit, access, or use Pexly. Use of the words "Pexly", "company", "we", "us," or "our" in this User Agreement refers to Pexly.app.
                 </p>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">Services Definition</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
-                  Pexly is a comprehensive digital asset trading platform offering a suite of integrated financial products and tools. The services provided by Pexly include, but are not limited to:
+                  Pexly is a digital asset technology platform providing users with access to a range of integrated services, tools, and third-party products. The services provided through Pexly include, but are not limited to:
                 </p>
                 <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4 mb-4">
                   <li>Spot Trading — buy and sell digital assets at live market prices</li>
@@ -141,15 +156,19 @@ export default function Terms() {
                 </ul>
                 <p className="text-muted-foreground leading-relaxed">
                   Pexly.app and its related interface are owned and operated by Pexly. Your use of the interface is also governed by our{" "}
-                  <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link> and{" "}
-                  <Link href="/cookie-policy" className="text-primary hover:underline">Cookie Policy</Link>.
+                  <Link href="/privacy" className="text-primary hover:underline">
+                    Privacy Policy
+                  </Link>{" "}
+                  and{" "}
+                  <Link href="/cookie-policy" className="text-primary hover:underline">
+                    Cookie Policy
+                  </Link>.
                 </p>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">Regulatory Compliance</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
-                  Your conduct on Pexly is subject to the laws, regulations, and rules of your local jurisdiction and any applicable governmental authority. Pexly operates strictly as a technology and services provider:
+                  Your conduct on Pexly is subject to the laws, regulations, and rules of your local jurisdiction and any applicable governmental authority. Pexly operates as a technology and services provider:
                 </p>
                 <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
                   <li>Compliance with applicable regional digital asset regulations</li>
@@ -162,14 +181,12 @@ export default function Terms() {
                   You represent that you are acting in compliance with and are legally bound by this User Agreement as well as the Applicable Laws in your jurisdiction.
                 </p>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">Updates</h2>
                 <p className="text-muted-foreground leading-relaxed">
                   We may make changes or updates to this Agreement for legal or regulatory reasons or at our discretion. If you continue to use the interface after these updates, you agree to the updated Agreement. The updated version will supersede all prior versions. We reserve the right to discontinue or make changes to any of the platform's features or services.
                 </p>
               </div>
-
               <div className="bg-amber-500/10 p-6 rounded-lg border border-amber-500/20">
                 <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
                   <AlertCircle className="h-6 w-6 text-amber-500" />
@@ -184,14 +201,12 @@ export default function Terms() {
                   </p>
                 </div>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">What Pexly Is</h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  Pexly is a multi-product digital asset trading platform providing users with access to spot markets, perpetual futures, prediction markets, crypto swaps, staking, and ancillary services. Pexly operates as a technology and services provider and does not operate as a licensed financial institution, investment advisor, or custody provider of client funds.
+                  Pexly is a digital asset technology and services platform providing users with access to spot markets, perpetual futures, prediction markets, crypto swaps, staking, a non-custodial wallet, and ancillary commerce services. Pexly operates as a technology and services provider and does not operate as a bank, investment advisor, or custodian of users' self-custodied digital assets.
                 </p>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">Spot Trading</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
@@ -201,11 +216,10 @@ export default function Terms() {
                   <li>Spot trades are executed at the best available market price at the time of your order. Prices may fluctuate between order placement and execution.</li>
                   <li>All spot trades are final once confirmed. Pexly does not guarantee the ability to cancel or modify an order once submitted to the market.</li>
                   <li>You are solely responsible for ensuring sufficient balance in your account before placing any trade.</li>
-                  <li>Trading fees applicable to spot transactions will be displayed prior to order confirmation and are subject to change at Pexly's discretion.</li>
+                  <li>Trading fees applicable to spot transactions, where applicable, will be displayed clearly prior to order confirmation and may be subject to change.</li>
                   <li>Pexly does not guarantee liquidity, market depth, or continuous availability of any trading pair.</li>
                 </ul>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">Perpetual Futures Trading</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
@@ -222,7 +236,6 @@ export default function Terms() {
                   PERPETUAL FUTURES ARE HIGH-RISK INSTRUMENTS. YOU MAY LOSE ALL FUNDS DEPOSITED AS MARGIN. ONLY TRADE WITH FUNDS YOU CAN AFFORD TO LOSE.
                 </p>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">Prediction Markets</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
@@ -236,7 +249,6 @@ export default function Terms() {
                   <li>Pexly does not guarantee the accuracy, timeliness, or availability of data used to resolve prediction markets.</li>
                 </ul>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">Crypto Swap</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
@@ -246,10 +258,9 @@ export default function Terms() {
                   <li>Swap rates are provided at the time of quote and may be subject to slippage depending on market conditions and the size of the transaction.</li>
                   <li>Swap transactions are final once confirmed and cannot be reversed. You are responsible for reviewing all details before confirming any swap.</li>
                   <li>Swap services may be facilitated through integrated third-party liquidity providers. Pexly is not responsible for the acts or omissions of these providers.</li>
-                  <li>Network processing fees may apply and will be displayed prior to confirmation. These fees are not controlled by Pexly.</li>
+                  <li>Any applicable swap, liquidity, or network costs will be disclosed before confirmation. Blockchain network fees are charged by the relevant network or infrastructure provider and are not fees charged by Pexly for access to the platform.</li>
                 </ul>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">Staking &amp; Earn</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
@@ -262,28 +273,24 @@ export default function Terms() {
                   <li>You are responsible for understanding the mechanics and risks of any staking or earn product before participating.</li>
                 </ul>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">No Financial Advice</h2>
                 <p className="text-muted-foreground leading-relaxed">
                   Pexly does not provide financial, investment, legal, or tax advice. All information provided through the platform is for general informational purposes only. Nothing on Pexly constitutes a recommendation to buy, sell, or hold any digital asset or to engage in any particular trading strategy.
                 </p>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">User Responsibility &amp; Risk</h2>
                 <p className="text-muted-foreground leading-relaxed">
                   Users acknowledge and agree that they bear full responsibility for their trading decisions, position management, and all financial outcomes arising from the use of any Pexly service. Digital asset trading carries inherent risk, including the risk of total loss. You should only use funds you can afford to lose and should seek independent financial advice if necessary.
                 </p>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">Regulatory Positioning</h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  Pexly operates as a technology and services provider and does not engage in regulated financial activities such as banking, fund management, or custody of client assets on their behalf. The platform provides a technology interface for user-governed interactions with integrated financial products.
+                  Pexly operates as a technology and services provider and does not engage in regulated financial activities such as banking, fund management, or custody of client assets on their behalf. The platform provides a technology interface for user-governed interactions with integrated financial products and services.
                 </p>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">Pexly Non-Custodial Wallet</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
@@ -300,7 +307,24 @@ export default function Terms() {
                   Because Pexly is a non-custodial wallet, all associated activities and potential risks of loss are entirely under your control at all times. Pexly cannot freeze, reverse, or recover funds on your behalf.
                 </p>
               </div>
-
+              {/* ─── ON-CHAIN TRANSFERS ──────────────────────────────── */}
+              <div>
+                <h2 className="text-2xl font-bold mb-4">On-Chain Transfers</h2>
+                <p className="text-muted-foreground leading-relaxed mb-4">
+                  Pexly does not charge a platform fee for sending or receiving supported Digital Assets directly on-chain through the non-custodial wallet. Users may use the wallet to transfer supported assets to and from external blockchain addresses without paying Pexly a fee for the use of the platform itself.
+                </p>
+                <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4 mb-4">
+                  <li>Pexly does not add a platform fee to ordinary on-chain transfers.</li>
+                  <li>Blockchain networks may require network, gas, miner, validator, or other protocol fees to process transactions.</li>
+                  <li>Any blockchain network fee is determined by the applicable network and is not a fee charged by Pexly for using the platform.</li>
+                  <li>Network fees may fluctuate based on network congestion, transaction demand, asset type, and other blockchain conditions.</li>
+                  <li>On-chain transactions are generally irreversible once confirmed by the relevant blockchain network.</li>
+                  <li>You are solely responsible for verifying the destination address, blockchain network, asset, and transaction amount before confirming a transfer.</li>
+                </ul>
+                <p className="text-muted-foreground leading-relaxed">
+                  Pexly cannot reverse, cancel, or recover an on-chain transaction after it has been confirmed on the applicable blockchain. Sending assets to an unsupported network, incorrect address, or incompatible destination may result in permanent loss.
+                </p>
+              </div>
               <div>
                 <h2 className="text-2xl font-bold mb-4">Wallet Security &amp; Private Keys</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
@@ -322,7 +346,6 @@ export default function Terms() {
                   Pexly holds no liability for unauthorized activities on your wallet or account that result from your failure to maintain adequate security of your credentials.
                 </p>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">Gift Card Services</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
@@ -336,7 +359,6 @@ export default function Terms() {
                   <li>Any disputes regarding gift card authenticity or redemption must be addressed directly with the gift card issuer or third-party service provider.</li>
                 </ul>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">Airtime &amp; Mobile Top-Up</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
@@ -350,7 +372,6 @@ export default function Terms() {
                   <li>Disputes regarding airtime delivery must be addressed directly with the telecommunications provider or third-party service provider.</li>
                 </ul>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">Shop &amp; Dropshipping</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
@@ -366,19 +387,19 @@ export default function Terms() {
                   <li>All purchases made via the Pexly Shop are subject to the terms and conditions of both Pexly and the respective merchant or fulfillment partner.</li>
                 </ul>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">Digital Asset Transactions</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
-                  When you initiate a Digital Asset transaction on Pexly, the transaction is processed through Pexly's platform infrastructure and any applicable integrated third-party systems. By using Pexly, you acknowledge and consent to the following:
+                  When you initiate a Digital Asset transaction on Pexly, the transaction may be processed through Pexly's platform infrastructure and any applicable integrated third-party systems. By using Pexly, you acknowledge and consent to the following:
                 </p>
                 <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4 mb-4">
-                  <li>Pexly may not be able to cancel or reverse a transaction once it has been submitted and confirmed</li>
-                  <li>Network processing times and transaction finality may vary depending on market conditions and network load</li>
-                  <li>You are responsible for reviewing all transaction details, including amounts, destination addresses, and applicable fees, before confirming any transaction</li>
+                  <li>Pexly may not be able to cancel or reverse a transaction once it has been submitted and confirmed.</li>
+                  <li>Network processing times and transaction finality may vary depending on market conditions and network load.</li>
+                  <li>You are responsible for reviewing all transaction details, including amounts, destination addresses, networks, and any applicable third-party or network costs before confirming any transaction.</li>
+                  <li>Pexly does not charge a platform fee merely for using the Pexly interface or for ordinary on-chain transfers through the non-custodial wallet.</li>
+                  <li>Where a third-party provider, trading venue, liquidity provider, blockchain network, or other external service imposes a fee, that fee may apply independently of Pexly and will be disclosed where applicable before confirmation.</li>
                 </ul>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">Third-Party Services &amp; Content</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
@@ -391,31 +412,38 @@ export default function Terms() {
                   Pexly denies any liability related to your use of third-party services. Disputes should be directed to the respective third-party provider.
                 </p>
               </div>
-
+              {/* ─── UPDATED FEES SECTION ────────────────────────────── */}
               <div>
                 <h2 className="text-2xl font-bold mb-4">Payment &amp; Fees</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
-                  Fees related to Pexly services are set by Pexly or, where applicable, by integrated third-party partners. Applicable fees will be displayed prior to using any service to which a fee applies. Fees may include, but are not limited to: trading fees, swap fees, network fees, and service charges.
+                  Using the Pexly platform and accessing the non-custodial wallet interface does not, by itself, incur a platform usage fee. Pexly does not charge users simply for creating an account, creating or using a non-custodial wallet, accessing the platform interface, or sending and receiving supported Digital Assets directly on-chain.
+                </p>
+                <p className="text-muted-foreground leading-relaxed mb-4">
+                  Certain products or transactions available through Pexly may involve fees, spreads, commissions, service charges, or other costs imposed by Pexly, an integrated third-party provider, trading venue, liquidity provider, merchant, or underlying blockchain network. Where applicable, such costs will be disclosed before you confirm the relevant transaction or service.
                 </p>
                 <p className="text-muted-foreground leading-relaxed">
-                  Pexly reserves the right to adjust its fee structure at any time. Any updates will be reflected on the platform prior to taking effect.
+                  Blockchain network fees, including gas, miner, validator, or protocol fees, are determined by the applicable blockchain network and are not fees charged by Pexly for using the platform. Pexly does not control the amount or timing of such network fees.
                 </p>
               </div>
-
+              {/* ─── UPDATED TRANSACTION FEES SECTION ───────────────── */}
               <div>
                 <h2 className="text-2xl font-bold mb-4">Transaction Fees</h2>
+                <p className="text-muted-foreground leading-relaxed mb-4">
+                  Pexly does not charge a platform fee for ordinary on-chain transfers made through its non-custodial wallet. Users can send and receive supported Digital Assets directly on-chain without paying Pexly a fee for the use of the platform.
+                </p>
+                <p className="text-muted-foreground leading-relaxed mb-4">
+                  However, the applicable blockchain network may require a network or protocol fee to process an on-chain transaction. These fees are imposed by the relevant blockchain network and are separate from any fee charged by Pexly. Network fees may change depending on network congestion, transaction demand, and other technical conditions.
+                </p>
                 <p className="text-muted-foreground leading-relaxed">
-                  Certain transactions on Pexly may incur network processing fees. These fees will be displayed clearly before you confirm any transaction. It is your responsibility to ensure your account has a sufficient balance to cover both the transaction amount and any applicable fees. Pexly is not liable for transaction failures resulting from insufficient account balance.
+                  For transactions involving third-party services, trading venues, liquidity providers, merchants, or other integrated providers, additional costs may apply. Where applicable, these costs will be presented before confirmation. You are responsible for reviewing the transaction details and any disclosed costs before proceeding.
                 </p>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">Taxes</h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  Your tax obligations concerning transactions made through Pexly are solely your responsibility. You are required to determine what, if any, taxes apply to your activity on the platform. Pexly does not collect, report, withhold, or remit taxes arising from your use of the platform.
+                  Your tax obligations concerning transactions made through Pexly are solely your responsibility. You are required to determine what, if any, taxes apply to your activity on the platform. Pexly does not collect, report, withhold, or remit taxes arising from your use of the platform unless required by applicable law.
                 </p>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">Intellectual Property License</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
@@ -431,18 +459,20 @@ export default function Terms() {
                   <li>Using Pexly for competitive analysis or to develop competing products</li>
                 </ul>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
                   <FileText className="h-6 w-6 text-primary" />
                   1. General
                 </h2>
                 <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
-                  <li>It is your responsibility to read the Agreement carefully and periodically review it as posted on the Pexly Website. Your continued use of the Services shall signify your acceptance to be bound by the then-current Agreement.</li>
-                  <li>Failure or delay by Pexly in enforcing or partially enforcing any provision of the Agreement shall not be construed as a waiver of any of our rights or remedies.</li>
+                  <li>
+                    It is your responsibility to read the Agreement carefully and periodically review it as posted on the Pexly Website. Your continued use of the Services shall signify your acceptance to be bound by the then-current Agreement.
+                  </li>
+                  <li>
+                    Failure or delay by Pexly in enforcing or partially enforcing any provision of the Agreement shall not be construed as a waiver of any of our rights or remedies.
+                  </li>
                 </ul>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
                   <Shield className="h-6 w-6 text-primary" />
@@ -460,14 +490,12 @@ export default function Terms() {
                   </p>
                 </div>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">3. Legal Processes Affecting Your Account</h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  We have the right to immediately suspend your access to your Pexly Account. You agree and understand that Digital Assets held in your Pexly Account may be subject to freezing, forfeiture, or seizure by a law enforcement agency and may be wholly and permanently unrecoverable.
+                  We have the right to immediately suspend your access to your Pexly Account. You agree and understand that Digital Assets held in your Pexly Account may be subject to freezing, forfeiture, or seizure by a law enforcement agency and may be wholly and permanently unrecoverable where permitted or required by applicable law.
                 </p>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">4. Binding Arbitration</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4 font-semibold uppercase">
@@ -480,7 +508,6 @@ export default function Terms() {
                   CLASS ACTION WAIVER: TO THE EXTENT PERMISSIBLE BY LAW, ALL CLAIMS WILL ONLY BE BROUGHT ON AN INDIVIDUAL BASIS, AND NOT AS A PLAINTIFF OR CLASS MEMBER IN ANY PURPORTED CLASS, COLLECTIVE ACTION, OR REPRESENTATIVE PROCEEDING.
                 </p>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">5. Privacy Policy &amp; Security</h2>
                 <p className="text-muted-foreground leading-relaxed">
@@ -488,12 +515,15 @@ export default function Terms() {
                 </p>
                 <p className="text-muted-foreground leading-relaxed mt-4">
                   Please view our official{" "}
-                  <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
+                  <Link href="/privacy" className="text-primary hover:underline">
+                    Privacy Policy
+                  </Link>.
                 </p>
               </div>
-
               <div>
-                <h2 className="text-2xl font-bold mb-4">6. No Warranty, Limitation of Liability &amp; Assumption of Risk</h2>
+                <h2 className="text-2xl font-bold mb-4">
+                  6. No Warranty, Limitation of Liability &amp; Assumption of Risk
+                </h2>
                 <p className="text-muted-foreground leading-relaxed mb-4 font-semibold uppercase">
                   THE SERVICES ARE PROVIDED ON AN "AS IS" AND "AS AVAILABLE" BASIS WITHOUT ANY GUARANTEES, REPRESENTATIONS OR WARRANTIES, WHETHER EXPRESS, IMPLIED OR STATUTORY. TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, PEXLY SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF TITLE, MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND/OR NON-INFRINGEMENT.
                 </p>
@@ -501,14 +531,12 @@ export default function Terms() {
                   Pexly does not provide investment, tax, or legal advice. Pexly is not registered with the U.S. Securities and Exchange Commission and does not offer securities services or investment advice. You are solely responsible for determining whether any investment, investment strategy, or related transaction is appropriate for you.
                 </p>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">7. Release of Pexly &amp; Indemnity</h2>
                 <p className="text-muted-foreground leading-relaxed">
                   If you have a dispute arising from the use of our Services, you release Pexly, its affiliates, and service providers, and each of their respective officers, directors, employees, agents, and representatives from any and all claims, demands, and damages of every kind and nature arising out of or in any way connected with such disputes.
                 </p>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">8. Trading on Pexly</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
@@ -520,7 +548,6 @@ export default function Terms() {
                   </p>
                 </div>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">9. Dispute Resolution</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
@@ -530,14 +557,21 @@ export default function Terms() {
                   You acknowledge and agree that Pexly's decision regarding a support case is conclusive and final as described in this Agreement. Pexly will have no liability in connection with decisions made in good faith pursuant to this Agreement.
                 </p>
               </div>
-
+              {/* ─── UPDATED FEES SECTION ────────────────────────────── */}
               <div>
-                <h2 className="text-2xl font-bold mb-4">10. Fees for Using Pexly Services</h2>
+                <h2 className="text-2xl font-bold mb-4">
+                  10. Fees for Using Pexly Services
+                </h2>
+                <p className="text-muted-foreground leading-relaxed mb-4">
+                  Creating an account and using the Pexly platform does not, by itself, require payment of a platform usage fee. Creating or using the Pexly non-custodial wallet, accessing the platform interface, and sending or receiving supported Digital Assets directly on-chain do not incur a Pexly platform fee.
+                </p>
+                <p className="text-muted-foreground leading-relaxed mb-4">
+                  Certain products and transactions may involve fees or other costs. These may include trading fees, swap-related charges, service charges, merchant charges, third-party provider fees, or other costs applicable to a specific service. Where a fee applies, it will be disclosed before you confirm the applicable transaction or service.
+                </p>
                 <p className="text-muted-foreground leading-relaxed">
-                  Creating a Wallet is free. Pexly charges fees for certain services; applicable fees will be displayed prior to you using any service to which a fee applies. Our fees are subject to change and Pexly reserves the right to adjust its pricing and fees at any time.
+                  Blockchain network fees are separate from Pexly platform fees. Any gas, miner, validator, protocol, or other network fee required to process an on-chain transaction is determined by the applicable blockchain network and is not charged by Pexly for use of the platform. Pexly does not control the amount of such network fees.
                 </p>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">11. Prohibited Use</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
@@ -552,14 +586,12 @@ export default function Terms() {
                   <li>Engage in transactions involving items that infringe or violate any copyright, trademark, or other proprietary right</li>
                 </ul>
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold mb-4">12. Jurisdiction</h2>
                 <p className="text-muted-foreground leading-relaxed">
                   This Agreement and your use of the Website and Services shall be governed by and construed in accordance with the laws of the Republic of Panama, without regard to principles of conflict of laws.
                 </p>
               </div>
-
               <div className="bg-muted/50 p-6 rounded-lg">
                 <div className="flex gap-3">
                   <AlertCircle className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
@@ -567,19 +599,20 @@ export default function Terms() {
                     <h3 className="font-semibold mb-2">Questions?</h3>
                     <p className="text-sm text-muted-foreground">
                       If you have any questions about this User Agreement, please contact our support team at{" "}
-                      <a href="mailto:support@pexly.app" className="text-primary hover:underline">
+                      <a
+                        href="mailto:support@pexly.app"
+                        className="text-primary hover:underline"
+                      >
                         support@pexly.app
                       </a>
                     </p>
                   </div>
                 </div>
               </div>
-
             </div>
           </div>
         </div>
       </section>
-
       <AppFooter />
     </div>
   );
