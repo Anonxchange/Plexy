@@ -61,18 +61,6 @@ const SwapIllustration = () => (
   </svg>
 );
 
-const PredictIllustration = () => (
-  <svg width="96" height="80" viewBox="0 0 96 80" fill="none" aria-hidden>
-    <path d="M12 68 A36 36 0 0 1 84 68" stroke="white" strokeWidth="6" strokeLinecap="round" strokeOpacity="0.2" fill="none" />
-    <path d="M12 68 A36 36 0 0 1 48 32" stroke="white" strokeWidth="6" strokeLinecap="round" strokeOpacity="0.9" fill="none" />
-    <path d="M12 68 A36 36 0 0 1 62 36" stroke="white" strokeWidth="6" strokeLinecap="round" strokeOpacity="0.5" fill="none" />
-    <line x1="48" y1="68" x2="30" y2="42" stroke="white" strokeWidth="2.5" strokeLinecap="round" opacity="0.9" />
-    <circle cx="48" cy="68" r="5" fill="white" opacity="0.9" />
-    <rect x="34" y="58" width="24" height="14" rx="4" fill="white" fillOpacity="0.15" />
-    <text x="46" y="69" textAnchor="middle" fontSize="7" fontWeight="700" fill="white" fontFamily="system-ui">62%</text>
-  </svg>
-);
-
 const AssetsIllustration = () => (
   <svg width="90" height="76" viewBox="0 0 90 76" fill="none" aria-hidden>
     <ellipse cx="45" cy="62" rx="30" ry="8" fill="white" fillOpacity="0.1" />
@@ -111,32 +99,6 @@ const ReceiveIllustration = () => (
     <rect x="26" y="36" width="4" height="4" rx="0.5" fill="white" fillOpacity="0.5" />
     <rect x="32" y="36" width="4" height="4" rx="0.5" fill="white" fillOpacity="0.3" />
     <rect x="38" y="36" width="4" height="4" rx="0.5" fill="white" fillOpacity="0.5" />
-  </svg>
-);
-
-const CardIllustration = () => (
-  <svg width="100" height="72" viewBox="0 0 100 72" fill="none" aria-hidden>
-    <rect x="6" y="10" width="88" height="54" rx="10" fill="white" fillOpacity="0.12" />
-    <rect x="6" y="10" width="88" height="16" rx="10" fill="white" fillOpacity="0.1" />
-    {/* chip */}
-    <rect x="16" y="28" width="16" height="12" rx="3" fill="white" fillOpacity="0.4" />
-    <line x1="24" y1="28" x2="24" y2="40" stroke="white" strokeWidth="0.8" strokeOpacity="0.5" />
-    <line x1="16" y1="34" x2="32" y2="34" stroke="white" strokeWidth="0.8" strokeOpacity="0.5" />
-    {/* contactless */}
-    <path d="M48 30 Q52 34 48 38" stroke="white" strokeWidth="1.5" strokeLinecap="round" fill="none" opacity="0.6" />
-    <path d="M52 27 Q59 34 52 41" stroke="white" strokeWidth="1.5" strokeLinecap="round" fill="none" opacity="0.4" />
-    {/* card number dots */}
-    <circle cx="16" cy="52" r="2" fill="white" fillOpacity="0.7" />
-    <circle cx="22" cy="52" r="2" fill="white" fillOpacity="0.7" />
-    <circle cx="28" cy="52" r="2" fill="white" fillOpacity="0.7" />
-    <circle cx="34" cy="52" r="2" fill="white" fillOpacity="0.7" />
-    <circle cx="44" cy="52" r="2" fill="white" fillOpacity="0.5" />
-    <circle cx="50" cy="52" r="2" fill="white" fillOpacity="0.5" />
-    <circle cx="56" cy="52" r="2" fill="white" fillOpacity="0.5" />
-    <circle cx="62" cy="52" r="2" fill="white" fillOpacity="0.5" />
-    {/* Pexly logo circle */}
-    <circle cx="84" cy="50" r="8" fill="white" fillOpacity="0.3" />
-    <circle cx="78" cy="50" r="8" fill="white" fillOpacity="0.2" />
   </svg>
 );
 
@@ -185,17 +147,6 @@ const UtilityIllustration = () => (
     <text x="73" y="51" textAnchor="middle" fontSize="10" fill="white" fontFamily="system-ui" fillOpacity="0.7">🎫</text>
     <rect x="14" y="64" width="60" height="10" rx="3" fill="white" fillOpacity="0.1" />
     <rect x="14" y="64" width="38" height="10" rx="3" fill="white" fillOpacity="0.2" />
-  </svg>
-);
-
-const StakeIllustration = () => (
-  <svg width="96" height="78" viewBox="0 0 96 78" fill="none" aria-hidden>
-    <rect x="6" y="34" width="84" height="36" rx="6" fill="white" fillOpacity="0.08" />
-    <path d="M8 60 Q20 52 32 46 Q44 40 56 32 Q68 24 88 14" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.9" />
-    <path d="M8 60 Q20 52 32 46 Q44 40 56 32 Q68 24 88 14 L88 70 L8 70 Z" fill="white" fillOpacity="0.06" />
-    <circle cx="88" cy="14" r="4" fill="white" opacity="0.9" />
-    <rect x="28" y="8" width="40" height="20" rx="6" fill="white" fillOpacity="0.15" />
-    <text x="48" y="22" textAnchor="middle" fontSize="11" fontWeight="800" fill="white" fontFamily="system-ui">12% APY</text>
   </svg>
 );
 
@@ -401,13 +352,6 @@ export function TradeMegaMenu({ onNavigate, onClose }: { onNavigate: (h: string)
       bg: "bg-gradient-to-br from-[#1a3300] to-[#3a6600]",
       illustration: <SwapIllustration />,
     },
-    {
-      label: t("trade.prediction"),
-      sub: "Trade real-world outcomes",
-      href: "/prediction",
-      bg: "bg-gradient-to-br from-[#134e4a] to-[#0d9488]",
-      illustration: <PredictIllustration />,
-    },
   ];
 
   return <MegaPanel cards={cards} cols={2} onNavigate={onNavigate} onClose={onClose} />;
@@ -429,13 +373,6 @@ export function WalletMegaMenu({ onNavigate, onClose }: { onNavigate: (h: string
       href: "/wallet/receive",
       bg: "bg-gradient-to-br from-[#14532d] to-[#16a34a]",
       illustration: <ReceiveIllustration />,
-    },
-    {
-      label: t("wallet.visa_card"),
-      sub: t("wallet.visa_card_desc"),
-      href: "/wallet/visa-card",
-      bg: "bg-gradient-to-br from-[#1e3a8a] to-[#2563eb]",
-      illustration: <CardIllustration />,
     },
     {
       label: t("wallet.lightning"),
@@ -490,15 +427,6 @@ export function ShopMegaMenu({ onNavigate, onClose }: { onNavigate: (h: string) 
 export function EarnMegaMenu({ onNavigate, onClose }: { onNavigate: (h: string) => void; onClose: () => void }) {
   const { t } = useTranslation();
   const cards: FeatureCard[] = [
-    {
-      label: t("earn.stake"),
-      sub: "Earn yield on your crypto",
-      href: "/wallet/stake",
-      bg: "bg-gradient-to-br from-[#1a3300] to-[#365f00]",
-      illustration: <StakeIllustration />,
-      badge: "HOT",
-      badgeClass: "bg-red-500 text-white",
-    },
     {
       label: t("earn.referral_program"),
       sub: "Invite friends, earn together",
