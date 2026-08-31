@@ -192,31 +192,20 @@ function RelatedGiftCards({
     <section
       aria-labelledby="related-gift-cards-heading"
       data-testid="section-related-gift-cards"
-      className="overflow-hidden rounded-2xl border border-border/60 bg-card p-5 sm:p-6"
+      className="space-y-5"
     >
-      <div className="mb-5 flex items-end justify-between gap-4">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
-            Keep exploring
-          </p>
-          <h3 id="related-gift-cards-heading" className="mt-1 text-lg font-semibold">
-            You may also like
-          </h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            More gift cards selected for this region and category.
-          </p>
-        </div>
-        <div className="hidden h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary sm:flex">
-          <Gift className="h-4 w-4" aria-hidden="true" />
-        </div>
+      <div className="text-center">
+        <h3 id="related-gift-cards-heading" className="text-2xl font-bold">
+          Similar Gift Cards you'll love
+        </h3>
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {[...Array(6)].map((_, index) => (
-            <div key={index} className="rounded-2xl border border-border/50 p-2.5">
-              <div className="aspect-[1.28/1] animate-pulse rounded-xl bg-secondary" />
-              <div className="space-y-2 px-1 pb-1 pt-3">
+        <div className="grid grid-cols-2 gap-4">
+          {[...Array(4)].map((_, index) => (
+            <div key={index} className="space-y-3">
+              <div className="aspect-[1.28/1] animate-pulse rounded-2xl bg-secondary" />
+              <div className="space-y-2">
                 <div className="h-4 w-4/5 animate-pulse rounded bg-secondary" />
                 <div className="h-3 w-1/2 animate-pulse rounded bg-secondary" />
               </div>
@@ -224,7 +213,7 @@ function RelatedGiftCards({
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-4">
           {products.map((product) => (
             <RelatedProductCard
               key={product.productId}
@@ -242,7 +231,24 @@ export function GiftCardDetail() {
   useHead({
     title: "Gift Card | Pexly",
     meta: [{ name: "description", content: "View and purchase this digital gift card with cryptocurrency. Instant delivery after payment." }],
+    // TrustBox script: loads the Trustpilot widget runtime once for the page.
+    script: [
+      {
+        src: "https://widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js",
+        async: true,
+      },
+    ],
   });
+
+  // Trustpilot config comes from env vars — never hardcode a business's
+  // review identifiers in source. The widget section simply doesn't render
+  // if these aren't configured.
+  const trustpilotBusinessUnitId = import.meta.env.VITE_TRUSTPILOT_BUSINESS_UNIT_ID as string | undefined;
+  const trustpilotProfileUrl = import.meta.env.VITE_TRUSTPILOT_PROFILE_URL as string | undefined;
+  // These two have Trustpilot-documented public defaults (not business-specific),
+  // but can still be overridden per deployment.
+  const trustpilotTemplateId = (import.meta.env.VITE_TRUSTPILOT_TEMPLATE_ID as string | undefined) || "5419b6ffb0d04a076446a9af";
+  const trustpilotLocale = (import.meta.env.VITE_TRUSTPILOT_LOCALE as string | undefined) || "en-US";
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [, params] = useRoute("/gift-cards/:id");
@@ -711,6 +717,28 @@ export function GiftCardDetail() {
           {/* On mobile: renders 3rd (after purchase card).           */}
           {/* On desktop: col-1 row-2, below trust badges.            */}
           <div className="space-y-6 lg:col-start-1 lg:row-start-2">
+
+            {/* Customer reviews (Trustpilot TrustBox) — rendered only when
+                the business unit id + profile url are configured via env */}
+            {trustpilotBusinessUnitId && trustpilotProfileUrl && (
+              <div className="rounded-xl border border-border/60 bg-card p-5 space-y-3">
+                <h3 className="font-semibold text-sm">Customer reviews</h3>
+                {/* TrustBox widget */}
+                <div
+                  className="trustpilot-widget"
+                  data-locale={trustpilotLocale}
+                  data-template-id={trustpilotTemplateId}
+                  data-businessunit-id={trustpilotBusinessUnitId}
+                  data-style-height="150px"
+                  data-style-width="100%"
+                >
+                  <a href={trustpilotProfileUrl} target="_blank" rel="noopener noreferrer">
+                    Trustpilot
+                  </a>
+                </div>
+                {/* End TrustBox widget */}
+              </div>
+            )}
 
             {/* How to redeem */}
             {fullInstructions && (
