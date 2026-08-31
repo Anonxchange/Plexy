@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ShoppingCart, Package } from '@/lib/icons';
 import { sanitizeImageUrl } from "@/lib/sanitize";
+import { CartLoadingAnimation } from "@/components/shop/CartLoadingAnimation";
 
 interface Listing {
   id: string;
@@ -51,12 +52,14 @@ export const ShopItemCard = ({ product, onViewDetails, onAddToCart }: ShopItemCa
       <div className="bg-muted lg:bg-transparent overflow-hidden relative w-full lg:aspect-[3/4]">
         {hasImage ? (
           <>
-            {/* Reserved slot + shimmer so the card is never a bare block of text */}
+            {/* Reserved slot + cart animation so the card is never a bare block of text */}
             {!loaded && (
               <div
-                className="w-full aspect-[3/4] lg:absolute lg:inset-0 lg:h-full animate-pulse bg-muted"
+                className="w-full aspect-[3/4] lg:absolute lg:inset-0 lg:h-full flex items-center justify-center bg-muted"
                 aria-hidden="true"
-              />
+              >
+                <CartLoadingAnimation size={48} />
+              </div>
             )}
             <img
               src={sanitizeImageUrl(product.images[0])}
