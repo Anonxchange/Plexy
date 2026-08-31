@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { X, ChevronRight, LayoutGrid, Search, Package } from '@/lib/icons';
 import { sanitizeImageUrl } from "@/lib/sanitize";
+import { CartLoadingAnimation } from "@/components/shop/CartLoadingAnimation";
 
 const CAT_SEPARATOR = " > ";
 
@@ -313,20 +314,35 @@ interface CategoryTileProps {
 }
 
 function CategoryTile({ node, image, onClick }: CategoryTileProps) {
+  const [loaded, setLoaded] = useState(false);
+
   return (
     <button
       onClick={onClick}
       className="flex flex-col items-center gap-1.5 text-center group"
     >
-      <div className="w-full aspect-square rounded-xl overflow-hidden bg-muted/60">
+      <div className="w-full aspect-square rounded-xl overflow-hidden bg-muted/60 relative">
         {image ? (
-          <img
-            src={image}
-            alt={node.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-            onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
-          />
+          <>
+            {!loaded && (
+              <div
+                className="absolute inset-0 flex items-center justify-center"
+                aria-hidden="true"
+              >
+                <CartLoadingAnimation size={32} />
+              </div>
+            )}
+            <img
+              src={image}
+              alt={node.name}
+              className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${
+                loaded ? 'opacity-100' : 'absolute inset-0 opacity-0 pointer-events-none'
+              }`}
+              loading="lazy"
+              onLoad={() => setLoaded(true)}
+              onError={() => setLoaded(true)}
+            />
+          </>
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <LayoutGrid className="h-7 w-7 text-muted-foreground/30" />
@@ -347,19 +363,36 @@ interface ProductTileProps {
 }
 
 function ProductTile({ product, onClick }: ProductTileProps) {
+  const [loaded, setLoaded] = useState(false);
+  const hasImage = !!product.images[0];
+
   return (
     <button
       onClick={onClick}
       className="flex flex-col items-center gap-1.5 text-center group"
     >
-      <div className="w-full aspect-square rounded-xl overflow-hidden bg-muted/60">
-        {product.images[0] ? (
-          <img
-            src={sanitizeImageUrl(product.images[0])}
-            alt={product.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-          />
+      <div className="w-full aspect-square rounded-xl overflow-hidden bg-muted/60 relative">
+        {hasImage ? (
+          <>
+            {!loaded && (
+              <div
+                className="absolute inset-0 flex items-center justify-center"
+                aria-hidden="true"
+              >
+                <CartLoadingAnimation size={32} />
+              </div>
+            )}
+            <img
+              src={sanitizeImageUrl(product.images[0])}
+              alt={product.title}
+              className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${
+                loaded ? 'opacity-100' : 'absolute inset-0 opacity-0 pointer-events-none'
+              }`}
+              loading="lazy"
+              onLoad={() => setLoaded(true)}
+              onError={() => setLoaded(true)}
+            />
+          </>
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <Package className="h-7 w-7 text-muted-foreground/30" />
