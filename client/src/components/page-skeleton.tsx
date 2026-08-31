@@ -1,12 +1,11 @@
-import Lottie from "lottie-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import cartLoadingAnimation from "@/assets/animations/cart-loading-small.json";
+import { CartLoadingAnimation } from "@/components/shop/CartLoadingAnimation";
 
 /**
  * Full shop page loading state (initial fetch, before categories/tabs/
  * products are available). Keeps lightweight gray bars for the page
  * chrome (header/filters) so layout doesn't jump, and uses the cart
- * animation for the product area itself.
+ * animation for the product area itself. No animation library required.
  */
 export function ShopPageSkeleton() {
   return (
@@ -28,12 +27,7 @@ export function ShopPageSkeleton() {
           aria-label="Loading products"
           className="w-full flex flex-col items-center justify-center py-32 gap-3"
         >
-          <Lottie
-            animationData={cartLoadingAnimation}
-            loop
-            autoplay
-            style={{ width: 120, height: 120 }}
-          />
+          <CartLoadingAnimation size={120} />
           <p className="text-sm text-muted-foreground">Loading products…</p>
         </div>
       </main>
