@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import {
   CART_LOADING_FRAMES,
   CART_LOADING_FRAME_DURATION_MS,
-} from "@/assets/animations/cart-loading-frames";
+} from "@/lib/cart-loading-frames";
 
 /**
  * Plays the cart loading animation by cycling through pre-rendered WebP
