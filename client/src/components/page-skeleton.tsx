@@ -1,11 +1,11 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { CartLoadingAnimation } from "@/components/shop/CartLoadingAnimation";
+import { ShopSkeleton } from "@/components/shop/ShopSkeleton";
 
 /**
  * Full shop page loading state (initial fetch, before categories/tabs/
- * products are available). Keeps lightweight gray bars for the page
- * chrome (header/filters) so layout doesn't jump, and uses the cart
- * animation for the product area itself. No animation library required.
+ * products are available). Plain gray placeholders for the page chrome
+ * and product grid — the cart loading animation is reserved for the
+ * per-image loading state inside each ShopItemCard.
  */
 export function ShopPageSkeleton() {
   return (
@@ -21,15 +21,7 @@ export function ShopPageSkeleton() {
           </div>
         </div>
 
-        {/* product area — animated */}
-        <div
-          role="status"
-          aria-label="Loading products"
-          className="w-full flex flex-col items-center justify-center py-32 gap-3"
-        >
-          <CartLoadingAnimation size={120} />
-          <p className="text-sm text-muted-foreground">Loading products…</p>
-        </div>
+        <ShopSkeleton />
       </main>
     </div>
   );
