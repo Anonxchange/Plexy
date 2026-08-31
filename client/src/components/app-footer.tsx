@@ -104,6 +104,7 @@ export function AppFooter() {
               <SiApple className="h-[15px] w-[15px]" aria-hidden="true" />
               <span>iOS</span>
             </a>
+
             <a
               href="#"
               aria-label={t('footer.download_android')}
@@ -122,6 +123,7 @@ export function AppFooter() {
               <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-white/35 mb-6">
                 {col.heading}
               </h3>
+
               <ul className="space-y-4">
                 {col.links.map((link) => (
                   <li key={link.label}>
@@ -166,6 +168,11 @@ export function AppFooter() {
           ))}
         </div>
 
+        {/* Business identification */}
+        <p className="text-xs text-white/35 leading-relaxed text-center max-w-3xl mx-auto mb-3">
+          PEXLY is a brand operated by Retail Rover, a CAC-registered business in Nigeria.
+        </p>
+
         {/* Legal disclaimer */}
         <p className="text-xs text-white/20 leading-relaxed text-center max-w-3xl mx-auto mb-8">
           {t('footer.disclaimer')}
@@ -173,8 +180,12 @@ export function AppFooter() {
 
         {/* Bottom bar — very last line */}
         <div className="h-px w-full bg-white/[0.04] mb-6" />
+
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white/25">
-          <span>{t('footer.copyright', { year: new Date().getFullYear() })}</span>
+          <span>
+            © {new Date().getFullYear()} PEXLY. Operated by Retail Rover.
+          </span>
+
           <div className="flex items-center gap-1.5">
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#B4F22E] shadow-[0_0_5px_rgba(180,242,46,0.9)]" />
             <span>{t('footer.all_operational')}</span>
