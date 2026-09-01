@@ -132,11 +132,15 @@ function RelatedProductCard({
       data-testid={`button-related-gift-card-${product.productId}`}
       aria-label={`View ${product.productName} gift card`}
       onClick={() => onSelect(String(product.productId))}
-      className="group w-full text-left rounded-2xl border border-border/60 bg-card p-2.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary/50"
+      className="group w-full self-start text-left rounded-2xl border border-border/60 bg-card p-2.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary/50"
     >
-      <div className="relative aspect-[1.28/1] overflow-hidden rounded-xl border border-border/50 bg-secondary/55">
+      {/* Fixed height (not aspect-ratio) so this never resizes when the grid
+          row stretches to match a taller sibling card. The badge is
+          absolutely positioned + pointer-events-none so it's purely a visual
+          overlay and can never push the image or logo down. */}
+      <div className="relative h-32 sm:h-36 w-full shrink-0 overflow-hidden rounded-xl border border-border/50 bg-secondary/55">
         {product.discountPercentage > 0 && (
-          <Badge className="absolute left-2 top-2 z-10 border-none bg-[#B4F22E] px-2 py-0.5 text-[10px] font-bold text-black shadow-sm">
+          <Badge className="pointer-events-none absolute left-2 top-2 z-10 border-none bg-[#B4F22E] px-2 py-0.5 text-[10px] font-bold text-black shadow-sm">
             Save {product.discountPercentage}%
           </Badge>
         )}
@@ -201,10 +205,10 @@ function RelatedGiftCards({
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 items-start">
           {[...Array(4)].map((_, index) => (
             <div key={index} className="space-y-3">
-              <div className="aspect-[1.28/1] animate-pulse rounded-2xl bg-secondary" />
+              <div className="h-32 sm:h-36 w-full animate-pulse rounded-2xl bg-secondary" />
               <div className="space-y-2">
                 <div className="h-4 w-4/5 animate-pulse rounded bg-secondary" />
                 <div className="h-3 w-1/2 animate-pulse rounded bg-secondary" />
@@ -213,7 +217,7 @@ function RelatedGiftCards({
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 items-start">
           {products.map((product) => (
             <RelatedProductCard
               key={product.productId}
