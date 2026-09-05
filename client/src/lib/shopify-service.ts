@@ -65,7 +65,11 @@ export interface ImportedReview {
   createdAt: string;
   countryCode?: string;
   images: string[];
+  videos: string[];
+  // `verifyBuyer` (source field) vs `verified` (source field) are two distinct
+  // flags in the raw Air Reviews data — see parseImportedReviews for details.
   verifiedBuyer: boolean;
+  verified: boolean;
   source: "imported";
 }
 
@@ -94,9 +98,15 @@ function parseImportedReviews(
         comment: typeof r.content === "string" ? r.content : "",
         displayName: r.firstName || "Verified shopper",
         createdAt: r.createdAt,
-        countryCode: r.countryCode,
+        countryCode: typeof r.countryCode === "string" ? r.countryCode.toUpperCase() : undefined,
         images: Array.isArray(r.images) ? r.images.filter((u: unknown) => typeof u === "string") : [],
+        videos: Array.isArray(r.videos) ? r.videos.filter((u: unknown) => typeof u === "string") : [],
+        // `verifyBuyer`: whether Air Reviews matched this reviewer to an actual
+        // store purchase. `verified`: the review's own approval/verification
+        // flag from the source (CJDropshipping) side. They're independent —
+        // keep both rather than collapsing into one boolean.
         verifiedBuyer: Boolean(r.verifyBuyer),
+        verified: Boolean(r.verified),
         source: "imported" as const,
       }));
   } catch (e) {
