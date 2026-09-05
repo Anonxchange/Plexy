@@ -18,7 +18,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { getSupabase } from "@/lib/supabase";
 import { toast } from "sonner";
-import type { ImportedReview } from "@/lib/shopify-storefront";
+import type { ImportedReview } from "@/lib/shopify-service";
 
 // Unified shape both DB reviews and imported (Air Reviews app metafield) reviews get mapped into,
 // so the list, average, and breakdown all treat them the same way.
