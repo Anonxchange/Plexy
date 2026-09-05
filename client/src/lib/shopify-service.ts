@@ -55,6 +55,56 @@ export interface ShopifyProduct {
   };
 }
 
+// Shape produced by parsing the "air_reviews_product.data" metafield (Air Reviews app / CJdropshipping import)
+// so it can sit alongside the Supabase `product_reviews` rows in the same UI.
+export interface ImportedReview {
+  id: string;
+  rating: number;
+  comment: string;
+  displayName: string;
+  createdAt: string;
+  countryCode?: string;
+  images: string[];
+  verifiedBuyer: boolean;
+  source: "imported";
+}
+
+const REVIEWS_METAFIELD_NAMESPACE = "air_reviews_product";
+const REVIEWS_METAFIELD_KEY = "data";
+
+function parseImportedReviews(
+  metafields?: Array<{ namespace: string; key: string; value: string; type: string } | null> | null
+): ImportedReview[] {
+  if (!metafields) return [];
+
+  const metafield = metafields.find(
+    (m) => m && m.namespace === REVIEWS_METAFIELD_NAMESPACE && m.key === REVIEWS_METAFIELD_KEY
+  );
+  if (!metafield?.value) return [];
+
+  try {
+    const parsed = JSON.parse(metafield.value);
+    const rawReviews: any[] = Array.isArray(parsed?.reviews) ? parsed.reviews : [];
+
+    return rawReviews
+      .filter((r) => r?.status === "approved")
+      .map((r) => ({
+        id: String(r.id),
+        rating: Number(r.rate) || 0,
+        comment: typeof r.content === "string" ? r.content : "",
+        displayName: r.firstName || "Verified shopper",
+        createdAt: r.createdAt,
+        countryCode: r.countryCode,
+        images: Array.isArray(r.images) ? r.images.filter((u: unknown) => typeof u === "string") : [],
+        verifiedBuyer: Boolean(r.verifyBuyer),
+        source: "imported" as const,
+      }));
+  } catch (e) {
+    devLog.error("Failed to parse air_reviews_product.data metafield:", e);
+    return [];
+  }
+}
+
 // Query name constants matching server-side allowlist
 export const PRODUCTS_QUERY = 'getProducts';
 export const PRODUCT_BY_HANDLE_QUERY = 'getProductByHandle';
@@ -168,7 +218,15 @@ export const shopifyService = {
 
   async getProductByHandle(handle: string) {
     const data = await storefrontApiRequest(PRODUCT_BY_HANDLE_QUERY, { handle });
-    return data?.data?.productByHandle;
+    const product = data?.data?.productByHandle;
+    if (!product) return product;
+
+    // Attach reviews imported via the Air Reviews app metafield so pages can
+    // pass them straight into <ReviewSection importedReviews={...} />.
+    return {
+      ...product,
+      importedReviews: parseImportedReviews(product.metafields),
+    };
   },
 
   async getCart(cartId: string) {
