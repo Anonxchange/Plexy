@@ -48,8 +48,17 @@ import { ShopItemCard } from "@/components/shop/ShopItemCard";
 import type { ShippingInfo } from "@/components/shop/shipping-types";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
-/** Strip <img> tags and CJ "Product Image:" label from description HTML.
- *  Images are shown in the full-width showcase below, not inline. */
+/** Strip <img> tags, CJ boilerplate, and any fixed-width/nowrap styling that
+ *  breaks mobile layout. CJ/Alibaba scraped description HTML frequently
+ *  contains things like <table width="800"> or
+ *  style="width:800px;white-space:nowrap". A single such element, anywhere
+ *  inside the description, is wider than the phone screen and has nothing
+ *  constraining it — so the mobile browser widens its layout viewport to
+ *  fit it and zooms the ENTIRE page out to compensate (not just the
+ *  description block). Stripping fixed widths/nowrap here, at the source,
+ *  prevents that regardless of what markup a given listing happens to ship.
+ *  This is plain string/regex sanitization — no eval, no dynamic <style> or
+ *  <script> injection — so it's safe under a strict CSP. */
 function stripImgTags(html: string): string {
   return html
     // Remove all img tags
@@ -59,7 +68,13 @@ function stripImgTags(html: string): string {
     // Collapse 3+ consecutive <br> tags into two
     .replace(/(<br\s*\/?>\s*){3,}/gi, '<br /><br />')
     // Collapse 3+ consecutive empty <p> tags into one
-    .replace(/(<p[^>]*>\s*<\/p>\s*){3,}/gi, '<p></p>');
+    .replace(/(<p[^>]*>\s*<\/p>\s*){3,}/gi, '<p></p>')
+    // Strip HTML width/height attributes (e.g. <table width="800">, <td width="200">)
+    .replace(/\s(?:width|height)=["']?\d+(?:px)?["']?/gi, '')
+    // Strip fixed pixel width/min-width/height declarations from inline styles
+    .replace(/\b(?:min-)?(?:width|height)\s*:\s*\d+(?:px|pt)\s*;?/gi, '')
+    // Strip white-space:nowrap, which keeps long text/table rows from wrapping
+    .replace(/white-space\s*:\s*nowrap\s*;?/gi, '');
 }
 
 function shuffleArray<T>(items: T[]): T[] {
@@ -701,7 +716,7 @@ export function ProductDetail() {
               <div className="hidden md:block space-y-4 pt-2">
                 <div className="space-y-2">
                   <p className="text-sm font-semibold">Description</p>
-                  <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground">
+                  <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground overflow-x-auto [&_*]:!max-w-full [&_*]:!box-border [&_table]:!w-full [&_table]:!table-fixed [&_td]:!whitespace-normal [&_td]:!break-words [&_p]:!whitespace-normal [&_div]:!whitespace-normal">
                     {product.description
                       ? parse(stripImgTags(product.description))
                       : "No description provided for this item."}
@@ -942,7 +957,7 @@ export function ProductDetail() {
               {/* Description + store — mobile only (desktop version is in col 1 under images) */}
               <div className="space-y-2 md:hidden">
                 <p className="text-sm font-semibold">Description</p>
-                <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground">
+                <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground overflow-x-auto [&_*]:!max-w-full [&_*]:!box-border [&_table]:!w-full [&_table]:!table-fixed [&_td]:!whitespace-normal [&_td]:!break-words [&_p]:!whitespace-normal [&_div]:!whitespace-normal">
                   {product.description
                     ? parse(stripImgTags(product.description))
                     : "No description provided for this item."}
