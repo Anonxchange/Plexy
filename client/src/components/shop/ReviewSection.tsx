@@ -29,7 +29,24 @@ interface UnifiedReview {
   createdAt: string;
   displayName: string | null;
   images: string[];
+  videos: string[];
+  countryCode?: string;
+  // Store (Supabase) reviews are always from real signed-in buyers on this
+  // site, so they're always "verified" in our UI sense. Imported reviews
+  // carry their own verification flag from the source data.
+  verified: boolean;
   source: "store" | "imported";
+}
+
+// Converts a 2-letter ISO country code (e.g. "GR", "NL") into a flag emoji
+// using the Unicode Regional Indicator trick — no image, no external
+// lookup, so it can't be blocked by any CSP img-src rule.
+function countryCodeToFlag(code?: string): string | null {
+  if (!code || code.length !== 2) return null;
+  const upper = code.toUpperCase();
+  if (!/^[A-Z]{2}$/.test(upper)) return null;
+  const codePoints = [...upper].map((c) => 0x1f1e6 + (c.charCodeAt(0) - 65));
+  return String.fromCodePoint(...codePoints);
 }
 
 interface ReviewSectionProps {
@@ -39,8 +56,10 @@ interface ReviewSectionProps {
 
 /** Inline SVG "verified" badge — blue circle, white check, Twitter/X style.
  *  Deliberately inline (no external image request) so it renders even under
- *  a strict CSP that blocks third-party image hosts. Used for reviews that
- *  come from our own Supabase-verified purchasers ("store" source). */
+ *  a strict CSP that blocks third-party image hosts. Shown whenever
+ *  review.verified is true — always true for our own store (Supabase)
+ *  reviews, and driven by the source's own `verified` flag for imported
+ *  (Air Reviews) reviews. */
 function VerifiedBadge({ className = "h-3.5 w-3.5" }: { className?: string }) {
   return (
     <svg
@@ -131,12 +150,24 @@ function timeAgo(dateStr: string) {
 // column + RPC) so counts survive reload and a user can't vote twice.
 type HelpfulState = Record<string, { clicked: boolean; count: number }>;
 
-// Lightbox state: which review's image gallery is open, and which index.
+// Lightbox state: which review's media gallery is open, and which index.
 interface LightboxState {
   key: string;
-  images: string[];
+  media: ReviewMedia[];
   index: number;
   reviewerName: string;
+}
+
+type ReviewMedia = { type: "image" | "video"; url: string };
+
+// Combine a review's images + videos into one ordered gallery (images first,
+// then videos) so the UI has one code path regardless of which the source
+// data actually populated.
+function reviewMedia(r: UnifiedReview): ReviewMedia[] {
+  return [
+    ...r.images.map((url) => ({ type: "image" as const, url })),
+    ...r.videos.map((url) => ({ type: "video" as const, url })),
+  ];
 }
 
 export function ReviewSection({ productId, importedReviews = [] }: ReviewSectionProps) {
@@ -192,6 +223,9 @@ export function ReviewSection({ productId, importedReviews = [] }: ReviewSection
         createdAt: r.created_at,
         displayName: r.display_name,
         images: [],
+        videos: [],
+        countryCode: undefined,
+        verified: true,
         source: "store",
       }));
       setDbReviews(mapped);
@@ -263,6 +297,12 @@ export function ReviewSection({ productId, importedReviews = [] }: ReviewSection
     createdAt: r.createdAt,
     displayName: r.displayName,
     images: r.images,
+    videos: r.videos || [],
+    countryCode: r.countryCode,
+    // `verified` here is the source's own review-verification flag (distinct
+    // from `verifyBuyer`/verifiedBuyer, which tracks purchase-matching and
+    // is unreliable in the sample data — see shopify-storefront.ts).
+    verified: Boolean((r as any).verified),
     source: "imported",
   }));
 
@@ -341,7 +381,7 @@ export function ReviewSection({ productId, importedReviews = [] }: ReviewSection
   function openLightbox(r: UnifiedReview, index: number) {
     setLightbox({
       key: reviewKey(r),
-      images: r.images,
+      media: reviewMedia(r),
       index,
       reviewerName: r.displayName || "Reviewer",
     });
@@ -350,7 +390,7 @@ export function ReviewSection({ productId, importedReviews = [] }: ReviewSection
   function stepLightbox(delta: number) {
     setLightbox((prev) => {
       if (!prev) return prev;
-      const len = prev.images.length;
+      const len = prev.media.length;
       const next = (prev.index + delta + len) % len;
       return { ...prev, index: next };
     });
@@ -473,7 +513,12 @@ export function ReviewSection({ productId, importedReviews = [] }: ReviewSection
                       <div>
                         <div className="flex items-center gap-1.5">
                           <p className="text-sm font-semibold">{review.displayName || "Anonymous"}</p>
-                          {review.source === "store" && <VerifiedBadge />}
+                          {countryCodeToFlag(review.countryCode) && (
+                            <span aria-label={review.countryCode} title={review.countryCode} className="text-sm leading-none">
+                              {countryCodeToFlag(review.countryCode)}
+                            </span>
+                          )}
+                          {review.verified && <VerifiedBadge />}
                         </div>
                         <p className="text-xs text-muted-foreground">{timeAgo(review.createdAt)}</p>
                       </div>
@@ -485,31 +530,50 @@ export function ReviewSection({ productId, importedReviews = [] }: ReviewSection
                     <p className="text-sm text-muted-foreground leading-relaxed">{review.comment}</p>
                   )}
 
-                  {review.images.length > 0 && (
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {review.images.slice(0, 4).map((url, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => openLightbox(review, i)}
-                          className="relative h-24 w-24 sm:h-28 sm:w-28 rounded-lg overflow-hidden border border-border/60 group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                          aria-label={`View photo ${i + 1} from ${review.displayName || "reviewer"}`}
-                        >
-                          <img
-                            src={url}
-                            alt={`${review.displayName || "Reviewer"}'s photo ${i + 1}`}
-                            loading="lazy"
-                            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-                          />
-                          {i === 3 && review.images.length > 4 && (
-                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white text-sm font-semibold">
-                              +{review.images.length - 4}
-                            </div>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  {(() => {
+                    const media = reviewMedia(review);
+                    if (media.length === 0) return null;
+                    return (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {media.slice(0, 4).map((m, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => openLightbox(review, i)}
+                            className="relative h-24 w-24 sm:h-28 sm:w-28 rounded-lg overflow-hidden border border-border/60 group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary bg-muted"
+                            aria-label={`View ${m.type} ${i + 1} from ${review.displayName || "reviewer"}`}
+                          >
+                            {m.type === "video" ? (
+                              <video
+                                src={m.url}
+                                muted
+                                playsInline
+                                preload="metadata"
+                                className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                              />
+                            ) : (
+                              <img
+                                src={m.url}
+                                alt={`${review.displayName || "Reviewer"}'s photo ${i + 1}`}
+                                loading="lazy"
+                                className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                              />
+                            )}
+                            {m.type === "video" && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                <div className="h-8 w-8 rounded-full bg-black/50 flex items-center justify-center text-white text-sm">▶</div>
+                              </div>
+                            )}
+                            {i === 3 && media.length > 4 && (
+                              <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white text-sm font-semibold">
+                                +{media.length - 4}
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })()}
 
                   {/* Share / Helpful / Report row */}
                   <div className="flex items-center gap-4 pt-1 text-xs font-medium text-muted-foreground">
@@ -562,58 +626,72 @@ export function ReviewSection({ productId, importedReviews = [] }: ReviewSection
           </button>
 
           <div className="absolute top-4 left-4 text-white/80 text-sm">
-            {lightbox.reviewerName} · {lightbox.index + 1}/{lightbox.images.length}
+            {lightbox.reviewerName} · {lightbox.index + 1}/{lightbox.media.length}
           </div>
 
-          {lightbox.images.length > 1 && (
+          {lightbox.media.length > 1 && (
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 stepLightbox(-1);
               }}
-              aria-label="Previous photo"
+              aria-label="Previous item"
               className="absolute left-2 sm:left-6 h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl flex items-center justify-center transition-colors"
             >
               ‹
             </button>
           )}
 
-          <img
-            src={lightbox.images[lightbox.index]}
-            alt={`${lightbox.reviewerName}'s photo ${lightbox.index + 1}`}
-            className="max-h-[85vh] max-w-[92vw] object-contain rounded-md select-none"
-            draggable={false}
-            onClick={(e) => e.stopPropagation()}
-            onTouchStart={onTouchStart}
-            onTouchEnd={onTouchEnd}
-          />
+          {lightbox.media[lightbox.index]?.type === "video" ? (
+            <video
+              key={lightbox.index}
+              src={lightbox.media[lightbox.index].url}
+              controls
+              autoPlay
+              playsInline
+              className="max-h-[85vh] max-w-[92vw] rounded-md select-none"
+              onClick={(e) => e.stopPropagation()}
+              onTouchStart={onTouchStart}
+              onTouchEnd={onTouchEnd}
+            />
+          ) : (
+            <img
+              src={lightbox.media[lightbox.index]?.url}
+              alt={`${lightbox.reviewerName}'s photo ${lightbox.index + 1}`}
+              className="max-h-[85vh] max-w-[92vw] object-contain rounded-md select-none"
+              draggable={false}
+              onClick={(e) => e.stopPropagation()}
+              onTouchStart={onTouchStart}
+              onTouchEnd={onTouchEnd}
+            />
+          )}
 
-          {lightbox.images.length > 1 && (
+          {lightbox.media.length > 1 && (
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 stepLightbox(1);
               }}
-              aria-label="Next photo"
+              aria-label="Next item"
               className="absolute right-2 sm:right-6 h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl flex items-center justify-center transition-colors"
             >
               ›
             </button>
           )}
 
-          {lightbox.images.length > 1 && (
+          {lightbox.media.length > 1 && (
             <div
               className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5"
               onClick={(e) => e.stopPropagation()}
             >
-              {lightbox.images.map((_, i) => (
+              {lightbox.media.map((_, i) => (
                 <button
                   key={i}
                   type="button"
                   onClick={() => setLightbox((prev) => (prev ? { ...prev, index: i } : prev))}
-                  aria-label={`Go to photo ${i + 1}`}
+                  aria-label={`Go to item ${i + 1}`}
                   className={`h-1.5 rounded-full transition-all ${
                     i === lightbox.index ? "w-5 bg-white" : "w-1.5 bg-white/40"
                   }`}
