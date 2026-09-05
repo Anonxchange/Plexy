@@ -35,6 +35,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { getSupabase } from "@/lib/supabase";
 import { shopifyService } from "@/lib/shopify-service";
+import type { ImportedReview } from "@/lib/shopify-service";
 import { devLog } from "@/lib/dev-logger";
 import { resolveCjVid } from "@/lib/cj-vid";
 import { useCart } from "@/hooks/use-shopify-cart";
@@ -110,6 +111,7 @@ interface Listing {
   inventoryQuantity?: number;
   shipping?: ShippingInfo;
   cjVid?: string;
+  importedReviews?: ImportedReview[];
 }
 
 function parseMedia(p: any): MediaItem[] | undefined {
@@ -332,6 +334,7 @@ export function ProductDetail() {
       availableForSale: p.variants.edges[0]?.node?.availableForSale,
       shipping: buildShippingInfo(p),
       cjVid: getMetafieldValue(p, ["cj_vid", "cj_variant_id", "cj_sku"]),
+      importedReviews: Array.isArray(p.importedReviews) ? p.importedReviews : [],
     });
   };
 
@@ -1123,7 +1126,7 @@ export function ProductDetail() {
 
         {/* Reviews */}
         {!isLoading && product && (
-          <ReviewSection productId={product.id} />
+          <ReviewSection productId={product.id} importedReviews={product.importedReviews} />
         )}
       </div>
 
