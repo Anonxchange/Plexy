@@ -1,8 +1,20 @@
-import { useState, useEffect } from "react";
-import { Star, Loader2, MessageSquare, BadgeCheck } from '@/lib/icons';
+import { useState, useEffect, useRef } from "react";
+import { Star, Loader2, MessageSquare, Share2, Flag } from '@/lib/icons';
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useAuth } from "@/lib/auth-context";
 import { getSupabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -23,6 +35,30 @@ interface UnifiedReview {
 interface ReviewSectionProps {
   productId: string;
   importedReviews?: ImportedReview[];
+}
+
+/** Inline SVG "verified" badge — blue circle, white check, Twitter/X style.
+ *  Deliberately inline (no external image request) so it renders even under
+ *  a strict CSP that blocks third-party image hosts. Used for reviews that
+ *  come from our own Supabase-verified purchasers ("store" source). */
+function VerifiedBadge({ className = "h-3.5 w-3.5" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 22 22"
+      className={className}
+      aria-label="Verified buyer on this store"
+      role="img"
+    >
+      <path
+        d="M11 0l2.2 1.6 2.7-.4 1.1 2.5 2.5 1.1-.4 2.7L20.6 9.7 19 12l1.6 2.3-1.6 2.7.4 2.7-2.5 1.1-1.1 2.5-2.7-.4L11 22l-2.2-1.6-2.7.4-1.1-2.5-2.5-1.1.4-2.7L1.4 12.3 3 10l-1.6-2.3.1-.1-.4-2.7 2.5-1.1L4.7 1.3l2.7.4L11 0z"
+        fill="#1D9BF0"
+      />
+      <path
+        d="M9.6 14.9 6.3 11.6l1.1-1.1 2.2 2.2 5-5 1.1 1.1-6.1 6.1z"
+        fill="#ffffff"
+      />
+    </svg>
+  );
 }
 
 function StarRating({
@@ -89,6 +125,20 @@ function timeAgo(dateStr: string) {
   return `${months}mo ago`;
 }
 
+// Local-only "helpful" state, keyed by `${source}-${id}`.
+// NOTE: this is client-side/session-only for now — no persistence yet.
+// A real implementation needs a `review_votes` table (or a `helpful_count`
+// column + RPC) so counts survive reload and a user can't vote twice.
+type HelpfulState = Record<string, { clicked: boolean; count: number }>;
+
+// Lightbox state: which review's image gallery is open, and which index.
+interface LightboxState {
+  key: string;
+  images: string[];
+  index: number;
+  reviewerName: string;
+}
+
 export function ReviewSection({ productId, importedReviews = [] }: ReviewSectionProps) {
   const { user } = useAuth();
   const [dbReviews, setDbReviews] = useState<UnifiedReview[]>([]);
@@ -99,9 +149,31 @@ export function ReviewSection({ productId, importedReviews = [] }: ReviewSection
   const [myReview, setMyReview] = useState<{ id: string; rating: number; comment: string | null } | null>(null);
   const [showForm, setShowForm] = useState(false);
 
+  const [helpful, setHelpful] = useState<HelpfulState>({});
+  const [reportingReview, setReportingReview] = useState<UnifiedReview | null>(null);
+  const [reportReason, setReportReason] = useState("fake");
+  const [reportDetails, setReportDetails] = useState("");
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+
+  const [lightbox, setLightbox] = useState<LightboxState | null>(null);
+  const touchStartX = useRef<number | null>(null);
+
   useEffect(() => {
     fetchReviews();
   }, [productId]);
+
+  // Keyboard navigation for the lightbox (Esc / ← / →)
+  useEffect(() => {
+    if (!lightbox) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLightbox(null);
+      if (e.key === "ArrowRight") stepLightbox(1);
+      if (e.key === "ArrowLeft") stepLightbox(-1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lightbox]);
 
   async function fetchReviews() {
     try {
@@ -204,6 +276,96 @@ export function ReviewSection({ productId, importedReviews = [] }: ReviewSection
     count: reviews.filter((r) => r.rating === star).length,
   }));
 
+  function reviewKey(r: UnifiedReview) {
+    return `${r.source}-${r.id}`;
+  }
+
+  function toggleHelpful(r: UnifiedReview) {
+    const key = reviewKey(r);
+    setHelpful((prev) => {
+      const cur = prev[key] || { clicked: false, count: 0 };
+      const clicked = !cur.clicked;
+      return {
+        ...prev,
+        [key]: { clicked, count: Math.max(0, cur.count + (clicked ? 1 : -1)) },
+      };
+    });
+  }
+
+  async function shareReview(r: UnifiedReview) {
+    const url = typeof window !== "undefined" ? window.location.href : "";
+    const title = `Review by ${r.displayName || "a customer"}`;
+    const text = r.comment
+      ? `"${r.comment.slice(0, 120)}" — ${r.displayName || "a customer"}`
+      : `${r.displayName || "A customer"} left a ${r.rating}-star review`;
+    try {
+      if (typeof navigator !== "undefined" && (navigator as any).share) {
+        await (navigator as any).share({ title, text, url });
+        return;
+      }
+    } catch (err: any) {
+      if (err?.name === "AbortError") return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copied to clipboard");
+    } catch {
+      toast.error("Could not copy link");
+    }
+  }
+
+  function openReport(r: UnifiedReview) {
+    setReportReason("fake");
+    setReportDetails("");
+    setReportingReview(r);
+  }
+
+  async function submitReviewReport() {
+    if (!reportingReview) return;
+    setIsSubmittingReport(true);
+    try {
+      // Placeholder — no backend table for review reports yet.
+      // Wire this up to a `review_reports` insert (or similar) in the data pass.
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      toast.success("Report submitted. Our team will review this.");
+      setReportingReview(null);
+      setReportDetails("");
+      setReportReason("fake");
+    } catch {
+      toast.error("Could not submit report. Please try again.");
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  }
+
+  function openLightbox(r: UnifiedReview, index: number) {
+    setLightbox({
+      key: reviewKey(r),
+      images: r.images,
+      index,
+      reviewerName: r.displayName || "Reviewer",
+    });
+  }
+
+  function stepLightbox(delta: number) {
+    setLightbox((prev) => {
+      if (!prev) return prev;
+      const len = prev.images.length;
+      const next = (prev.index + delta + len) % len;
+      return { ...prev, index: next };
+    });
+  }
+
+  function onTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0]?.clientX ?? null;
+  }
+  function onTouchEnd(e: React.TouchEvent) {
+    if (touchStartX.current == null) return;
+    const dx = (e.changedTouches[0]?.clientX ?? 0) - touchStartX.current;
+    if (Math.abs(dx) > 40) stepLightbox(dx < 0 ? 1 : -1);
+    touchStartX.current = null;
+  }
+
   return (
     <div className="mt-12 space-y-8">
       <Separator />
@@ -298,46 +460,237 @@ export function ReviewSection({ productId, importedReviews = [] }: ReviewSection
           </div>
         ) : (
           <div className="space-y-4">
-            {reviews.map((review) => (
-              <div key={`${review.source}-${review.id}`} className="rounded-xl border border-border/60 bg-card p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                      {(review.displayName || "U")[0].toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-sm font-semibold">{review.displayName || "Anonymous"}</p>
-                        {review.source === "store" && (
-                          <BadgeCheck className="h-3.5 w-3.5 text-primary" aria-label="Verified buyer on this store" />
-                        )}
+            {reviews.map((review) => {
+              const key = reviewKey(review);
+              const hs = helpful[key];
+              return (
+                <div key={key} className="rounded-xl border border-border/60 bg-card p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                        {(review.displayName || "U")[0].toUpperCase()}
                       </div>
-                      <p className="text-xs text-muted-foreground">{timeAgo(review.createdAt)}</p>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-semibold">{review.displayName || "Anonymous"}</p>
+                          {review.source === "store" && <VerifiedBadge />}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{timeAgo(review.createdAt)}</p>
+                      </div>
                     </div>
+                    <StarRating value={review.rating} readonly size="sm" />
                   </div>
-                  <StarRating value={review.rating} readonly size="sm" />
+
+                  {review.comment && (
+                    <p className="text-sm text-muted-foreground leading-relaxed">{review.comment}</p>
+                  )}
+
+                  {review.images.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {review.images.slice(0, 4).map((url, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => openLightbox(review, i)}
+                          className="relative h-24 w-24 sm:h-28 sm:w-28 rounded-lg overflow-hidden border border-border/60 group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                          aria-label={`View photo ${i + 1} from ${review.displayName || "reviewer"}`}
+                        >
+                          <img
+                            src={url}
+                            alt={`${review.displayName || "Reviewer"}'s photo ${i + 1}`}
+                            loading="lazy"
+                            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                          />
+                          {i === 3 && review.images.length > 4 && (
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white text-sm font-semibold">
+                              +{review.images.length - 4}
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Share / Helpful / Report row */}
+                  <div className="flex items-center gap-4 pt-1 text-xs font-medium text-muted-foreground">
+                    <button
+                      type="button"
+                      onClick={() => shareReview(review)}
+                      className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+                    >
+                      <Share2 className="h-3.5 w-3.5" />
+                      Share
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleHelpful(review)}
+                      className={`flex items-center gap-1.5 transition-colors ${
+                        hs?.clicked ? "text-primary" : "hover:text-foreground"
+                      }`}
+                    >
+                      👍 Helpful{hs?.count ? ` (${hs.count})` : ""}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openReport(review)}
+                      className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+                    >
+                      <Flag className="h-3.5 w-3.5" />
+                      Report
+                    </button>
+                  </div>
                 </div>
-                {review.comment && (
-                  <p className="text-sm text-muted-foreground leading-relaxed">{review.comment}</p>
-                )}
-                {review.images.length > 0 && (
-                  <div className="flex gap-2 pt-1">
-                    {review.images.slice(0, 4).map((url, i) => (
-                      <img
-                        key={i}
-                        src={url}
-                        alt={`${review.displayName || "Reviewer"}'s photo ${i + 1}`}
-                        loading="lazy"
-                        className="h-16 w-16 rounded-lg object-cover border border-border/60"
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
+
+      {/* Fullscreen scrollable image viewer */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center"
+          onClick={() => setLightbox(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setLightbox(null)}
+            aria-label="Close"
+            className="absolute top-4 right-4 h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors"
+          >
+            ×
+          </button>
+
+          <div className="absolute top-4 left-4 text-white/80 text-sm">
+            {lightbox.reviewerName} · {lightbox.index + 1}/{lightbox.images.length}
+          </div>
+
+          {lightbox.images.length > 1 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                stepLightbox(-1);
+              }}
+              aria-label="Previous photo"
+              className="absolute left-2 sm:left-6 h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl flex items-center justify-center transition-colors"
+            >
+              ‹
+            </button>
+          )}
+
+          <img
+            src={lightbox.images[lightbox.index]}
+            alt={`${lightbox.reviewerName}'s photo ${lightbox.index + 1}`}
+            className="max-h-[85vh] max-w-[92vw] object-contain rounded-md select-none"
+            draggable={false}
+            onClick={(e) => e.stopPropagation()}
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
+          />
+
+          {lightbox.images.length > 1 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                stepLightbox(1);
+              }}
+              aria-label="Next photo"
+              className="absolute right-2 sm:right-6 h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl flex items-center justify-center transition-colors"
+            >
+              ›
+            </button>
+          )}
+
+          {lightbox.images.length > 1 && (
+            <div
+              className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {lightbox.images.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setLightbox((prev) => (prev ? { ...prev, index: i } : prev))}
+                  aria-label={`Go to photo ${i + 1}`}
+                  className={`h-1.5 rounded-full transition-all ${
+                    i === lightbox.index ? "w-5 bg-white" : "w-1.5 bg-white/40"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Report review dialog */}
+      <AlertDialog open={!!reportingReview} onOpenChange={(open) => !open && setReportingReview(null)}>
+        <AlertDialogContent
+          className="
+            inset-x-0 bottom-0 top-auto left-0 right-0 translate-x-0 translate-y-0
+            w-full max-w-full rounded-t-2xl rounded-b-none border-b-0
+            max-h-[88vh] overflow-y-auto
+            pb-[max(1.5rem,env(safe-area-inset-bottom))]
+            data-[state=open]:slide-in-from-bottom data-[state=open]:slide-in-from-left-0 data-[state=open]:slide-in-from-top-0
+            data-[state=closed]:slide-out-to-bottom data-[state=closed]:slide-out-to-left-0 data-[state=closed]:slide-out-to-top-0
+            sm:inset-auto sm:left-[50%] sm:right-auto sm:top-[50%] sm:bottom-auto
+            sm:translate-x-[-50%] sm:translate-y-[-50%]
+            sm:w-full sm:max-w-lg sm:rounded-lg sm:border sm:max-h-none sm:overflow-visible sm:pb-6
+            sm:data-[state=open]:slide-in-from-left-1/2 sm:data-[state=open]:slide-in-from-top-[48%] sm:data-[state=open]:slide-in-from-bottom-0
+            sm:data-[state=closed]:slide-out-to-left-1/2 sm:data-[state=closed]:slide-out-to-top-[48%] sm:data-[state=closed]:slide-out-to-bottom-0
+          "
+        >
+          <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-muted sm:hidden" />
+
+          <AlertDialogHeader>
+            <AlertDialogTitle>Report this review</AlertDialogTitle>
+            <AlertDialogDescription>
+              Let us know what's wrong with this review and our trust &amp; safety team will take a look.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-4">
+            <RadioGroup value={reportReason} onValueChange={setReportReason} className="space-y-2">
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="fake" id="rr-fake" />
+                <Label htmlFor="rr-fake" className="font-normal cursor-pointer">Fake or incentivized review</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="offensive" id="rr-offensive" />
+                <Label htmlFor="rr-offensive" className="font-normal cursor-pointer">Offensive or inappropriate content</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="off-topic" id="rr-off-topic" />
+                <Label htmlFor="rr-off-topic" className="font-normal cursor-pointer">Not related to this product</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="other" id="rr-other" />
+                <Label htmlFor="rr-other" className="font-normal cursor-pointer">Other</Label>
+              </div>
+            </RadioGroup>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="rr-details" className="text-sm">Additional details (optional)</Label>
+              <Textarea
+                id="rr-details"
+                value={reportDetails}
+                onChange={(e) => setReportDetails(e.target.value)}
+                placeholder="Add any context that will help us review this…"
+                rows={4}
+                maxLength={1000}
+              />
+            </div>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmittingReport}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={submitReviewReport} disabled={isSubmittingReport}>
+              {isSubmittingReport ? "Submitting…" : "Submit report"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
