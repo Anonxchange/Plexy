@@ -1129,7 +1129,24 @@ export function ProductDetail() {
 
       {/* Report listing dialog */}
       <AlertDialog open={reportOpen} onOpenChange={setReportOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent
+          className="
+            inset-x-0 bottom-0 top-auto left-0 right-0 translate-x-0 translate-y-0
+            w-full max-w-full rounded-t-2xl rounded-b-none border-b-0
+            max-h-[88vh] overflow-y-auto
+            pb-[max(1.5rem,env(safe-area-inset-bottom))]
+            data-[state=open]:slide-in-from-bottom data-[state=open]:slide-in-from-left-0 data-[state=open]:slide-in-from-top-0
+            data-[state=closed]:slide-out-to-bottom data-[state=closed]:slide-out-to-left-0 data-[state=closed]:slide-out-to-top-0
+            sm:inset-auto sm:left-[50%] sm:right-auto sm:top-[50%] sm:bottom-auto
+            sm:translate-x-[-50%] sm:translate-y-[-50%]
+            sm:w-full sm:max-w-lg sm:rounded-lg sm:border sm:max-h-none sm:overflow-visible sm:pb-6
+            sm:data-[state=open]:slide-in-from-left-1/2 sm:data-[state=open]:slide-in-from-top-[48%] sm:data-[state=open]:slide-in-from-bottom-0
+            sm:data-[state=closed]:slide-out-to-left-1/2 sm:data-[state=closed]:slide-out-to-top-[48%] sm:data-[state=closed]:slide-out-to-bottom-0
+          "
+        >
+          {/* Drag-handle bar — bottom-sheet affordance, mobile only */}
+          <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-muted sm:hidden" />
+
           <AlertDialogHeader>
             <AlertDialogTitle>Report this listing</AlertDialogTitle>
             <AlertDialogDescription>
