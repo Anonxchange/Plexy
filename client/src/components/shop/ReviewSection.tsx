@@ -1,23 +1,28 @@
 import { useState, useEffect } from "react";
-import { Star, Loader2, MessageSquare } from '@/lib/icons';
+import { Star, Loader2, MessageSquare, BadgeCheck } from '@/lib/icons';
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/auth-context";
 import { getSupabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import type { ImportedReview } from "@/lib/shopify-storefront";
 
-interface Review {
+// Unified shape both DB reviews and imported (Air Reviews app metafield) reviews get mapped into,
+// so the list, average, and breakdown all treat them the same way.
+interface UnifiedReview {
   id: string;
-  user_id: string;
   rating: number;
   comment: string | null;
-  created_at: string;
-  display_name: string | null;
+  createdAt: string;
+  displayName: string | null;
+  images: string[];
+  source: "store" | "imported";
 }
 
 interface ReviewSectionProps {
   productId: string;
+  importedReviews?: ImportedReview[];
 }
 
 function StarRating({
@@ -58,7 +63,7 @@ function StarRating({
   );
 }
 
-function averageRating(reviews: Review[]) {
+function averageRating(reviews: UnifiedReview[]) {
   if (!reviews.length) return 0;
   return reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
 }
@@ -84,14 +89,14 @@ function timeAgo(dateStr: string) {
   return `${months}mo ago`;
 }
 
-export function ReviewSection({ productId }: ReviewSectionProps) {
+export function ReviewSection({ productId, importedReviews = [] }: ReviewSectionProps) {
   const { user } = useAuth();
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [dbReviews, setDbReviews] = useState<UnifiedReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [myRating, setMyRating] = useState(5);
   const [myComment, setMyComment] = useState("");
-  const [myReview, setMyReview] = useState<Review | null>(null);
+  const [myReview, setMyReview] = useState<{ id: string; rating: number; comment: string | null } | null>(null);
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
@@ -107,11 +112,22 @@ export function ReviewSection({ productId }: ReviewSectionProps) {
         .eq("product_id", productId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      setReviews(data || []);
+
+      const mapped: UnifiedReview[] = (data || []).map((r: any) => ({
+        id: r.id,
+        rating: r.rating,
+        comment: r.comment,
+        createdAt: r.created_at,
+        displayName: r.display_name,
+        images: [],
+        source: "store",
+      }));
+      setDbReviews(mapped);
+
       if (user) {
-        const mine = (data || []).find((r: Review) => r.user_id === user.id);
+        const mine = (data || []).find((r: any) => r.user_id === user.id);
         if (mine) {
-          setMyReview(mine);
+          setMyReview({ id: mine.id, rating: mine.rating, comment: mine.comment });
           setMyRating(mine.rating);
           setMyComment(mine.comment || "");
         }
@@ -165,6 +181,22 @@ export function ReviewSection({ productId }: ReviewSectionProps) {
       setSubmitting(false);
     }
   }
+
+  // Merge store (Supabase) reviews with imported (Air Reviews metafield) reviews into one
+  // list, newest first, so the average/breakdown/list all reflect both sources together.
+  const mappedImported: UnifiedReview[] = importedReviews.map((r) => ({
+    id: r.id,
+    rating: r.rating,
+    comment: r.comment || null,
+    createdAt: r.createdAt,
+    displayName: r.displayName,
+    images: r.images,
+    source: "imported",
+  }));
+
+  const reviews = [...dbReviews, ...mappedImported].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
 
   const avg = averageRating(reviews);
   const ratingCounts = [5, 4, 3, 2, 1].map((star) => ({
@@ -267,21 +299,39 @@ export function ReviewSection({ productId }: ReviewSectionProps) {
         ) : (
           <div className="space-y-4">
             {reviews.map((review) => (
-              <div key={review.id} className="rounded-xl border border-border/60 bg-card p-4 space-y-2">
+              <div key={`${review.source}-${review.id}`} className="rounded-xl border border-border/60 bg-card p-4 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                      {(review.display_name || "U")[0].toUpperCase()}
+                      {(review.displayName || "U")[0].toUpperCase()}
                     </div>
                     <div>
-                      <p className="text-sm font-semibold">{review.display_name || "Anonymous"}</p>
-                      <p className="text-xs text-muted-foreground">{timeAgo(review.created_at)}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-semibold">{review.displayName || "Anonymous"}</p>
+                        {review.source === "store" && (
+                          <BadgeCheck className="h-3.5 w-3.5 text-primary" aria-label="Verified buyer on this store" />
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{timeAgo(review.createdAt)}</p>
                     </div>
                   </div>
                   <StarRating value={review.rating} readonly size="sm" />
                 </div>
                 {review.comment && (
                   <p className="text-sm text-muted-foreground leading-relaxed">{review.comment}</p>
+                )}
+                {review.images.length > 0 && (
+                  <div className="flex gap-2 pt-1">
+                    {review.images.slice(0, 4).map((url, i) => (
+                      <img
+                        key={i}
+                        src={url}
+                        alt={`${review.displayName || "Reviewer"}'s photo ${i + 1}`}
+                        loading="lazy"
+                        className="h-16 w-16 rounded-lg object-cover border border-border/60"
+                      />
+                    ))}
+                  </div>
                 )}
               </div>
             ))}
