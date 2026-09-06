@@ -15,6 +15,14 @@
   ],
   "rewrites": [
     {
+      "source": "/sitemap-products.xml",
+      "destination": "https://hvpeycnedmzrjshmvgri.supabase.co/functions/v1/sitemap-products"
+    },
+    {
+      "source": "/sitemap-products",
+      "destination": "https://hvpeycnedmzrjshmvgri.supabase.co/functions/v1/sitemap-products"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
