@@ -504,8 +504,8 @@ export default function AsterLightweightChart({
       const up  = chg >= 0;
       const colorCls = up ? "text-trading-green" : "text-trading-red";
       const bgCls    = up ? "bg-trading-green/12" : "bg-trading-red/12";
-      const priceCls = `${colorCls} text-[10px] font-medium tracking-tight`;
-      const badgeCls = `${colorCls} ${bgCls} inline-flex items-center ml-1 px-1 py-0 rounded text-[9px] font-medium leading-normal`;
+      const priceCls = `${colorCls} text-[14px] font-medium tracking-tight`;
+      const badgeCls = `${colorCls} ${bgCls} inline-flex items-center ml-1 px-1.5 py-0.5 rounded text-[12px] font-medium leading-normal`;
       el.innerHTML =
         `<span class="${priceCls}">${c.toFixed(dp)}</span>` +
         `<span class="${badgeCls}">${up ? "▲" : "▼"} ${up ? "+" : ""}${chg.toFixed(dp)}&nbsp;(${up ? "+" : ""}${pct.toFixed(2)}%)</span>`;
