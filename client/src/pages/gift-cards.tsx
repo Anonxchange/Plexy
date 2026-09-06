@@ -308,7 +308,7 @@ function DesktopProductRow({
         </div>
         {/* Pulled up so row 1 overlaps the bottom edge of the photo above —
             the cards sit in front, the image tucks behind from here down. */}
-        <div className="grid grid-cols-4 gap-4 -mt-6">{grid}</div>
+        <div className="grid grid-cols-4 gap-4 -mt-2">{grid}</div>
       </section>
     );
   }
