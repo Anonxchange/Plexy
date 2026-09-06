@@ -122,7 +122,7 @@ export function ProductCardGrid({ card, onClick }: { card: any; onClick: () => v
           </span>
         )}
         {card.image ? (
-          <img src={card.image} alt={card.name} loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
+          <img src={card.image} alt={card.name} loading="lazy" decoding="async" className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-200" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground">
             <Gift className="h-12 w-12" />
