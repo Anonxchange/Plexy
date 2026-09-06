@@ -283,6 +283,37 @@ function DesktopProductRow({
 
   if (!isLoading && cards.length === 0) return null;
 
+  const grid = isLoading
+    ? [...Array(8)].map((_, i) => <ProductCardGridSkeleton key={i} />)
+    : cards.map(card => <ProductCardGrid key={card.id} card={card} onClick={() => onCardClick(card.id)} />);
+
+  // Rows with a banner image: title + "See all" stack on the left (both
+  // left-aligned), and the photo is a sibling that stretches the full
+  // height of the title-block + grid combined — its bottom edge lines up
+  // flush with the last row of cards, exactly like Bitrefill.
+  if (bannerImage) {
+    return (
+      <section className="py-8 border-t border-border">
+        <div className="flex gap-6 items-stretch">
+          <div className="flex-1 min-w-0">
+            <div className="mb-5">
+              <h2 className="text-2xl font-black text-foreground">{title}</h2>
+              <button onClick={onSeeAll} className="text-sm text-muted-foreground underline underline-offset-2">
+                See all
+              </button>
+            </div>
+            <div className="grid grid-cols-4 gap-4">{grid}</div>
+          </div>
+          <div className="w-[260px] flex-shrink-0 rounded-xl overflow-hidden">
+            <img src={bannerImage} alt={bannerAlt || title} className="w-full h-full object-cover" />
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // No banner (e.g. the eSIM/bonus row): flat grid, "See all" inline to
+  // the right of the title.
   return (
     <section className="py-8 border-t border-border">
       <div className="flex items-center justify-between mb-5">
@@ -291,20 +322,7 @@ function DesktopProductRow({
           See all
         </button>
       </div>
-      <div className="flex gap-6 items-stretch">
-        <div className="grid grid-cols-4 gap-4 flex-1 min-w-0">
-          {isLoading
-            ? [...Array(8)].map((_, i) => <ProductCardGridSkeleton key={i} />)
-            : cards.map(card => (
-                <ProductCardGrid key={card.id} card={card} onClick={() => onCardClick(card.id)} />
-              ))}
-        </div>
-        {bannerImage && (
-          <div className="w-[260px] flex-shrink-0 rounded-xl overflow-hidden">
-            <img src={bannerImage} alt={bannerAlt || title} className="w-full h-full object-cover" />
-          </div>
-        )}
-      </div>
+      <div className="grid grid-cols-4 gap-4">{grid}</div>
     </section>
   );
 }
