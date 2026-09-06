@@ -1,5 +1,3 @@
-import { next } from '@vercel/edge';
-
 export const config = {
   matcher: '/:path*', // Runs on every request
 };
@@ -15,6 +13,6 @@ export default function middleware(request) {
     });
   }
 
-  // Secret matches — let the request continue to your SPA / rewrites as normal.
-  return next();
+  // Returning nothing (undefined) tells Vercel to let the request continue
+  // through normally — no @vercel/edge import needed.
 }
