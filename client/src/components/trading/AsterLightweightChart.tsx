@@ -505,8 +505,8 @@ export default function AsterLightweightChart({
       const colorCls = up ? "text-trading-green" : "text-trading-red";
       const bgCls    = up ? "bg-trading-green/12" : "bg-trading-red/12";
       el.innerHTML =
-        `<span class="${colorCls}" style="font-weight:500;font-size:10px;letter-spacing:-0.01em">${c.toFixed(dp)}</span>` +
-        `<span class="${colorCls} ${bgCls}" style="display:inline-flex;align-items:center;margin-left:5px;padding:1px 4px;border-radius:4px;font-size:9px;font-weight:500">${up ? "▲" : "▼"} ${up ? "+" : ""}${chg.toFixed(dp)}&nbsp;(${up ? "+" : ""}${pct.toFixed(2)}%)</span>`;
+        `<span class="${colorCls}" style="font-weight:500;font-size:8px;letter-spacing:-0.01em">${c.toFixed(dp)}</span>` +
+        `<span class="${colorCls} ${bgCls}" style="display:inline-flex;align-items:center;margin-left:3px;padding:0px 3px;border-radius:3px;font-size:7px;font-weight:500;line-height:1.4">${up ? "▲" : "▼"} ${up ? "+" : ""}${chg.toFixed(dp)}&nbsp;(${up ? "+" : ""}${pct.toFixed(2)}%)</span>`;
     }
 
     chart.subscribeCrosshairMove(param => {
