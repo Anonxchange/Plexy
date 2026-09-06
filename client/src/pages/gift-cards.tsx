@@ -122,7 +122,7 @@ export function ProductCardGrid({ card, onClick }: { card: any; onClick: () => v
           </span>
         )}
         {card.image ? (
-          <img src={card.image} alt={card.name} loading="lazy" decoding="async" className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-200" />
+          <img src={card.image} alt={card.name} loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground">
             <Gift className="h-12 w-12" />
@@ -757,12 +757,16 @@ export function GiftCards() {
         </section>
 
         {/* ── FAQ ── */}
-        <div className="max-w-2xl mx-auto pb-16">
-          <h2 className="text-2xl font-black text-foreground mb-1">Frequently asked questions</h2>
-          <p className="text-muted-foreground text-sm mb-6">
-            Check out our <span className="underline text-foreground/70 cursor-pointer">Knowledge Base</span> for more.
-          </p>
-          <div>{faqs.map((faq, i) => <FaqItem key={i} question={faq.question} answer={faq.answer} />)}</div>
+        <div className="pb-16 flex gap-16">
+          <div className="w-[280px] flex-shrink-0">
+            <h2 className="text-2xl font-black text-foreground mb-1">Frequently asked questions</h2>
+            <p className="text-muted-foreground text-sm">
+              Check out our <span className="underline text-foreground/70 cursor-pointer">Knowledge Base</span> page for more FAQs.
+            </p>
+          </div>
+          <div className="flex-1 min-w-0">
+            {faqs.map((faq, i) => <FaqItem key={i} question={faq.question} answer={faq.answer} />)}
+          </div>
         </div>
       </div>
 
