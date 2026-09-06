@@ -287,27 +287,28 @@ function DesktopProductRow({
     ? [...Array(8)].map((_, i) => <ProductCardGridSkeleton key={i} />)
     : cards.map(card => <ProductCardGrid key={card.id} card={card} onClick={() => onCardClick(card.id)} />);
 
-  // Rows with a banner image: title + "See all" stack on the left (both
-  // left-aligned), and the photo is a sibling that stretches the full
-  // height of the title-block + grid combined — its bottom edge lines up
-  // flush with the last row of cards, exactly like Bitrefill.
+  // Rows with a banner image: title + "See all" occupy columns 1-2 of a
+  // single 4-col grid; the photo occupies columns 3-4 as its own short,
+  // fixed-height row (not stretched to the full grid). The 8 product cards
+  // are just further grid children, so they auto-flow into the two rows
+  // beneath — the photo never extends down into the card rows at all.
   if (bannerImage) {
     return (
       <section className="py-8 border-t border-border">
-        <div className="flex gap-6 items-stretch">
-          <div className="flex-1 min-w-0">
-            <div className="mb-5">
-              <h2 className="text-2xl font-black text-foreground">{title}</h2>
-              <button onClick={onSeeAll} className="text-sm text-muted-foreground underline underline-offset-2">
-                See all
-              </button>
-            </div>
-            <div className="grid grid-cols-4 gap-4">{grid}</div>
+        <div className="grid grid-cols-4 gap-4">
+          <div className="col-span-2">
+            <h2 className="text-2xl font-black text-foreground mb-1">{title}</h2>
+            <button onClick={onSeeAll} className="text-sm text-muted-foreground underline underline-offset-2">
+              See all
+            </button>
           </div>
-          <div className="w-[260px] flex-shrink-0 rounded-xl overflow-hidden">
+          <div className="col-span-2 h-[220px] rounded-xl overflow-hidden">
             <img src={bannerImage} alt={bannerAlt || title} className="w-full h-full object-cover" />
           </div>
         </div>
+        {/* Pulled up so row 1 overlaps the bottom edge of the photo above —
+            the cards sit in front, the image tucks behind from here down. */}
+        <div className="grid grid-cols-4 gap-4 -mt-6">{grid}</div>
       </section>
     );
   }
