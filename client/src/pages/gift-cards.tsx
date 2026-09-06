@@ -6,7 +6,7 @@ import { useLocation } from "wouter";
 import {
   Search, Coffee, Gamepad2, ShoppingBag, Music, Home, Globe,
   Smartphone, Coins, Gift, Heart, Dumbbell, Package, ShoppingCart,
-  Check, ChevronsUpDown, Plus, ChevronLeft, ChevronRight,
+  Check, ChevronsUpDown, Plus,
   Flame, CreditCard, UtensilsCrossed,
 } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
@@ -179,43 +179,6 @@ function ProductCardHorizontalSkeleton() {
   );
 }
 
-// ── Sidebar (desktop only) ────────────────────────────────────────────────────
-function Sidebar({ activeCategory, onSelect }: { activeCategory: string; onSelect: (name: string, id?: number) => void }) {
-  const { data: apiCategories, isLoading } = useGiftCardCategories();
-  const categories = [
-    { name: "All Gift Cards", id: undefined as number | undefined },
-    ...(apiCategories ?? []).map(c => ({ name: c.name, id: c.id as number | undefined })),
-  ];
-
-  return (
-    <nav className="w-56 flex-shrink-0 pr-4">
-      <ul className="space-y-0.5">
-        {isLoading ? (
-          [...Array(9)].map((_, i) => (
-            <li key={i} className="px-3 py-2"><Skeleton className="h-5 w-full" /></li>
-          ))
-        ) : (
-          categories.map((cat) => (
-            <li key={cat.name}>
-              <button
-                onClick={() => onSelect(cat.name, cat.id)}
-                className={cn(
-                  "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors font-medium",
-                  activeCategory === cat.name
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                )}
-              >
-                {cat.name}
-              </button>
-            </li>
-          ))
-        )}
-      </ul>
-    </nav>
-  );
-}
-
 // ── Desktop hero right-panel: live popular gift card tiles ───────────────────
 function DesktopHeroGrid({ countryCode, onCardClick }: { countryCode?: string; onCardClick: (id: string) => void }) {
   const { data, isLoading } = useGiftCardProducts({ page: 1, size: 12, countryCode });
@@ -249,47 +212,32 @@ function DesktopHeroGrid({ countryCode, onCardClick }: { countryCode?: string; o
   );
 }
 
-// ── Desktop main grid section ─────────────────────────────────────────────────
-function DesktopCategoryGrid({
-  categoryName,
-  categoryId,
+// ── Desktop: flat "8,000+ products" grid (no pagination, no sidebar) ────────
+// Mirrors Bitrefill's homepage "8k+ products in 180+ countries" showcase:
+// a single static grid with a "See all" link out to the full browse page,
+// instead of an in-place paginated catalog.
+function DesktopMainGrid({
   countryCode,
+  onSeeAll,
   onCardClick,
 }: {
-  categoryName: string;
-  categoryId?: number;
   countryCode?: string;
+  onSeeAll: () => void;
   onCardClick: (id: string) => void;
 }) {
-  const [page, setPage] = useState(1);
-  const { data, isLoading } = useGiftCardProducts({ page, size: 20, categoryId, countryCode });
-  const cards = mapProducts(dedupeByBrand(filterByCountry(data?.content || [], countryCode), countryCode));
+  const { data, isLoading } = useGiftCardProducts({ page: 1, size: 20, countryCode });
+  const cards = mapProducts(dedupeByBrand(filterByCountry(data?.content || [], countryCode), countryCode)).slice(0, 8);
 
   return (
-    <div className="flex-1 min-w-0">
+    <section id="desktop-catalog" className="py-8">
       <div className="flex items-center justify-between mb-5">
-        <h2 className="text-2xl font-black text-foreground">
-          {categoryName === "All Gift Cards" ? "Check out the most popular shops!" : categoryName}
-        </h2>
-        <div className="flex gap-1.5">
-          <button
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page <= 1}
-            className="h-9 w-9 rounded-full border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-30 transition-colors"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => setPage(p => p + 1)}
-            disabled={!data || page >= data.totalPages}
-            className="h-9 w-9 rounded-full border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-30 transition-colors"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
+        <h2 className="text-2xl font-black text-foreground">8,000+ products in 180+ countries</h2>
+        <button onClick={onSeeAll} className="text-sm text-muted-foreground underline underline-offset-2 flex-shrink-0">
+          See all
+        </button>
       </div>
       {isLoading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           {[...Array(8)].map((_, i) => <ProductCardGridSkeleton key={i} />)}
         </div>
       ) : cards.length === 0 ? (
@@ -299,16 +247,95 @@ function DesktopCategoryGrid({
           <p className="text-muted-foreground text-sm">Connect your Supabase API to browse live products.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           {cards.map(card => (
-            <ProductCardGrid
-              key={card.id}
-              card={card}
-              onClick={() => onCardClick(card.id)}
-            />
+            <ProductCardGrid key={card.id} card={card} onClick={() => onCardClick(card.id)} />
           ))}
         </div>
       )}
+    </section>
+  );
+}
+
+// ── Desktop: one curated category row, optionally with a banner image ──────
+// This is the Bitrefill-style building block: "Gaming" / "For Your Travel
+// Needs" / "Shopping" etc, each its own horizontal strip with a "See all"
+// link, stacked one after another down the page.
+function DesktopProductRow({
+  title,
+  categoryId,
+  countryCode,
+  bannerImage,
+  bannerAlt,
+  onSeeAll,
+  onCardClick,
+}: {
+  title: string;
+  categoryId?: number;
+  countryCode?: string;
+  bannerImage?: string;
+  bannerAlt?: string;
+  onSeeAll: () => void;
+  onCardClick: (id: string) => void;
+}) {
+  const { data, isLoading } = useGiftCardProducts({ page: 1, size: 20, categoryId, countryCode });
+  const cards = mapProducts(dedupeByBrand(filterByCountry(data?.content || [], countryCode), countryCode)).slice(0, 8);
+
+  if (!isLoading && cards.length === 0) return null;
+
+  return (
+    <section className="py-8 border-t border-border">
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-2xl font-black text-foreground">{title}</h2>
+        <button onClick={onSeeAll} className="text-sm text-muted-foreground underline underline-offset-2 flex-shrink-0">
+          See all
+        </button>
+      </div>
+      <div className="flex gap-6 items-stretch">
+        <div className="grid grid-cols-4 gap-4 flex-1 min-w-0">
+          {isLoading
+            ? [...Array(8)].map((_, i) => <ProductCardGridSkeleton key={i} />)
+            : cards.map(card => (
+                <ProductCardGrid key={card.id} card={card} onClick={() => onCardClick(card.id)} />
+              ))}
+        </div>
+        {bannerImage && (
+          <div className="w-[260px] flex-shrink-0 rounded-xl overflow-hidden">
+            <img src={bannerImage} alt={bannerAlt || title} className="w-full h-full object-cover" />
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ── Mobile 2-row grid section (used for the "2k+ products" showcase) ─────────
+// Pulls page 2 (not page 1) so this row never shows the exact same items as
+// the "Popular" row above it, which also queries with no category filter.
+function GridSection({ countryCode }: { countryCode?: string }) {
+  const [, setLocation] = useLocation();
+  const { data, isLoading } = useGiftCardProducts({ page: 2, size: 24, countryCode });
+  const cards = mapProducts(dedupeByBrand(filterByCountry(data?.content || [], countryCode), countryCode)).slice(0, 12);
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-rows-2 grid-flow-col auto-cols-[130px] gap-3 overflow-x-auto scrollbar-hide pb-1">
+        {[...Array(12)].map((_, i) => <ProductCardHorizontalSkeleton key={i} />)}
+      </div>
+    );
+  }
+
+  if (cards.length === 0) return null;
+
+  return (
+    <div className="grid grid-rows-2 grid-flow-col auto-cols-[130px] gap-3 overflow-x-auto scrollbar-hide pb-1">
+      {cards.map((card) => (
+        <ProductCardHorizontal
+          key={card.id}
+          card={card}
+          onClick={() => setLocation(`/gift-cards/${card.id}`)}
+        />
+      ))}
     </div>
   );
 }
@@ -360,37 +387,6 @@ function HorizontalSection({
   );
 }
 
-// ── Mobile 2-row grid section (used for the "2k+ products" showcase) ─────────
-// Pulls page 2 (not page 1) so this row never shows the exact same items as
-// the "Popular" row above it, which also queries with no category filter.
-function GridSection({ countryCode }: { countryCode?: string }) {
-  const [, setLocation] = useLocation();
-  const { data, isLoading } = useGiftCardProducts({ page: 2, size: 24, countryCode });
-  const cards = mapProducts(dedupeByBrand(filterByCountry(data?.content || [], countryCode), countryCode)).slice(0, 12);
-
-  if (isLoading) {
-    return (
-      <div className="grid grid-rows-2 grid-flow-col auto-cols-[130px] gap-3 overflow-x-auto scrollbar-hide pb-1">
-        {[...Array(12)].map((_, i) => <ProductCardHorizontalSkeleton key={i} />)}
-      </div>
-    );
-  }
-
-  if (cards.length === 0) return null;
-
-  return (
-    <div className="grid grid-rows-2 grid-flow-col auto-cols-[130px] gap-3 overflow-x-auto scrollbar-hide pb-1">
-      {cards.map((card) => (
-        <ProductCardHorizontal
-          key={card.id}
-          card={card}
-          onClick={() => setLocation(`/gift-cards/${card.id}`)}
-        />
-      ))}
-    </div>
-  );
-}
-
 // ── FAQ ───────────────────────────────────────────────────────────────────────
 const faqs = [
   { question: "What payment options do you accept?", answer: "We accept cryptocurrency payments including Bitcoin (BTC), Ethereum (ETH), and USDT. This ensures fast, secure, and private transactions." },
@@ -420,17 +416,6 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
   );
 }
 
-// ── HERO brand tiles ──────────────────────────────────────────────────────────
-const FEATURED_BRANDS: Array<
-  | { kind: "logo"; name: string; logo: string; bg: string }
-  | { kind: "image"; name: string; src: string }
-> = [
-  { kind: "logo",  name: "PlayStation",     logo: "/logos/brands/playstation.svg", bg: "#003087" },
-  { kind: "image", name: "Pay with Crypto",  src: cryptoQrImg },
-  { kind: "image", name: "Instant Delivery", src: orderCompleteImg },
-  { kind: "logo",  name: "Spotify",         logo: "/logos/brands/spotify.svg",     bg: "#1DB954" },
-];
-
 // ── Main page ─────────────────────────────────────────────────────────────────
 export function GiftCards() {
   useHead({
@@ -446,12 +431,10 @@ export function GiftCards() {
   const { data: reloadlyCategories } = useGiftCardCategories();
   const { data: reloadlyCountries }  = useGiftCardCountries();
 
-  // Mobile tab state
+  // Shared "which tab is highlighted" state — used by both the mobile tab
+  // bar and the desktop tab bar (only one of the two is ever visible at a
+  // time, so they can safely share the same piece of state).
   const [activeTab, setActiveTab] = useState("Popular");
-
-  // Desktop sidebar state
-  const [desktopCategory, setDesktopCategory] = useState("All Gift Cards");
-  const [desktopCategoryId, setDesktopCategoryId] = useState<number | undefined>(undefined);
 
   const [openCountry, setOpenCountry] = useState(false);
   const [activeCountryCode, setActiveCountryCode] = useState<string | undefined>(undefined);
@@ -499,9 +482,17 @@ export function GiftCards() {
     if (searchInput.trim()) goToBrowse("All Gift Cards", undefined, searchInput.trim());
   };
 
-  const handleSidebarSelect = (name: string, id?: number) => {
-    setDesktopCategory(name);
-    setDesktopCategoryId(id);
+  // Shared by both the mobile and desktop tab bars: "Popular" just scrolls
+  // to the on-page showcase, anything else jumps straight to the full
+  // browse page for that category.
+  const handleTabClick = (name: string, id: number | undefined, scrollTargetId: string) => {
+    if (name === "Popular") {
+      setActiveTab("Popular");
+      document.getElementById(scrollTargetId)?.scrollIntoView({ behavior: "smooth" });
+    } else {
+      setActiveTab(name);
+      goToBrowse(name, id);
+    }
   };
 
   return (
@@ -519,7 +510,7 @@ export function GiftCards() {
       )}
 
       {/* ════════════════════════════════════════════════════════
-          DESKTOP layout (lg+) — Bitrefill-style
+          DESKTOP layout (lg+) — Bitrefill-style stacked sections
           ════════════════════════════════════════════════════════ */}
       <div className="hidden lg:block max-w-7xl mx-auto px-6">
 
@@ -607,16 +598,16 @@ export function GiftCards() {
           </div>
         </div>
 
-        {/* ── Category tabs ── */}
+        {/* ── Category tabs (jump to a section, or straight to browse) ── */}
         <div className="border-b border-border overflow-x-auto scrollbar-hide">
           <div className="flex gap-0">
             {mobileTabs.map(tab => (
               <button
                 key={tab.name}
-                onClick={() => handleSidebarSelect(tab.name, tab.id)}
+                onClick={() => handleTabClick(tab.name, tab.id, "desktop-catalog")}
                 className={cn(
                   "flex flex-col items-center gap-1 px-5 py-3.5 flex-shrink-0 border-b-2 transition-colors",
-                  desktopCategory === tab.name
+                  activeTab === tab.name
                     ? "border-primary text-foreground"
                     : "border-transparent text-muted-foreground hover:text-foreground"
                 )}
@@ -628,18 +619,8 @@ export function GiftCards() {
           </div>
         </div>
 
-        {/* ── Full-width product grid ── */}
-        <div id="desktop-catalog" className="py-8">
-          <DesktopCategoryGrid
-            categoryName={desktopCategory}
-            categoryId={desktopCategoryId}
-            countryCode={activeCountryCode}
-            onCardClick={id => setLocation(`/gift-cards/${id}`)}
-          />
-        </div>
-
-        {/* ── How it works — 3-col horizontal ── */}
-        <div className="border-t border-border py-12">
+        {/* ── How it works ── */}
+        <div className="border-b border-border py-12">
           <h2 className="text-2xl font-black text-foreground mb-8">How it works</h2>
           <div className="grid grid-cols-3 gap-8">
             {/* Step 1 */}
@@ -673,6 +654,108 @@ export function GiftCards() {
           </div>
         </div>
 
+        {/* ── 8,000+ products flat grid (replaces sidebar + pagination) ── */}
+        <DesktopMainGrid
+          countryCode={activeCountryCode}
+          onSeeAll={() => goToBrowse("All Gift Cards")}
+          onCardClick={id => setLocation(`/gift-cards/${id}`)}
+        />
+
+        {/* ── Bonus category (eSIM when available, otherwise another real category) ── */}
+        {bonusCategory && (
+          <DesktopProductRow
+            title={esimCategory ? "eSIMs, your passport to data in 140+ countries!" : `Check out our ${bonusCategory.name} gift cards!`}
+            categoryId={bonusCategory.id}
+            countryCode={activeCountryCode}
+            onSeeAll={() => goToBrowse(bonusCategory.name, bonusCategory.id)}
+            onCardClick={id => setLocation(`/gift-cards/${id}`)}
+          />
+        )}
+
+        {/* ── Gaming ── */}
+        {gamingCategory && (
+          <DesktopProductRow
+            title="Gaming"
+            categoryId={gamingCategory.id}
+            countryCode={activeCountryCode}
+            bannerImage="https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?w=600&h=400&fit=crop&auto=format"
+            bannerAlt="Gaming"
+            onSeeAll={() => goToBrowse("Gaming", gamingCategory.id)}
+            onCardClick={id => setLocation(`/gift-cards/${id}`)}
+          />
+        )}
+
+        {/* ── Travel ── */}
+        {travelCategory && (
+          <DesktopProductRow
+            title="For Your Travel Needs"
+            categoryId={travelCategory.id}
+            countryCode={activeCountryCode}
+            bannerImage="https://images.unsplash.com/photo-1507608616759-54f48f0af0ee?w=600&h=400&fit=crop&auto=format"
+            bannerAlt="Travel"
+            onSeeAll={() => goToBrowse("Travel", travelCategory.id)}
+            onCardClick={id => setLocation(`/gift-cards/${id}`)}
+          />
+        )}
+
+        {/* ── Shopping ── */}
+        {shoppingCategory && (
+          <DesktopProductRow
+            title="Shopping"
+            categoryId={shoppingCategory.id}
+            countryCode={activeCountryCode}
+            bannerImage="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600&h=400&fit=crop&auto=format"
+            bannerAlt="Shopping"
+            onSeeAll={() => goToBrowse("Shopping", shoppingCategory.id)}
+            onCardClick={id => setLocation(`/gift-cards/${id}`)}
+          />
+        )}
+
+        {/* ── Entertainment ── */}
+        {entertainmentCategory && (
+          <DesktopProductRow
+            title="Entertainment"
+            categoryId={entertainmentCategory.id}
+            countryCode={activeCountryCode}
+            bannerImage="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600&h=400&fit=crop&auto=format"
+            bannerAlt="Entertainment"
+            onSeeAll={() => goToBrowse("Entertainment", entertainmentCategory.id)}
+            onCardClick={id => setLocation(`/gift-cards/${id}`)}
+          />
+        )}
+
+        {/* ── Shop on the Go ── */}
+        <section className="my-10 rounded-2xl overflow-hidden" style={{ background: "hsl(168 40% 18%)" }}>
+          <div className="py-10 px-12 text-center">
+            <h2 className="text-3xl font-black text-white uppercase tracking-tight mb-3">
+              Shop on the Go
+            </h2>
+            <p className="text-white/80 text-sm leading-relaxed mb-6 max-w-md mx-auto">
+              Download our app to manage the shopping from your phone.
+            </p>
+            <div className="flex items-center justify-center gap-3">
+              <a
+                href="#"
+                className="inline-flex items-center gap-3 bg-black text-white px-5 py-3 rounded-xl hover:bg-black/80 transition-colors"
+              >
+                <svg viewBox="0 0 24 24" className="h-6 w-6 fill-white flex-shrink-0" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                </svg>
+                <span className="text-left">
+                  <span className="block text-[10px] leading-none text-white/70">Download on the</span>
+                  <span className="block text-base font-semibold leading-tight">App Store</span>
+                </span>
+              </a>
+              <a
+                href="#"
+                className="inline-flex items-center justify-center px-8 py-3 rounded-full bg-white text-black font-semibold text-sm hover:bg-white/90 transition-colors"
+              >
+                Get the app
+              </a>
+            </div>
+          </div>
+        </section>
+
         {/* ── FAQ ── */}
         <div className="max-w-2xl mx-auto pb-16">
           <h2 className="text-2xl font-black text-foreground mb-1">Frequently asked questions</h2>
@@ -684,7 +767,7 @@ export function GiftCards() {
       </div>
 
       {/* ════════════════════════════════════════════════════════
-          MOBILE layout (< lg)
+          MOBILE layout (< lg) — UNCHANGED
           ════════════════════════════════════════════════════════ */}
       <div className="lg:hidden">
 
