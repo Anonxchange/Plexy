@@ -186,7 +186,7 @@ function DesktopHeroGrid({ countryCode, onCardClick }: { countryCode?: string; o
 
   if (isLoading) return (
     <div className="grid grid-cols-2 gap-2">
-      {[...Array(6)].map((_, i) => <Skeleton key={i} className="w-full aspect-[3/2] rounded-xl" />)}
+      {[...Array(6)].map((_, i) => <Skeleton key={i} className="w-full aspect-[4/3] rounded-xl" />)}
     </div>
   );
 
@@ -194,7 +194,7 @@ function DesktopHeroGrid({ countryCode, onCardClick }: { countryCode?: string; o
     <div className="grid grid-cols-2 gap-2">
       {cards.map(card => (
         <button key={card.id} onClick={() => onCardClick(card.id)} className="group text-left">
-          <div className="w-full aspect-[3/2] rounded-xl overflow-hidden bg-secondary border border-border group-hover:border-primary/30 transition-colors relative">
+          <div className="w-full aspect-[4/3] rounded-xl overflow-hidden bg-secondary border border-border group-hover:border-primary/30 transition-colors relative">
             {card.discount > 0 && (
               <span className="absolute top-1.5 left-1.5 z-10 text-[10px] font-bold bg-yellow-400 text-black px-1.5 py-0.5 rounded">
                 -{card.discount}%
@@ -225,7 +225,7 @@ function DesktopMainGrid({
   onSeeAll: () => void;
   onCardClick: (id: string) => void;
 }) {
-  const { data, isLoading } = useGiftCardProducts({ page: 1, size: 20, countryCode });
+  const { data, isLoading } = useGiftCardProducts({ page: 1, size: 50, countryCode });
   const cards = mapProducts(dedupeByBrand(filterByCountry(data?.content || [], countryCode), countryCode)).slice(0, 8);
 
   return (
@@ -278,13 +278,17 @@ function DesktopProductRow({
   onSeeAll: () => void;
   onCardClick: (id: string) => void;
 }) {
-  const { data, isLoading } = useGiftCardProducts({ page: 1, size: 20, categoryId, countryCode });
-  const cards = mapProducts(dedupeByBrand(filterByCountry(data?.content || [], countryCode), countryCode)).slice(0, 8);
+  // Bannered rows (Gaming, Travel, Shopping, Entertainment) show a full 4x2
+  // grid of 8, matching Bitrefill. The eSIM/bonus row (no banner) is a
+  // single row of 4, matching Bitrefill's actual eSIM showcase.
+  const maxCards = bannerImage ? 8 : 4;
+  const { data, isLoading } = useGiftCardProducts({ page: 1, size: 50, categoryId, countryCode });
+  const cards = mapProducts(dedupeByBrand(filterByCountry(data?.content || [], countryCode), countryCode)).slice(0, maxCards);
 
   if (!isLoading && cards.length === 0) return null;
 
   const grid = isLoading
-    ? [...Array(8)].map((_, i) => <ProductCardGridSkeleton key={i} />)
+    ? [...Array(maxCards)].map((_, i) => <ProductCardGridSkeleton key={i} />)
     : cards.map(card => <ProductCardGrid key={card.id} card={card} onClick={() => onCardClick(card.id)} />);
 
   // Rows with a banner image: title + "See all" occupy columns 1-2 of a
@@ -534,7 +538,7 @@ export function GiftCards() {
       <div className="hidden lg:block max-w-7xl mx-auto px-6">
 
         {/* ── Hero: headline + search LEFT │ live popular grid RIGHT ── */}
-        <div className="flex items-start gap-10 py-10 border-b border-border">
+        <div className="flex items-stretch gap-10 py-10 border-b border-border">
 
           {/* Left */}
           <div className="flex-1 min-w-0">
@@ -604,16 +608,18 @@ export function GiftCards() {
           </div>
 
           {/* Right — live popular gift card grid */}
-          <div className="flex-shrink-0 w-[320px]">
+          <div className="flex-shrink-0 w-[360px] flex flex-col">
             {activeCountryObj && (
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                 Popular in {activeCountryObj.name} {activeCountryObj.flag}
               </p>
             )}
-            <DesktopHeroGrid
-              countryCode={activeCountryCode}
-              onCardClick={id => setLocation(`/gift-cards/${id}`)}
-            />
+            <div className="flex-1 min-h-0">
+              <DesktopHeroGrid
+                countryCode={activeCountryCode}
+                onCardClick={id => setLocation(`/gift-cards/${id}`)}
+              />
+            </div>
           </div>
         </div>
 
@@ -625,7 +631,7 @@ export function GiftCards() {
                 key={tab.name}
                 onClick={() => handleTabClick(tab.name, tab.id, "desktop-catalog")}
                 className={cn(
-                  "flex flex-col items-center gap-1 px-5 py-3.5 flex-shrink-0 border-b-2 transition-colors",
+                  "flex flex-1 flex-col items-center gap-1 px-5 py-3.5 border-b-2 transition-colors",
                   activeTab === tab.name
                     ? "border-primary text-foreground"
                     : "border-transparent text-muted-foreground hover:text-foreground"
