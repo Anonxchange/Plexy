@@ -12,6 +12,13 @@
          IP-geolocation API call is needed in production. -->
     <meta name="cf-country" content="" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Tells the browser we implement both color schemes ourselves (see the
+         inline theme script below and `color-scheme` in index.css). Without
+         this, Chrome/Android "Force Dark" heuristics assume the page has no
+         real dark mode and run their own color-inversion pass over our
+         already-correct theme colors, distorting custom accents like the
+         lime green tokens. -->
+    <meta name="color-scheme" content="light dark" />
     <!-- Sets theme class before first paint so ThemeProvider has nothing to change,
          eliminating the full-document style recalculation on initial load.
          Inlined to avoid a blocking network round-trip for a 180-byte file. -->
