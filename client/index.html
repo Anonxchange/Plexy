@@ -22,7 +22,7 @@
     <!-- Sets theme class before first paint so ThemeProvider has nothing to change,
          eliminating the full-document style recalculation on initial load.
          Inlined to avoid a blocking network round-trip for a 180-byte file. -->
-    <script>try{var t=localStorage.getItem('pexly-theme');if(t==='dark'||t==='light')document.documentElement.classList.add(t);else document.documentElement.classList.add('light');}catch(e){}</script>
+    <script>try{var t=localStorage.getItem('pexly-theme');if(t==='dark'||t==='light'){document.documentElement.classList.add(t);}else{document.documentElement.classList.add(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');}}catch(e){document.documentElement.classList.add('light');}</script>
     <title>Pexly - Non-Custodial Decentralized Crypto Software</title>
     <meta name="description" content="Pexly is your all-in-one decentralized market. Swap crypto, earn yield through staking, buy gift cards, top up mobile credit, pay utility bills, shop with crypto, and explore blockchain data — all without giving up custody of your assets." />
 
