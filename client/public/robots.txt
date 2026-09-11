@@ -4,6 +4,16 @@ Disallow: /explorer/block/
 Disallow: /explorer/address/
 Disallow: /explorer/blocks
 Disallow: /explorer/transactions
+Disallow: /_vercel/insights/
+Disallow: /_vercel/speed-insights/
+Disallow: /cdn-cgi/
+
+# Applebot crawls Vercel analytics/telemetry endpoints aggressively - keep it
+# indexing real pages but block it from these
+User-agent: Applebot
+Disallow: /_vercel/insights/
+Disallow: /_vercel/speed-insights/
+Disallow: /cdn-cgi/
 
 # Block AI training crawlers
 User-agent: GPTBot
