@@ -109,7 +109,7 @@
 
 // ─── Imports ──────────────────────────────────────────────────────────────────
 
-import * as scrypt    from "scrypt-js";
+import { scrypt }     from "hash-wasm";
 import * as RLP       from "@ethereumjs/rlp";
 import * as secp      from "@noble/secp256k1";
 import * as btc       from "@scure/btc-signer";
@@ -460,6 +460,10 @@ function validateRpcGasLimit(raw: unknown, floorOverride?: bigint): bigint {
  * Uses adaptive KDF params unless an explicit `params` override is supplied
  * (e.g. when re-deriving during vault decryption, where the vault stores the
  * original params and we MUST reproduce the exact same key).
+ *
+ * Backed by hash-wasm's scrypt (WASM) rather than scrypt-js (pure JS) — same
+ * algorithm/parameters, just a faster implementation. outputType: "binary"
+ * makes it return a Uint8Array directly, matching the old scrypt-js return type.
  */
 async function deriveScryptKey(
   password: string | Uint8Array,
@@ -476,7 +480,15 @@ async function deriveScryptKey(
     ownBytes = true;
   }
   try {
-    return await scrypt.scrypt(pwBytes, salt, kdf.N, kdf.r, kdf.p, kdf.dkLen);
+    return await scrypt({
+      password: pwBytes,
+      salt,
+      costFactor: kdf.N,
+      blockSize: kdf.r,
+      parallelism: kdf.p,
+      hashLength: kdf.dkLen,
+      outputType: "binary",
+    });
   } finally {
     // Zero-fill the encoded password bytes as soon as scrypt is done.
     // If we encoded them ourselves we always wipe; if the caller passed a
