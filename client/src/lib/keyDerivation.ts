@@ -1,4 +1,4 @@
-import * as scrypt from "scrypt-js";
+import { scrypt } from "hash-wasm";
 import { mnemonicToSeed as bip39MnemonicToSeed } from '@scure/bip39';
 
 export async function mnemonicToSeed(mnemonic: string): Promise<Uint8Array> {
@@ -30,14 +30,15 @@ export async function deriveEncryptionKey(
   const encoder = new TextEncoder();
   const passwordBuffer = encoder.encode(password.normalize('NFKC'));
   try {
-    return await scrypt.scrypt(
-      passwordBuffer, 
-      salt, 
-      params.N, 
-      params.r, 
-      params.p, 
-      params.dkLen
-    );
+    return await scrypt({
+      password: passwordBuffer,
+      salt,
+      costFactor: params.N,
+      blockSize: params.r,
+      parallelism: params.p,
+      hashLength: params.dkLen,
+      outputType: "binary",
+    });
   } finally {
     passwordBuffer.fill(0);
   }
