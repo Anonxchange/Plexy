@@ -3,10 +3,10 @@ import { useWalletData } from "@/hooks/use-wallet-data";
 import {
   Eye,
   EyeOff,
-  Smartphone,
-  RefreshCw,
+  BitcoinSmartphone,
+  CreditCardChange,
   Send,
-  ArrowDownToLine,
+  WalletAdd,
 } from '@/lib/icons';
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -103,11 +103,11 @@ export function WalletHeader({
           <div className="w-full flex justify-end">
             <div className="grid grid-cols-4 bg-background dark:bg-card rounded-lg border p-1 w-full md:hidden transition-colors">
               <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1" onClick={onTopup}>
-                <Smartphone className="h-4 w-4" />
+                <BitcoinSmartphone className="h-4 w-4" />
                 <span className="text-[10px] font-semibold mt-0.5">Top-up</span>
               </Button>
               <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1" onClick={onSwap}>
-                <RefreshCw className="h-4 w-4" />
+                <CreditCardChange className="h-4 w-4" />
                 <span className="text-[10px] font-semibold mt-0.5">Swap</span>
               </Button>
               <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1" onClick={onSend}>
@@ -115,14 +115,14 @@ export function WalletHeader({
                 <span className="text-[10px] font-semibold mt-0.5">Send</span>
               </Button>
               <Button variant="ghost" size="sm" className="h-9 flex-col gap-0 px-1 text-primary" onClick={onReceive}>
-                <ArrowDownToLine className="h-4 w-4" />
+                <WalletAdd className="h-4 w-4" />
                 <span className="text-[10px] font-semibold mt-0.5">Deposit</span>
               </Button>
             </div>
 
             <div className="hidden md:flex flex-row items-center gap-2 bg-background dark:bg-card rounded-lg border p-1">
               <Button variant="ghost" size="sm" className="h-9 gap-2 px-4" onClick={onTopup}>
-                <Smartphone className="h-4 w-4" />
+                <BitcoinSmartphone className="h-4 w-4" />
                 <span>Mobile top up</span>
               </Button>
               <Button variant="ghost" size="sm" className="h-9 gap-2 px-4" onClick={onSend}>
@@ -130,11 +130,11 @@ export function WalletHeader({
                 <span>Send</span>
               </Button>
               <Button variant="ghost" size="sm" className="h-9 gap-2 px-4 text-primary" onClick={onReceive}>
-                <ArrowDownToLine className="h-4 w-4" />
+                <WalletAdd className="h-4 w-4" />
                 <span>Deposit</span>
               </Button>
               <Button variant="ghost" size="sm" className="h-9 gap-2 px-4" onClick={onSwap}>
-                <RefreshCw className="h-4 w-4" />
+                <CreditCardChange className="h-4 w-4" />
                 <span>Swap</span>
               </Button>
             </div>
