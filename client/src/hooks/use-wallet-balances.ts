@@ -250,11 +250,10 @@ export async function getUserWallets(
 ): Promise<Wallet[]> {
   const client = await getSupabase();
 
-  const { data: dbWallets, error: dbError } = await client
-    .from('user_wallets')
-    .select('id, address, chain_id, is_active')
-    .eq('user_id', userId)
-    .eq('is_active', true);
+  // user_wallets is locked down server-side — reads now go through the
+  // get_my_wallet RPC, which is scoped to auth.uid() and already filters
+  // to is_active = true, so no .eq()/.select() chaining is needed here.
+  const { data: dbWallets, error: dbError } = await client.rpc('get_my_wallet');
 
   if (dbError) {
     if (previous && previous.length) return previous.map(markStale);
