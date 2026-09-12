@@ -460,10 +460,6 @@ function validateRpcGasLimit(raw: unknown, floorOverride?: bigint): bigint {
  * Uses adaptive KDF params unless an explicit `params` override is supplied
  * (e.g. when re-deriving during vault decryption, where the vault stores the
  * original params and we MUST reproduce the exact same key).
- *
- * Backed by hash-wasm's scrypt (WASM) rather than scrypt-js (pure JS) — same
- * algorithm/parameters, just a faster implementation. outputType: "binary"
- * makes it return a Uint8Array directly, matching the old scrypt-js return type.
  */
 async function deriveScryptKey(
   password: string | Uint8Array,
