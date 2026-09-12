@@ -24,6 +24,7 @@ import {
   BellOffIcon as _BellOff,
   BellRingIcon as _BellRing,
   Bitcoin01Icon as _Bitcoin,
+  BitcoinSmartphone01Icon as _BitcoinSmartphone,
   BlocksIcon as _Blocks,
   BoltIcon as _Bolt,
   BookOpen01Icon as _BookOpen,
@@ -56,6 +57,7 @@ import {
   Copy01Icon as _Copy,
   CpuIcon as _Cpu,
   CreditCardIcon as _CreditCard,
+  CreditCardChangeIcon as _CreditCardChange,
   Crown02Icon as _Crown,
   Database01Icon as _Database,
   Dollar01Icon as _Dollar,
@@ -144,7 +146,7 @@ import {
   Rotate01Icon as _Rotate,
   BalanceScaleIcon as _BalanceScale,
   Search01Icon as _Search,
-  SendingOrderIcon as _SendingOrder,
+  SendIcon as _SendIcon,
   Settings01Icon as _Settings,
   Share01Icon as _Share,
   Shield01Icon as _Shield,
@@ -182,6 +184,7 @@ import {
   Video01Icon as _Video,
   VolumeHighIcon as _VolumeHigh,
   Wallet01Icon as _Wallet,
+  WalletAdd02Icon as _WalletAdd,
   Cancel01Icon as _Cancel,
   CancelCircleIcon as _CancelCircle,
   WebhookIcon as _Webhook,
@@ -257,6 +260,7 @@ export const Bell = makeIcon(_Bell, 'Bell');
 export const BellOff = makeIcon(_BellOff, 'BellOff');
 export const BellRing = makeIcon(_BellRing, 'BellRing');
 export const Bitcoin = makeIcon(_Bitcoin, 'Bitcoin');
+export const BitcoinSmartphone = makeIcon(_BitcoinSmartphone, 'BitcoinSmartphone');
 export const Blocks = makeIcon(_Blocks, 'Blocks');
 export const Bolt = makeIcon(_Bolt, 'Bolt');
 export const BookOpen = makeIcon(_BookOpen, 'BookOpen');
@@ -292,6 +296,7 @@ export const Cookie = makeIcon(_Cookie, 'Cookie');
 export const Copy = makeIcon(_Copy, 'Copy');
 export const Cpu = makeIcon(_Cpu, 'Cpu');
 export const CreditCard = makeIcon(_CreditCard, 'CreditCard');
+export const CreditCardChange = makeIcon(_CreditCardChange, 'CreditCardChange');
 export const Crown = makeIcon(_Crown, 'Crown');
 export const Database = makeIcon(_Database, 'Database');
 export const DollarSign = makeIcon(_Dollar, 'DollarSign');
@@ -385,7 +390,7 @@ export const RotateCcw = makeIcon(_Rotate, 'RotateCcw');
 export const RotateCw = makeIcon(_Rotate, 'RotateCw');
 export const Scale = makeIcon(_BalanceScale, 'Scale');
 export const Search = makeIcon(_Search, 'Search');
-export const Send = makeIcon(_SendingOrder, 'Send');
+export const Send = makeIcon(_SendIcon, 'Send');
 export const Settings = makeIcon(_Settings, 'Settings');
 export const Share2 = makeIcon(_Share, 'Share2');
 export const Shield = makeIcon(_Shield, 'Shield');
@@ -433,6 +438,7 @@ export const Video = makeIcon(_Video, 'Video');
 export const Volume2 = makeIcon(_VolumeHigh, 'Volume2');
 export const VolumeX = makeIcon(_Mute, 'VolumeX');
 export const Wallet = makeIcon(_Wallet, 'Wallet');
+export const WalletAdd = makeIcon(_WalletAdd, 'WalletAdd');
 export const Webhook = makeIcon(_Webhook, 'Webhook');
 export const Wifi = makeIcon(_Wifi, 'Wifi');
 export const X = makeIcon(_Cancel, 'X');
