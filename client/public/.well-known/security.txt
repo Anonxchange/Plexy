@@ -1,32 +1,10 @@
 # security.txt for Pexly (https://www.pexly.app)
 # Spec: RFC 9116 — https://www.rfc-editor.org/rfc/rfc9116
-#
-# Deployment:
-#   1. Host this file at BOTH of these paths (RFC 9116 §2 recommends the
-#      first; many scanners still check the second for legacy reasons):
-#        https://www.pexly.app/.well-known/security.txt
-#        https://www.pexly.app/security.txt   (redirect to the above is fine)
-#   2. This is text/plain, not text/html — your cloudflare-worker.js already
-#      passes non-HTML content types straight through untouched (see the
-#      `if (!contentType.includes("text/html")) return response;` check),
-#      so no HTMLRewriter/CSP changes are needed for this file to work.
-#   3. Must be served with Content-Type: text/plain; charset=utf-8
-#   4. Re-sign / bump `Expires` at least once a year — scanners and browsers'
-#      security tooling treat an expired file as invalid/absent.
 
-# ── Replace before deploying ──────────────────────────────────────────────
 Contact: mailto:security@pexly.app
-# Optional but recommended if you run a bug bounty or want encrypted reports:
-# Contact: https://pexly.app/security-disclosure
-# Encryption: https://www.pexly.app/pgp-key.txt
-
-# ── Fill in / verify these paths exist on your site ───────────────────────
 Policy: https://www.pexly.app/risk-disclosure
-Acknowledgments: https://www.pexly.app/security-acknowledgments
 
 Canonical: https://www.pexly.app/.well-known/security.txt
 Preferred-Languages: en
 
-# Bump this date at least yearly. RFC 9116 requires an Expires field;
-# without one (or after it lapses) the file is considered invalid.
 Expires: 2027-09-12T00:00:00.000Z
