@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import parse from "html-react-parser";
 import { 
-  ArrowLeft,
   ShoppingCart, 
   Star, 
   Package, 
@@ -587,40 +586,7 @@ export function ProductDetail() {
   return (
     <div>
       <div className="container mx-auto pt-3 pb-8 md:py-8 max-w-6xl px-4">
-        {/* Top bar — always visible */}
-        <div className="flex items-center justify-between mb-2 sm:mb-6">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/shop")}
-            aria-label="Back to shop"
-            title="Back to shop"
-            className="group h-10 w-10 rounded-full border border-border/70 bg-background/90 shadow-sm transition-all hover:-translate-x-0.5 hover:border-primary/40 hover:bg-primary/10 hover:shadow-md"
-          >
-            <ArrowLeft className="h-5 w-5 transition-transform duration-200 group-hover:-translate-x-0.5" />
-          </Button>
-          <div className="flex items-center gap-1.5">
-            <CartSheet />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleShare}
-              aria-label="Share product"
-              title="Share product"
-            >
-              <Share2 className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setReportOpen(true)}
-              aria-label="Report product"
-              title="Report product"
-            >
-              <Flag className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
+        {/* Top bar removed — back navigation no longer shown here */}
 
         {/* Loading state */}
         {isLoading && (
@@ -752,9 +718,30 @@ export function ProductDetail() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Badge variant="secondary">{product.category}</Badge>
-                <Button variant="ghost" size="icon">
-                  <Heart className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <CartSheet />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleShare}
+                    aria-label="Share product"
+                    title="Share product"
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setReportOpen(true)}
+                    aria-label="Report product"
+                    title="Report product"
+                  >
+                    <Flag className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon">
+                    <Heart className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               {product.tags && product.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
