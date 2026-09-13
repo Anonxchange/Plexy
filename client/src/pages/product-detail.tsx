@@ -639,7 +639,7 @@ export function ProductDetail() {
 
             return (
               <div className="space-y-4">
-                <div className="relative aspect-square rounded-xl overflow-hidden bg-muted">
+                <div className="relative -mx-4 sm:mx-0 aspect-square rounded-none sm:rounded-xl overflow-hidden bg-muted">
                   {mediaItems.length === 0 ? (
                     <div className="w-full h-full flex items-center justify-center">
                       <Package className="h-16 w-16 text-muted-foreground" />
