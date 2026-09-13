@@ -595,7 +595,7 @@ export function ProductDetail() {
           </div>
         )}
 
-        {!isLoading && product && <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+        {!isLoading && product && <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-8 lg:gap-12">
           {/* Left: Media (images + video) */}
           {(() => {
             const mediaItems: MediaItem[] = product.media && product.media.length > 0
