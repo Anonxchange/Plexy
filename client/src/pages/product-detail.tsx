@@ -588,7 +588,7 @@ export function ProductDetail() {
     <div>
       <div className="container mx-auto pt-3 pb-8 md:py-8 max-w-6xl px-4">
         {/* Top bar — always visible */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-2 sm:mb-6">
           <Button
             variant="ghost"
             size="icon"
