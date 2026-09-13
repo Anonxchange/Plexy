@@ -585,7 +585,7 @@ export function ProductDetail() {
 
   return (
     <div>
-      <div className="container mx-auto pt-3 pb-8 md:py-8 max-w-6xl px-4">
+      <div className="container mx-auto pt-0 sm:pt-3 pb-8 md:py-8 max-w-6xl px-4">
         {/* Top bar removed — back navigation no longer shown here */}
 
         {/* Loading state */}
@@ -719,7 +719,9 @@ export function ProductDetail() {
               <div className="flex items-center justify-between">
                 <Badge variant="secondary">{product.category}</Badge>
                 <div className="flex items-center gap-1">
-                  <CartSheet />
+                  <Button variant="ghost" size="icon">
+                    <Heart className="h-4 w-4" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -738,9 +740,7 @@ export function ProductDetail() {
                   >
                     <Flag className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon">
-                    <Heart className="h-4 w-4" />
-                  </Button>
+                  <CartSheet />
                 </div>
               </div>
               {product.tags && product.tags.length > 0 && (
