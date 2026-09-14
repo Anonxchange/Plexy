@@ -5,7 +5,7 @@ import { useSchema, createProductSchema } from "@/hooks/use-schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import parse from "html-react-parser";
+import parse, { domToReact } from "html-react-parser";
 import { 
   ShoppingCart, 
   Star, 
@@ -18,6 +18,7 @@ import {
   Flag,
   Minus,
   Plus,
+  ChevronRight,
 } from '@/lib/icons';
 import {
   AlertDialog,
@@ -198,6 +199,7 @@ export function ProductDetail() {
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [relatedProducts, setRelatedProducts] = useState<Listing[]>([]);
   const [quantity, setQuantity] = useState(1);
+  const [specsExpanded, setSpecsExpanded] = useState(true);
   
   // Store the raw Shopify product data so we don't re-fetch on add-to-cart
   const shopifyDataRef = useRef<any>(null);
@@ -583,6 +585,37 @@ export function ProductDetail() {
     }
   };
 
+  // Pulls any <table> out of the parsed description HTML and wraps it with a
+  // collapsible "Specifications" header, matching the AliExpress-style layout.
+  // Everything else in the description (paragraphs, headings, etc.) renders as-is.
+  const descriptionParseOptions = {
+    replace: (domNode: any) => {
+      if (domNode.type === "tag" && domNode.name === "table") {
+        return (
+          <div className="not-prose my-4">
+            <button
+              type="button"
+              onClick={() => setSpecsExpanded((v) => !v)}
+              className="w-full flex items-center justify-between border-b border-border/60 pb-3 mb-3"
+            >
+              <span className="text-base font-bold text-foreground">Specifications</span>
+              <ChevronRight
+                className={`h-4 w-4 text-muted-foreground transition-transform ${
+                  specsExpanded ? "rotate-90" : ""
+                }`}
+              />
+            </button>
+            {specsExpanded && (
+              <table className="w-full table-fixed bg-muted/40 rounded-xl overflow-hidden border-separate border-spacing-0 [&_tr]:border-b [&_tr]:border-border/50 [&_tr:last-child]:border-b-0 [&_td]:whitespace-normal [&_td]:break-words [&_td]:py-2.5 [&_td]:px-3 [&_td]:align-top [&_td:first-child]:text-muted-foreground [&_td:first-child]:font-normal [&_td:first-child]:w-2/5 [&_td:last-child]:text-foreground [&_td:last-child]:font-medium">
+                {domToReact(domNode.children as any, descriptionParseOptions)}
+              </table>
+            )}
+          </div>
+        );
+      }
+    },
+  };
+
   return (
     <div>
       <div className="container mx-auto pt-0 sm:pt-3 pb-8 md:py-8 max-w-6xl px-4">
@@ -693,9 +726,9 @@ export function ProductDetail() {
                       report
                     </button>
                   </div>
-                  <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground overflow-x-auto [&_*]:!max-w-full [&_*]:!box-border [&_p]:!whitespace-normal [&_div]:!whitespace-normal [&_p]:!my-3 [&_table]:!w-full [&_table]:!table-fixed [&_table]:!my-3 [&_table]:!bg-muted/40 [&_table]:!rounded-xl [&_table]:!overflow-hidden [&_table]:!border-separate [&_table]:!border-spacing-0 [&_tr]:!border-b [&_tr]:!border-border/50 [&_tr:last-child]:!border-b-0 [&_td]:!whitespace-normal [&_td]:!break-words [&_td]:!py-2.5 [&_td]:!px-3 [&_td]:!align-top [&_td:first-child]:!text-muted-foreground [&_td:first-child]:!font-normal [&_td:first-child]:!w-2/5 [&_td:last-child]:!text-foreground [&_td:last-child]:!font-medium">
+                  <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground overflow-x-auto [&_*]:!max-w-full [&_*]:!box-border [&_p]:!whitespace-normal [&_div]:!whitespace-normal [&_p]:!my-3">
                     {product.description
-                      ? parse(stripImgTags(product.description))
+                      ? parse(stripImgTags(product.description), descriptionParseOptions)
                       : "No description provided for this item."}
                   </div>
                 </div>
@@ -964,9 +997,9 @@ export function ProductDetail() {
                     report
                   </button>
                 </div>
-                <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground overflow-x-auto [&_*]:!max-w-full [&_*]:!box-border [&_p]:!whitespace-normal [&_div]:!whitespace-normal [&_p]:!my-3 [&_table]:!w-full [&_table]:!table-fixed [&_table]:!my-3 [&_table]:!bg-muted/40 [&_table]:!rounded-xl [&_table]:!overflow-hidden [&_table]:!border-separate [&_table]:!border-spacing-0 [&_tr]:!border-b [&_tr]:!border-border/50 [&_tr:last-child]:!border-b-0 [&_td]:!whitespace-normal [&_td]:!break-words [&_td]:!py-2.5 [&_td]:!px-3 [&_td]:!align-top [&_td:first-child]:!text-muted-foreground [&_td:first-child]:!font-normal [&_td:first-child]:!w-2/5 [&_td:last-child]:!text-foreground [&_td:last-child]:!font-medium">
+                <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground overflow-x-auto [&_*]:!max-w-full [&_*]:!box-border [&_p]:!whitespace-normal [&_div]:!whitespace-normal [&_p]:!my-3">
                   {product.description
-                    ? parse(stripImgTags(product.description))
+                    ? parse(stripImgTags(product.description), descriptionParseOptions)
                     : "No description provided for this item."}
                 </div>
               </div>
