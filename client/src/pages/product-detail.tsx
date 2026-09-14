@@ -683,9 +683,17 @@ export function ProductDetail() {
 
               {/* Description + store — desktop only, lives under images in col 1 */}
               <div className="hidden md:block space-y-4 pt-2">
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold">Description</p>
-                  <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground overflow-x-auto [&_*]:!max-w-full [&_*]:!box-border [&_table]:!w-full [&_table]:!table-fixed [&_td]:!whitespace-normal [&_td]:!break-words [&_p]:!whitespace-normal [&_div]:!whitespace-normal">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                    <p className="text-base font-bold">Item description</p>
+                    <button
+                      onClick={() => setReportOpen(true)}
+                      className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-2"
+                    >
+                      report
+                    </button>
+                  </div>
+                  <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground overflow-x-auto [&_*]:!max-w-full [&_*]:!box-border [&_p]:!whitespace-normal [&_div]:!whitespace-normal [&_p]:!my-3 [&_table]:!w-full [&_table]:!table-fixed [&_table]:!my-3 [&_table]:!bg-muted/40 [&_table]:!rounded-xl [&_table]:!overflow-hidden [&_table]:!border-separate [&_table]:!border-spacing-0 [&_tr]:!border-b [&_tr]:!border-border/50 [&_tr:last-child]:!border-b-0 [&_td]:!whitespace-normal [&_td]:!break-words [&_td]:!py-2.5 [&_td]:!px-3 [&_td]:!align-top [&_td:first-child]:!text-muted-foreground [&_td:first-child]:!font-normal [&_td:first-child]:!w-2/5 [&_td:last-child]:!text-foreground [&_td:last-child]:!font-medium">
                     {product.description
                       ? parse(stripImgTags(product.description))
                       : "No description provided for this item."}
@@ -913,7 +921,8 @@ export function ProductDetail() {
                 </div>
               </div>
 
-              <Separator />
+              <div className="-mx-4 sm:mx-0 sm:hidden h-2 bg-muted/60" />
+              <Separator className="hidden sm:block" />
 
               {product.user_id === 'shopify' ? (
                 <ShippingEstimator
@@ -945,9 +954,17 @@ export function ProductDetail() {
               )}
 
               {/* Description + store — mobile only (desktop version is in col 1 under images) */}
-              <div className="space-y-2 md:hidden">
-                <p className="text-sm font-semibold">Description</p>
-                <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground overflow-x-auto [&_*]:!max-w-full [&_*]:!box-border [&_table]:!w-full [&_table]:!table-fixed [&_td]:!whitespace-normal [&_td]:!break-words [&_p]:!whitespace-normal [&_div]:!whitespace-normal">
+              <div className="space-y-3 md:hidden">
+                <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                  <p className="text-base font-bold">Item description</p>
+                  <button
+                    onClick={() => setReportOpen(true)}
+                    className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-2"
+                  >
+                    report
+                  </button>
+                </div>
+                <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground overflow-x-auto [&_*]:!max-w-full [&_*]:!box-border [&_p]:!whitespace-normal [&_div]:!whitespace-normal [&_p]:!my-3 [&_table]:!w-full [&_table]:!table-fixed [&_table]:!my-3 [&_table]:!bg-muted/40 [&_table]:!rounded-xl [&_table]:!overflow-hidden [&_table]:!border-separate [&_table]:!border-spacing-0 [&_tr]:!border-b [&_tr]:!border-border/50 [&_tr:last-child]:!border-b-0 [&_td]:!whitespace-normal [&_td]:!break-words [&_td]:!py-2.5 [&_td]:!px-3 [&_td]:!align-top [&_td:first-child]:!text-muted-foreground [&_td:first-child]:!font-normal [&_td:first-child]:!w-2/5 [&_td:last-child]:!text-foreground [&_td:last-child]:!font-medium">
                   {product.description
                     ? parse(stripImgTags(product.description))
                     : "No description provided for this item."}
