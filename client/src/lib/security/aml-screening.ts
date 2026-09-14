@@ -1,4 +1,3 @@
-
 import { createClient } from '../supabase';
 
 const supabase = createClient();
@@ -22,32 +21,18 @@ export interface ChainAnalysisResult {
 
 class AMLScreening {
   async screenUser(userId: string, fullName: string, country: string): Promise<SanctionsMatch[]> {
-    const { data: sanctions, error } = await supabase
-      .from('sanctions_lists')
-      .select('*')
-      .or(`country.eq.${country},country.is.null`);
+    // Screening now runs server-side inside screen_user_for_signup (SECURITY
+    // DEFINER), so this works for logged-out signup (anon role) without
+    // needing direct SELECT on sanctions_lists — which anon/authenticated no
+    // longer have, to stop the raw list from being scraped via dev tools.
+    const { data, error } = await supabase.rpc('screen_user_for_signup', {
+      p_full_name: fullName,
+      p_country: country,
+    });
 
     if (error) throw error;
 
-    const matches: SanctionsMatch[] = [];
-    const nameLower = fullName.toLowerCase();
-
-    for (const sanction of sanctions || []) {
-      const entityLower = sanction.entity_name.toLowerCase();
-      const similarity = this.calculateSimilarity(nameLower, entityLower);
-
-      if (similarity > 0.8) {
-        matches.push({
-          list_name: sanction.list_name,
-          entity_name: sanction.entity_name,
-          entity_type: sanction.entity_type,
-          country: sanction.country,
-          match_score: similarity,
-        });
-      }
-    }
-
-    return matches;
+    return (data as SanctionsMatch[]) || [];
   }
 
   async screenAddress(
