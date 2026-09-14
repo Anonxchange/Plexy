@@ -358,36 +358,20 @@ export function SignUp() {
       // before an auth session exists, so this guard must happen first.
       // This also catches casing differences such as User@Example.com vs
       // user@example.com.
+      //
+      // email_exists_for_signup is SECURITY DEFINER and internally checks
+      // both auth.users (registered emails) and user_profiles.username
+      // (legacy accounts whose email was stored as their username), so it is
+      // the single source of truth here. user_profiles has no anon SELECT
+      // policy anymore (profile-leak fix), so querying it directly from this
+      // logged-out flow would always fail — do not add those calls back.
       setLoading(true);
       const { data: authAccountExists, error: rpcError } = await supabase.rpc(
         "email_exists_for_signup",
         { p_email: normalizedEmail },
       );
 
-      // The RPC reads auth.users with SECURITY DEFINER. Keep a profile
-      // fallback for existing projects where the migration has not been
-      // applied yet, and also cover older profiles whose email was stored as
-      // their username.
-      const { data: existingEmailProfile, error: existingEmailProfileError } = await supabase
-        .from("user_profiles")
-        .select("id")
-        .eq("email", normalizedEmail)
-        .maybeSingle();
-
-      const { data: existingUsernameProfile, error: existingUsernameProfileError } =
-        existingEmailProfile || existingEmailProfileError
-          ? { data: null, error: existingEmailProfileError }
-          : await supabase
-              .from("user_profiles")
-              .select("id")
-              .eq("username", normalizedEmail)
-              .maybeSingle();
-
-      if (
-        rpcError &&
-        existingEmailProfileError &&
-        existingUsernameProfileError
-      ) {
+      if (rpcError) {
         setLoading(false);
         toast({
           title: "Unable to check account",
@@ -397,10 +381,7 @@ export function SignUp() {
         return;
       }
 
-      if (
-        authAccountExists === true ||
-        Boolean(existingEmailProfile || existingUsernameProfile)
-      ) {
+      if (authAccountExists === true) {
         setLoading(false);
         toast({
           title: "Account already exists",
