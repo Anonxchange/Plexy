@@ -6,15 +6,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { MapPin, Truck, Clock, CreditCard, ShoppingCart, Loader2, Package, AlertCircle, CheckCircle2, ChevronRight, RotateCcw, ShieldCheck } from '@/lib/icons';
+import { MapPin, Truck, Clock, Loader2, Package, AlertCircle, ChevronRight, RotateCcw, ShieldCheck } from '@/lib/icons';
 import { formatPrice } from "@/lib/shopify-service";
 import { getCountryCode } from "@/lib/geo";
-import { useCart } from "@/hooks/use-shopify-cart";
 import { useShippingRates } from "@/hooks/use-shipping-rates";
 import { isValidCjVid } from "@/lib/cj-vid";
-import { toast } from "sonner";
 import type { ShippingInfo } from "./shipping-types";
 
 // ─── Country list ─────────────────────────────────────────────────────────────
@@ -134,11 +131,7 @@ interface ShippingEstimatorProps {
 // ─── Component ────────────────────────────────────────────────────────────────
 export function ShippingEstimator({
   shipping,
-  productPrice,
   currency,
-  variantId,
-  productTitle,
-  productImage,
   cjVid,
 }: ShippingEstimatorProps) {
   const parsed = useMemo(() => parseShipping(shipping), [shipping]);
@@ -148,10 +141,8 @@ export function ShippingEstimator({
 
   const [selectedCountry, setSelectedCountry] = useState<string>("");
   const [selectedMethodIdx, setSelectedMethodIdx] = useState(0);
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [shippingExpanded, setShippingExpanded] = useState(false);
 
-  const { addToCart, checkoutUrl } = useCart();
   const { rates, isLoading: isLoadingRates, error: ratesError, calculate, reset } = useShippingRates();
 
   // Auto-detect user's country via IP on mount, fall back to US then first available
@@ -226,54 +217,15 @@ export function ShippingEstimator({
       ? "Free"
       : formatPrice(fee as number, feeCurrency);
 
-  const total = fee != null ? productPrice + (fee as number) : null;
-
-  const handleCheckout = async () => {
-    if (!variantId) {
-      toast.error("Please select all product options before checkout.");
-      return;
-    }
-    setIsCheckingOut(true);
-    try {
-      // Add to the shared cart first so the item is included in the checkout
-      await addToCart(variantId, {
-        variantId,
-        title: productTitle,
-        price: productPrice,
-        currency,
-        image: productImage ?? "",
-      });
-      // After addToCart the hook writes the URL to localStorage — read it from
-      // there because React state won't have re-rendered within this call.
-      const url = localStorage.getItem('shopify_checkout_url') || checkoutUrl;
-      if (!url) {
-        toast.error("Could not create checkout. Please try again.");
-        return;
-      }
-      window.location.href = url;
-    } catch {
-      toast.error("Checkout failed. Please try again.");
-    } finally {
-      setIsCheckingOut(false);
-    }
-  };
-
-  const handleAddToCart = async () => {
-    if (!variantId) {
-      toast.error("Please select all product options first.");
-      return;
-    }
-    await addToCart(variantId, {
-      variantId,
-      title: productTitle,
-      price: productPrice,
-      currency,
-      image: productImage ?? "",
-    });
-  };
-
   return (
     <div className="-mx-4 sm:mx-0 border-y sm:border sm:rounded-2xl border-border/70 bg-card overflow-hidden space-y-0 sm:shadow-sm">
+      {/* Section label */}
+      <div className="px-4 pt-4 pb-2">
+        <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+          Service commitment
+        </p>
+      </div>
+
       {/* Shipping — tap to expand destination & method */}
       <button
         type="button"
@@ -421,59 +373,6 @@ export function ShippingEstimator({
           <p>Safe payments: We do not share your personal details with third parties.</p>
           <p>Secure personal details: We protect your privacy and keep your data safe.</p>
         </div>
-      </div>
-
-      <Separator />
-
-      {/* Cost summary — compact row style */}
-      <div className="divide-y divide-border/60">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Product price</span>
-          </div>
-          <span className="text-sm font-semibold">{formatPrice(productPrice, currency)}</span>
-        </div>
-      </div>
-
-      {!isLoadingRates && total !== null && (
-        <>
-          <Separator />
-          <div className="flex justify-between items-center px-4 py-3">
-            <span className="font-bold text-sm">Total</span>
-            <span className="font-bold text-lg text-primary">
-              {formatPrice(total, feeCurrency)}
-            </span>
-          </div>
-        </>
-      )}
-      <p className="px-4 pb-4 text-xs text-muted-foreground">
-        * Taxes and final shipping calculated at checkout. Delivery times may vary by destination.
-      </p>
-
-      <Separator />
-
-      {/* Actions */}
-      <div className="p-4 grid grid-cols-2 gap-3">
-        <Button
-          variant="outline"
-          className="h-11"
-          onClick={handleAddToCart}
-        >
-          <ShoppingCart className="h-4 w-4 mr-2" />
-          Add to Cart
-        </Button>
-        <Button
-          className="h-11"
-          onClick={handleCheckout}
-          disabled={isCheckingOut || !variantId}
-        >
-          {isCheckingOut ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            "Go to Checkout"
-          )}
-        </Button>
       </div>
     </div>
   );
