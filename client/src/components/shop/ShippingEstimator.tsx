@@ -218,7 +218,7 @@ export function ShippingEstimator({
       : formatPrice(fee as number, feeCurrency);
 
   return (
-    <div className="-mx-4 sm:mx-0 border-y sm:border sm:rounded-2xl border-border/70 bg-card overflow-hidden space-y-0 sm:shadow-sm">
+    <div className="-mx-4 sm:mx-0 border-b sm:border sm:rounded-2xl border-border/70 bg-card overflow-hidden space-y-0 sm:shadow-sm">
       {/* Section label */}
       <div className="px-4 pt-4 pb-2">
         <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
@@ -233,7 +233,7 @@ export function ShippingEstimator({
         className="w-full flex items-start justify-between gap-3 px-4 py-3.5 text-left hover:bg-muted/40 transition-colors"
       >
         <div className="flex items-start gap-3 min-w-0">
-          <Truck className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+          <Truck className="h-4 w-4 mt-0.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <div className="min-w-0">
             {isLoadingRates ? (
               <div className="h-4 w-40 bg-muted animate-pulse rounded" />
@@ -352,7 +352,7 @@ export function ShippingEstimator({
         className="flex items-center justify-between px-4 py-3.5 hover:bg-muted/40 transition-colors"
       >
         <div className="flex items-center gap-3">
-          <RotateCcw className="h-4 w-4 text-muted-foreground" />
+          <RotateCcw className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
           <span className="text-sm font-semibold">Return &amp; refund policy</span>
         </div>
         <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -363,7 +363,7 @@ export function ShippingEstimator({
       {/* Security & Privacy */}
       <div className="px-4 py-3.5">
         <div className="flex items-center gap-3">
-          <ShieldCheck className="h-4 w-4 text-muted-foreground shrink-0" />
+          <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <p className="text-sm">
             <span className="font-semibold">Security &amp; Privacy</span>{" "}
             <span className="text-muted-foreground">secure personal details</span>
