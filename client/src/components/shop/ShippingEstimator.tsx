@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { MapPin, Truck, Clock, CreditCard, ShoppingCart, Loader2, Package, AlertCircle, CheckCircle2 } from '@/lib/icons';
+import { MapPin, Truck, Clock, CreditCard, ShoppingCart, Loader2, Package, AlertCircle, CheckCircle2, ChevronRight, RotateCcw } from '@/lib/icons';
 import { formatPrice } from "@/lib/shopify-service";
 import { getCountryCode } from "@/lib/geo";
 import { useCart } from "@/hooks/use-shopify-cart";
@@ -417,38 +417,56 @@ export function ShippingEstimator({
 
       <Separator />
 
-      {/* Cost summary */}
-      <div className="p-4 space-y-2.5">
-        <div className="flex justify-between items-center text-sm">
-          <span className="text-muted-foreground">Product price</span>
-          <span className="font-semibold">{formatPrice(productPrice, currency)}</span>
+      {/* Cost summary — compact row style */}
+      <div className="divide-y divide-border/60">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-3">
+            <Package className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Product price</span>
+          </div>
+          <span className="text-sm font-semibold">{formatPrice(productPrice, currency)}</span>
         </div>
-        <div className="flex justify-between items-center text-sm">
-          <span className="text-muted-foreground flex items-center gap-1.5">
-            <CreditCard className="h-3.5 w-3.5" />
-            Shipping fee
-          </span>
+
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-3">
+            <CreditCard className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Shipping fee</span>
+          </div>
           {isLoadingRates ? (
-            <div className="h-5 w-20 bg-muted animate-pulse rounded" />
+            <div className="h-4 w-20 bg-muted animate-pulse rounded" />
           ) : (
-            <span className="font-semibold">{shippingCostDisplay}</span>
+            <span className="text-sm font-semibold">{shippingCostDisplay}</span>
           )}
         </div>
-        {!isLoadingRates && total !== null && (
-          <>
-            <Separator />
-            <div className="flex justify-between items-center">
-              <span className="font-bold text-sm">Total</span>
-              <span className="font-bold text-lg text-primary">
-                {formatPrice(total, feeCurrency)}
-              </span>
-            </div>
-          </>
-        )}
-        <p className="text-xs text-muted-foreground">
-          * Taxes and final shipping calculated at checkout. Delivery times may vary by destination.
-        </p>
+
+        <a
+          href="https://www.pexly.app/en/refund-policy"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <RotateCcw className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Return &amp; refund policy</span>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </a>
       </div>
+
+      {!isLoadingRates && total !== null && (
+        <>
+          <Separator />
+          <div className="flex justify-between items-center px-4 py-3">
+            <span className="font-bold text-sm">Total</span>
+            <span className="font-bold text-lg text-primary">
+              {formatPrice(total, feeCurrency)}
+            </span>
+          </div>
+        </>
+      )}
+      <p className="px-4 pb-4 text-xs text-muted-foreground">
+        * Taxes and final shipping calculated at checkout. Delivery times may vary by destination.
+      </p>
 
       <Separator />
 
