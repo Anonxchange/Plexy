@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { MapPin, Truck, Clock, CreditCard, ShoppingCart, Loader2, Package, AlertCircle, CheckCircle2, ChevronRight, RotateCcw } from '@/lib/icons';
+import { MapPin, Truck, Clock, CreditCard, ShoppingCart, Loader2, Package, AlertCircle, CheckCircle2, ChevronRight, RotateCcw, ShieldCheck } from '@/lib/icons';
 import { formatPrice } from "@/lib/shopify-service";
 import { getCountryCode } from "@/lib/geo";
 import { useCart } from "@/hooks/use-shopify-cart";
@@ -149,6 +149,7 @@ export function ShippingEstimator({
   const [selectedCountry, setSelectedCountry] = useState<string>("");
   const [selectedMethodIdx, setSelectedMethodIdx] = useState(0);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [shippingExpanded, setShippingExpanded] = useState(false);
 
   const { addToCart, checkoutUrl } = useCart();
   const { rates, isLoading: isLoadingRates, error: ratesError, calculate, reset } = useShippingRates();
@@ -227,9 +228,6 @@ export function ShippingEstimator({
 
   const total = fee != null ? productPrice + (fee as number) : null;
 
-  const selectedCountryName =
-    ALL_COUNTRIES.find((c) => c.code === selectedCountry)?.name ?? "";
-
   const handleCheckout = async () => {
     if (!variantId) {
       toast.error("Please select all product options before checkout.");
@@ -275,144 +273,154 @@ export function ShippingEstimator({
   };
 
   return (
-    <div className="rounded-2xl border border-border/70 bg-card overflow-hidden space-y-0 shadow-sm">
-      {/* Header */}
-      <div className="px-4 pt-4 pb-3 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
-            <Truck className="h-4 w-4 text-primary" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold">Delivery &amp; shipping</p>
-            <p className="text-xs text-muted-foreground">Reliable delivery estimates for your order</p>
-          </div>
-        </div>
-        {useLiveRates && (
-          <span className="text-xs text-primary bg-primary/10 px-2 py-1 rounded-full font-medium whitespace-nowrap">
-            Live rates
-          </span>
-        )}
-      </div>
-
-      <Separator />
-
-      {/* Destination */}
-      <div className="p-4 space-y-3">
-        {/* Country */}
-        <div className="flex items-center justify-between gap-3">
-          <label className="text-sm font-semibold flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-primary" />
-            Ship to
-          </label>
-          <Select value={selectedCountry} onValueChange={handleCountryChange}>
-            <SelectTrigger className="w-[min(13rem,60%)] h-10 text-sm">
-              <SelectValue placeholder="Select country" />
-            </SelectTrigger>
-            <SelectContent className="max-h-64">
-              {availableCountries.map((c) => (
-                <SelectItem key={c.code} value={c.code}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Shipping Method */}
-        {isLoadingRates ? (
-          <div className="flex items-center gap-2 rounded-xl bg-muted/50 px-3 py-2.5 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Fetching shipping rates…
-          </div>
-        ) : ratesError && isValidCjVid(cjVid) ? (
-          <div className="flex items-center gap-2 rounded-xl bg-muted/50 px-3 py-2.5 text-xs text-muted-foreground">
-            <AlertCircle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
-            <span>Could not load live rates. Showing estimated data.</span>
-          </div>
-        ) : !isValidCjVid(cjVid) && parsed.methods.length === 1 && parsed.methods[0] === "Standard Shipping" && !parsed.fees[0] ? (
-          <div className="flex items-center gap-2 rounded-xl bg-muted/50 px-3 py-2.5 text-xs text-muted-foreground">
-            <AlertCircle className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-            <span>Shipping estimate not available for this product.</span>
-          </div>
-        ) : displayMethods.length > 1 ? (
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-              <Truck className="h-3.5 w-3.5" />
-              Shipping method
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {displayMethods.map((m, i) => (
-                <button
-                  key={m}
-                  onClick={() => setSelectedMethodIdx(i)}
-                  className={`px-3 py-2 rounded-lg text-xs font-semibold border-2 transition-all ${
-                    selectedMethodIdx === i
-                      ? "bg-foreground text-background border-foreground"
-                      : "bg-background text-foreground border-border/40 hover:border-primary/50"
-                  }`}
-                >
-                  {m}
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-1.5">
-            <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-              <Truck className="h-3.5 w-3.5" />
-              Shipping method
-            </p>
-            <p className="text-sm font-semibold">{displayMethods[0]}</p>
-          </div>
-        )}
-      </div>
-
-      <Separator />
-
-      {/* Delivery highlight — keep the complete estimate visible at a glance */}
-      <div className="mx-4 my-4 rounded-xl border border-emerald-200/70 bg-emerald-50/70 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/15">
-            <Truck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-              <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">Estimated delivery</p>
-              <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            </div>
+    <div className="-mx-4 sm:mx-0 border-y sm:border sm:rounded-2xl border-border/70 bg-card overflow-hidden space-y-0 sm:shadow-sm">
+      {/* Shipping — tap to expand destination & method */}
+      <button
+        type="button"
+        onClick={() => setShippingExpanded((v) => !v)}
+        className="w-full flex items-start justify-between gap-3 px-4 py-3.5 text-left hover:bg-muted/40 transition-colors"
+      >
+        <div className="flex items-start gap-3 min-w-0">
+          <Truck className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+          <div className="min-w-0">
             {isLoadingRates ? (
-              <div className="mt-2 h-7 w-32 rounded bg-emerald-200/70 animate-pulse dark:bg-emerald-900/60" />
+              <div className="h-4 w-40 bg-muted animate-pulse rounded" />
             ) : (
-              <p className="mt-1 text-xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100">
-                {deliveryTime}
+              <p className="text-sm font-semibold truncate">
+                Shipping: {shippingCostDisplay}
               </p>
             )}
-            {selectedCountryName && (
-              <p className="mt-0.5 text-xs text-emerald-800/80 dark:text-emerald-300/80">
-                Delivered to {selectedCountryName}
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {isLoadingRates ? "Calculating…" : `Est. delivery: ${deliveryTime}`}
+            </p>
+          </div>
+        </div>
+        <ChevronRight
+          className={`h-4 w-4 mt-0.5 text-muted-foreground shrink-0 transition-transform ${
+            shippingExpanded ? "rotate-90" : ""
+          }`}
+        />
+      </button>
+
+      {shippingExpanded && (
+        <div className="px-4 pb-4 space-y-3 border-t border-border/60 bg-muted/20">
+          {/* Country */}
+          <div className="flex items-center justify-between gap-3 pt-3">
+            <label className="text-sm font-semibold flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-primary" />
+              Ship to
+            </label>
+            <Select value={selectedCountry} onValueChange={handleCountryChange}>
+              <SelectTrigger className="w-[min(13rem,60%)] h-10 text-sm">
+                <SelectValue placeholder="Select country" />
+              </SelectTrigger>
+              <SelectContent className="max-h-64">
+                {availableCountries.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Shipping Method */}
+          {isLoadingRates ? (
+            <div className="flex items-center gap-2 rounded-xl bg-muted/50 px-3 py-2.5 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Fetching shipping rates…
+            </div>
+          ) : ratesError && isValidCjVid(cjVid) ? (
+            <div className="flex items-center gap-2 rounded-xl bg-muted/50 px-3 py-2.5 text-xs text-muted-foreground">
+              <AlertCircle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
+              <span>Could not load live rates. Showing estimated data.</span>
+            </div>
+          ) : !isValidCjVid(cjVid) && parsed.methods.length === 1 && parsed.methods[0] === "Standard Shipping" && !parsed.fees[0] ? (
+            <div className="flex items-center gap-2 rounded-xl bg-muted/50 px-3 py-2.5 text-xs text-muted-foreground">
+              <AlertCircle className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+              <span>Shipping estimate not available for this product.</span>
+            </div>
+          ) : displayMethods.length > 1 ? (
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                <Truck className="h-3.5 w-3.5" />
+                Shipping method
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {displayMethods.map((m, i) => (
+                  <button
+                    key={m}
+                    onClick={() => setSelectedMethodIdx(i)}
+                    className={`px-3 py-2 rounded-lg text-xs font-semibold border-2 transition-all ${
+                      selectedMethodIdx === i
+                        ? "bg-foreground text-background border-foreground"
+                        : "bg-background text-foreground border-border/40 hover:border-primary/50"
+                    }`}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                <Truck className="h-3.5 w-3.5" />
+                Shipping method
               </p>
+              <p className="text-sm font-semibold">{displayMethods[0]}</p>
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5" />
+              Processing: {processingTime}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Package className="h-3.5 w-3.5" />
+              Ships from {parsed.shipsFrom}
+            </span>
+            {useLiveRates && (
+              <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-full font-medium">
+                Live rates
+              </span>
             )}
           </div>
         </div>
-        <div className="mt-4 grid grid-cols-1 gap-3 border-t border-emerald-200/70 pt-3 text-sm dark:border-emerald-900/60 sm:grid-cols-2">
-          <div className="flex items-start gap-2">
-            <Clock className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-400" />
-            <div>
-              <p className="text-xs text-emerald-800/70 dark:text-emerald-300/70">Est. processing</p>
-              <p className="font-semibold text-emerald-950 dark:text-emerald-100">{processingTime}</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-2">
-            <Package className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-400" />
-            <div>
-              <p className="text-xs text-emerald-800/70 dark:text-emerald-300/70">Ships from</p>
-              <p className="font-semibold text-emerald-950 dark:text-emerald-100">{parsed.shipsFrom}</p>
-            </div>
-          </div>
+      )}
+
+      <Separator />
+
+      {/* Return & refund policy */}
+      <a
+        href="https://www.pexly.app/en/refund-policy"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-between px-4 py-3.5 hover:bg-muted/40 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <RotateCcw className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-semibold">Return &amp; refund policy</span>
         </div>
-        <p className="mt-3 text-xs text-emerald-800/80 dark:text-emerald-300/80">
-          Delivery days are confirmed with the available shipping option at checkout.
-        </p>
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </a>
+
+      <Separator />
+
+      {/* Security & Privacy */}
+      <div className="px-4 py-3.5">
+        <div className="flex items-center gap-3">
+          <ShieldCheck className="h-4 w-4 text-muted-foreground shrink-0" />
+          <p className="text-sm">
+            <span className="font-semibold">Security &amp; Privacy</span>{" "}
+            <span className="text-muted-foreground">secure personal details</span>
+          </p>
+        </div>
+        <div className="mt-2 ml-7 space-y-1 text-xs text-muted-foreground">
+          <p>Safe payments: We do not share your personal details with third parties.</p>
+          <p>Secure personal details: We protect your privacy and keep your data safe.</p>
+        </div>
       </div>
 
       <Separator />
@@ -421,36 +429,11 @@ export function ShippingEstimator({
       <div className="divide-y divide-border/60">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <CreditCard className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-medium">Product price</span>
           </div>
           <span className="text-sm font-semibold">{formatPrice(productPrice, currency)}</span>
         </div>
-
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Shipping fee</span>
-          </div>
-          {isLoadingRates ? (
-            <div className="h-4 w-20 bg-muted animate-pulse rounded" />
-          ) : (
-            <span className="text-sm font-semibold">{shippingCostDisplay}</span>
-          )}
-        </div>
-
-        <a
-          href="https://www.pexly.app/en/refund-policy"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <RotateCcw className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Return &amp; refund policy</span>
-          </div>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-        </a>
       </div>
 
       {!isLoadingRates && total !== null && (
