@@ -14,7 +14,6 @@ import { getBitcoinAddress } from "./bitcoinSigner";
 import { getSolanaAddress, deriveSolanaPrivateKey } from "./solanaSigner";
 import { getTronAddress } from "./tronSigner";
 import {
-  encryptVault,
   encryptVaultWithKey,
   EncryptedVault,
   DerivedVaultKey,
@@ -400,9 +399,23 @@ class NonCustodialWalletManager {
     password: string,
     precomputedKey?: DerivedVaultKey
   ): Promise<EncryptedVault> {
-    return precomputedKey
-      ? encryptVaultWithKey(data, precomputedKey)
-      : encryptVault(data, password);
+    if (precomputedKey) {
+      // TODO: no worker message type currently accepts a pre-derived
+      // DerivedVaultKey (its CryptoKey is non-extractable and created via
+      // webCrypto.ts's deriveVaultKey(), likely called by whatever passes
+      // precomputedKey in — probably WalletSetupDialog for multi-chain
+      // creation, to avoid re-running scrypt per chain). Until the worker
+      // gains an equivalent batch/reuse-key API, this path still runs on
+      // the main thread via encryptVaultWithKey. Not changed here — needs
+      // the caller's file to pick the right worker-side replacement
+      // (likely "encryptVaultBatch", which already derives once internally).
+      return encryptVaultWithKey(data, precomputedKey);
+    }
+    return callSigningWorker<EncryptedVault>("encryptVault", {
+      data,
+      password,
+      origin: typeof window !== "undefined" ? window.location.origin : undefined,
+    });
   }
 
   async decryptPrivateKey(
