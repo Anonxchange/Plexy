@@ -365,6 +365,20 @@ export function SignUp() {
       // the single source of truth here. user_profiles has no anon SELECT
       // policy anymore (profile-leak fix), so querying it directly from this
       // logged-out flow would always fail — do not add those calls back.
+
+      // The RPC is EXECUTE-granted to anon so logged-out visitors can reach
+      // it, which also means it's the one endpoint on this page a bot could
+      // hammer to enumerate registered emails. Require the Turnstile token
+      // first so every call to it is already rate-limited by the captcha.
+      if (import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken) {
+        toast({
+          title: "Security check required",
+          description: "Complete the CAPTCHA before continuing.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setLoading(true);
       const { data: authAccountExists, error: rpcError } = await supabase.rpc(
         "email_exists_for_signup",
