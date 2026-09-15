@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { callSigningWorker } from "@/hooks/use-signing-worker";
+import { requestWalletRefresh } from "@/hooks/use-wallet-balances";
 import type { SecureWalletResult } from "@/lib/signing.worker";
-import { createClient } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 import { AlertTriangle, X } from '@/lib/icons';
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
@@ -48,34 +49,45 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [walletStateVerified, setWalletStateVerified] = useState(false);
   const { toast } = useToast();
   const rateLimit = usePasswordRateLimit({ maxAttempts: 3, baseDelayMs: 15_000 });
 
   const passwordValidation = useMemo(() => validateWalletPassword(password), [password]);
 
-  // Guard: when the dialog opens, verify user_wallets is truly empty before
-  // showing the creation flow. Uses a cancellation flag so the async response
-  // cannot call state setters or callbacks after the dialog has closed or the
-  // component has re-rendered with a different open value.
+  // Guard: when the dialog opens, verify the RPC-scoped wallet state before
+  // allowing creation. A failed check is fail-closed: never create locally
+  // when the server state is unknown.
   useEffect(() => {
     if (!open || !userId) return;
 
     let cancelled = false;
+    setWalletStateVerified(false);
 
     const checkExisting = async () => {
       try {
-        const supabase = createClient();
-        const { data: hasWallet, error } = await supabase.rpc('has_my_wallet');
+        const supabase = await getSupabase();
+        const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
+        const wallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
 
         if (cancelled) return;
 
-        if (!error && hasWallet) {
+        if (wallets.length > 0) {
           // Wallet already exists — close silently and signal success
           onOpenChange(false);
           onSuccess();
+          return;
         }
+
+        setWalletStateVerified(true);
       } catch {
-        // If the check fails, leave the dialog open so the user can proceed
+        if (cancelled) return;
+        toast({
+          title: "Wallet status unavailable",
+          description: "We could not verify your wallet. No wallet was created. Please try again.",
+          variant: "destructive",
+        });
+        onOpenChange(false);
       }
     };
 
@@ -114,8 +126,8 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
     await new Promise<void>(r => setTimeout(r, 32));
 
     try {
-      const supabase = createClient();
-      const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
+      const supabase = await getSupabase();
+      const { createMyWallets } = await import("@/lib/non-custodial-wallet");
 
       // One worker call: mnemonic generation, all 5 chain key derivations,
       // and all 6 vault encryptions (one shared scrypt derivation, via
@@ -160,9 +172,14 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
         makeWallet("BNB", "binance", secureWallet.addresses.EVM, secureWallet.encryptedVaults.EVM),
         makeWallet("Avalanche", "ethereum", secureWallet.addresses.EVM, secureWallet.encryptedVaults.EVM),
       ];
-      // Persist locally (all wallets at once) and then atomically to Supabase.
-      await nonCustodialWalletManager.saveWalletsToStorage(generatedWallets, userId);
-      await nonCustodialWalletManager.saveWalletsToSupabase(supabase, generatedWallets, userId);
+      // The RPC write is authoritative. Only cache the canonical rows returned
+      // by the RPC-backed reload; never make failed writes look successful
+      // through local storage.
+      const canonicalWallets = await createMyWallets(supabase, generatedWallets, userId);
+      if (canonicalWallets.length === 0) {
+        throw new Error("Wallet creation returned no saved wallets.");
+      }
+      requestWalletRefresh();
 
       rateLimit.reset();
       setPassword("");
@@ -175,7 +192,7 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
       setStep("password");
       toast({
         title: "Generation failed",
-        description: error.message || "Failed to secure your wallet.",
+        description: "We could not secure your wallet. No wallet was saved. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -229,7 +246,8 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
                 <div className="space-y-3 pt-2">
                   <Button
                     className="w-full h-14 bg-[#B4F22E] hover:bg-[#a3db29] text-black font-bold text-lg rounded-full transition-all hover:scale-[1.02] shadow-[0_4px_12px_rgba(180,242,46,0.3)]"
-                    onClick={() => setStep("password")}
+                     onClick={() => setStep("password")}
+                     disabled={!walletStateVerified}
                   >
                     Enter now
                   </Button>
