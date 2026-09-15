@@ -200,6 +200,21 @@ export function ProductDetail() {
   const [relatedProducts, setRelatedProducts] = useState<Listing[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [specsExpanded, setSpecsExpanded] = useState(true);
+  // Pinned to 768px (Tailwind's `md`) to match every other desktop/mobile
+  // split already in this component (md:grid-cols-2, md:hidden, etc).
+  // Deliberately not the shared useIsMobile hook, which trips at 640px —
+  // that would misclassify 640-767px tablets as "not mobile" while the
+  // grid here is still single-column, reintroducing the original bug.
+  const [isDesktopLayout, setIsDesktopLayout] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches
+  );
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 768px)");
+    const handler = () => setIsDesktopLayout(mql.matches);
+    handler();
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
   
   // Store the raw Shopify product data so we don't re-fetch on add-to-cart
   const shopifyDataRef = useRef<any>(null);
@@ -230,6 +245,107 @@ export function ProductDetail() {
     [product, id]
   );
   useSchema(productSchema, 'product-schema');
+
+  // Images pulled from the description HTML (or the media carousel as a
+  // fallback) shown in the "Product Details" showcase strip. Computed once
+  // here so it can be rendered in two different spots in the JSX below
+  // (desktop: under the main image; mobile: under the description) without
+  // duplicating the parsing logic.
+  const productShowcase = useMemo(() => {
+    if (!product) return null;
+    const seen = new Set<string>();
+    const descImages: string[] = [];
+
+    const normSrc = (raw: string): string | null => {
+      if (!raw || raw.startsWith('data:') || raw.length < 8) return null;
+      return raw.startsWith('http://') ? raw.replace('http://', 'https://') : raw;
+    };
+
+    if (product.descriptionHtml) {
+      const tagRe = /<img[^>]+>/gi;
+      let tagMatch: RegExpExecArray | null;
+      while ((tagMatch = tagRe.exec(product.descriptionHtml)) !== null) {
+        const tag = tagMatch[0];
+        const dataSrcMatch = /data-src=["']([^"']+)["']/i.exec(tag);
+        const srcMatch = /\bsrc=["']([^"']+)["']/i.exec(tag);
+        const raw = dataSrcMatch?.[1] || srcMatch?.[1] || '';
+        const src = normSrc(raw);
+        if (src && !seen.has(src)) {
+          seen.add(src);
+          descImages.push(src);
+        }
+      }
+    }
+
+    const carouselImages: string[] = [];
+    const candidates = product.media && product.media.length > 0
+      ? product.media.filter(m => m.type === 'image').map(m => (m as any).url as string)
+      : product.images;
+    for (const url of candidates) {
+      const src = normSrc(url);
+      if (src && !seen.has(src)) {
+        seen.add(src);
+        carouselImages.push(src);
+      }
+    }
+
+    const hasDescImages = descImages.length > 0;
+    const showcaseImages = hasDescImages ? descImages : carouselImages;
+    if (showcaseImages.length === 0) return null;
+    const sectionLabel = hasDescImages ? 'Product Details' : 'Product Images';
+    return { showcaseImages, sectionLabel };
+  }, [product]);
+
+  // Renders the "Product Details" divider + flush image stack. `topMarginClass`
+  // sets the spacing above it, which differs by placement (see call sites below).
+  const renderProductShowcase = (topMarginClass: string) => {
+    if (!productShowcase) return null;
+    const { showcaseImages, sectionLabel } = productShowcase;
+    return (
+      <div className={topMarginClass}>
+        <div className="flex items-center gap-4 mb-0">
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+          <div className="flex items-center gap-2 px-4">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+            <span className="text-xs font-semibold tracking-[0.18em] uppercase text-muted-foreground">
+              {sectionLabel}
+            </span>
+            <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+          </div>
+          <div className="h-px flex-1 bg-gradient-to-l from-transparent via-border to-transparent" />
+        </div>
+
+        {/* Flush stack — zero gap between images, same on every breakpoint */}
+        <div className="-mx-4 sm:mx-0 overflow-hidden rounded-none sm:rounded-2xl mt-5">
+          {showcaseImages.map((url, idx) => (
+            <div key={idx} className="w-full block" style={{ lineHeight: 0 }}>
+              <img
+                src={url}
+                alt={`${product?.title} – detail ${idx + 1}`}
+                className="w-full h-auto block select-none"
+                loading={idx === 0 ? "eager" : "lazy"}
+                draggable={false}
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  const wrapper = (e.currentTarget as HTMLImageElement).parentElement;
+                  if (wrapper) wrapper.style.display = 'none';
+                }}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Decorative end mark */}
+        <div className="flex items-center justify-center gap-2 mt-5">
+          <div className="w-8 h-px bg-border/60" />
+          <div className="w-1 h-1 rounded-full bg-primary/50" />
+          <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+          <div className="w-1 h-1 rounded-full bg-primary/50" />
+          <div className="w-8 h-px bg-border/60" />
+        </div>
+      </div>
+    );
+  };
 
   useEffect(() => {
     if (id) {
@@ -750,96 +866,14 @@ export function ProductDetail() {
                 </div>
               </div>
 
-              {/* Product image showcase — edge-to-edge on mobile, and part of
-                  this left column's flow on tablet/desktop so the sticky buy
-                  box (right column) has something to track alongside. */}
-              {(() => {
-                const seen = new Set<string>();
-                const descImages: string[] = [];
-
-                const normSrc = (raw: string): string | null => {
-                  if (!raw || raw.startsWith('data:') || raw.length < 8) return null;
-                  return raw.startsWith('http://') ? raw.replace('http://', 'https://') : raw;
-                };
-
-                if (product.descriptionHtml) {
-                  const tagRe = /<img[^>]+>/gi;
-                  let tagMatch: RegExpExecArray | null;
-                  while ((tagMatch = tagRe.exec(product.descriptionHtml)) !== null) {
-                    const tag = tagMatch[0];
-                    const dataSrcMatch = /data-src=["']([^"']+)["']/i.exec(tag);
-                    const srcMatch = /\bsrc=["']([^"']+)["']/i.exec(tag);
-                    const raw = dataSrcMatch?.[1] || srcMatch?.[1] || '';
-                    const src = normSrc(raw);
-                    if (src && !seen.has(src)) {
-                      seen.add(src);
-                      descImages.push(src);
-                    }
-                  }
-                }
-
-                const carouselImages: string[] = [];
-                const candidates = product.media && product.media.length > 0
-                  ? product.media.filter(m => m.type === 'image').map(m => (m as any).url as string)
-                  : product.images;
-                for (const url of candidates) {
-                  const src = normSrc(url);
-                  if (src && !seen.has(src)) {
-                    seen.add(src);
-                    carouselImages.push(src);
-                  }
-                }
-
-                const hasDescImages = descImages.length > 0;
-                const showcaseImages = hasDescImages ? descImages : carouselImages;
-                if (showcaseImages.length === 0) return null;
-                const sectionLabel = hasDescImages ? 'Product Details' : 'Product Images';
-
-                return (
-                  <div className="mt-10">
-                    <div className="flex items-center gap-4 mb-0">
-                      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
-                      <div className="flex items-center gap-2 px-4">
-                        <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                        <span className="text-xs font-semibold tracking-[0.18em] uppercase text-muted-foreground">
-                          {sectionLabel}
-                        </span>
-                        <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      </div>
-                      <div className="h-px flex-1 bg-gradient-to-l from-transparent via-border to-transparent" />
-                    </div>
-
-                    {/* Flush stack — zero gap between images, same on every breakpoint */}
-                    <div className="-mx-4 sm:mx-0 overflow-hidden rounded-none sm:rounded-2xl mt-5">
-                      {showcaseImages.map((url, idx) => (
-                        <div key={idx} className="w-full block" style={{ lineHeight: 0 }}>
-                          <img
-                            src={url}
-                            alt={`${product.title} – detail ${idx + 1}`}
-                            className="w-full h-auto block select-none"
-                            loading={idx === 0 ? "eager" : "lazy"}
-                            draggable={false}
-                            referrerPolicy="no-referrer"
-                            onError={(e) => {
-                              const wrapper = (e.currentTarget as HTMLImageElement).parentElement;
-                              if (wrapper) wrapper.style.display = 'none';
-                            }}
-                          />
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Decorative end mark */}
-                    <div className="flex items-center justify-center gap-2 mt-5">
-                      <div className="w-8 h-px bg-border/60" />
-                      <div className="w-1 h-1 rounded-full bg-primary/50" />
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      <div className="w-1 h-1 rounded-full bg-primary/50" />
-                      <div className="w-8 h-px bg-border/60" />
-                    </div>
-                  </div>
-                );
-              })()}
+              {/* Product image showcase — desktop/tablet only here, part of
+                  this left column's flow so the sticky buy box (right
+                  column) has something to track alongside. Gated on
+                  isDesktopLayout (768px, matching this component's other
+                  md: breakpoints) so only one copy ever renders — otherwise
+                  we'd eager-load the first image twice. On phones this same
+                  content renders further down, under the description. */}
+              {isDesktopLayout && renderProductShowcase("mt-10")}
             </div>
             );
           })()}
@@ -1098,6 +1132,13 @@ export function ProductDetail() {
                     : "No description provided for this item."}
                 </div>
               </div>
+
+              {/* Product image showcase — phones only here, directly under
+                  the description and closer to it (smaller top margin) than
+                  the desktop/tablet placement above. Gated on
+                  !isDesktopLayout so this is the only copy that renders
+                  below 768px (see gate above). */}
+              {!isDesktopLayout && renderProductShowcase("mt-4")}
 
               <div className="grid grid-cols-2 gap-4 text-sm md:hidden">
                 <div className="flex items-center gap-2">
