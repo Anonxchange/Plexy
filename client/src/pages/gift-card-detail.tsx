@@ -205,7 +205,7 @@ function RelatedGiftCards({
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-2 gap-4 items-start">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-4 items-start">
           {[...Array(4)].map((_, index) => (
             <div key={index} className="space-y-3">
               <div className="h-32 sm:h-36 w-full animate-pulse rounded-2xl bg-secondary" />
@@ -217,7 +217,7 @@ function RelatedGiftCards({
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4 items-start">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-4 items-start">
           {products.map((product) => (
             <RelatedProductCard
               key={product.productId}
