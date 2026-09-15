@@ -659,24 +659,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // 5. CREATE REQUIRED: Supabase confirmed no wallet exists anywhere.
-      // Re-query user_wallets as an authoritative double-check before prompting —
-      // loadWalletsFromSupabase may have thrown transiently in step 1.
-      const { count: createCount, error: createCountError } = await supabase
-        .from('user_wallets')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId);
-
-      // If the count query itself errored (e.g. RLS blocks it), we cannot
-      // confirm the user has zero wallets — stay silent rather than risk
-      // showing "create wallet" over real funds.
-      if (createCountError) {
-        devLog.warn("Wallet count check failed, aborting dialog:", createCountError.message);
+      // 5. CREATE REQUIRED: the RPC confirmed no wallet exists anywhere.
+      // Re-query through the same RPC as an authoritative double-check before
+      // prompting. Direct user_wallets access is intentionally unavailable.
+      const { nonCustodialWalletManager } = await import("./non-custodial-wallet");
+      let confirmedWallets: any[];
+      try {
+        confirmedWallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
+      } catch (walletCheckError: any) {
+        devLog.warn("Wallet RPC check failed, aborting dialog:", walletCheckError?.message);
         checkedUsersRef.current.delete(userId);
         return;
       }
 
-      if (createCount && createCount > 0) {
+      if (confirmedWallets.length > 0) {
         setWalletImportState({ required: false, expectedAddress: null });
         return;
       }
@@ -827,6 +823,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(null);
           setUser(null);
           setWalletImportState({ required: false, expectedAddress: null });
+          void import("./non-custodial-wallet").then(({ clearWalletStateFromMemory }) => {
+            clearWalletStateFromMemory();
+          });
           checkedUsersRef.current.clear();
           lastTrackedTokenRef.current = null; // reset so next sign-in always runs trackDevice
           return;
@@ -1220,6 +1219,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Clear sensitive in-memory state immediately
     setSessionPassword(null);
     setWalletImportState({ required: false, expectedAddress: null });
+    void import("./non-custodial-wallet").then(({ clearWalletStateFromMemory }) => {
+      clearWalletStateFromMemory();
+    });
     checkedUsersRef.current.clear();
     setPendingOTPWithTimestamp(null);
     setPendingSession(null);

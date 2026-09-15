@@ -20,6 +20,7 @@ import {
 } from "./webCrypto";
 import { callSigningWorker } from "@/hooks/use-signing-worker";
 import { runWithUnlockGate } from "./security/wallet-unlock-gate";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 // Constants for Encoding
 const XRP_ALPHABET = "rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz";
@@ -114,6 +115,161 @@ function parseVaultField(value: any): any {
   } catch {
     return value;
   }
+}
+
+export type WalletRpcRow = {
+  id: string;
+  chain_id: string;
+  address: string;
+  wallet_type: string;
+  encrypted_private_key: string;
+  encrypted_mnemonic: string | null;
+  is_active: string | boolean;
+  is_backed_up: string | boolean;
+  created_at: string;
+};
+
+let walletInitializationPromise: Promise<NonCustodialWallet[]> | null = null;
+
+function asBoolean(value: string | boolean | null | undefined): boolean {
+  return value === true || value === "true";
+}
+
+function mapWalletRpcRow(row: WalletRpcRow): NonCustodialWallet {
+  return {
+    id: row.id,
+    chainId: row.chain_id,
+    address: row.address,
+    walletType: row.wallet_type,
+    encryptedPrivateKey: parseVaultField(row.encrypted_private_key),
+    encryptedMnemonic: parseVaultField(row.encrypted_mnemonic),
+    createdAt: row.created_at,
+    isActive: asBoolean(row.is_active),
+    isBackedUp: asBoolean(row.is_backed_up),
+  };
+}
+
+/**
+ * The only frontend read path for public.user_wallets.
+ *
+ * The RPC derives ownership from auth.uid(). The frontend deliberately does
+ * not send user_id and never falls back to a direct table query.
+ */
+export async function getMyWalletRows(
+  supabase: SupabaseClient,
+  expectedUserId?: string,
+): Promise<WalletRpcRow[]> {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) throw userError;
+  if (!user) throw new Error("AUTH_REQUIRED");
+  if (expectedUserId && expectedUserId !== user.id) {
+    throw new Error("AUTH_USER_MISMATCH");
+  }
+
+  const { data, error } = await supabase.rpc("get_my_wallet");
+  if (error) throw error;
+  return Array.isArray(data) ? (data as WalletRpcRow[]) : [];
+}
+
+/**
+ * Loads the authenticated user's canonical wallet rows and caches the
+ * encrypted blobs in the existing IndexedDB-backed wallet store.
+ *
+ * Calls are serialized so auth events, route mounts, and wallet setup cannot
+ * initialize the same wallet concurrently.
+ */
+export async function loadMyWallets(
+  supabase: SupabaseClient,
+  expectedUserId?: string,
+): Promise<NonCustodialWallet[]> {
+  if (walletInitializationPromise) return walletInitializationPromise;
+
+  const operation = (async () => {
+    const rows = await getMyWalletRows(supabase, expectedUserId);
+    const wallets = rows.map(mapWalletRpcRow);
+    const userId = expectedUserId ?? (await supabase.auth.getUser()).data.user?.id;
+    if (!userId) throw new Error("AUTH_REQUIRED");
+    if (wallets.length > 0) {
+      await nonCustodialWalletManager.saveWalletsToStorage(wallets, userId);
+    }
+    return wallets;
+  })();
+
+  walletInitializationPromise = operation;
+  try {
+    return await operation;
+  } finally {
+    if (walletInitializationPromise === operation) {
+      walletInitializationPromise = null;
+    }
+  }
+}
+
+/**
+ * Persists a newly generated wallet set through the RPC, then reloads the
+ * database response as the only canonical frontend state.
+ */
+export async function createMyWallets(
+  supabase: SupabaseClient,
+  wallets: NonCustodialWallet[],
+  expectedUserId: string,
+): Promise<NonCustodialWallet[]> {
+  if (walletInitializationPromise) return walletInitializationPromise;
+
+  const operation = (async () => {
+    const existing = await getMyWalletRows(supabase, expectedUserId);
+    if (existing.length > 0) {
+      const canonical = existing.map(mapWalletRpcRow);
+      await nonCustodialWalletManager.saveWalletsToStorage(canonical, expectedUserId);
+      return canonical;
+    }
+
+    if (!wallets.length) throw new Error("WALLET_DATA_REQUIRED");
+
+    const serialize = (value: string | EncryptedVault | undefined) =>
+      value === undefined ? null : typeof value === "string" ? value : JSON.stringify(value);
+
+    const payload = wallets.map((wallet) => ({
+      id: wallet.id,
+      chain_id: wallet.chainId,
+      address: wallet.address,
+      wallet_type: wallet.walletType,
+      encrypted_private_key: serialize(wallet.encryptedPrivateKey),
+      encrypted_mnemonic: serialize(wallet.encryptedMnemonic),
+      is_active: wallet.isActive ? "true" : "false",
+      is_backed_up: wallet.isBackedUp ? "true" : "false",
+    }));
+
+    const { error: createError } = await supabase.rpc("create_my_wallets", {
+      wallets: payload,
+    });
+    if (createError) throw createError;
+
+    const savedRows = await getMyWalletRows(supabase, expectedUserId);
+    if (savedRows.length === 0) throw new Error("WALLET_CREATE_EMPTY");
+
+    const canonical = savedRows.map(mapWalletRpcRow);
+    await nonCustodialWalletManager.saveWalletsToStorage(canonical, expectedUserId);
+    return canonical;
+  })();
+
+  walletInitializationPromise = operation;
+  try {
+    return await operation;
+  } finally {
+    if (walletInitializationPromise === operation) {
+      walletInitializationPromise = null;
+    }
+  }
+}
+
+/** Clears transient in-memory coordination state on sign-out. */
+export function clearWalletStateFromMemory(): void {
+  walletInitializationPromise = null;
 }
 
 class NonCustodialWalletManager {
@@ -286,32 +442,7 @@ class NonCustodialWalletManager {
   }
 
   public async loadWalletsFromSupabase(supabase: any, userId: string): Promise<NonCustodialWallet[]> {
-    const { data, error } = await supabase
-      .from('user_wallets')
-      .select('id, user_id, chain_id, address, wallet_type, encrypted_private_key, encrypted_mnemonic, is_active, is_backed_up, created_at')
-      .eq('user_id', userId);
-
-    if (error) {
-      devLog.error("Error loading wallets from Supabase:", error);
-      throw error;
-    }
-
-    if (!data || data.length === 0) return [];
-
-    const wallets: NonCustodialWallet[] = data.map((w: any) => ({
-      id:                   w.id,
-      chainId:              w.chain_id,
-      address:              w.address,
-      walletType:           w.wallet_type,
-      encryptedPrivateKey:  parseVaultField(w.encrypted_private_key),
-      encryptedMnemonic:    parseVaultField(w.encrypted_mnemonic),
-      isActive:             w.is_active    === 'true' || w.is_active    === true,
-      isBackedUp:           w.is_backed_up === 'true' || w.is_backed_up === true,
-      createdAt:            w.created_at,
-    }));
-
-    await this.saveWalletsToStorage(wallets, userId);
-    return wallets;
+    return loadMyWallets(supabase as SupabaseClient, userId);
   }
 
   public async saveWalletsToSupabase(supabase: any, wallets: NonCustodialWallet[], userId: string): Promise<void> {
@@ -344,38 +475,7 @@ class NonCustodialWalletManager {
   }
 
   public async saveWalletToSupabase(supabase: any, wallet: NonCustodialWallet, userId: string): Promise<void> {
-    const serialize = (v: string | EncryptedVault | undefined) =>
-      v === undefined ? null : typeof v === 'string' ? v : JSON.stringify(v);
-
-    const { error } = await supabase
-      .from('user_wallets')
-      .upsert(
-        {
-          id:                    wallet.id,
-          user_id:               userId,
-          chain_id:              wallet.chainId,
-          address:               wallet.address,
-          wallet_type:           wallet.walletType,
-          encrypted_private_key: serialize(wallet.encryptedPrivateKey),
-          encrypted_mnemonic:    serialize(wallet.encryptedMnemonic),
-          is_active:             wallet.isActive   ? 'true' : 'false',
-          is_backed_up:          wallet.isBackedUp ? 'true' : 'false',
-        },
-        { onConflict: 'id' }
-      );
-
-    if (error) {
-      devLog.error("Error saving wallet:", error);
-      throw error;
-    }
-
-    // Pin ETH address to user_profiles for cross-device wallet detection
-    if (wallet.chainId?.toLowerCase().includes('ethereum') && wallet.address) {
-      await supabase
-        .from('user_profiles')
-        .update({ wallet_address: wallet.address })
-        .eq('id', userId);
-    }
+    await this.saveWalletsToSupabase(supabase, [wallet], userId);
   }
 
   public async saveWalletsToStorage(wallets: NonCustodialWallet[], userId: string): Promise<void> {

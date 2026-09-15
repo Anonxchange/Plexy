@@ -1,4 +1,5 @@
 import { getSupabase } from "@/lib/supabase";
+import { getMyWalletRows } from "@/lib/non-custodial-wallet";
 
 export interface WalletMonitorTarget {
   address: string;
@@ -79,18 +80,13 @@ export function resolveWalletChain(chainId: string): {
  */
 export async function getWalletMonitorTargets(userId: string): Promise<WalletMonitorTarget[]> {
   const client = await getSupabase();
-  const { data, error } = await client
-    .from("user_wallets")
-    .select("address, chain_id, is_active")
-    .eq("user_id", userId)
-    .eq("is_active", true);
-
-  if (error) throw new Error(error.message);
+  const data = await getMyWalletRows(client, userId);
 
   const seen = new Set<string>();
   const targets: WalletMonitorTarget[] = [];
 
-  for (const row of data ?? []) {
+  for (const row of data) {
+    if (row.is_active !== true && row.is_active !== "true") continue;
     const address = String(row.address ?? "").trim();
     const resolved = resolveWalletChain(String(row.chain_id ?? ""));
     if (!address || !resolved.supported) continue;
