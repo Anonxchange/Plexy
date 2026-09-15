@@ -363,12 +363,12 @@ export function ProductDetail() {
 
           // Fetch related products in the background (same product type for relevance)
           const typeQuery = p.productType ? `product_type:${p.productType}` : undefined;
-          shopifyService.getProducts(8, undefined, typeQuery).then(({ products }) => {
+          shopifyService.getProducts(16, undefined, typeQuery).then(({ products }) => {
             if (fetchId !== id) return;
             const related = shuffleArray(
               products.filter((edge: any) => edge.node.handle !== decodedId)
             )
-              .slice(0, 6)
+              .slice(0, 12)
               .map((edge: any) => {
                 const rp = edge.node;
                 return {
@@ -408,7 +408,7 @@ export function ProductDetail() {
           applyShopifyProduct(found.node);
 
           const related = shuffleArray(result.products.filter((edge: any) => edge.node.id !== decodedId))
-            .slice(0, 6)
+            .slice(0, 12)
             .map((edge: any) => {
               const rp = edge.node;
               return {
@@ -1142,28 +1142,18 @@ export function ProductDetail() {
             <h2 className="text-xl font-bold">You may also like</h2>
             {/* Match the shop's Pinterest-style flow:
                 natural-height images on mobile, regular grid on desktop. */}
-            <div className="flex gap-0.5 -mx-4 lg:grid lg:grid-cols-4 xl:grid-cols-5 lg:gap-4 lg:mx-0">
-              <div className="flex flex-col gap-0.5 flex-1 lg:contents">
-                {relatedProducts
-                  .filter((_, index) => index % 2 === 0)
-                  .map((related) => (
+            {/* Mobile: CSS masonry (browser balances column heights by actual
+                rendered size, not just item count) | Tablet & up: 4-col grid */}
+            <div className="-mx-4 md:mx-0 md:grid md:grid-cols-4 md:gap-4">
+              <div className="columns-2 gap-0.5 md:contents">
+                {relatedProducts.map((related) => (
+                  <div key={related.id} className="mb-0.5 break-inside-avoid md:contents">
                     <ShopItemCard
-                      key={related.id}
                       product={related}
                       onViewDetails={() => navigate(`/shop/product/${encodeURIComponent(related.id)}`)}
                     />
-                  ))}
-              </div>
-              <div className="flex flex-col gap-0.5 flex-1 lg:contents">
-                {relatedProducts
-                  .filter((_, index) => index % 2 === 1)
-                  .map((related) => (
-                    <ShopItemCard
-                      key={related.id}
-                      product={related}
-                      onViewDetails={() => navigate(`/shop/product/${encodeURIComponent(related.id)}`)}
-                    />
-                  ))}
+                  </div>
+                ))}
               </div>
             </div>
           </div>
