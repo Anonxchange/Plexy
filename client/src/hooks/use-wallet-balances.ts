@@ -250,14 +250,21 @@ export async function getUserWallets(
 ): Promise<Wallet[]> {
   const client = await getSupabase();
 
+  const {
+    data: { user },
+    error: userError,
+  } = await client.auth.getUser();
+  if (userError) throw userError;
+  if (!user) throw new Error("AUTH_REQUIRED");
+  if (user.id !== userId) throw new Error("AUTH_USER_MISMATCH");
+
   // user_wallets is locked down server-side — reads now go through the
   // get_my_wallet RPC, which is scoped to auth.uid() and already filters
   // to is_active = true, so no .eq()/.select() chaining is needed here.
   const { data: dbWallets, error: dbError } = await client.rpc('get_my_wallet');
 
   if (dbError) {
-    if (previous && previous.length) return previous.map(markStale);
-    return [];
+    throw dbError;
   }
   if (!dbWallets || dbWallets.length === 0) return [];
 
@@ -524,8 +531,14 @@ export function useWalletBalances() {
       // Awaited: returning early with stale data made the query settle before the
       // real numbers arrived, so a failed chain read looked like a successful one.
       const fresh = await getUserWallets(userId, cached).catch((err) => {
-        console.warn('[wallet-balances] chain refresh failed:', err);
-        return (cached ?? []).map(markStale);
+        if (import.meta.env.DEV) {
+          console.warn('[wallet-balances] chain refresh failed:', err);
+        }
+        // Preserve a previously verified snapshot for continuity, but keep the
+        // query in an error state when there is no cache. This prevents a failed
+        // RPC from looking like a confirmed empty wallet.
+        if (cached && cached.length > 0) return cached.map(markStale);
+        throw err;
       });
 
       writeSessionSnapshot(userId, fresh);
