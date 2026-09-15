@@ -56,10 +56,10 @@ export default function WalletPage() {
   //   • Slow network / transient API error → wallet feed momentarily empty
   //     → opens "create new" prematurely.
   //
-  // New logic: server (Supabase user_wallets) is the source of truth.
+  // New logic: the RPC-backed server state is the source of truth.
   //   1) Wait for the wallet feed to either succeed or stop loading entirely
   //      (no opening the dialog while still in flight or while errored).
-  //   2) Query Supabase directly for any user_wallets row. Retry up to
+  //   2) Query get_my_wallet through Supabase. Retry up to
   //      3 times with backoff to absorb transient network failures.
   //   3) If the server has wallets but local doesn't → open dialog in
   //      IMPORT mode with the existing address as expectedAddress.
@@ -83,27 +83,21 @@ export default function WalletPage() {
       const localWallets = await (nonCustodialWalletManager as any).getWalletsFromStorage(user.id);
       if (cancelled) return;
 
-      if (localWallets.length > 0) {
-        // Local wallet exists — nothing to do, no dialog needed
-        return;
-      }
-
-      // Step 2: ask Supabase as the source of truth, with retry
+      // Step 2: ask the RPC as the source of truth, with retry
       const fetchServerWallets = async (): Promise<{ ok: boolean; address: string | null }> => {
         try {
           const supabase = await getSupabase();
-          const { data, error } = await supabase
-            .from('user_wallets')
-            .select('address, chain_id')
-            .eq('user_id', user.id)
-            .limit(1);
-          if (error) return { ok: false, address: null };
+          const { getMyWalletRows, createMyWallets } = await import("@/lib/non-custodial-wallet");
+          const data = await getMyWalletRows(supabase, user.id);
+          if (data.length === 0 && localWallets.length > 0) {
+            await createMyWallets(supabase, localWallets, user.id);
+            return { ok: true, address: localWallets[0]?.address ?? null };
+          }
           // Prefer the ETH wallet's address as the canonical "expected" address
-          // since that's what loadWalletsFromSupabase uses for verification.
-          const eth = (data ?? []).find((r: any) =>
+          const eth = data.find((r: any) =>
             (r.chain_id || '').toLowerCase().includes('ethereum')
           );
-          const first = (data ?? [])[0];
+          const first = data[0];
           return { ok: true, address: eth?.address ?? first?.address ?? null };
         } catch {
           return { ok: false, address: null };
