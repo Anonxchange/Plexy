@@ -319,6 +319,9 @@ class NonCustodialWalletManager {
     const serialize = (v: string | EncryptedVault | undefined) =>
       v === undefined ? null : typeof v === 'string' ? v : JSON.stringify(v);
 
+    // user_id is intentionally omitted — create_my_wallets scopes every row
+    // to auth.uid() server-side, so the RPC can't be tricked into writing
+    // into another user's rows even if the caller's userId were wrong.
     const payload = wallets.map(w => ({
       id:                     w.id,
       chain_id:               w.chainId,
@@ -330,29 +333,14 @@ class NonCustodialWalletManager {
       is_backed_up:           w.isBackedUp ? 'true' : 'false',
     }));
 
-    const { error } = await supabase
-      .from('user_wallets')
-      .upsert(
-        payload.map(w => ({ ...w, user_id: userId })),
-        { onConflict: 'id' }
-      );
+    const { error } = await supabase.rpc('create_my_wallets', { wallets: payload });
 
     if (error) {
       devLog.error("Error batch-saving wallets:", error);
       throw error;
     }
-
-    // Pin the ETH wallet address on the user profile so auth-context
-    // can detect the wallet even when user_wallets is temporarily unavailable.
-    const ethWallet = wallets.find(w =>
-      w.chainId?.toLowerCase().includes('ethereum')
-    );
-    if (ethWallet?.address) {
-      await supabase
-        .from('user_profiles')
-        .update({ wallet_address: ethWallet.address })
-        .eq('id', userId);
-    }
+    // ETH address pinning to user_profiles now happens inside the RPC,
+    // atomically with the wallet insert — no separate client-side call needed.
   }
 
   public async saveWalletToSupabase(supabase: any, wallet: NonCustodialWallet, userId: string): Promise<void> {
