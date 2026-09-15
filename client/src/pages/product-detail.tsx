@@ -1024,7 +1024,8 @@ export function ProductDetail() {
           </div>
         </div>}
 
-        {/* Full-width product image showcase */}
+        {/* Product image showcase — edge-to-edge on mobile, confined to the
+            gallery column on tablet/desktop (see grid below) */}
         {!isLoading && product && (() => {
           const seen = new Set<string>();
           const descImages: string[] = [];
@@ -1078,52 +1079,59 @@ export function ProductDetail() {
           const sectionLabel = hasDescImages ? 'Product Details' : 'Product Images';
 
           return (
-            <div className="mt-14">
-              <div className="flex items-center gap-4 mb-0">
-                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
-                <div className="flex items-center gap-2 px-4">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  <span className="text-xs font-semibold tracking-[0.18em] uppercase text-muted-foreground">
-                    {sectionLabel}
-                  </span>
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                </div>
-                <div className="h-px flex-1 bg-gradient-to-l from-transparent via-border to-transparent" />
-              </div>
-
-              {/* Edge-to-edge image stack */}
-              <div className="-mx-4 sm:-mx-6 md:-mx-8 lg:-mx-0 overflow-hidden rounded-none lg:rounded-2xl mt-5">
-                {showcaseImages.map((url, idx) => (
-                  <div
-                    key={idx}
-                    className="w-full"
-                    style={{ lineHeight: 0 }}
-                  >
-                    <img
-                      src={url}
-                      alt={`${product.title} – detail ${idx + 1}`}
-                      className="w-full h-auto block select-none"
-                      loading={idx === 0 ? "eager" : "lazy"}
-                      draggable={false}
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        // Hide this image's wrapper on failure — don't leave empty space
-                        const wrapper = (e.currentTarget as HTMLImageElement).parentElement;
-                        if (wrapper) wrapper.style.display = 'none';
-                      }}
-                    />
+            <div className="mt-14 grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-8 lg:gap-12">
+              <div>
+                <div className="flex items-center gap-4 mb-0">
+                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+                  <div className="flex items-center gap-2 px-4">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    <span className="text-xs font-semibold tracking-[0.18em] uppercase text-muted-foreground">
+                      {sectionLabel}
+                    </span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                   </div>
-                ))}
+                  <div className="h-px flex-1 bg-gradient-to-l from-transparent via-border to-transparent" />
+                </div>
+
+                {/* Edge-to-edge on mobile only — from md up this sits inside the
+                    gallery column above, so it never needs to bleed past it. */}
+                <div className="-mx-4 sm:mx-0 overflow-hidden rounded-none sm:rounded-2xl mt-5">
+                  {showcaseImages.map((url, idx) => (
+                    <div
+                      key={idx}
+                      className="w-full"
+                      style={{ lineHeight: 0 }}
+                    >
+                      <img
+                        src={url}
+                        alt={`${product.title} – detail ${idx + 1}`}
+                        className="w-full h-auto block select-none"
+                        loading={idx === 0 ? "eager" : "lazy"}
+                        draggable={false}
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          // Hide this image's wrapper on failure — don't leave empty space
+                          const wrapper = (e.currentTarget as HTMLImageElement).parentElement;
+                          if (wrapper) wrapper.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Decorative end mark */}
+                <div className="flex items-center justify-center gap-2 mt-5">
+                  <div className="w-8 h-px bg-border/60" />
+                  <div className="w-1 h-1 rounded-full bg-primary/50" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  <div className="w-1 h-1 rounded-full bg-primary/50" />
+                  <div className="w-8 h-px bg-border/60" />
+                </div>
               </div>
 
-              {/* Decorative end mark */}
-              <div className="flex items-center justify-center gap-2 mt-5">
-                <div className="w-8 h-px bg-border/60" />
-                <div className="w-1 h-1 rounded-full bg-primary/50" />
-                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                <div className="w-1 h-1 rounded-full bg-primary/50" />
-                <div className="w-8 h-px bg-border/60" />
-              </div>
+              {/* Empty right column — keeps this block aligned under the
+                  gallery instead of stretching across the buy-box column too */}
+              <div className="hidden md:block" aria-hidden="true" />
             </div>
           );
         })()}
