@@ -205,7 +205,7 @@ function RelatedGiftCards({
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-4 items-start">
+        <div className="grid grid-cols-2 gap-4 items-start">
           {[...Array(4)].map((_, index) => (
             <div key={index} className="space-y-3">
               <div className="h-32 sm:h-36 w-full animate-pulse rounded-2xl bg-secondary" />
@@ -217,7 +217,7 @@ function RelatedGiftCards({
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-4 items-start">
+        <div className="grid grid-cols-2 gap-4 items-start">
           {products.map((product) => (
             <RelatedProductCard
               key={product.productId}
@@ -437,11 +437,11 @@ export function GiftCardDetail() {
       </div>
 
       <main className="max-w-6xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] lg:grid-cols-[1fr_420px] gap-6 lg:gap-8">
 
           {/* ── LEFT COLUMN TOP (Hero, Title, Trust badges) ──────── */}
-          {/* On mobile: renders 1st. On desktop: col-1 row-1        */}
-          <div className="space-y-6 lg:col-start-1 lg:row-start-1">
+          {/* On mobile: renders 1st. On tablet/desktop: col-1 row-1 */}
+          <div className="space-y-6 md:col-start-1 md:row-start-1">
 
             {/* Hero card */}
             <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-secondary/60 to-secondary/20 border border-border/60 shadow-sm">
@@ -556,8 +556,8 @@ export function GiftCardDetail() {
 
           {/* ── RIGHT COLUMN (Purchase card + Security note) ─────── */}
           {/* On mobile: renders 2nd (after trust badges, before     */}
-          {/* how-to-redeem). On desktop: col-2 spanning both rows.  */}
-          <div className="space-y-4 lg:col-start-2 lg:row-start-1 lg:row-span-2">
+          {/* how-to-redeem). On tablet/desktop: col-2 spanning rows.*/}
+          <div className="space-y-4 md:col-start-2 md:row-start-1 md:row-span-2">
             <div className="sticky top-20 space-y-4">
 
               {/* Purchase card */}
@@ -719,8 +719,8 @@ export function GiftCardDetail() {
 
           {/* ── LEFT COLUMN BOTTOM (How to redeem, Networks, FAQ) ─── */}
           {/* On mobile: renders 3rd (after purchase card).           */}
-          {/* On desktop: col-1 row-2, below trust badges.            */}
-          <div className="space-y-6 lg:col-start-1 lg:row-start-2">
+          {/* On tablet/desktop: col-1 row-2, below trust badges.     */}
+          <div className="space-y-6 md:col-start-1 md:row-start-2">
 
             {/* Customer reviews (Trustpilot TrustBox) — rendered only when
                 the business unit id + profile url are configured via env */}
