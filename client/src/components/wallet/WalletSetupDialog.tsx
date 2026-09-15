@@ -7,9 +7,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { deriveVaultKey } from "@/lib/webCrypto";
+import { callSigningWorker } from "@/hooks/use-signing-worker";
+import type { SecureWalletResult } from "@/lib/signing.worker";
 import { createClient } from "@/lib/supabase";
-import { devLog } from "@/lib/dev-logger";
 import { AlertTriangle, X } from '@/lib/icons';
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
@@ -120,59 +120,52 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
       const supabase = createClient();
       const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
 
-      // Derive the scrypt key ONCE and reuse across all 6 chain wallets.
-      // Without this, scrypt would run 12× (private key + mnemonic per chain)
-      // taking 15–30 s on a mobile CPU. One derivation takes ~1–3 s.
-      //
-      // TODO(security): migrate this to callSigningWorker("createSecureWallet")
-      // so that (a) scrypt runs off the main thread and (b) the mnemonic
-      // never appears as a JS string on the main thread heap.
-      // See: signing.worker.ts → createSecureWallet / SecureWalletResult
-      const vaultKey = await deriveVaultKey(password);
+      // One worker call: mnemonic generation, all 5 chain key derivations,
+      // and all 6 vault encryptions (one shared scrypt derivation, via
+      // encryptVaultBatch inside the worker) happen entirely inside the
+      // isolated worker realm. The mnemonic is generated, used, and wiped
+      // inside the worker and never crosses the postMessage wire — unlike
+      // the previous per-chain loop, where `mnemonicPhrase` existed as a
+      // plain JS string on the main thread for the whole loop's duration.
+      const secureWallet = await callSigningWorker<SecureWalletResult>(
+        "createSecureWallet",
+        { password, origin: window.location.origin },
+      );
 
-      // Pass null supabase so each generation skips individual RPC saves.
-      // All wallets are collected and batch-saved atomically at the end.
-      const { mnemonicPhrase, wallet: ethWallet } =
-        await nonCustodialWalletManager.generateNonCustodialWallet(
-          "ethereum",
-          password,
-          null,
-          userId,
-          undefined,
-          vaultKey
-        );
+      const now = new Date().toISOString();
+      const makeWallet = (
+        chainId: string,
+        walletType: string,
+        address: string,
+        encryptedPrivateKey: SecureWalletResult["encryptedVaults"]["EVM"],
+      ) => ({
+        id: crypto.randomUUID(),
+        chainId,
+        address,
+        walletType,
+        encryptedPrivateKey,
+        encryptedMnemonic: secureWallet.encryptedVaults.mnemonic,
+        createdAt: now,
+        isActive: true,
+        isBackedUp: false,
+      });
 
-      const generatedWallets = [ethWallet];
-      const chains = ["Bitcoin (SegWit)", "Solana", "Tron (TRC-20)", "XRP", "BNB", "Avalanche"];
-      const failed: string[] = [];
-
-      for (const chain of chains) {
-        try {
-          const { wallet } = await nonCustodialWalletManager.generateNonCustodialWallet(
-            chain,
-            password,
-            null,
-            userId,
-            mnemonicPhrase,
-            vaultKey
-          );
-          generatedWallets.push(wallet);
-        } catch (chainErr: any) {
-          devLog.error(`Failed to generate ${chain} wallet:`, chainErr);
-          failed.push(chain);
-        }
-      }
-
-      // Atomic batch save — all wallets succeed or none do
+      // BNB and Avalanche share the same EVM key/address/vault, matching
+      // the walletType grouping the previous per-chain code used (see
+      // NonCustodialWalletManager.generateNonCustodialWallet's chainId
+      // branch: BNB -> "binance", other EVM-family chains -> "ethereum").
+      const generatedWallets = [
+        makeWallet("ethereum", "ethereum", secureWallet.addresses.EVM, secureWallet.encryptedVaults.EVM),
+        makeWallet("Bitcoin (SegWit)", "bitcoin", secureWallet.addresses.BTC, secureWallet.encryptedVaults.BTC),
+        makeWallet("Solana", "solana", secureWallet.addresses.SOL, secureWallet.encryptedVaults.SOL),
+        makeWallet("Tron (TRC-20)", "tron", secureWallet.addresses.TRX, secureWallet.encryptedVaults.TRX),
+        makeWallet("XRP", "xrp", secureWallet.addresses.XRP, secureWallet.encryptedVaults.XRP),
+        makeWallet("BNB", "binance", secureWallet.addresses.EVM, secureWallet.encryptedVaults.EVM),
+        makeWallet("Avalanche", "ethereum", secureWallet.addresses.EVM, secureWallet.encryptedVaults.EVM),
+      ];
+      // Persist locally (all wallets at once) and then atomically to Supabase.
+      await nonCustodialWalletManager.saveWalletsToStorage(generatedWallets, userId);
       await nonCustodialWalletManager.saveWalletsToSupabase(supabase, generatedWallets, userId);
-
-      if (failed.length > 0) {
-        toast({
-          title: "Some wallets failed to generate",
-          description: `Could not create: ${failed.join(", ")}. You can retry from settings.`,
-          variant: "destructive",
-        });
-      }
 
       rateLimit.reset();
       setPassword("");
