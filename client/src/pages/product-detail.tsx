@@ -749,13 +749,108 @@ export function ProductDetail() {
                   </div>
                 </div>
               </div>
+
+              {/* Product image showcase — edge-to-edge on mobile, and part of
+                  this left column's flow on tablet/desktop so the sticky buy
+                  box (right column) has something to track alongside. */}
+              {(() => {
+                const seen = new Set<string>();
+                const descImages: string[] = [];
+
+                const normSrc = (raw: string): string | null => {
+                  if (!raw || raw.startsWith('data:') || raw.length < 8) return null;
+                  return raw.startsWith('http://') ? raw.replace('http://', 'https://') : raw;
+                };
+
+                if (product.descriptionHtml) {
+                  const tagRe = /<img[^>]+>/gi;
+                  let tagMatch: RegExpExecArray | null;
+                  while ((tagMatch = tagRe.exec(product.descriptionHtml)) !== null) {
+                    const tag = tagMatch[0];
+                    const dataSrcMatch = /data-src=["']([^"']+)["']/i.exec(tag);
+                    const srcMatch = /\bsrc=["']([^"']+)["']/i.exec(tag);
+                    const raw = dataSrcMatch?.[1] || srcMatch?.[1] || '';
+                    const src = normSrc(raw);
+                    if (src && !seen.has(src)) {
+                      seen.add(src);
+                      descImages.push(src);
+                    }
+                  }
+                }
+
+                const carouselImages: string[] = [];
+                const candidates = product.media && product.media.length > 0
+                  ? product.media.filter(m => m.type === 'image').map(m => (m as any).url as string)
+                  : product.images;
+                for (const url of candidates) {
+                  const src = normSrc(url);
+                  if (src && !seen.has(src)) {
+                    seen.add(src);
+                    carouselImages.push(src);
+                  }
+                }
+
+                const hasDescImages = descImages.length > 0;
+                const showcaseImages = hasDescImages ? descImages : carouselImages;
+                if (showcaseImages.length === 0) return null;
+                const sectionLabel = hasDescImages ? 'Product Details' : 'Product Images';
+
+                return (
+                  <div className="mt-10">
+                    <div className="flex items-center gap-4 mb-0">
+                      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+                      <div className="flex items-center gap-2 px-4">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                        <span className="text-xs font-semibold tracking-[0.18em] uppercase text-muted-foreground">
+                          {sectionLabel}
+                        </span>
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      </div>
+                      <div className="h-px flex-1 bg-gradient-to-l from-transparent via-border to-transparent" />
+                    </div>
+
+                    {/* Flush stack — zero gap between images, same on every breakpoint */}
+                    <div className="-mx-4 sm:mx-0 overflow-hidden rounded-none sm:rounded-2xl mt-5">
+                      {showcaseImages.map((url, idx) => (
+                        <div key={idx} className="w-full block" style={{ lineHeight: 0 }}>
+                          <img
+                            src={url}
+                            alt={`${product.title} – detail ${idx + 1}`}
+                            className="w-full h-auto block select-none"
+                            loading={idx === 0 ? "eager" : "lazy"}
+                            draggable={false}
+                            referrerPolicy="no-referrer"
+                            onError={(e) => {
+                              const wrapper = (e.currentTarget as HTMLImageElement).parentElement;
+                              if (wrapper) wrapper.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Decorative end mark */}
+                    <div className="flex items-center justify-center gap-2 mt-5">
+                      <div className="w-8 h-px bg-border/60" />
+                      <div className="w-1 h-1 rounded-full bg-primary/50" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      <div className="w-1 h-1 rounded-full bg-primary/50" />
+                      <div className="w-8 h-px bg-border/60" />
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
             );
           })()}
 
 
-          {/* Right: Info */}
-          <div className="space-y-6">
+          {/* Right: Info — outer div stretches to match the left column's
+              height (default grid behavior); the inner div is what actually
+              sticks and tracks alongside it while scrolling, same pattern
+              as the gift-card detail page's purchase card. */}
+          <div>
+            <div className="md:sticky md:top-20 space-y-6">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Badge variant="secondary">{product.category}</Badge>
@@ -1021,120 +1116,9 @@ export function ProductDetail() {
                 </div>
               </div>
             </div>
+            </div>
           </div>
         </div>}
-
-        {/* Product image showcase — edge-to-edge on mobile, confined to the
-            gallery column on tablet/desktop (see grid below) */}
-        {!isLoading && product && (() => {
-          const seen = new Set<string>();
-          const descImages: string[] = [];
-
-          // Helper: normalise a raw src — force https, skip blanks/data URIs
-          const normSrc = (raw: string): string | null => {
-            if (!raw || raw.startsWith('data:') || raw.length < 8) return null;
-            return raw.startsWith('http://') ? raw.replace('http://', 'https://') : raw;
-          };
-
-          // 1. Extract images from descriptionHtml
-          //    Check both src AND data-src (CJ uses lazy-load data-src in some themes)
-          if (product.descriptionHtml) {
-            const tagRe = /<img[^>]+>/gi;
-            let tagMatch: RegExpExecArray | null;
-            while ((tagMatch = tagRe.exec(product.descriptionHtml)) !== null) {
-              const tag = tagMatch[0];
-              // Prefer data-src (lazy-load real URL) over src (may be placeholder)
-              const dataSrcMatch = /data-src=["']([^"']+)["']/i.exec(tag);
-              const srcMatch = /\bsrc=["']([^"']+)["']/i.exec(tag);
-              const raw = dataSrcMatch?.[1] || srcMatch?.[1] || '';
-              const src = normSrc(raw);
-              if (src && !seen.has(src)) {
-                seen.add(src);
-                descImages.push(src);
-              }
-            }
-          }
-
-          // 2. Carousel images (Shopify CDN — always load reliably)
-          const carouselImages: string[] = [];
-          const candidates = product.media && product.media.length > 0
-            ? product.media.filter(m => m.type === 'image').map(m => (m as any).url as string)
-            : product.images;
-          for (const url of candidates) {
-            const src = normSrc(url);
-            if (src && !seen.has(src)) {
-              seen.add(src);
-              carouselImages.push(src);
-            }
-          }
-
-          // 3. Decide what to show:
-          //    - If description images exist → show ONLY those
-          //    - If no description images → show carousel images full-width
-          const hasDescImages = descImages.length > 0;
-          const showcaseImages = hasDescImages ? descImages : carouselImages;
-
-          if (showcaseImages.length === 0) return null;
-
-          const sectionLabel = hasDescImages ? 'Product Details' : 'Product Images';
-
-          return (
-            <div className="mt-14 grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-8 lg:gap-12">
-              <div>
-                <div className="flex items-center gap-4 mb-0">
-                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
-                  <div className="flex items-center gap-2 px-4">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                    <span className="text-xs font-semibold tracking-[0.18em] uppercase text-muted-foreground">
-                      {sectionLabel}
-                    </span>
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  </div>
-                  <div className="h-px flex-1 bg-gradient-to-l from-transparent via-border to-transparent" />
-                </div>
-
-                {/* Edge-to-edge on mobile only — from md up this sits inside the
-                    gallery column above, so it never needs to bleed past it. */}
-                <div className="-mx-4 sm:mx-0 overflow-hidden rounded-none sm:rounded-2xl mt-5">
-                  {showcaseImages.map((url, idx) => (
-                    <div
-                      key={idx}
-                      className="w-full"
-                      style={{ lineHeight: 0 }}
-                    >
-                      <img
-                        src={url}
-                        alt={`${product.title} – detail ${idx + 1}`}
-                        className="w-full h-auto block select-none"
-                        loading={idx === 0 ? "eager" : "lazy"}
-                        draggable={false}
-                        referrerPolicy="no-referrer"
-                        onError={(e) => {
-                          // Hide this image's wrapper on failure — don't leave empty space
-                          const wrapper = (e.currentTarget as HTMLImageElement).parentElement;
-                          if (wrapper) wrapper.style.display = 'none';
-                        }}
-                      />
-                    </div>
-                  ))}
-                </div>
-
-                {/* Decorative end mark */}
-                <div className="flex items-center justify-center gap-2 mt-5">
-                  <div className="w-8 h-px bg-border/60" />
-                  <div className="w-1 h-1 rounded-full bg-primary/50" />
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  <div className="w-1 h-1 rounded-full bg-primary/50" />
-                  <div className="w-8 h-px bg-border/60" />
-                </div>
-              </div>
-
-              {/* Empty right column — keeps this block aligned under the
-                  gallery instead of stretching across the buy-box column too */}
-              <div className="hidden md:block" aria-hidden="true" />
-            </div>
-          );
-        })()}
 
         {/* Related Products */}
         {relatedProducts.length > 0 && (
