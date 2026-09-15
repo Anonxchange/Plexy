@@ -533,9 +533,9 @@ export function GiftCards() {
       )}
 
       {/* ════════════════════════════════════════════════════════
-          DESKTOP layout (lg+) — Bitrefill-style stacked sections
+          DESKTOP layout (md+) — Bitrefill-style stacked sections
           ════════════════════════════════════════════════════════ */}
-      <div className="hidden lg:block max-w-7xl mx-auto px-6">
+      <div className="hidden md:block max-w-7xl mx-auto px-6">
 
         {/* ── Hero: headline + search LEFT │ live popular grid RIGHT ── */}
         <div className="flex items-stretch gap-10 py-10 border-b border-border">
@@ -796,9 +796,9 @@ export function GiftCards() {
       </div>
 
       {/* ════════════════════════════════════════════════════════
-          MOBILE layout (< lg) — UNCHANGED
+          MOBILE layout (< md) — UNCHANGED
           ════════════════════════════════════════════════════════ */}
-      <div className="lg:hidden">
+      <div className="md:hidden">
 
         {/* Hero */}
         <section className="px-4 pt-8 pb-6 bg-background">
