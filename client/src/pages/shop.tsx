@@ -272,17 +272,17 @@ function TrendingNowSection({
           </span>
         </div>
       </div>
-      {/* Mobile: horizontal scroll  |  Desktop: 5-column grid */}
-      <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1 md:grid md:grid-cols-3 md:gap-x-4 md:gap-y-5 md:overflow-x-visible md:mx-0 md:px-0 md:pb-0 lg:grid-cols-5 lg:gap-x-5 lg:gap-y-6">
+      {/* Horizontal scroll on mobile — this section is only ever shown on mobile now */}
+      <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
         {trending.length === 0
           ? Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex-shrink-0 w-44 md:w-auto">
-                <div className="w-44 h-52 md:w-full md:aspect-square md:h-auto lg:aspect-square bg-muted md:bg-white dark:md:bg-neutral-900 animate-pulse mb-2.5" />
+              <div key={i} className="flex-shrink-0 w-44">
+                <div className="w-44 h-52 bg-muted animate-pulse mb-2.5" />
                 <div className="h-3.5 bg-muted animate-pulse rounded mb-1.5 w-4/5" />
                 <div className="h-3.5 bg-muted animate-pulse rounded w-2/5" />
               </div>
             ))
-          : trending.map((product, idx) => {
+          : trending.map((product) => {
               const disc =
                 product.originalPrice && product.originalPrice > product.price
                   ? Math.round(
@@ -295,14 +295,14 @@ function TrendingNowSection({
                 <div
                   key={product.id}
                   onClick={() => onViewDetails(product)}
-                  className={`flex-shrink-0 w-44 md:w-auto cursor-pointer group${idx >= 5 ? ' lg:hidden' : ''}`}
+                  className="flex-shrink-0 w-44 cursor-pointer group"
                 >
-                  <div className="w-44 h-52 md:w-full md:h-auto md:aspect-square bg-muted md:bg-transparent overflow-hidden relative mb-2.5">
+                  <div className="w-44 h-52 bg-muted overflow-hidden relative mb-2.5">
                     {product.images[0] ? (
                       <img
                         src={product.images[0]}
                         alt={product.title}
-                        className="w-full h-full object-cover md:object-contain group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         loading="lazy"
                       />
                     ) : (
@@ -344,6 +344,23 @@ function TrendingNowSection({
   );
 }
 
+// ── Desktop hero banner — matches the finalized mockup, tablet/desktop only ──
+function ShopHero({ onShopNow }: { onShopNow: () => void }) {
+  return (
+    <div className="hidden md:flex items-center justify-between bg-muted rounded-xl p-8 mb-6">
+      <div>
+        <h2 className="text-2xl font-bold mb-2">New season, new finds</h2>
+        <p className="text-sm text-muted-foreground">
+          Fresh styles across fashion, home, and accessories.
+        </p>
+      </div>
+      <Button size="lg" onClick={onShopNow} className="bg-primary hover:bg-primary/90">
+        Shop now
+      </Button>
+    </div>
+  );
+}
+
 
 export function Shop() {
   useHead({
@@ -361,6 +378,7 @@ export function Shop() {
   const [, navigate] = useLocation();
   const { addToCart } = useCart();
   const [searchQuery, setSearchQuery] = useState("");
+  const productsRef = useRef<HTMLDivElement | null>(null);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState("shuffle");
@@ -729,8 +747,8 @@ export function Shop() {
           <ShopBanner />
         </div>
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
+        {/* Header — mobile only now; desktop uses the hero banner instead */}
+        <div className="flex items-center justify-between mb-4 md:hidden">
           <div>
             <h1 className="text-3xl font-bold">Shop</h1>
             <p className="text-sm text-muted-foreground mt-0.5">Discover amazing products for every need</p>
@@ -744,11 +762,16 @@ export function Shop() {
           </div>
         </div>
 
-        {/* Trending Now */}
-        <TrendingNowSection
-          products={activeTab === "marketplace" ? listings.slice(0, 12) : trendingProducts}
-          onViewDetails={handleViewDetails}
-        />
+        {/* Desktop hero banner */}
+        <ShopHero onShopNow={() => productsRef.current?.scrollIntoView({ behavior: "smooth" })} />
+
+        {/* Trending Now — mobile only, hidden on tablet/desktop */}
+        <div className="md:hidden">
+          <TrendingNowSection
+            products={activeTab === "marketplace" ? listings.slice(0, 12) : trendingProducts}
+            onViewDetails={handleViewDetails}
+          />
+        </div>
 
 
         {/* Search + Sort + Tabs row */}
@@ -855,7 +878,7 @@ export function Shop() {
         </div>
 
         {/* Main content: sidebar + grid */}
-        <div className="flex gap-6">
+        <div ref={productsRef} className="flex gap-6">
 
           {/* Desktop sidebar — L1 only, clicking opens category modal */}
           <aside className="hidden lg:flex flex-col w-52 flex-shrink-0">
