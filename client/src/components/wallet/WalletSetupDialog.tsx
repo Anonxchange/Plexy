@@ -65,15 +65,12 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
     const checkExisting = async () => {
       try {
         const supabase = createClient();
-        const { count, error } = await supabase
-          .from('user_wallets')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', userId);
+        const { data: hasWallet, error } = await supabase.rpc('has_my_wallet');
 
         if (cancelled) return;
 
-        if (!error && count && count > 0) {
-          // Wallets already exist — close silently and signal success
+        if (!error && hasWallet) {
+          // Wallet already exists — close silently and signal success
           onOpenChange(false);
           onSuccess();
         }
