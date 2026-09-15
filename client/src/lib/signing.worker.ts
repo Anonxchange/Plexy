@@ -109,7 +109,7 @@
 
 // ─── Imports ──────────────────────────────────────────────────────────────────
 
-import { scrypt }     from "hash-wasm";
+import { scryptAsync } from "@noble/hashes/scrypt";
 import * as RLP       from "@ethereumjs/rlp";
 import * as secp      from "@noble/secp256k1";
 import * as btc       from "@scure/btc-signer";
@@ -476,14 +476,11 @@ async function deriveScryptKey(
     ownBytes = true;
   }
   try {
-    return await scrypt({
-      password: pwBytes,
-      salt,
-      costFactor: kdf.N,
-      blockSize: kdf.r,
-      parallelism: kdf.p,
-      hashLength: kdf.dkLen,
-      outputType: "binary",
+    return await scryptAsync(pwBytes, salt, {
+      N: kdf.N,
+      r: kdf.r,
+      p: kdf.p,
+      dkLen: kdf.dkLen,
     });
   } finally {
     // Zero-fill the encoded password bytes as soon as scrypt is done.
