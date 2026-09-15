@@ -272,7 +272,7 @@ function TrendingNowSection({
           </span>
         </div>
       </div>
-      {/* Horizontal scroll on mobile — this section is only ever shown on mobile now */}
+      {/* Horizontal scroll on every breakpoint — mobile, tablet, and desktop */}
       <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
         {trending.length === 0
           ? Array.from({ length: 5 }).map((_, i) => (
@@ -743,7 +743,7 @@ export function Shop() {
       <main className="flex-1 container mx-auto px-4 pt-0 pb-6 lg:pt-6 max-w-7xl">
 
         {/* Banner carousel — mobile only, sits at the very top before the header */}
-        <div className="lg:hidden -mx-4">
+        <div className="md:hidden -mx-4">
           <ShopBanner />
         </div>
 
@@ -765,13 +765,11 @@ export function Shop() {
         {/* Desktop hero banner */}
         <ShopHero onShopNow={() => productsRef.current?.scrollIntoView({ behavior: "smooth" })} />
 
-        {/* Trending Now — mobile only, hidden on tablet/desktop */}
-        <div className="md:hidden">
-          <TrendingNowSection
-            products={activeTab === "marketplace" ? listings.slice(0, 12) : trendingProducts}
-            onViewDetails={handleViewDetails}
-          />
-        </div>
+        {/* Trending Now — shown on every breakpoint, mobile through desktop */}
+        <TrendingNowSection
+          products={activeTab === "marketplace" ? listings.slice(0, 12) : trendingProducts}
+          onViewDetails={handleViewDetails}
+        />
 
 
         {/* Search + Sort + Tabs row */}
@@ -977,11 +975,11 @@ export function Shop() {
               </div>
             ) : (
               <>
-                {/* Mobile: 2-col masonry | Desktop: 4-col grid via lg:contents */}
-                <div className="flex gap-0.5 -mx-4 lg:grid lg:grid-cols-4 lg:gap-4 lg:mx-0">
+                {/* Mobile: 2-col masonry | Tablet & up: 4-col grid via md:contents */}
+                <div className="flex gap-0.5 -mx-4 md:grid md:grid-cols-4 md:gap-4 md:mx-0">
                   <Suspense fallback={<ShopSkeleton />}>
-                    {/* Left column (mobile) — lg:contents collapses it into the parent grid */}
-                    <div className="flex flex-col gap-0.5 flex-1 lg:contents">
+                    {/* Left column (mobile) — md:contents collapses it into the parent grid */}
+                    <div className="flex flex-col gap-0.5 flex-1 md:contents">
                       {visibleProducts
                         .filter((_, i) => i % 2 === 0)
                         .map((product) => (
@@ -993,8 +991,8 @@ export function Shop() {
                           />
                         ))}
                     </div>
-                    {/* Right column (mobile) — lg:contents collapses it into the parent grid */}
-                    <div className="flex flex-col gap-0.5 flex-1 lg:contents">
+                    {/* Right column (mobile) — md:contents collapses it into the parent grid */}
+                    <div className="flex flex-col gap-0.5 flex-1 md:contents">
                       {visibleProducts
                         .filter((_, i) => i % 2 === 1)
                         .map((product) => (
