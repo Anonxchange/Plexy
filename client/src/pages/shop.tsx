@@ -977,8 +977,8 @@ export function Shop() {
               </div>
             ) : (
               <>
-                {/* Mobile: 2-col masonry | Desktop: 4/5-col grid via lg:contents */}
-                <div className="flex gap-0.5 -mx-4 lg:grid lg:grid-cols-4 xl:grid-cols-5 lg:gap-4 lg:mx-0">
+                {/* Mobile: 2-col masonry | Desktop: 4-col grid via lg:contents */}
+                <div className="flex gap-0.5 -mx-4 lg:grid lg:grid-cols-4 lg:gap-4 lg:mx-0">
                   <Suspense fallback={<ShopSkeleton />}>
                     {/* Left column (mobile) — lg:contents collapses it into the parent grid */}
                     <div className="flex flex-col gap-0.5 flex-1 lg:contents">
