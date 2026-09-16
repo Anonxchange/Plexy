@@ -82,7 +82,7 @@ export function PhoneVerification({ onVerified, onSkip, initialPhone = "", initi
       if (data.user) {
         const updateData: any = {
           id: data.user.id,
-          phone_number: fullPhoneNumber,
+          phone: fullPhoneNumber,
           phone_verified: true,
         };
 

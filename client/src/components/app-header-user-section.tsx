@@ -147,15 +147,20 @@ export const AppHeaderUserSection = memo(function AppHeaderUserSection({ onOpenS
     fetchMfaStatus();
     (async () => {
       const supabase = await getSupabase();
+      const {
+        data: { user: authUser },
+        error: authError,
+      } = await supabase.auth.getUser();
+      if (authError || !authUser) return;
       const { data: profile } = await supabase
         .from("user_profiles")
-        .select("username, preferred_currency, phone_number")
-        .eq("id", user.id)
+        .select("username, preferred_currency, phone")
+        .eq("id", authUser.id)
         .single();
       if (profile?.username) setUserName(profile.username);
       if (profile?.preferred_currency)
         setPreferredCurrency(profile.preferred_currency.toUpperCase());
-      setProfilePhone(profile?.phone_number || null);
+      setProfilePhone(profile?.phone || null);
     })();
   }, [user?.id]);
 

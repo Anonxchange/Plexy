@@ -117,7 +117,7 @@ export function PhoneLinkingDialog({
       const { data: existingUser, error: checkError } = await supabase
         .from('user_profiles')
         .select('id')
-        .eq('phone_number', fullPhoneNumber)
+        .eq('phone', fullPhoneNumber)
         .neq('id', userId)
         .single();
 
@@ -215,7 +215,7 @@ export function PhoneLinkingDialog({
       // Determine country from phone code and update profile
       const countryFromPhone = getCountryByPhoneCode(countryCode);
       const updateData: any = {
-        phone_number: fullPhoneNumber,
+        phone: fullPhoneNumber,
         phone_verified: true,
       };
 
