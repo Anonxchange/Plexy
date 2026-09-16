@@ -7,9 +7,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { callSigningWorker } from "@/hooks/use-signing-worker";
 import { requestWalletRefresh } from "@/hooks/use-wallet-balances";
-import type { SecureWalletResult } from "@/lib/signing.worker";
 import { getSupabase } from "@/lib/supabase";
 import { AlertTriangle, X } from '@/lib/icons';
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -44,7 +42,7 @@ interface WalletSetupDialogProps {
   expectedAddress?: string | null;
 }
 
-export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: WalletSetupDialogProps) {
+export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expectedAddress }: WalletSetupDialogProps) {
   const [step, setStep] = useState<"intro" | "password" | "generating" | "success">("intro");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -127,51 +125,49 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
 
     try {
       const supabase = await getSupabase();
-      const { createMyWallets } = await import("@/lib/non-custodial-wallet");
+      const { createMyWallets, nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
 
-      // One worker call: mnemonic generation, all 5 chain key derivations,
-      // and all 6 vault encryptions (one shared scrypt derivation, via
-      // encryptVaultBatch inside the worker) happen entirely inside the
-      // isolated worker realm. The mnemonic is generated, used, and wiped
-      // inside the worker and never crosses the postMessage wire — unlike
-      // the previous per-chain loop, where `mnemonicPhrase` existed as a
-      // plain JS string on the main thread for the whole loop's duration.
-      const secureWallet = await callSigningWorker<SecureWalletResult>(
-        "createSecureWallet",
-        { password, origin: window.location.origin },
+      // Single source of truth for wallet generation: one worker call inside
+      // generateNonCustodialWallets() handles mnemonic generation, all 5
+      // chain key derivations, and all 6 vault encryptions (one shared
+      // scrypt derivation) entirely inside the isolated worker realm. The
+      // mnemonic is generated, used, and wiped inside the worker and never
+      // crosses the postMessage wire.
+      //
+      // persist:false here is deliberate: createMyWallets below is the one
+      // atomic, RPC-canonical write path (it checks for an existing wallet
+      // server-side and reloads the canonical rows afterward). Letting the
+      // manager also persist directly would race a second, uncoordinated
+      // write against that RPC call.
+      const { wallets: baseWallets } = await nonCustodialWalletManager.generateNonCustodialWallets(
+        password,
+        undefined,
+        userId,
+        undefined,
+        { persist: false },
       );
 
-      const now = new Date().toISOString();
-      const makeWallet = (
-        chainId: string,
-        walletType: string,
-        address: string,
-        encryptedPrivateKey: SecureWalletResult["encryptedVaults"]["EVM"],
-      ) => ({
-        id: crypto.randomUUID(),
-        chainId,
-        address,
-        walletType,
-        encryptedPrivateKey,
-        encryptedMnemonic: secureWallet.encryptedVaults.mnemonic,
-        createdAt: now,
-        isActive: true,
-        isBackedUp: false,
-      });
+      const evmWallet = baseWallets.find((w) => w.chainId === "ethereum")!;
 
-      // BNB and Avalanche share the same EVM key/address/vault, matching
-      // the walletType grouping the previous per-chain code used (see
-      // NonCustodialWalletManager.generateNonCustodialWallet's chainId
-      // branch: BNB -> "binance", other EVM-family chains -> "ethereum").
+      // BNB and Avalanche share the same EVM key/address/vault — pure
+      // relabeling via addEvmChainVariant, no extra derivation needed.
+      const [bnbWallet, avalancheWallet] = await Promise.all([
+        nonCustodialWalletManager.addEvmChainVariant(
+          evmWallet, "BNB", "binance", userId, undefined, undefined, { persist: false },
+        ),
+        nonCustodialWalletManager.addEvmChainVariant(
+          evmWallet, "Avalanche", "ethereum", userId, undefined, undefined, { persist: false },
+        ),
+      ]);
+
       const generatedWallets = [
-        makeWallet("ethereum", "ethereum", secureWallet.addresses.EVM, secureWallet.encryptedVaults.EVM),
-        makeWallet("Bitcoin (SegWit)", "bitcoin", secureWallet.addresses.BTC, secureWallet.encryptedVaults.BTC),
-        makeWallet("Solana", "solana", secureWallet.addresses.SOL, secureWallet.encryptedVaults.SOL),
-        makeWallet("Tron (TRC-20)", "tron", secureWallet.addresses.TRX, secureWallet.encryptedVaults.TRX),
-        makeWallet("XRP", "xrp", secureWallet.addresses.XRP, secureWallet.encryptedVaults.XRP),
-        makeWallet("BNB", "binance", secureWallet.addresses.EVM, secureWallet.encryptedVaults.EVM),
-        makeWallet("Avalanche", "ethereum", secureWallet.addresses.EVM, secureWallet.encryptedVaults.EVM),
+        ...baseWallets.map((w) =>
+          w.chainId === "bitcoin" ? { ...w, chainId: "Bitcoin (SegWit)" } : w
+        ),
+        bnbWallet,
+        avalancheWallet,
       ];
+
       // The RPC write is authoritative. Only cache the canonical rows returned
       // by the RPC-backed reload; never make failed writes look successful
       // through local storage.
@@ -179,6 +175,14 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess }: Wal
       if (canonicalWallets.length === 0) {
         throw new Error("Wallet creation returned no saved wallets.");
       }
+
+      if (expectedAddress) {
+        const ethWallet = canonicalWallets.find((w) => w.walletType === "ethereum");
+        if (ethWallet?.address.toLowerCase() !== expectedAddress.toLowerCase()) {
+          throw new Error("Created wallet address did not match the expected address.");
+        }
+      }
+
       requestWalletRefresh();
 
       rateLimit.reset();
