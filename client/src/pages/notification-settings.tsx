@@ -1,13 +1,11 @@
 
 import { useHead } from "@unhead/react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { useAuth } from "@/lib/auth-context";
-import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Bell, Mail, MessageSquare, DollarSign, TrendingUp, Flame, Megaphone } from '@/lib/icons';
 import { PexlyFooter } from "@/components/pexly-footer";
@@ -15,9 +13,7 @@ import { PexlyFooter } from "@/components/pexly-footer";
 export default function NotificationSettings() {
   useHead({ title: "Notification Settings | Pexly", meta: [{ name: "description", content: "Choose how and when you receive notifications for platform activity." }] });
   const [, setLocation] = useLocation();
-  const { user } = useAuth();
   const { toast } = useToast();
-  const supabase = createClient();
 
   // Notification preferences
   const [tradeUpdates, setTradeUpdates] = useState(true);
@@ -28,41 +24,6 @@ export default function NotificationSettings() {
   const [pushNotifications, setPushNotifications] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [smsNotifications, setSmsNotifications] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (user) {
-      loadNotificationSettings();
-    }
-  }, [user]);
-
-  const loadNotificationSettings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('notification_preferences')
-        .eq('id', user?.id)
-        .single();
-
-      if (error && error.code !== 'PGRST116') throw error;
-
-      if (data?.notification_preferences) {
-        const prefs = data.notification_preferences;
-        setTradeUpdates(prefs.trade_updates ?? true);
-        setPriceAlerts(prefs.price_alerts ?? true);
-        setMarketMovers(prefs.market_movers ?? true);
-        setNewOffers(prefs.new_offers ?? true);
-        setMarketingEmails(prefs.marketing_emails ?? false);
-        setPushNotifications(prefs.push_notifications ?? true);
-        setEmailNotifications(prefs.email_notifications ?? true);
-        setSmsNotifications(prefs.sms_notifications ?? false);
-      }
-    } catch (error) {
-      console.error('Error loading notification settings:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const saveNotificationSettings = async () => {
     try {
@@ -77,11 +38,12 @@ export default function NotificationSettings() {
         sms_notifications: smsNotifications,
       };
 
-      await supabase
-        .from('user_profiles')
-        .update({ notification_preferences: preferences })
-        .eq('id', user?.id);
-      // Silently ignore DB errors — column may not exist in this deployment.
+      localStorage.setItem("pexly-notif-prefs", JSON.stringify({
+        ...preferences,
+        transaction_updates: tradeUpdates,
+        login_notifications: true,
+        suspicious_activity: true,
+      }));
 
       toast({
         title: "Success!",

@@ -432,7 +432,7 @@ export function SignIn() {
       const { data: existingUser, error: checkError } = await supabase
         .from('user_profiles')
         .select('id')
-        .eq('phone_number', fullPhoneNumber)
+          .eq('phone', fullPhoneNumber)
         .eq('phone_verified', true)
         .single();
 
