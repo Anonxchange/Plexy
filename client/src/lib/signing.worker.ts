@@ -150,6 +150,35 @@ function wipeHDKey(k: any): void {
   try { if (k.chainCode instanceof Uint8Array) k.chainCode.fill(0); } catch { /**/ }
 }
 
+/**
+ * Defense-in-depth: resolvePassword() legitimately returns "" for message
+ * types that need no password at all (generateMnemonic, hash, etc.), so it
+ * can't reject empty input itself. Every function that actually derives an
+ * encryption key from a password MUST call this first — otherwise a caller
+ * bug that forgets to attach a password silently produces a vault encrypted
+ * with an empty string, unlockable by anyone with no password at all.
+ */
+function assertNonEmptyPassword(password: string | Uint8Array): void {
+  const empty = password instanceof Uint8Array
+    ? password.length === 0
+    : typeof password !== "string" || password.length === 0;
+  if (empty) throw new Error("Password is required");
+}
+
+/**
+ * Origin binding must be asserted by the worker itself, not accepted verbatim
+ * from the caller. A dedicated worker always shares its creating page's
+ * origin, so self.location.origin is the authoritative value — trusting a
+ * caller-supplied `origin` string instead would let a compromised main-thread
+ * caller forge the AAD binding at vault-creation time. Falls back to the
+ * passed value only in non-worker contexts (e.g. unit tests) where
+ * self.location is unavailable.
+ */
+function resolveAuthoritativeOrigin(passedOrigin?: string): string | undefined {
+  const selfOrigin = typeof self !== "undefined" ? (self as any).location?.origin : undefined;
+  return selfOrigin || passedOrigin;
+}
+
 // ─── Session key cache (worker-internal only, never sent over postMessage) ────
 //
 // Problem: scrypt (N=262 144) takes 1–3 s on desktop. Without caching, every
@@ -654,6 +683,8 @@ async function deriveXRPAddress(mnemonic: string): Promise<string> {
  * A phishing clone on a different domain cannot decrypt vaults created here.
  */
 async function encryptVault(data: string, password: string | Uint8Array, origin?: string, kdfParamsOverride?: KdfParams): Promise<EncryptedVault> {
+  assertNonEmptyPassword(password);
+  origin = resolveAuthoritativeOrigin(origin);
   const kdfParams = kdfParamsOverride ?? getAdaptiveKdfParams();
   const salt = crypto.getRandomValues(new Uint8Array(SALT_LEN));
   const iv   = crypto.getRandomValues(new Uint8Array(IV_LEN));
@@ -686,6 +717,8 @@ async function encryptVaultBatch(
   origin?: string,
   kdfParamsOverride?: KdfParams,
 ): Promise<EncryptedVault[]> {
+  assertNonEmptyPassword(password);
+  origin = resolveAuthoritativeOrigin(origin);
   const kdfParams = kdfParamsOverride ?? getAdaptiveKdfParams();
   const salt = crypto.getRandomValues(new Uint8Array(SALT_LEN));
   const keyBuffer = await deriveScryptKey(password, salt, kdfParams);
@@ -788,8 +821,25 @@ const _LOCKOUT_MS = 30_000; // 30-second lockout window
 const _MAX_FAILS  = 5;
 const _failMap    = new Map<string, { count: number; until: number }>();
 
+/**
+ * KNOWN LIMITATION: _failMap lives only in this worker's in-memory heap. A
+ * page reload (or any event that terminates and respawns the worker) creates
+ * a brand-new empty map, resetting every counter. This lockout is therefore
+ * a soft speed bump against a script hammering the *same* worker instance —
+ * it is NOT a substitute for real brute-force protection. The actual defense
+ * against sustained password guessing is (a) the scrypt cost itself
+ * (0.5–3 s per attempt depending on device tier) and (b) the server-side
+ * gate in wallet-unlock-gate.ts (runWithUnlockGate), which should wrap every
+ * user-facing decrypt attempt so failures are tracked per-account server-side
+ * where a page reload can't reset them. Any code path that calls the worker's
+ * decryptVault/validateVaultPassword directly, bypassing runWithUnlockGate,
+ * loses that server-side protection — this in-worker map alone is not enough.
+ */
 function _vaultKey(v: EncryptedVault): string {
-  return v.ciphertext?.slice(0, 8) ?? "unknown";
+  // salt is a fresh crypto.getRandomValues(16) value per encryption event,
+  // so it's already effectively unique per vault — safer than a truncated
+  // ciphertext prefix, which risks incidental collisions across vaults.
+  return v.salt ?? v.ciphertext?.slice(0, 16) ?? "unknown";
 }
 
 function _checkAndBumpFails(vault: EncryptedVault): void {
@@ -833,6 +883,7 @@ async function openVault(vault: unknown, password: string | Uint8Array): Promise
 // ─── ⑤  Legacy vault migration ────────────────────────────────────────────────
 
 async function migrateLegacyVault(legacyData: any, password: string, userId: string, origin?: string): Promise<EncryptedVault> {
+  assertNonEmptyPassword(password);
   let mnemonic: string;
   if (typeof legacyData === "string") {
     const combined = b64decode(legacyData);
@@ -893,6 +944,7 @@ async function createMultiChainWallet(
   origin?: string,
   existingMnemonic?: string
 ): Promise<MultiChainWalletResult> {
+  assertNonEmptyPassword(password);
   const mnemonic = existingMnemonic || generateMnemonic(wordlist, 256);
   const seed = await mnemonicToSeed(mnemonic);
   const root = HDKey.fromMasterSeed(seed);
@@ -1454,7 +1506,6 @@ export type WorkerRequest =
   // ③ Encryption
   | { id: string; type: "encryptVault";        data: string; password: string; origin?: string }
   | { id: string; type: "encryptVaultBatch";   items: Array<{ data: string }>; password: string; origin?: string }
-  | { id: string; type: "deriveVaultKey";      password: string }
   // ③·5 Session cache management
   | { id: string; type: "clearSessionCache" }
   // ④ Decryption
@@ -1511,11 +1562,17 @@ export type WorkerResponse =
 //   Fall-through to msg.password (plain string) keeps backward compatibility
 //   when passwordBytes is absent (e.g. legacy calls from other callers).
 
+let _warnedPlainPassword = false;
 function resolvePassword(msg: any): string | Uint8Array {
   if (msg.passwordBytes instanceof Uint8Array) return msg.passwordBytes;
   if (typeof msg.password === "string") {
-    if (import.meta.env.DEV) {
-      console.warn("[CryptoVaultWorker] Password arrived as plain string — upgrade caller to use passwordBytes transferable");
+    if (!_warnedPlainPassword) {
+      _warnedPlainPassword = true;
+      console.warn(
+        "[CryptoVaultWorker] Password arrived as plain string — upgrade caller to use " +
+        "passwordBytes transferable. A plain string can't be reliably zeroed and persists " +
+        "in the main-thread heap until GC. (Logged once per worker lifetime.)"
+      );
     }
     return msg.password;
   }
@@ -1524,6 +1581,14 @@ function resolvePassword(msg: any): string | Uint8Array {
 
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   const msg = event.data as any;
+  if (!msg || typeof msg !== "object" || typeof msg.type !== "string") {
+    self.postMessage({
+      id: typeof msg?.id === "string" ? msg.id : "unknown",
+      ok: false,
+      error: "Malformed worker message: missing or invalid type",
+    });
+    return;
+  }
   const pw  = resolvePassword(msg); // Uint8Array (transferred) or string
   let response: WorkerResponse;
   try {
@@ -1552,13 +1617,15 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         const _evmPub = secp.getPublicKey(_evmChild.privateKey!, false);
         const _evmAddr = "0x" + bytesToHex(keccak_256(_evmPub.slice(1)).slice(-20));
 
-        // BTC
-        const _btcPub     = _btcChild.publicKey!;
-        const _btcPkHash  = ripemd160(sha256(_btcPub));
-        const _btcWitness = new Uint8Array([0x00, 0x14, ..._btcPkHash]);
-        const _btcChecksum = sha256(sha256(new Uint8Array([0x05, ...ripemd160(sha256(_btcWitness))]))).slice(0, 4);
-        const _btcPayload  = new Uint8Array([0x05, ...ripemd160(sha256(_btcWitness)), ..._btcChecksum]);
-        const _btcAddr = base58.encode(_btcPayload);
+        // BTC — native SegWit (P2WPKH, "bc1q..."), same construction as
+        // deriveBTCAddress() / bitcoinSigner.ts. Previously this hand-rolled
+        // a P2SH-wrapped-SegWit ("3...") address from the same key, which is
+        // a DIFFERENT scriptPubKey than the one signBitcoinTransaction() can
+        // spend from — funds sent to that address were unspendable via this
+        // wallet's signing path. Fixed to reuse the shared p2wpkh() builder.
+        const _btcP2wpkh = btc.p2wpkh(_btcChild.publicKey!, btc.NETWORK);
+        if (!_btcP2wpkh.address) throw new Error("Failed to generate SegWit address");
+        const _btcAddr = _btcP2wpkh.address;
 
         // SOL — SLIP-0010
         const _solPriv = await _deriveSolPriv(_seedCopy);
@@ -1588,17 +1655,12 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         break;
       }
       // ③ Encryption — pw is Uint8Array or string; encryptVault accepts both
-      // FIX: deriveVaultKey was declared in WorkerRequest but had no handler,
-      // causing "Unknown worker message type" for any caller. Returns the
-      // scrypt-derived key as a hex string so callers don't receive raw bytes.
-      case "deriveVaultKey": {
-        const salt = crypto.getRandomValues(new Uint8Array(SALT_LEN));
-        const keyBuffer = await deriveScryptKey(pw, salt);
-        if (pw instanceof Uint8Array) pw.fill(0);
-        result = { keyHex: Array.from(keyBuffer).map(b => b.toString(16).padStart(2, "0")).join(""), saltHex: Array.from(salt).map(b => b.toString(16).padStart(2, "0")).join("") };
-        keyBuffer.fill(0);
-        break;
-      }
+      // NOTE: there is intentionally no "deriveVaultKey" handler. A prior
+      // version returned the raw scrypt-derived key as hex over postMessage,
+      // which contradicts this file's own invariant that key material never
+      // leaves the worker. Callers that need one scrypt round to produce
+      // several vaults should use "encryptVaultBatch" — it derives the key
+      // once internally and only ever returns finished EncryptedVault blobs.
       // ③·5 Session cache management
       case "clearSessionCache": clearSessionCache(); result = true; break;
       case "encryptVault":      result = await encryptVault(msg.data, pw, msg.origin); break;
