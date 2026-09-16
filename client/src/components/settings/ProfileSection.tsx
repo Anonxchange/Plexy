@@ -97,7 +97,7 @@ export function ProfileSection() {
         }
 
         if (!isEditingPhone) {
-          const fullPhone = authUser?.phone || data.phone_number || data.phone || "";
+          const fullPhone = authUser?.phone || data.phone || "";
           if (fullPhone) {
             const userCountryCode = getCountryPhoneCode(data.country);
             const codes = [userCountryCode, "+234", "+1", "+44", "+91", "+254", "+233", "+27"];
@@ -130,7 +130,7 @@ export function ProfileSection() {
         data: { user: authUser },
       } = await supabase.auth.getUser();
       const authPhone = authUser?.phone || "";
-      const currentPhone = authPhone || profileData?.phone_number || "";
+      const currentPhone = authPhone || profileData?.phone || "";
       const newPhone = phone.trim();
       const newFullPhoneNumber = countryCodeForPhone + newPhone;
 
@@ -149,10 +149,10 @@ export function ProfileSection() {
       };
 
       if (authPhone) {
-        updateData.phone_number = authPhone;
+        updateData.phone = authPhone;
         updateData.phone_verified = authUser?.phone_confirmed_at ? true : false;
       } else if (newFullPhoneNumber === currentPhone) {
-        updateData.phone_number = newFullPhoneNumber;
+        updateData.phone = newFullPhoneNumber;
       }
 
       const { error } = await supabase
@@ -554,7 +554,7 @@ export function ProfileSection() {
             await supabase
               .from("user_profiles")
               .update({
-                phone_number: authUser.phone,
+                phone: authUser.phone,
                 phone_verified: true,
               })
               .eq("id", user?.id);

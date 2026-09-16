@@ -90,14 +90,14 @@ export function SecuritySection() {
 
       const { data: profileData } = await supabase
         .from("user_profiles")
-        .select("sms_two_factor_enabled, email_two_factor_enabled, phone_number")
+        .select("sms_two_factor_enabled, email_two_factor_enabled, phone")
         .eq("id", user.id)
         .single();
 
       if (profileData) {
         setSmsAuth(profileData.sms_two_factor_enabled === true);
         setEmailAuth(profileData.email_two_factor_enabled === true);
-        if (profileData.phone_number) setPhone(profileData.phone_number);
+        if (profileData.phone) setPhone(profileData.phone);
       }
     } catch (error) {
       console.error("Error fetching 2FA status:", error);

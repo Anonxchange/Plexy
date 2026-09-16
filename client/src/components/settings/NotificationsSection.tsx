@@ -1,10 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Check, Loader2, Bell, Mail, MessageSquare, Shield, TrendingUp, Megaphone, Smartphone } from '@/lib/icons';
-import { useAuth } from "@/lib/auth-context";
-import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 
 export interface NotificationPrefs {
@@ -67,36 +65,11 @@ function PreferenceRow({ icon, label, description, checked, onChange }: RowProps
 }
 
 export function NotificationsSection() {
-  const { user } = useAuth();
   const { toast } = useToast();
-  const supabase = createClient();
 
   const [prefs, setPrefs] = useState<NotificationPrefs>(loadFromStorage());
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [fetching, setFetching] = useState(true);
-
-  useEffect(() => {
-    if (!user?.id) {
-      setFetching(false);
-      return;
-    }
-    supabase
-      .from("user_profiles")
-      .select("notification_preferences")
-      .eq("id", user.id)
-      .single()
-      .then(({ data }) => {
-        if (data?.notification_preferences) {
-          const merged = { ...DEFAULTS, ...data.notification_preferences };
-          setPrefs(merged);
-          try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-          } catch {}
-        }
-        setFetching(false);
-      });
-  }, [user?.id]);
 
   const set = (key: keyof NotificationPrefs) => (value: boolean) => {
     setPrefs((p) => ({ ...p, [key]: value }));
@@ -109,15 +82,6 @@ export function NotificationsSection() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
       } catch {}
 
-      if (user?.id) {
-        await supabase
-          .from("user_profiles")
-          .update({ notification_preferences: prefs })
-          .eq("id", user.id);
-        // Silently ignore DB errors — column may not exist in this deployment;
-        // preferences are already persisted to localStorage above.
-      }
-
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch {
@@ -126,14 +90,6 @@ export function NotificationsSection() {
       setLoading(false);
     }
   };
-
-  if (fetching) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-8">
