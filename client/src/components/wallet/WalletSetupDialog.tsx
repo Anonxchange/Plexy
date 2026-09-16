@@ -190,6 +190,7 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expec
       setConfirmPassword("");
       setStep("success");
     } catch (error: any) {
+      console.error("Wallet creation failed:", error?.message ?? error, error);
       rateLimit.recordFailure();
       setPassword("");
       setConfirmPassword("");
