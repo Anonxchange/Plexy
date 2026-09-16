@@ -1,84 +1,26 @@
-import { generateMnemonic, mnemonicToSeed } from "@scure/bip39";
-import { wordlist } from "@scure/bip39/wordlists/english.js";
-import { HDKey } from "@scure/bip32";
-import { sha256 } from "@noble/hashes/sha256";
-import { ripemd160 } from "@noble/hashes/ripemd160";
 import { getValue, setValue } from "./ids";
 import { devLog } from "./dev-logger";
-import { wipeBytes, wipeHDKey } from "./secureMemory";
-
-// Local Signer Imports
-import { getEVMAddress } from "./evmSigner";
-import { getBitcoinAddress } from "./bitcoinSigner";
-// Added deriveSolanaPrivateKey to the import below
-import { getSolanaAddress, deriveSolanaPrivateKey } from "./solanaSigner";
-import { getTronAddress } from "./tronSigner";
 import {
-  encryptVaultWithKey,
-  EncryptedVault,
-  DerivedVaultKey,
-} from "./webCrypto";
-import { callSigningWorker } from "@/hooks/use-signing-worker";
+  callSigningWorker,
+  createSecureWallet,
+  getMnemonicForBackup,
+} from "@/hooks/use-signing-worker";
+import type { EncryptedVault, SecureWalletResult } from "@/hooks/use-signing-worker";
 import { runWithUnlockGate } from "./security/wallet-unlock-gate";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-// Constants for Encoding
-const XRP_ALPHABET = "rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz";
-
-function toHex(uint8: Uint8Array): string {
-  return Array.from(uint8)
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-function fromHex(hex: string): Uint8Array {
-  const match = hex.match(/.{1,2}/g);
-  return new Uint8Array(match ? match.map(byte => parseInt(byte, 16)) : []);
-}
-
-/**
- * Custom XRP Address Derivation using Uint8Array & noble-hashes
- */
-function deriveXrpAddress(publicKey: Uint8Array): string {
-  // Use ripemd160(sha256(publicKey)) for XRP account ID
-  const accountId = ripemd160(sha256(publicKey));
-  const payload = new Uint8Array(21);
-  payload[0] = 0x00; // AccountID prefix
-  payload.set(accountId, 1);
-  
-  // Double SHA256 for checksum
-  const checksum = sha256(sha256(payload)).slice(0, 4);
-  const final = new Uint8Array(25);
-  final.set(payload);
-  final.set(checksum, 21);
-  
-  // Use XRP-specific base58 alphabet
-  return base58EncodeWithAlphabet(final, XRP_ALPHABET);
-}
-
-/**
- * Base58 Encoder with custom alphabet
- */
-function base58EncodeWithAlphabet(inputBytes: Uint8Array, alphabet: string): string {
-  if (inputBytes.length === 0) return '';
-  let digits = [0];
-  for (let i = 0; i < inputBytes.length; i++) {
-    let carry = inputBytes[i];
-    for (let j = 0; j < digits.length; j++) {
-      carry += digits[j] << 8;
-      digits[j] = carry % 58;
-      carry = (carry / 58) | 0;
-    }
-    while (carry > 0) {
-      digits.push(carry % 58);
-      carry = (carry / 58) | 0;
-    }
-  }
-  let result = '';
-  for (let i = 0; i < inputBytes.length && inputBytes[i] === 0; i++) result += alphabet[0];
-  for (let i = digits.length - 1; i >= 0; i--) result += alphabet[digits[i]];
-  return result;
-}
+// NOTE: this file no longer touches mnemonics, seeds, HDKeys, or raw private
+// key bytes on the main thread. All of that — mnemonic generation, per-chain
+// key derivation (EVM/BTC/SOL/TRX/XRP), and vault encryption — now happens
+// exclusively inside signing.worker.ts via createSecureWallet(). This file
+// only ever sees addresses and EncryptedVault blobs, both safe to hold on
+// the main thread and to persist to storage/Supabase as-is.
+//
+// Previously this file also imported per-chain signer modules
+// (evmSigner/bitcoinSigner/solanaSigner/tronSigner) and duplicated XRP/base58
+// address encoding locally so it could derive keys on the main thread. Those
+// are gone now that the worker is the single source of truth for wallet
+// generation — see createSecureWallet() / generateNonCustodialWallets() below.
 
 export interface NonCustodialWallet {
   id: string;
@@ -115,6 +57,15 @@ function parseVaultField(value: any): any {
   } catch {
     return value;
   }
+}
+
+/**
+ * Returns true if a stored vault value is in the legacy string format
+ * (deterministic salt — a cryptographic weakness). Modern vaults are
+ * EncryptedVault objects; legacy ones are a raw base64 string.
+ */
+function isLegacyVault(vault: string | EncryptedVault | undefined): boolean {
+  return typeof vault === "string";
 }
 
 export type WalletRpcRow = {
@@ -279,135 +230,139 @@ class NonCustodialWalletManager {
   }
 
   /**
-   * Generates a single-chain wallet on the MAIN THREAD.
+   * Generates a full wallet set (EVM + Bitcoin + Solana + Tron + XRP) with a
+   * single call into the signing worker.
    *
-   * ⚠️  SECURITY NOTE — main-thread mnemonic:
-   * The mnemonic is generated and handled as a plain JS string on the main
-   * thread heap.  JS strings are immutable and cannot be zeroed.  The seed
-   * (Uint8Array) and HDKey objects are wiped in the finally block, but the
-   * mnemonic and private-key hex strings cannot be.
+   * Replaces the old per-chain, main-thread `generateNonCustodialWallet`.
+   * That method generated the mnemonic, derived each chain's HDKey, and hex-
+   * encoded each private key on the MAIN THREAD before handing the data off
+   * to be encrypted — meaning the mnemonic and every private key briefly
+   * existed as unzeroable JS strings/heap objects outside the worker.
    *
-   * For new call-sites prefer callSigningWorker("createSecureWallet") which
-   * keeps the mnemonic entirely inside the worker thread and never exposes it
-   * on the main thread.  This method is kept to support the legacy per-chain
-   * generation flow in WalletSetupDialog.
+   * Now: `createSecureWallet()` runs entirely inside signing.worker.ts. It
+   * generates (or reuses `existingMnemonic`), derives all five chains' keys,
+   * encrypts all six vaults (5 keys + the mnemonic) with a single scrypt
+   * round, and returns only `{ addresses, encryptedVaults }` — the mnemonic
+   * and every raw private key are wiped inside the worker and never appear
+   * in the postMessage response. This file never sees them.
+   *
+   * To show the one-time seed-phrase backup screen, call
+   * `getWalletMnemonicForBackup()` separately with the returned mnemonic
+   * vault — that is the only controlled point where the mnemonic crosses
+   * back to the main thread, exactly as documented in signing.worker.ts.
    */
-  async generateNonCustodialWallet(
-    chainId: string = "ethereum",
+  async generateNonCustodialWallets(
     userPassword: string,
     supabase?: any,
     userId?: string,
     existingMnemonic?: string,
-    precomputedKey?: DerivedVaultKey
-  ): Promise<{ wallet: NonCustodialWallet; mnemonicPhrase: string }> {
+    options?: { persist?: boolean },
+  ): Promise<{ wallets: NonCustodialWallet[]; mnemonicVault: EncryptedVault }> {
     if (!userId) throw new Error("userId is required");
     if (!userPassword) throw new Error("Password is required");
+    const persist = options?.persist ?? true;
 
-    const mnemonic = existingMnemonic || generateMnemonic(wordlist, 256);
-    const seed = await mnemonicToSeed(mnemonic);
-    const root = HDKey.fromMasterSeed(seed);
+    const origin = typeof window !== "undefined" ? window.location.origin : undefined;
 
-    let privateKey: string;
-    let address: string;
-    let walletType: string;
+    const { addresses, encryptedVaults }: SecureWalletResult = await createSecureWallet(
+      userPassword,
+      origin,
+      existingMnemonic,
+    );
 
-    // finally block guarantees seed + root are wiped on every exit path:
-    // normal return, early return inside EVM branch, or any thrown exception.
-    try {
-      if (chainId === "bitcoin" || chainId === "Bitcoin (SegWit)" || chainId === "Bitcoin (Taproot)") {
-        address = await getBitcoinAddress(mnemonic);
-        const account = root.derive("m/84'/0'/0'/0/0");
-        privateKey = toHex(account.privateKey!);
-        wipeHDKey(account);
-        walletType = "bitcoin";
-      } else if (chainId === "Solana") {
-        address = await getSolanaAddress(mnemonic);
-        const privKeyBytes = await deriveSolanaPrivateKey(mnemonic);
-        if (!privKeyBytes) throw new Error("Failed to derive Solana private key");
-        privateKey = toHex(privKeyBytes);
-        wipeBytes(privKeyBytes);
-        walletType = "solana";
-      } else if (chainId === "Tron (TRC-20)") {
-        address = await getTronAddress(mnemonic);
-        const account = root.derive("m/44'/195'/0'/0/0");
-        privateKey = toHex(account.privateKey!);
-        wipeHDKey(account);
-        walletType = "tron";
-      } else if (chainId === "XRP") {
-        const account = root.derive("m/44'/144'/0'/0/0");
-        privateKey = toHex(account.privateKey!);
-        address = deriveXrpAddress(account.publicKey!);
-        wipeHDKey(account);
-        walletType = "xrp";
-      } else if (["ethereum", "ETH", "Ethereum", "BNB", "BSC", "Binance Coin", "Tether", "Polygon", "Arbitrum", "Optimism", "Base", "Avalanche", "USDT", "USDC"].includes(chainId)) {
-        address = await getEVMAddress(mnemonic);
-        const account = root.derive("m/44'/60'/0'/0/0");
-        privateKey = toHex(account.privateKey!);
-        wipeHDKey(account);
+    const createdAt = new Date().toISOString();
+    const baseWallet = (
+      chainId: string,
+      walletType: string,
+      address: string,
+      encryptedPrivateKey: EncryptedVault,
+      assetType?: string,
+    ): NonCustodialWallet => ({
+      id: crypto.randomUUID(),
+      chainId,
+      address,
+      walletType,
+      encryptedPrivateKey,
+      encryptedMnemonic: encryptedVaults.mnemonic,
+      createdAt,
+      isActive: true,
+      isBackedUp: false,
+      ...(assetType ? { assetType } : {}),
+    });
 
-        if (chainId === "BNB" || chainId === "BSC" || chainId === "Binance Coin") {
-          walletType = "binance";
-        } else if (chainId === "USDT" || chainId === "USDC") {
-          walletType = "evm-token";
-        } else {
-          walletType = "ethereum";
-        }
+    const wallets: NonCustodialWallet[] = [
+      baseWallet("ethereum", "ethereum", addresses.EVM, encryptedVaults.EVM),
+      baseWallet("bitcoin", "bitcoin", addresses.BTC, encryptedVaults.BTC),
+      baseWallet("Solana", "solana", addresses.SOL, encryptedVaults.SOL),
+      baseWallet("Tron (TRC-20)", "tron", addresses.TRX, encryptedVaults.TRX),
+      baseWallet("XRP", "xrp", addresses.XRP, encryptedVaults.XRP),
+    ];
 
-        const assetType = (chainId === "USDT" || chainId === "USDC") ? chainId : undefined;
-
-        const encryptedPrivateKey = await this.encryptPrivateKey(privateKey, userPassword, precomputedKey);
-        const encryptedMnemonic = await this.encryptPrivateKey(mnemonic, userPassword, precomputedKey);
-
-        const newWallet: NonCustodialWallet = {
-          id: crypto.randomUUID(),
-          chainId,
-          address,
-          walletType,
-          encryptedPrivateKey,
-          encryptedMnemonic,
-          createdAt: new Date().toISOString(),
-          isActive: true,
-          isBackedUp: false,
-          assetType,
-        };
-
-        const wallets = await this.getWalletsFromStorage(userId);
-        await this.saveWalletsToStorage([...wallets, newWallet], userId);
-        if (supabase) await this.saveWalletToSupabase(supabase, newWallet, userId);
-
-        return { wallet: newWallet, mnemonicPhrase: mnemonic };
-      } else {
-        address = await getEVMAddress(mnemonic);
-        const account = root.derive("m/44'/60'/0'/0/0");
-        privateKey = toHex(account.privateKey!);
-        wipeHDKey(account);
-        walletType = chainId.toLowerCase();
-      }
-
-      const encryptedPrivateKey = await this.encryptPrivateKey(privateKey!, userPassword, precomputedKey);
-      const encryptedMnemonic = await this.encryptPrivateKey(mnemonic, userPassword, precomputedKey);
-
-      const newWallet: NonCustodialWallet = {
-        id: crypto.randomUUID(),
-        chainId,
-        address: address!,
-        walletType: walletType!,
-        encryptedPrivateKey,
-        encryptedMnemonic,
-        createdAt: new Date().toISOString(),
-        isActive: true,
-        isBackedUp: false,
-      };
-
-      const wallets = await this.getWalletsFromStorage(userId);
-      await this.saveWalletsToStorage([...wallets, newWallet], userId);
-      if (supabase) await this.saveWalletToSupabase(supabase, newWallet, userId);
-
-      return { wallet: newWallet, mnemonicPhrase: mnemonic };
-    } finally {
-      wipeBytes(seed);
-      wipeHDKey(root);
+    // persist:false lets a caller that owns its own atomic write path (e.g.
+    // WalletSetupDialog's RPC-canonical createMyWallets, which checks for an
+    // existing wallet server-side and reloads canonical rows afterward)
+    // build these wallet objects without this method ALSO writing them
+    // independently. Skipping this section is what avoids two uncoordinated
+    // write paths racing each other into Supabase.
+    if (persist) {
+      const existing = await this.getWalletsFromStorage(userId);
+      await this.saveWalletsToStorage([...existing, ...wallets], userId);
+      if (supabase) await this.saveWalletsToSupabase(supabase, wallets, userId);
     }
+
+    return { wallets, mnemonicVault: encryptedVaults.mnemonic };
+  }
+
+  /**
+   * Adds an extra row for an EVM-family chain (BNB, Polygon, Arbitrum, USDT,
+   * USDC, …) that reuses an already-generated EVM wallet's address and vault.
+   * Every EVM-compatible chain shares the SAME keypair — there is no separate
+   * derivation to run, so this never touches the worker or any key material,
+   * it just relabels the existing EVM wallet under a different chainId.
+   */
+  async addEvmChainVariant(
+    evmWallet: NonCustodialWallet,
+    chainId: string,
+    walletType: string,
+    userId: string,
+    supabase?: any,
+    assetType?: string,
+    options?: { persist?: boolean },
+  ): Promise<NonCustodialWallet> {
+    const persist = options?.persist ?? true;
+    const variant: NonCustodialWallet = {
+      id: crypto.randomUUID(),
+      chainId,
+      address: evmWallet.address,
+      walletType,
+      encryptedPrivateKey: evmWallet.encryptedPrivateKey,
+      encryptedMnemonic: evmWallet.encryptedMnemonic,
+      createdAt: new Date().toISOString(),
+      isActive: true,
+      isBackedUp: false,
+      ...(assetType ? { assetType } : {}),
+    };
+
+    // See generateNonCustodialWallets: persist:false lets a caller batch this
+    // variant into its own atomic write (e.g. createMyWallets) instead of
+    // this method writing it separately.
+    if (persist) {
+      const wallets = await this.getWalletsFromStorage(userId);
+      await this.saveWalletsToStorage([...wallets, variant], userId);
+      if (supabase) await this.saveWalletToSupabase(supabase, variant, userId);
+    }
+
+    return variant;
+  }
+
+  /**
+   * One-time seed-phrase backup screen. Decrypts the mnemonic vault inside
+   * the worker and returns the plaintext phrase — the only point where the
+   * mnemonic crosses back to the main thread. Caller must discard it from
+   * component state immediately after the user confirms they've saved it.
+   */
+  async getWalletMnemonicForBackup(mnemonicVault: EncryptedVault, password: string): Promise<string> {
+    return getMnemonicForBackup(mnemonicVault, password);
   }
 
   public async getWalletsFromStorage(userId: string): Promise<NonCustodialWallet[]> {
@@ -482,30 +437,6 @@ class NonCustodialWalletManager {
     await setValue('wallets', this.getStorageKey(userId), wallets);
   }
 
-  private async encryptPrivateKey(
-    data: string,
-    password: string,
-    precomputedKey?: DerivedVaultKey
-  ): Promise<EncryptedVault> {
-    if (precomputedKey) {
-      // TODO: no worker message type currently accepts a pre-derived
-      // DerivedVaultKey (its CryptoKey is non-extractable and created via
-      // webCrypto.ts's deriveVaultKey(), likely called by whatever passes
-      // precomputedKey in — probably WalletSetupDialog for multi-chain
-      // creation, to avoid re-running scrypt per chain). Until the worker
-      // gains an equivalent batch/reuse-key API, this path still runs on
-      // the main thread via encryptVaultWithKey. Not changed here — needs
-      // the caller's file to pick the right worker-side replacement
-      // (likely "encryptVaultBatch", which already derives once internally).
-      return encryptVaultWithKey(data, precomputedKey);
-    }
-    return callSigningWorker<EncryptedVault>("encryptVault", {
-      data,
-      password,
-      origin: typeof window !== "undefined" ? window.location.origin : undefined,
-    });
-  }
-
   async decryptPrivateKey(
     vault: string | EncryptedVault,
     password: string,
@@ -534,7 +465,6 @@ class NonCustodialWalletManager {
    * wallets to decide whether to prompt migration.
    */
   async hasLegacyVaults(userId: string): Promise<boolean> {
-    const { isLegacyVault } = await import("./webCrypto");
     const wallets = await this.getWalletsFromStorage(userId);
     return wallets.some(
       (w) => isLegacyVault(w.encryptedPrivateKey) || isLegacyVault(w.encryptedMnemonic)
@@ -549,7 +479,6 @@ class NonCustodialWalletManager {
    * Safe to call multiple times — wallets already in the modern format are skipped.
    */
   async migrateLegacyVaults(userId: string, password: string, supabase?: any): Promise<void> {
-    const { isLegacyVault } = await import("./webCrypto");
     const wallets = await this.getWalletsFromStorage(userId);
     let anyMigrated = false;
 
