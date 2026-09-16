@@ -1,6 +1,17 @@
 import { getSupabase } from "@/lib/supabase";
 import { asterMarket, type Ticker24h } from "@/lib/asterdex-service";
 
+const NOTIFICATION_PREFS_STORAGE_KEY = "pexly-notif-prefs";
+
+function getLocalNotificationPrefs(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(NOTIFICATION_PREFS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
 export interface Notification {
   id: string;
   user_id: string;
@@ -234,13 +245,7 @@ export async function sendCoinReceivedNotification(
   try {
     const supabase = await getSupabase();
 
-    const { data } = await supabase
-      .from('user_profiles')
-      .select('notification_preferences')
-      .eq('id', userId)
-      .single();
-
-    const prefs = data?.notification_preferences as Record<string, boolean> | null;
+    const prefs = getLocalNotificationPrefs();
     if (prefs && prefs.transaction_updates === false) return;
 
     const amount = Number(tx.amount);
@@ -276,13 +281,7 @@ export async function sendLoginNotificationIfEnabled(
   try {
     const supabase = await getSupabase();
 
-    const { data } = await supabase
-      .from('user_profiles')
-      .select('notification_preferences')
-      .eq('id', userId)
-      .single();
-
-    const prefs = data?.notification_preferences as Record<string, boolean> | null;
+    const prefs = getLocalNotificationPrefs();
     if (prefs && prefs.login_notifications === false) return;
 
     const now = new Date();
@@ -358,13 +357,8 @@ export async function fetchAndCreateMarketMoversNotifications(userId: string): P
   try {
     const supabase = await getSupabase();
 
-    // Respect user pref
-    const { data } = await supabase
-      .from('user_profiles')
-      .select('notification_preferences')
-      .eq('id', userId)
-      .single();
-    const prefs = data?.notification_preferences as Record<string, boolean> | null;
+    // Respect the local preference; user_profiles has no notification_preferences column.
+    const prefs = getLocalNotificationPrefs();
     if (prefs && prefs.market_movers === false) return;
 
     // ── Bybit-style catch-up model ───────────────────────────────────────────

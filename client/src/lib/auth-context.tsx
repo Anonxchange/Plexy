@@ -609,59 +609,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // No local/Supabase blobs. Before opening any dialog we MUST confirm
-      // the server state. If Supabase was unreachable in step 1, retry once
-      // with a lightweight ping before giving up.
-      if (!supabaseReachable) {
-        try {
-          const { error: pingError } = await supabase
-            .from('user_profiles')
-            .select('id')
-            .eq('id', userId)
-            .maybeSingle();
-          if (!pingError) {
-            supabaseReachable = true;
-          }
-        } catch {
-          // Still unreachable — stay silent
-        }
-      }
-
-      // If we still can't reach Supabase, refuse to open the dialog.
-      // The wallet page has its own retry loop that handles this case.
+      // If the wallet RPC was unavailable, refuse to open the dialog.
+      // Do not use user_profiles as a wallet-detection fallback: its
+      // permissions are intentionally independent from wallet RPC access,
+      // and a profile permission error must not hide wallet setup.
       if (!supabaseReachable) {
         devLog.warn("Wallet check aborted — Supabase unreachable, will retry on wallet page");
         checkedUsersRef.current.delete(userId); // allow retry next navigation
         return;
       }
 
-      // 4. Check Wallet Address (Ownership check) — use the confirmed client
-      const { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('wallet_address')
-        .eq('id', userId)
-        .maybeSingle();
-
-      // A non-null error here means the query failed (RLS, network blip, etc.).
-      // Treat it the same as "unreachable" — do not open the dialog.
-      if (profileError) {
-        devLog.warn("Wallet check aborted — profile fetch error:", profileError.message);
-        checkedUsersRef.current.delete(userId);
-        return;
-      }
-
-      // Sync flow removed: if wallet_address exists in the profile but
-      // user_wallets came back empty (transient load failure, new device, etc.)
-      // we no longer prompt for a password-based sync. The user can set up
-      // a fresh wallet from their wallet page instead.
-      if (profile?.wallet_address) {
-        setWalletImportState({ required: false, expectedAddress: null });
-        return;
-      }
-
-      // 5. CREATE REQUIRED: the RPC confirmed no wallet exists anywhere.
+      // CREATE REQUIRED: the wallet RPC confirmed no wallet exists.
       // Re-query through the same RPC as an authoritative double-check before
-      // prompting. Direct user_wallets access is intentionally unavailable.
+      // prompting. Direct user_wallets access and user_profiles fallback reads
+      // are intentionally unavailable.
       const { nonCustodialWalletManager } = await import("./non-custodial-wallet");
       let confirmedWallets: any[];
       try {
