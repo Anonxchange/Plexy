@@ -147,7 +147,10 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expec
         { persist: false },
       );
 
-      const evmWallet = baseWallets.find((w) => w.chainId === "ethereum")!;
+      const evmWallet = baseWallets.find((w) => w.chainId === "ethereum");
+      if (!evmWallet) {
+        throw new Error("Wallet generator returned no Ethereum wallet.");
+      }
 
       // BNB and Avalanche share the same EVM key/address/vault — pure
       // relabeling via addEvmChainVariant, no extra derivation needed.
