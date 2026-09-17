@@ -563,7 +563,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const supabase = await getSupabase();
-      checkedUsersRef.current.add(userId);
 
       // DECISION FLOW:
       // 1. Fetch authoritative encrypted blobs from Supabase (source of truth).
@@ -605,6 +604,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // 2. If wallet is already unlocked in memory -> Wallet Ready
       if (wallets.length > 0 && isWalletUnlockedRef.current) {
+        checkedUsersRef.current.add(userId);
         setWalletImportState({ required: false, expectedAddress: null });
         return;
       }
@@ -613,6 +613,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       //    (loadWalletsFromSupabase saves them). Password is only required when
       //    the user signs a transaction, not just to load the wallet page.
       if (wallets.length > 0) {
+        checkedUsersRef.current.add(userId);
         setWalletImportState({ required: false, expectedAddress: null });
         return;
       }
@@ -642,10 +643,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (confirmedWallets.length > 0) {
+        checkedUsersRef.current.add(userId);
         setWalletImportState({ required: false, expectedAddress: null });
         return;
       }
 
+      checkedUsersRef.current.add(userId);
       setWalletImportState({
         required: true,
         expectedAddress: null,
