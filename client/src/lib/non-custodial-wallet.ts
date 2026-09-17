@@ -82,6 +82,18 @@ export type WalletRpcRow = {
 
 let walletInitializationPromise: Promise<NonCustodialWallet[]> | null = null;
 
+async function cacheWalletsBestEffort(wallets: NonCustodialWallet[], userId: string): Promise<void> {
+  try {
+    await nonCustodialWalletManager.saveWalletsToStorage(wallets, userId);
+  } catch (error) {
+    // Supabase is authoritative. A browser cache failure must never turn a
+    // successful server read/write into "no wallet was saved".
+    devLog.warn("Wallet cache unavailable; continuing with server wallet state", {
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 function asBoolean(value: string | boolean | null | undefined): boolean {
   return value === true || value === "true";
 }
@@ -145,7 +157,7 @@ export async function loadMyWallets(
     const userId = expectedUserId ?? (await supabase.auth.getUser()).data.user?.id;
     if (!userId) throw new Error("AUTH_REQUIRED");
     if (wallets.length > 0) {
-      await nonCustodialWalletManager.saveWalletsToStorage(wallets, userId);
+      await cacheWalletsBestEffort(wallets, userId);
     }
     return wallets;
   })();
@@ -175,7 +187,7 @@ export async function createMyWallets(
     const existing = await getMyWalletRows(supabase, expectedUserId);
     if (existing.length > 0) {
       const canonical = existing.map(mapWalletRpcRow);
-      await nonCustodialWalletManager.saveWalletsToStorage(canonical, expectedUserId);
+      await cacheWalletsBestEffort(canonical, expectedUserId);
       return canonical;
     }
 
@@ -204,7 +216,7 @@ export async function createMyWallets(
     if (savedRows.length === 0) throw new Error("WALLET_CREATE_EMPTY");
 
     const canonical = savedRows.map(mapWalletRpcRow);
-    await nonCustodialWalletManager.saveWalletsToStorage(canonical, expectedUserId);
+    await cacheWalletsBestEffort(canonical, expectedUserId);
     return canonical;
   })();
 
