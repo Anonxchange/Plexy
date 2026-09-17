@@ -66,3 +66,19 @@ export async function getAllValues(store: keyof PexlyDB) {
 export function resetDBConnection(): void {
   dbPromise = null;
 }
+
+/**
+ * Close the active IndexedDB connection before deleting the database.
+ * deleteDatabase() remains blocked while this module keeps a connection open.
+ */
+export async function closeDBConnection(): Promise<void> {
+  const pending = dbPromise;
+  dbPromise = null;
+  if (!pending) return;
+  try {
+    const db = await pending;
+    db.close();
+  } catch {
+    // The connection never opened; there is nothing left to close.
+  }
+}
