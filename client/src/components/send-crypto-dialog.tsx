@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import { usePasswordRateLimit } from "@/hooks/use-password-rate-limit";
 import {
@@ -35,13 +34,21 @@ import {
   ChevronLeft,
 } from "@/lib/icons";
 import {
+  prepareEVMTransferIntent,
   signEVMTransactionFromVault,
+  prepareBitcoinTransferIntent,
   signBitcoinTransactionFromVault,
+  prepareSolanaTransferIntent,
   signSolanaTransactionFromVault,
+  prepareSplTokenTransferIntent,
+  signSplTokenTransactionFromVault,
+  prepareTronTransferIntent,
   signTronTransactionFromVault,
+  prepareTrc20TransferIntent,
+  signTrc20TransactionFromVault,
 } from "@/hooks/use-signing-worker";
 import { broadcastEVMTransaction } from "@/lib/evmSigner";
-import { getLatestBlockhash, broadcastSolanaTransaction } from "@/lib/solanaSigner";
+import { broadcastSolanaTransaction } from "@/lib/solanaSigner";
 import { broadcastTronTransaction } from "@/lib/tronSigner";
 import { btcFees, btcUtxos, chainBroadcast } from "@/lib/chain-gateway";
 import { monitorWithdrawal } from "@/lib/withdrawal-monitor";
@@ -344,6 +351,23 @@ export function SendCryptoDialog({
     return crypto;
   };
 
+  // Currency key format the *signing worker* actually recognizes
+  // (TOKEN_CONTRACTS / SPL_TOKENS / TRC20_TOKENS in signing.worker.ts all key
+  // on e.g. "USDT_TRX", "USDC_SOL" — underscored, and TRX/SOL not TRC20/SOL-
+  // with-a-hyphen). Deliberately kept separate from getNetworkSpecificSymbol
+  // above, which feeds the fee-quote API and may intentionally use a
+  // different key shape for that unrelated concern — conflating the two is
+  // exactly how the previous TRC-20 currency key ended up wrong.
+  const getWorkerCurrencyKey = (crypto: string, network: string): string => {
+    if (crypto === "USDT" || crypto === "USDC") {
+      if (network.includes("ERC-20")) return `${crypto}_ETH`;
+      if (network.includes("BEP-20")) return `${crypto}_BSC`;
+      if (network.includes("TRC-20")) return `${crypto}_TRX`;
+      if (network.includes("SPL"))    return `${crypto}_SOL`;
+    }
+    return crypto;
+  };
+
   const selectedWallet = wallets.find((w) => w.symbol === selectedCrypto);
   const networkSpecificSymbol =
     selectedCrypto && selectedNetwork
@@ -391,9 +415,19 @@ export function SendCryptoDialog({
     if (!user) return;
     const cryptoAmountNum =
       amountInputMode === "crypto" ? parseFloat(amount) : parseFloat(cryptoAmount);
-    const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
+    // Worker-facing currency key (USDT_TRX, USDC_SOL, ...) — see note above
+    // getWorkerCurrencyKey for why this is a separate mapping from the
+    // fee-display symbol used elsewhere in this component.
+    const workerCurrency = getWorkerCurrencyKey(selectedCrypto, selectedNetwork);
     const broadcastAt = Math.floor(Date.now() / 1000);
     let txHash = "";
+
+    // Every branch below follows the same shape: prepare (resolves
+    // network-derived values and returns a single-use approvalDigest bundled
+    // into `signRequest`), then sign with EXACTLY that `signRequest` object —
+    // not a hand-built one — since the sign step's approval check requires
+    // it to match what prepare actually resolved. See use-signing-worker.ts's
+    // comment above prepareEVMTransferIntent for the full explanation.
 
     if (selectedNetwork.includes("Bitcoin")) {
       const [feesResult, utxoResult] = await Promise.all([btcFees(), btcUtxos(fromAddress)]);
@@ -450,40 +484,72 @@ export function SendCryptoDialog({
 
       const btcTxData = {
         to: toAddress,
-        // The signing worker accepts BTC units and converts to satoshis once.
-        amount: cryptoAmountNum,
+        // parseDecimalUnits in the worker requires a string — previously this
+        // passed the raw number `cryptoAmountNum`, which would have failed
+        // ("Invalid amount") the moment the two-step approval was wired up.
+        amount: cryptoAmountNum.toString(),
         utxos: selectedUtxos,
         feeRate,
         fromAddress,
       };
-      const result = await signBitcoinTransactionFromVault(vault, password, btcTxData) as any;
+      const prepared = await prepareBitcoinTransferIntent(vault, password, btcTxData);
+      const result = await signBitcoinTransactionFromVault(vault, password, prepared.signRequest) as any;
       const broadcastResult = await chainBroadcast("BTC", "sendrawtransaction", [result.signedTx]);
       txHash = broadcastResult?.result ?? broadcastResult;
     } else if (selectedNetwork.includes("Ethereum") || selectedNetwork.includes("Binance")) {
       const chainKey = selectedNetwork.includes("Binance") ? "BSC" : "ETH";
-      const txData = { to: toAddress, amount: cryptoAmountNum.toString(), currency: symbolToUse as any };
-      const result = await signEVMTransactionFromVault(vault, password, txData) as any;
+      const txData = { to: toAddress, amount: cryptoAmountNum.toString(), currency: workerCurrency as any };
+      const prepared = await prepareEVMTransferIntent(vault, password, txData);
+      const result = await signEVMTransactionFromVault(vault, password, prepared.signRequest) as any;
       txHash = await broadcastEVMTransaction(result.signedTx, chainKey);
     } else if (selectedNetwork.includes("Avalanche") || selectedCrypto === "AVAX") {
       const txData = { to: toAddress, amount: cryptoAmountNum.toString(), currency: "AVAX" as any };
-      const result = await signEVMTransactionFromVault(vault, password, txData) as any;
+      const prepared = await prepareEVMTransferIntent(vault, password, txData);
+      const result = await signEVMTransactionFromVault(vault, password, prepared.signRequest) as any;
       txHash = await broadcastEVMTransaction(result.signedTx, "AVAX");
     } else if (selectedNetwork.includes("Solana")) {
-      const recentBlockhash = await getLatestBlockhash();
-      const result = await signSolanaTransactionFromVault(vault, password, {
-        to: toAddress,
-        amount: cryptoAmountNum.toString(),
-        currency: "SOL",
-        recentBlockhash,
-      }) as any;
-      txHash = await broadcastSolanaTransaction(result.signedTx);
+      // BUG FIXED: this branch previously matched on `selectedNetwork.includes("Solana")`,
+      // which is also true for the "Solana (SPL)" network entry — but it
+      // unconditionally sent `currency: "SOL"` regardless of which coin was
+      // selected. A user choosing to send USDC or USDT on "Solana (SPL)"
+      // would have had native SOL sent instead. Branch on the actual coin.
+      if (selectedCrypto === "USDC" || selectedCrypto === "USDT") {
+        const prepared = await prepareSplTokenTransferIntent(vault, password, {
+          to: toAddress,
+          amount: cryptoAmountNum.toString(),
+          currency: workerCurrency as any, // "USDC_SOL" | "USDT_SOL"
+        });
+        const result = await signSplTokenTransactionFromVault(vault, password, prepared.signRequest) as any;
+        txHash = await broadcastSolanaTransaction(result.signedTx);
+      } else {
+        const prepared = await prepareSolanaTransferIntent(vault, password, {
+          to: toAddress,
+          amount: cryptoAmountNum.toString(),
+          currency: "SOL",
+        });
+        const result = await signSolanaTransactionFromVault(vault, password, prepared.signRequest) as any;
+        txHash = await broadcastSolanaTransaction(result.signedTx);
+      }
     } else if (selectedNetwork.includes("Tron")) {
-      const result = await signTronTransactionFromVault(vault, password, {
-        to: toAddress,
-        amount: cryptoAmountNum.toString(),
-        currency: symbolToUse as any,
-      }) as any;
-      txHash = await broadcastTronTransaction(result.signedTx);
+      // Same class of bug as Solana above: native TRX vs TRC-20 USDC/USDT
+      // need different prepare/sign pairs and a currency key the worker
+      // actually recognizes (USDT_TRX / USDC_TRX, not "USDT-TRC20").
+      if (selectedCrypto === "USDC" || selectedCrypto === "USDT") {
+        const prepared = await prepareTrc20TransferIntent(vault, password, {
+          to: toAddress,
+          amount: cryptoAmountNum.toString(),
+          currency: workerCurrency as any, // "USDC_TRX" | "USDT_TRX"
+        });
+        const result = await signTrc20TransactionFromVault(vault, password, prepared.signRequest) as any;
+        txHash = await broadcastTronTransaction(result.signedTx);
+      } else {
+        const prepared = await prepareTronTransferIntent(vault, password, {
+          to: toAddress,
+          amount: cryptoAmountNum.toString(),
+        });
+        const result = await signTronTransactionFromVault(vault, password, prepared.signRequest) as any;
+        txHash = await broadcastTronTransaction(result.signedTx);
+      }
     } else {
       throw new Error(`Signing not supported for ${selectedNetwork}`);
     }
