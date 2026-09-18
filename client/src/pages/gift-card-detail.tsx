@@ -688,13 +688,33 @@ export function GiftCardDetail() {
 
                 {/* CTA buttons */}
                 <div className="space-y-2.5 pt-1">
-                  <Button
+                  {/* Buy Now — styled like the Shopify checkout button (label + inline
+                      payment marks). Crypto icons are the existing <img> sources from
+                      cryptoIconUrls already used below in "Pay with crypto", so nothing
+                      new is introduced under the CSP. */}
+                  <button
                     onClick={handleBuyCard}
                     disabled={!isValueValid}
-                    className="w-full h-12 text-base font-bold bg-[#B4F22E] text-black hover:opacity-90 rounded-xl shadow-lg shadow-[#B4F22E]/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full h-12 rounded-xl bg-[#FFC439] hover:bg-[#f0b429] active:bg-[#e0a420] transition-colors flex items-center justify-center gap-2 font-bold text-base text-[#003087] shadow-lg shadow-[#FFC439]/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Buy Now"
                   >
-                    Buy Now
-                  </Button>
+                    <span>Buy Now</span>
+                    <div className="flex items-center gap-1">
+                      {[
+                        { src: cryptoIconUrls.BTC, alt: "Bitcoin" },
+                        { src: cryptoIconUrls.USDT, alt: "USDT" },
+                        { src: cryptoIconUrls.USDC, alt: "USDC" },
+                        { src: cryptoIconUrls.SOL, alt: "Solana" },
+                      ].map(({ src, alt }) => (
+                        <div
+                          key={alt}
+                          className="h-6 w-6 rounded-full bg-white flex items-center justify-center overflow-hidden ring-1 ring-black/5"
+                        >
+                          <img src={src} alt={alt} className="h-4 w-4" />
+                        </div>
+                      ))}
+                    </div>
+                  </button>
                   <Button
                     variant="outline"
                     onClick={handleAddToCart}
