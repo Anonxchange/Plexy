@@ -8,7 +8,12 @@
  * It owns the postMessage protocol (WorkerRequest/WorkerResponse, the message
  * dispatch loop) and everything chain-specific: RPC calls through the Supabase
  * chain-gateway edge function, EIP-1559 fee logic, and transaction building
- * + signing for EVM only. Bitcoin/Solana/TRON signing is deliberately not exposed until each protocol has a tested transaction implementation.
+ * + signing for EVM, native BTC/SOL/TRX, and SPL/TRC-20 USDC+USDT.
+ *
+ * Scope note: only the SPL and TRC-20 tokens explicitly listed in SPL_TOKENS /
+ * TRC20_TOKENS below are supported. Adding another token means adding its
+ * mint/contract address + decimals there — nothing here "generically" signs
+ * an arbitrary token, on purpose.
  *
  * Mnemonic generation, per-chain key/address derivation, and vault
  * encryption/decryption live in ./vault-crypto.ts, which this file imports.
@@ -143,11 +148,14 @@ function workerGatewayChain(key: string): string {
  *
  * Replaces the old `rpcCall()` helper that made direct calls to hardcoded
  * public RPC endpoints (publicnode.com, drpc.org, etc.).
+ *
+ * accessToken is REQUIRED and must come from the caller's own `request`
+ * object, not a module-level variable. This worker's `onmessage` handler is
+ * async, so two in-flight messages can interleave at any `await`; a shared
+ * mutable `currentAccessToken` global would let one call's token leak into,
+ * or get wiped out from under, a concurrent call. See assertAccessToken().
  */
-let currentAccessToken: string | undefined;
-
-async function workerGatewayRpc(chain: string, method: string, params: unknown[], accessToken?: string): Promise<unknown> {
-  accessToken = accessToken ?? currentAccessToken;
+async function workerGatewayRpc(chain: string, method: string, params: unknown[], accessToken: string): Promise<unknown> {
   const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined) ?? "";
   const anonKey    = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ?? "";
   if (!supabaseUrl || !anonKey) {
@@ -174,8 +182,7 @@ async function workerGatewayRpc(chain: string, method: string, params: unknown[]
   }
 }
 
-async function workerGatewayTron(path: string, body: unknown, accessToken?: string): Promise<any> {
-  accessToken = accessToken ?? currentAccessToken;
+async function workerGatewayTron(path: string, body: unknown, accessToken: string): Promise<any> {
   const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined) ?? "";
   const anonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ?? "";
   if (!supabaseUrl || !anonKey) throw new Error("chain-gateway: Supabase environment is missing");
@@ -190,6 +197,24 @@ async function workerGatewayTron(path: string, body: unknown, accessToken?: stri
     if (!res.ok || data?.error) throw new Error(formatWorkerRpcError(data?.error ?? data?.message ?? `Gateway HTTP ${res.status}`));
     return data;
   } finally { clearTimeout(t); }
+}
+
+/**
+ * Validates and extracts the access token from a single request object.
+ * Every handler that calls workerGatewayRpc/workerGatewayTron must obtain
+ * its token through this function (from ITS OWN `request`, never a shared
+ * variable) so concurrent worker messages can never observe each other's
+ * credentials. Throwing here (rather than silently falling back to
+ * `undefined`, as the old currentAccessToken ternary did) also means a
+ * malformed/oversized token fails loudly instead of quietly downgrading to
+ * an unauthenticated call.
+ */
+function assertAccessToken(request: any): string {
+  const token = request?.accessToken;
+  if (typeof token !== "string" || token.length === 0 || token.length > 4096) {
+    throw new Error("Missing or invalid access token");
+  }
+  return token;
 }
 
 function parseDecimalUnits(value: unknown, decimals: number, name: string): bigint {
@@ -221,6 +246,117 @@ function buildSolanaLegacyMessage(payer: Uint8Array, recentBlockhash: Uint8Array
     ...recentBlockhash, ...solShortVec(1), programIndex, ...solShortVec(accountIndexes.length),
     ...accountIndexes, ...solShortVec(data.length), ...data
   ]);
+}
+
+// ─── SPL Token (Solana) / TRC-20 (TRON) constants ────────────────────────────
+// Every constant below was independently verified against multiple current
+// sources (issuer docs, block explorers, the official SPL Associated Token
+// Account spec) before being committed here. That said: given what's at
+// stake, re-verify each one yourself against an authoritative, live source
+// (Solana Explorer / Solscan for the mints, Tronscan for the contracts, the
+// spl-associated-token-account program docs for the program IDs) before this
+// touches real funds. A single wrong character here is unrecoverable.
+//
+// Deliberately NOT "generic token support": adding a token means adding its
+// mint/contract + decimals to one of the two maps below. Nothing here signs
+// an arbitrary, caller-supplied token contract.
+const SOL_TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+const SOL_ASSOCIATED_TOKEN_PROGRAM_ID = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
+
+const SPL_TOKENS: Record<string, { mint: string; decimals: number }> = {
+  USDC_SOL: { mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", decimals: 6 },
+  USDT_SOL: { mint: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", decimals: 6 },
+};
+
+const TRC20_TOKENS: Record<string, { contract: string; decimals: number }> = {
+  USDT_TRX: { contract: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", decimals: 6 },
+  USDC_TRX: { contract: "TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8", decimals: 6 },
+};
+
+// ─── Ed25519 curve arithmetic for Solana Program Derived Addresses ──────────
+// Implemented with plain modular BigInt arithmetic rather than reaching into
+// @noble/ed25519 internals, whose class names/API have already changed
+// across major versions elsewhere in this file (see the v2/v3 wiring notes
+// above). This performs the same check `PublicKey.isOnCurve` does: a valid
+// PDA must NOT decode to a point that satisfies the curve equation. Verify
+// this against a few known associated-token-account addresses (e.g. compare
+// against `getAssociatedTokenAddressSync` from @solana/spl-token, or what
+// Solana Explorer shows for a wallet's USDC account) before trusting it with
+// real funds — elliptic-curve code is exactly the kind of thing that can be
+// subtly wrong and still "usually" work.
+const ED_P = (1n << 255n) - 19n;
+function edMod(a: bigint, m: bigint): bigint { const r = a % m; return r >= 0n ? r : r + m; }
+function edPow(base: bigint, exp: bigint, m: bigint): bigint {
+  base = edMod(base, m); let result = 1n;
+  while (exp > 0n) { if (exp & 1n) result = edMod(result * base, m); exp >>= 1n; base = edMod(base * base, m); }
+  return result;
+}
+function edInv(a: bigint, m: bigint): bigint { return edPow(a, m - 2n, m); }
+const ED_D = edMod(-121665n * edInv(121666n, ED_P), ED_P);
+const ED_SQRT_M1 = edPow(2n, (ED_P - 1n) / 4n, ED_P);
+function edSqrt(a: bigint): bigint | null {
+  let c = edPow(a, (ED_P + 3n) / 8n, ED_P);
+  if (edMod(c * c - a, ED_P) === 0n) return c;
+  c = edMod(c * ED_SQRT_M1, ED_P);
+  if (edMod(c * c - a, ED_P) === 0n) return c;
+  return null;
+}
+function isOnEd25519Curve(point: Uint8Array): boolean {
+  if (point.length !== 32) return false;
+  const bytes = point.slice(); bytes[31] &= 0x7f;
+  let y = 0n; for (let i = 31; i >= 0; i--) y = (y << 8n) | BigInt(bytes[i]);
+  if (y >= ED_P) return false;
+  const y2 = edMod(y * y, ED_P);
+  const u = edMod(y2 - 1n, ED_P);
+  const v = edMod(ED_D * y2 + 1n, ED_P);
+  const x2 = edMod(u * edInv(v, ED_P), ED_P);
+  if (x2 === 0n) return true; // (0, y) is itself a valid curve point
+  return edSqrt(x2) !== null;
+}
+
+/** Solana's `PublicKey.findProgramAddressSync` — off-curve, deterministic, bump-seeded. */
+async function findProgramAddress(seeds: Uint8Array[], programId: Uint8Array): Promise<Uint8Array> {
+  const marker = new TextEncoder().encode("ProgramDerivedAddress");
+  for (let bump = 255; bump >= 0; bump--) {
+    const parts = [...seeds, new Uint8Array([bump]), programId, marker];
+    const total = parts.reduce((n, p) => n + p.length, 0);
+    const combined = new Uint8Array(total);
+    let off = 0; for (const p of parts) { combined.set(p, off); off += p.length; }
+    const candidate = sha256(combined);
+    if (!isOnEd25519Curve(candidate)) return candidate;
+  }
+  throw new Error("Unable to derive a valid Solana program address");
+}
+
+/** Seeds per the SPL Associated Token Account spec: [wallet, tokenProgram, mint]. */
+async function deriveAssociatedTokenAccount(owner: Uint8Array, mint: Uint8Array): Promise<Uint8Array> {
+  return findProgramAddress([owner, base58.decode(SOL_TOKEN_PROGRAM_ID), mint], base58.decode(SOL_ASSOCIATED_TOKEN_PROGRAM_ID));
+}
+
+/** SPL Token account layout: mint(32) + owner(32) + amount(u64 LE, 8) + ... */
+function decodeSplTokenAccount(raw: Uint8Array): { mint: Uint8Array; owner: Uint8Array; amount: bigint } {
+  if (raw.length < 72) throw new Error("Invalid SPL token account data");
+  const mint = raw.slice(0, 32);
+  const owner = raw.slice(32, 64);
+  let amount = 0n; for (let i = 71; i >= 64; i--) amount = (amount << 8n) | BigInt(raw[i]);
+  return { mint, owner, amount };
+}
+
+async function fetchSolanaAccount(address: string, accessToken: string): Promise<Uint8Array | null> {
+  const result = await workerGatewayRpc("SOL", "getAccountInfo", [address, { encoding: "base64" }], accessToken) as any;
+  const value = result?.value;
+  if (!value) return null;
+  return decodeRpcBytes(value.data);
+}
+
+function tronAbiEncodeAddress(addr: string): string {
+  const hex = tronAddressToHex(addr); // 42 hex chars, no "0x": 1-byte 0x41 network prefix + 20-byte account body
+  if (hex.length !== 42) throw new Error("Unexpected TRON address hex length");
+  return hex.slice(2).padStart(64, "0"); // drop the 1-byte network prefix, left-pad the 20-byte body to 32 bytes
+}
+function tronAbiEncodeUint256(amount: bigint): string {
+  if (amount < 0n || amount >= (1n << 256n)) throw new Error("Invalid TRC-20 amount");
+  return amount.toString(16).padStart(64, "0");
 }
 
 function decodeRpcBytes(data: unknown): Uint8Array {
@@ -326,8 +462,8 @@ interface FeeHistoryFallback {
  * come from the authenticated chain gateway and are checked against the same
  * safety bounds as every other RPC-derived fee.
  */
-async function getFeeHistoryFallback(chain: string): Promise<FeeHistoryFallback> {
-  const raw = await workerGatewayRpc(chain, "eth_feeHistory", ["0x5", "latest", [25, 50, 75]]) as any;
+async function getFeeHistoryFallback(chain: string, accessToken: string): Promise<FeeHistoryFallback> {
+  const raw = await workerGatewayRpc(chain, "eth_feeHistory", ["0x5", "latest", [25, 50, 75]], accessToken) as any;
   const baseFees = Array.isArray(raw?.baseFeePerGas) ? raw.baseFeePerGas : [];
   const rewards = Array.isArray(raw?.reward) ? raw.reward : [];
 
@@ -506,26 +642,27 @@ function validateTxType(value: unknown, config: typeof CHAIN_CONFIGS[string]): 0
 }
 
 async function resolveEvmFeeFields(config: typeof CHAIN_CONFIGS[string], gwChain: string, request: any): Promise<{ type: number; gasPrice: string | null; maxFeePerGas: string | null; maxPriorityFeePerGas: string | null }> {
+  const accessToken = assertAccessToken(request);
   validateTxType(request.type, config);
   const useEip1559 = config.eip1559 && request.type !== 0;
   if (!useEip1559) {
     const gasPrice = request.gasPrice != null
       ? validateRpcGasPrice(request.gasPrice)
-      : validateRpcGasPrice(await workerGatewayRpc(gwChain, "eth_gasPrice", []));
+      : validateRpcGasPrice(await workerGatewayRpc(gwChain, "eth_gasPrice", [], accessToken));
     return { type: 0, gasPrice: gasPrice.toString(), maxFeePerGas: null, maxPriorityFeePerGas: null };
   }
   let priority: bigint;
   if (request.maxPriorityFeePerGas != null) priority = validateRpcGasPrice(request.maxPriorityFeePerGas);
   else {
-    const raw = await workerGatewayRpc(gwChain, "eth_maxPriorityFeePerGas", []);
+    const raw = await workerGatewayRpc(gwChain, "eth_maxPriorityFeePerGas", [], accessToken);
     const fallback = tryValidateRpcGasPrice(raw);
-    priority = fallback ?? (await getFeeHistoryFallback(gwChain)).priorityFeePerGas;
+    priority = fallback ?? (await getFeeHistoryFallback(gwChain, accessToken)).priorityFeePerGas;
   }
   let maxFee: bigint;
   if (request.maxFeePerGas != null) maxFee = validateRpcGasPrice(request.maxFeePerGas);
   else {
-    const gp = tryValidateRpcGasPrice(await workerGatewayRpc(gwChain, "eth_gasPrice", []));
-    maxFee = gp != null ? gp * 2n : (await getFeeHistoryFallback(gwChain)).latestBaseFeePerGas * 2n + priority;
+    const gp = tryValidateRpcGasPrice(await workerGatewayRpc(gwChain, "eth_gasPrice", [], accessToken));
+    maxFee = gp != null ? gp * 2n : (await getFeeHistoryFallback(gwChain, accessToken)).latestBaseFeePerGas * 2n + priority;
     if (maxFee > RPC_GAS_PRICE_MAX) maxFee = RPC_GAS_PRICE_MAX;
   }
   if (maxFee < priority) throw new Error("maxFeePerGas cannot be lower than maxPriorityFeePerGas");
@@ -544,6 +681,7 @@ async function _signEVMCore(
   gasLimit: bigint,
   request: any,
 ): Promise<{ signedTx: string; txHash: string; from: string; type: number }> {
+  const accessToken = assertAccessToken(request);
   validateTxType(request.type, config);
   const useEip1559 = config.eip1559 && request.type !== 0;
 
@@ -554,9 +692,9 @@ async function _signEVMCore(
     if (request.maxPriorityFeePerGas != null) {
       maxPriorityFeePerGas = validateRpcGasPrice(request.maxPriorityFeePerGas);
     } else {
-      const rawPri = await workerGatewayRpc(gwChain, "eth_maxPriorityFeePerGas", []);
+      const rawPri = await workerGatewayRpc(gwChain, "eth_maxPriorityFeePerGas", [], accessToken);
       maxPriorityFeePerGas = tryValidateRpcGasPrice(rawPri) ?? (
-        feeHistory = await getFeeHistoryFallback(gwChain),
+        feeHistory = await getFeeHistoryFallback(gwChain, accessToken),
         feeHistory.priorityFeePerGas
       );
     }
@@ -565,11 +703,11 @@ async function _signEVMCore(
     if (request.maxFeePerGas != null) {
       maxFeePerGas = validateRpcGasPrice(request.maxFeePerGas);
     } else {
-      const gasPrice = tryValidateRpcGasPrice(await workerGatewayRpc(gwChain, "eth_gasPrice", []));
+      const gasPrice = tryValidateRpcGasPrice(await workerGatewayRpc(gwChain, "eth_gasPrice", [], accessToken));
       if (gasPrice != null) {
         maxFeePerGas = gasPrice * 2n;
       } else {
-        feeHistory ??= await getFeeHistoryFallback(gwChain);
+        feeHistory ??= await getFeeHistoryFallback(gwChain, accessToken);
         maxFeePerGas = feeHistory.latestBaseFeePerGas * 2n + maxPriorityFeePerGas;
       }
       if (maxFeePerGas > RPC_GAS_PRICE_MAX) maxFeePerGas = RPC_GAS_PRICE_MAX;
@@ -590,7 +728,7 @@ async function _signEVMCore(
 
   const gasPrice = request.gasPrice != null
     ? validateRpcGasPrice(request.gasPrice)
-    : validateRpcGasPrice(await workerGatewayRpc(gwChain, "eth_gasPrice", []));
+    : validateRpcGasPrice(await workerGatewayRpc(gwChain, "eth_gasPrice", [], accessToken));
   const tx       = [nonce, gasPrice, gasLimit, to, value, data, config.chainId, BigInt(0), BigInt(0)];
   const encoded  = RLP.encode(tx);
   const hash     = keccak_256(encoded);
@@ -614,10 +752,11 @@ async function handleSignEVMTransaction(mnemonic: string, request: any): Promise
     if (!config) throw new Error(`Unsupported EVM chain: ${baseChain}`);
     assertSupportedCurrency(currency, baseChain);
     const gwChain = workerGatewayChain(baseChain);
+    const accessToken = assertAccessToken(request);
 
     const nonce = request.nonce != null
       ? validateRpcNonce(request.nonce)
-      : validateRpcNonce(await workerGatewayRpc(gwChain, "eth_getTransactionCount", [from, "pending"]));
+      : validateRpcNonce(await workerGatewayRpc(gwChain, "eth_getTransactionCount", [from, "pending"], accessToken));
 
     let to = assertAddress(request.to, "recipient");
     let value = 0n;
@@ -664,10 +803,11 @@ async function handleSignEVMContractCall(mnemonic: string, request: any): Promis
     const config  = CHAIN_CONFIGS[baseChain];
     if (!config) throw new Error(`Unsupported EVM chain: ${baseChain}`);
     const gwChain = workerGatewayChain(baseChain);
+    const accessToken = assertAccessToken(request);
 
     const nonce = request.nonce != null
       ? validateRpcNonce(request.nonce)
-      : validateRpcNonce(await workerGatewayRpc(gwChain, "eth_getTransactionCount", [from, "pending"]));
+      : validateRpcNonce(await workerGatewayRpc(gwChain, "eth_getTransactionCount", [from, "pending"], accessToken));
 
     const to = assertAddress(request.to, "contract address");
     const data = assertHex(request.data, "contract data");
@@ -682,7 +822,7 @@ async function handleSignEVMContractCall(mnemonic: string, request: any): Promis
       gasLimit = validateRpcGasLimit(request.gasLimit, 21_000n);
     } else {
       const raw = await workerGatewayRpc(gwChain, "eth_estimateGas",
-        [{ from, to, value: "0x" + valueWei.toString(16), data }]);
+        [{ from, to, value: "0x" + valueWei.toString(16), data }], accessToken);
       gasLimit = validateRpcGasLimit(raw, 21_000n);
       gasLimit = (gasLimit * 125n) / 100n;
       if (gasLimit < 60_000n) gasLimit = 60_000n;
@@ -720,7 +860,8 @@ async function prepareEVMTransferIntent(mnemonic: string, request: any): Promise
     if (!config) throw new Error(`Unsupported EVM chain: ${baseChain}`);
     assertSupportedCurrency(currency, baseChain);
     const gwChain = workerGatewayChain(baseChain);
-    const nonce = request.nonce != null ? validateRpcNonce(request.nonce) : validateRpcNonce(await workerGatewayRpc(gwChain, "eth_getTransactionCount", [from, "pending"]));
+    const accessToken = assertAccessToken(request);
+    const nonce = request.nonce != null ? validateRpcNonce(request.nonce) : validateRpcNonce(await workerGatewayRpc(gwChain, "eth_getTransactionCount", [from, "pending"], accessToken));
     let to = assertAddress(request.to, "recipient");
     let value = 0n; let data = "0x"; let gasLimit: bigint;
     const token = TOKEN_CONTRACTS[currency];
@@ -757,12 +898,13 @@ async function prepareEVMContractIntent(mnemonic: string, request: any): Promise
     const config = CHAIN_CONFIGS[baseChain];
     if (!config) throw new Error(`Unsupported EVM chain: ${baseChain}`);
     const gwChain = workerGatewayChain(baseChain);
-    const nonce = request.nonce != null ? validateRpcNonce(request.nonce) : validateRpcNonce(await workerGatewayRpc(gwChain, "eth_getTransactionCount", [from, "pending"]));
+    const accessToken = assertAccessToken(request);
+    const nonce = request.nonce != null ? validateRpcNonce(request.nonce) : validateRpcNonce(await workerGatewayRpc(gwChain, "eth_getTransactionCount", [from, "pending"], accessToken));
     const to = assertAddress(request.to, "contract address");
     const data = assertHex(request.data, "contract data");
     const valueWei = BigInt(request.valueWei ?? "0");
     if (valueWei < 0n || valueWei >= (1n << 256n)) throw new Error("Invalid valueWei");
-    let gasLimit = request.gasLimit != null ? validateRpcGasLimit(request.gasLimit, 21_000n) : validateRpcGasLimit(await workerGatewayRpc(gwChain, "eth_estimateGas", [{ from, to, value: "0x" + valueWei.toString(16), data }]), 21_000n);
+    let gasLimit = request.gasLimit != null ? validateRpcGasLimit(request.gasLimit, 21_000n) : validateRpcGasLimit(await workerGatewayRpc(gwChain, "eth_estimateGas", [{ from, to, value: "0x" + valueWei.toString(16), data }], accessToken), 21_000n);
     if (request.gasLimit == null) { gasLimit = (gasLimit * 125n) / 100n; if (gasLimit < 60_000n) gasLimit = 60_000n; if (gasLimit > RPC_GAS_LIMIT_MAX) throw new Error("Estimated gas exceeds block limit"); }
     const fees = await resolveEvmFeeFields(config, gwChain, request);
     const intent: Record<string, unknown> = {
@@ -777,6 +919,7 @@ async function prepareEVMContractIntent(mnemonic: string, request: any): Promise
 
 // ─── Bitcoin / Solana / TRON protocol-correct signing ───────────────────────
 async function prepareBitcoinTransferIntent(mnemonic: string, request: any): Promise<any> {
+  const accessToken = assertAccessToken(request);
   const { deriveBTCAddress } = await import("./vault-crypto");
   const from = await deriveBTCAddress(mnemonic);
   if (!Array.isArray(request?.utxos) || request.utxos.length < 1 || request.utxos.length > 100) throw new Error("Invalid Bitcoin UTXO set");
@@ -792,7 +935,7 @@ async function prepareBitcoinTransferIntent(mnemonic: string, request: any): Pro
     for (const u of request.utxos) {
       if (!/^[0-9a-fA-F]{64}$/.test(String(u.txid)) || !Number.isInteger(Number(u.vout)) || Number(u.vout) < 0 || Number(u.vout) > 100000) throw new Error("Invalid Bitcoin outpoint");
       const vout = Number(u.vout);
-      const out = await workerGatewayRpc("BTC", "gettxout", [String(u.txid), vout, true], request.accessToken) as any;
+      const out = await workerGatewayRpc("BTC", "gettxout", [String(u.txid), vout, true], accessToken) as any;
       if (!out) throw new Error("Bitcoin UTXO is spent, missing, or no longer available");
       const networkValue = parseDecimalUnits(String(out.value), 8, "network UTXO value");
       const suppliedValue = parseDecimalUnits(String(u.value), 8, "UTXO value");
@@ -811,6 +954,7 @@ async function prepareBitcoinTransferIntent(mnemonic: string, request: any): Pro
   } finally { wipeBytes(priv); }
 }
 async function signBitcoinPrepared(mnemonic: string, request: any): Promise<any> {
+  const accessToken = assertAccessToken(request);
   const { deriveBTCAddress } = await import("./vault-crypto");
   const from = await deriveBTCAddress(mnemonic);
   if (!request?.approvalDigest) throw new Error("Bitcoin transaction requires a prepared approval");
@@ -820,7 +964,7 @@ async function signBitcoinPrepared(mnemonic: string, request: any): Promise<any>
   const utxos: Array<{txid:string,vout:number,value:string}> = [];
   for (const u of request.utxos) {
     if (!/^[0-9a-fA-F]{64}$/.test(String(u.txid)) || !Number.isInteger(u.vout) || u.vout < 0 || u.vout > 100000) throw new Error("Invalid Bitcoin outpoint");
-    const out = await workerGatewayRpc("BTC", "gettxout", [String(u.txid), u.vout, true], request.accessToken) as any;
+    const out = await workerGatewayRpc("BTC", "gettxout", [String(u.txid), u.vout, true], accessToken) as any;
     if (!out) throw new Error("Bitcoin UTXO is spent, missing, or no longer available");
     const sats = parseDecimalUnits(String(out.value), 8, "network UTXO value");
     const scriptHex = String(out.scriptPubKey?.hex ?? "").toLowerCase();
@@ -853,12 +997,14 @@ async function signBitcoinPrepared(mnemonic: string, request: any): Promise<any>
 }
 
 async function prepareSolanaTransferIntent(mnemonic: string, request: any): Promise<any> {
+  const accessToken = assertAccessToken(request);
   const priv = await deriveSOLPrivateKey(mnemonic); const pub = await nobleEd.getPublicKeyAsync(priv); wipeBytes(priv);
   const from = base58.encode(pub); const to = String(request?.to ?? "");
   let toBytes: Uint8Array; try { toBytes = base58.decode(to); } catch { throw new Error("Invalid Solana recipient"); }
   if (toBytes.length !== 32) throw new Error("Invalid Solana recipient");
   const amount = parseDecimalUnits(request.amount, 9, "SOL amount");
-  const latest = await workerGatewayRpc("SOL", "getLatestBlockhash", [{ commitment:"finalized" }], request.accessToken) as any;
+  if (amount <= 0n) throw new Error("SOL amount must be greater than zero");
+  const latest = await workerGatewayRpc("SOL", "getLatestBlockhash", [{ commitment:"finalized" }], accessToken) as any;
   const blockhash = latest?.value?.blockhash; if (typeof blockhash !== "string") throw new Error("Solana blockhash unavailable");
   const intent = { kind:"sol-transfer", from, recipient:to, amountLamports:amount.toString(), recentBlockhash:blockhash, currency:"SOL" };
   const approvalDigest = await intentDigest(intent); rememberApproval(approvalDigest, from, intent);
@@ -881,9 +1027,10 @@ async function signSolanaPrepared(mnemonic: string, request: any): Promise<any> 
 }
 
 async function prepareTronTransferIntent(mnemonic: string, request: any): Promise<any> {
+  const accessToken = assertAccessToken(request);
   const priv = await deriveTRONPrivateKey(mnemonic); const from = tronAddressFromPrivateKey(priv); wipeBytes(priv);
   const to = String(request?.to ?? ""); tronAddressToHex(to); const amountSun = parseDecimalUnits(request.amount,6,"TRX amount"); if(amountSun<=0n||amountSun>9007199254740991n) throw new Error("Invalid TRX amount");
-  const built = await workerGatewayTron("/wallet/createtransaction", {owner_address:from,to_address:to,amount:Number(amountSun),visible:true}, request.accessToken);
+  const built = await workerGatewayTron("/wallet/createtransaction", {owner_address:from,to_address:to,amount:Number(amountSun),visible:true}, accessToken);
   const c=built?.raw_data?.contract?.[0]; const v=c?.parameter?.value;
   if(built?.raw_data?.contract?.length!==1||c?.type!=="TransferContract"||!v) throw new Error("Gateway returned an invalid TRON transaction");
   if(tronAddressToHex(from).toLowerCase()!==String(v.owner_address).toLowerCase() || tronAddressToHex(to).toLowerCase()!==String(v.to_address).toLowerCase() || BigInt(v.amount)!==amountSun) throw new Error("TRON transaction intent mismatch");
@@ -899,6 +1046,217 @@ async function signTronPrepared(mnemonic:string,request:any):Promise<any>{
     const raw=Uint8Array.from((rawHex.match(/../g)||[]).map((x:string)=>parseInt(x,16))); const hash=sha256(raw); const sig=await secp.signAsync(hash,priv,{lowS:true,format:"recovered",prehash:false} as any); const signature=bytesToHex(sig.slice(1,65))+Number(sig[0]).toString(16).padStart(2,"0");
     return {signedTx:{...request.unsignedTransaction,raw_data_hex:rawHex,signature:[signature]},txID:bytesToHex(hash),from,to,amountSun:amountSun.toString()};
   }finally{wipeBytes(priv);}
+}
+
+// ─── SPL Token transfers (USDC/USDT on Solana) ──────────────────────────────
+// Scope: transfers between EXISTING token accounts only. If the recipient has
+// no associated token account for this mint yet, this fails with a clear
+// error rather than silently adding a "create account" instruction — auto-
+// creating accounts on someone else's behalf is a separate feature with its
+// own review, not something to fold in here by default.
+async function prepareSplTokenTransferIntent(mnemonic: string, request: any): Promise<any> {
+  const accessToken = assertAccessToken(request);
+  const currency = typeof request?.currency === "string" ? request.currency.toUpperCase() : "";
+  const token = SPL_TOKENS[currency];
+  if (!token) throw new Error(`Unsupported Solana token: ${currency}`);
+
+  const priv = await deriveSOLPrivateKey(mnemonic);
+  const ownerPub = await nobleEd.getPublicKeyAsync(priv);
+  wipeBytes(priv);
+
+  const to = String(request?.to ?? "");
+  let toBytes: Uint8Array;
+  try { toBytes = base58.decode(to); } catch { throw new Error("Invalid Solana recipient"); }
+  if (toBytes.length !== 32) throw new Error("Invalid Solana recipient");
+
+  const mintBytes = base58.decode(token.mint);
+  const amount = parseDecimalUnits(request.amount, token.decimals, `${currency} amount`);
+  if (amount <= 0n) throw new Error(`${currency} amount must be greater than zero`);
+
+  const sourceAta = await deriveAssociatedTokenAccount(ownerPub, mintBytes);
+  const destAta = await deriveAssociatedTokenAccount(toBytes, mintBytes);
+  const sourceAddr = base58.encode(sourceAta);
+  const destAddr = base58.encode(destAta);
+
+  const sourceRaw = await fetchSolanaAccount(sourceAddr, accessToken);
+  if (!sourceRaw) throw new Error(`No ${currency} token account found for this wallet`);
+  const sourceAcc = decodeSplTokenAccount(sourceRaw);
+  if (bytesToHex(sourceAcc.mint) !== bytesToHex(mintBytes)) throw new Error("Source token account mint mismatch");
+  if (bytesToHex(sourceAcc.owner) !== bytesToHex(ownerPub)) throw new Error("Source token account owner mismatch");
+  if (sourceAcc.amount < amount) throw new Error(`Insufficient ${currency} balance`);
+
+  const destRaw = await fetchSolanaAccount(destAddr, accessToken);
+  if (!destRaw) {
+    throw new Error(
+      `Recipient has no ${currency} token account yet. This signer does not create recipient token ` +
+      `accounts — the recipient needs to receive or opt into ${currency} first, or use a flow that ` +
+      `explicitly adds the "create associated token account" instruction.`
+    );
+  }
+  const destAcc = decodeSplTokenAccount(destRaw);
+  if (bytesToHex(destAcc.mint) !== bytesToHex(mintBytes)) throw new Error("Destination token account mint mismatch");
+
+  const latest = await workerGatewayRpc("SOL", "getLatestBlockhash", [{ commitment: "finalized" }], accessToken) as any;
+  const blockhash = latest?.value?.blockhash;
+  if (typeof blockhash !== "string") throw new Error("Solana blockhash unavailable");
+
+  const from = base58.encode(ownerPub);
+  const intent = {
+    kind: "spl-transfer", currency, from, recipient: to, mint: token.mint,
+    sourceAta: sourceAddr, destAta: destAddr, amount: amount.toString(), decimals: token.decimals,
+    recentBlockhash: blockhash,
+  };
+  const approvalDigest = await intentDigest(intent);
+  rememberApproval(approvalDigest, from, intent);
+  return {
+    from, intent, approvalDigest,
+    signRequest: { ...request, amount: amount.toString(), recentBlockhash: blockhash, sourceAta: sourceAddr, destAta: destAddr },
+  };
+}
+
+async function signSplTokenPrepared(mnemonic: string, request: any): Promise<any> {
+  const currency = typeof request?.currency === "string" ? request.currency.toUpperCase() : "";
+  const token = SPL_TOKENS[currency];
+  if (!token) throw new Error(`Unsupported Solana token: ${currency}`);
+
+  const priv = await deriveSOLPrivateKey(mnemonic);
+  try {
+    const ownerPub = await nobleEd.getPublicKeyAsync(priv);
+    const from = base58.encode(ownerPub);
+    const to = String(request.to ?? "");
+    const mintBytes = base58.decode(token.mint);
+    const amount = BigInt(String(request.amount));
+    if (amount <= 0n || amount > 0xffffffffffffffffn) throw new Error(`Invalid ${currency} amount`);
+    const sourceAddr = String(request.sourceAta ?? "");
+    const destAddr = String(request.destAta ?? "");
+    const blockhash58 = String(request.recentBlockhash ?? "");
+
+    const intent = {
+      kind: "spl-transfer", currency, from, recipient: to, mint: token.mint,
+      sourceAta: sourceAddr, destAta: destAddr, amount: amount.toString(), decimals: token.decimals,
+      recentBlockhash: blockhash58,
+    };
+    const digest = await intentDigest(intent);
+    consumeApproval(String(request.approvalDigest), from, intent);
+    if (digest !== String(request.approvalDigest)) throw new Error("Solana token approval digest mismatch");
+
+    const sourceAta = base58.decode(sourceAddr);
+    const destAta = base58.decode(destAddr);
+    const blockhash = base58.decode(blockhash58);
+    const tokenProgram = base58.decode(SOL_TOKEN_PROGRAM_ID);
+
+    // keys: [owner(signer,writable,payer), source(writable), dest(writable), mint(readonly), tokenProgram(readonly,program)]
+    // TransferChecked account order is [source, mint, destination, owner] — see accountIndexes below.
+    const keys = [ownerPub, sourceAta, destAta, mintBytes, tokenProgram];
+    const data = new Uint8Array([12, ...u64le(amount), token.decimals]); // SPL Token instruction 12 = TransferChecked
+    const message = buildSolanaLegacyMessage(ownerPub, blockhash, keys, 4, [1, 3, 2, 0], data, 2);
+    const signature = await nobleEd.signAsync(message, priv);
+    const packet = new Uint8Array([...solShortVec(1), ...signature, ...message]);
+    return {
+      signedTx: base58.encode(packet), signature: base58.encode(signature), publicKey: from,
+      currency, amount: amount.toString(), from, to,
+    };
+  } finally { wipeBytes(priv); }
+}
+
+// ─── TRC-20 token transfers (USDC/USDT on TRON) ─────────────────────────────
+// Mirrors the ERC-20 pattern already used for EVM tokens: encode
+// transfer(address,uint256), have the gateway build the call via
+// triggersmartcontract, then independently verify every field of the
+// returned transaction against what was actually requested before signing.
+async function prepareTrc20TransferIntent(mnemonic: string, request: any): Promise<any> {
+  const accessToken = assertAccessToken(request);
+  const currency = typeof request?.currency === "string" ? request.currency.toUpperCase() : "";
+  const token = TRC20_TOKENS[currency];
+  if (!token) throw new Error(`Unsupported TRON token: ${currency}`);
+
+  const priv = await deriveTRONPrivateKey(mnemonic);
+  const from = tronAddressFromPrivateKey(priv);
+  wipeBytes(priv);
+
+  const to = String(request?.to ?? "");
+  tronAddressToHex(to); // validates format/checksum; throws on invalid recipient
+  const amount = parseDecimalUnits(request.amount, token.decimals, `${currency} amount`);
+  if (amount <= 0n) throw new Error(`${currency} amount must be greater than zero`);
+
+  const parameter = tronAbiEncodeAddress(to) + tronAbiEncodeUint256(amount);
+
+  const feeLimit = Number.isSafeInteger(request.feeLimit) && request.feeLimit >= 1_000_000 && request.feeLimit <= 150_000_000
+    ? request.feeLimit
+    : 50_000_000; // sun; 50 TRX ceiling on energy fees unless the caller specifies a (bounded) lower cap
+
+  const built = await workerGatewayTron("/wallet/triggersmartcontract", {
+    owner_address: from, contract_address: token.contract,
+    function_selector: "transfer(address,uint256)", parameter, fee_limit: feeLimit, call_value: 0, visible: true,
+  }, accessToken);
+
+  const tx = built?.transaction;
+  const c = tx?.raw_data?.contract?.[0];
+  const v = c?.parameter?.value;
+  if (tx?.raw_data?.contract?.length !== 1 || c?.type !== "TriggerSmartContract" || !v) {
+    throw new Error("Gateway returned an invalid TRC-20 transaction");
+  }
+  const expectedData = "a9059cbb" + parameter; // transfer(address,uint256) selector
+  if (
+    tronAddressToHex(from).toLowerCase() !== String(v.owner_address).toLowerCase() ||
+    tronAddressToHex(token.contract).toLowerCase() !== String(v.contract_address).toLowerCase() ||
+    String(v.data ?? "").toLowerCase() !== expectedData.toLowerCase()
+  ) {
+    // Note on trust boundary: this checks the JSON summary TronGrid/Alchemy echoes back
+    // against what we asked for. It does not independently decode raw_data_hex's protobuf
+    // bytes to re-derive these same fields — doing that would require a TRON protobuf
+    // parser. We're trusting that the provider's JSON summary and its raw_data_hex agree,
+    // which is a narrower guarantee than the EVM/BTC paths (which rebuild everything from
+    // primitives). Acceptable given TronGrid/Alchemy as a semi-trusted server-side
+    // dependency, but worth knowing if you're evaluating the trust model end to end.
+    throw new Error("TRC-20 transaction intent mismatch");
+  }
+  const rawHex = String(tx.raw_data_hex ?? "");
+  if (!/^[0-9a-fA-F]+$/.test(rawHex) || rawHex.length % 2 || rawHex.length < 20) throw new Error("Invalid TRON raw_data_hex");
+
+  const intent = {
+    kind: "trc20-transfer", currency, from, to, contract: token.contract,
+    amount: amount.toString(), rawDataHex: rawHex.toLowerCase(),
+  };
+  const approvalDigest = await intentDigest(intent);
+  rememberApproval(approvalDigest, from, intent);
+  return {
+    from, intent, approvalDigest,
+    signRequest: { ...request, amount: amount.toString(), rawDataHex: rawHex, unsignedTransaction: tx },
+  };
+}
+
+async function signTrc20Prepared(mnemonic: string, request: any): Promise<any> {
+  const currency = typeof request?.currency === "string" ? request.currency.toUpperCase() : "";
+  const token = TRC20_TOKENS[currency];
+  if (!token) throw new Error(`Unsupported TRON token: ${currency}`);
+
+  const priv = await deriveTRONPrivateKey(mnemonic);
+  try {
+    const from = tronAddressFromPrivateKey(priv);
+    const to = String(request.to ?? "");
+    tronAddressToHex(to);
+    const amount = BigInt(String(request.amount));
+    if (amount <= 0n) throw new Error(`Invalid ${currency} amount`);
+    const rawHex = String(request.rawDataHex ?? "");
+
+    const intent = {
+      kind: "trc20-transfer", currency, from, to, contract: token.contract,
+      amount: amount.toString(), rawDataHex: rawHex.toLowerCase(),
+    };
+    const digest = await intentDigest(intent);
+    consumeApproval(String(request.approvalDigest), from, intent);
+    if (digest !== String(request.approvalDigest)) throw new Error("TRC-20 approval digest mismatch");
+
+    const raw = Uint8Array.from((rawHex.match(/../g) || []).map((x: string) => parseInt(x, 16)));
+    const hash = sha256(raw);
+    const sig = await secp.signAsync(hash, priv, { lowS: true, format: "recovered", prehash: false } as any);
+    const signature = bytesToHex(sig.slice(1, 65)) + Number(sig[0]).toString(16).padStart(2, "0");
+    return {
+      signedTx: { ...request.unsignedTransaction, raw_data_hex: rawHex, signature: [signature] },
+      txID: bytesToHex(hash), from, to, currency, amount: amount.toString(),
+    };
+  } finally { wipeBytes(priv); }
 }
 
 // ─── ⑭  Vault-based EVM signing helpers ─────────────────────────────────────
@@ -942,6 +1300,10 @@ export type WorkerRequest =
   | { id: string; type: "signSolanaTransactionFromVault"; vault: EncryptedVault | unknown; passwordBytes: Uint8Array; request: any & { accessToken?: string } }
   | { id: string; type: "prepareTronTransferIntent"; vault: EncryptedVault | unknown; passwordBytes: Uint8Array; request: any & { accessToken?: string } }
   | { id: string; type: "signTronTransactionFromVault"; vault: EncryptedVault | unknown; passwordBytes: Uint8Array; request: any & { accessToken?: string } }
+  | { id: string; type: "prepareSplTokenTransferIntent"; vault: EncryptedVault | unknown; passwordBytes: Uint8Array; request: any & { accessToken?: string } }
+  | { id: string; type: "signSplTokenTransactionFromVault"; vault: EncryptedVault | unknown; passwordBytes: Uint8Array; request: any & { accessToken?: string } }
+  | { id: string; type: "prepareTrc20TransferIntent"; vault: EncryptedVault | unknown; passwordBytes: Uint8Array; request: any & { accessToken?: string } }
+  | { id: string; type: "signTrc20TransactionFromVault"; vault: EncryptedVault | unknown; passwordBytes: Uint8Array; request: any & { accessToken?: string } }
   | { id: string; type: "prepareEVMTransferIntent"; vault: EncryptedVault | unknown; passwordBytes: Uint8Array; request: any & { accessToken?: string } }
   | { id: string; type: "prepareEVMContractIntent"; vault: EncryptedVault | unknown; passwordBytes: Uint8Array; request: any & { accessToken?: string } }
   // ⑭ Vault-based signing — mnemonic decrypted + wiped entirely inside worker
@@ -989,7 +1351,12 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       if (!msg.request || typeof msg.request !== "object" || Array.isArray(msg.request)) throw new Error("Invalid transaction request");
       if (Object.getPrototypeOf(msg.request) !== Object.prototype && Object.getPrototypeOf(msg.request) !== null) throw new Error("Invalid transaction request object");
     }
-    currentAccessToken = typeof msg.request?.accessToken === "string" && msg.request.accessToken.length <= 4096 ? msg.request.accessToken : undefined;
+    // NOTE: there is deliberately no module-level "currentAccessToken" here.
+    // This handler is async and re-entrant — two in-flight messages can
+    // interleave at any `await` — so a shared mutable token would let one
+    // call's request observe (or clobber) another's credentials. Every
+    // handler below pulls its own token from its own `request` object via
+    // assertAccessToken().
 
     const passwordTypes = new Set([
       "encryptVault", "encryptVaultBatch",
@@ -999,6 +1366,8 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       "prepareBitcoinTransferIntent", "signBitcoinTransactionFromVault",
       "prepareSolanaTransferIntent", "signSolanaTransactionFromVault",
       "prepareTronTransferIntent", "signTronTransactionFromVault",
+      "prepareSplTokenTransferIntent", "signSplTokenTransactionFromVault",
+      "prepareTrc20TransferIntent", "signTrc20TransactionFromVault",
       "signEVMTransactionFromVault", "signEVMContractCallFromVault"
     ]);
     pw = passwordTypes.has(msg.type) ? resolvePassword(msg) : null;
@@ -1039,6 +1408,10 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       case "signSolanaTransactionFromVault": { const mnemonic=await openVault(msg.vault,pw!); result=await signSolanaPrepared(mnemonic,msg.request); break; }
       case "prepareTronTransferIntent": { const mnemonic=await openVault(msg.vault,pw!); result=await prepareTronTransferIntent(mnemonic,msg.request); break; }
       case "signTronTransactionFromVault": { const mnemonic=await openVault(msg.vault,pw!); result=await signTronPrepared(mnemonic,msg.request); break; }
+      case "prepareSplTokenTransferIntent": { const mnemonic=await openVault(msg.vault,pw!); result=await prepareSplTokenTransferIntent(mnemonic,msg.request); break; }
+      case "signSplTokenTransactionFromVault": { const mnemonic=await openVault(msg.vault,pw!); result=await signSplTokenPrepared(mnemonic,msg.request); break; }
+      case "prepareTrc20TransferIntent": { const mnemonic=await openVault(msg.vault,pw!); result=await prepareTrc20TransferIntent(mnemonic,msg.request); break; }
+      case "signTrc20TransactionFromVault": { const mnemonic=await openVault(msg.vault,pw!); result=await signTrc20Prepared(mnemonic,msg.request); break; }
       // ⑭ Two-step EVM approval: prepare exact intent before signing
       case "prepareEVMTransferIntent": {
         const mnemonic = await openVault(msg.vault, pw!);
@@ -1066,7 +1439,6 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       error: err instanceof Error ? err.message : formatWorkerRpcError(err),
     };
   } finally {
-    currentAccessToken = undefined;
     if (pw) wipeBytes(pw);
   }
   self.postMessage(response);
