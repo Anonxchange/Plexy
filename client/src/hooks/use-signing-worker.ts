@@ -454,9 +454,14 @@ export const signTrc20TransactionFromVault = (vault: unknown, password: string, 
   callSigningWorker("signTrc20TransactionFromVault", { vault, password, request });
 
 /**
- * Wipe the worker's session key cache.
- * Call on logout so the cached scrypt-derived key is zeroed immediately
- * rather than waiting for the 15-minute TTL to expire.
+ * Call on logout (or whenever you want to be extra sure). Maps to
+ * clearSessionCache in the worker, which — despite the name — is a no-op
+ * kept only for API compatibility: vault-crypto.ts deliberately keeps NO
+ * reusable derived-key cache in production ("Every vault open re-runs
+ * scrypt, reducing the time a derived AES key remains in memory" — see
+ * vault-crypto.ts). So every prepare/sign call already re-derives and wipes
+ * its own key; there's no cached key for this call to clear. It's harmless
+ * to keep calling on logout, just don't rely on it to do anything.
  */
 export const clearWorkerSessionCache = () =>
   callSigningWorker("clearSessionCache", {} as any);
