@@ -54,6 +54,61 @@ let sharedWorker: Worker | null = null;
 const pending = new Map<string, PendingCall>();
 let callSeq = 0;
 
+// ─── Access-token plumbing ───────────────────────────────────────────────────
+// The signing worker's chain-gateway calls now require a Supabase access
+// token on every gateway-touching request (see assertAccessToken in
+// signing.worker.ts) — reads included, not just broadcasts. This file has no
+// visibility into this app's auth module, so rather than guessing an import
+// path and silently getting it wrong, the app must register a provider once
+// at startup:
+//
+//   import { setAccessTokenProvider } from "@/hooks/use-signing-worker";
+//   setAccessTokenProvider(async () => {
+//     const { data } = await supabase.auth.getSession();
+//     return data.session?.access_token ?? null;
+//   });
+//
+// Until that's wired up, gateway-touching calls fail loudly with "Missing or
+// invalid access token" (from the worker) rather than silently sending an
+// unauthenticated request — fail-closed, not fail-open.
+type AccessTokenProvider = () => Promise<string | null> | string | null;
+let accessTokenProvider: AccessTokenProvider | null = null;
+
+export function setAccessTokenProvider(provider: AccessTokenProvider): void {
+  accessTokenProvider = provider;
+}
+
+// Message types whose `request` object needs an accessToken merged in before
+// it crosses the postMessage boundary — i.e. everything that talks to the
+// chain-gateway from inside the worker.
+const GATEWAY_REQUEST_TYPES = new Set([
+  "prepareBitcoinTransferIntent", "signBitcoinTransactionFromVault",
+  "prepareSolanaTransferIntent", "signSolanaTransactionFromVault",
+  "prepareTronTransferIntent", "signTronTransactionFromVault",
+  "prepareSplTokenTransferIntent", "signSplTokenTransactionFromVault",
+  "prepareTrc20TransferIntent", "signTrc20TransactionFromVault",
+  "prepareEVMTransferIntent", "prepareEVMContractIntent",
+  "signEVMTransactionFromVault", "signEVMContractCallFromVault",
+]);
+
+async function resolveAccessToken(): Promise<string | null> {
+  if (!accessTokenProvider) {
+    if (import.meta.env.DEV) {
+      console.warn(
+        "[use-signing-worker] No access-token provider registered — call " +
+        "setAccessTokenProvider() at app startup. Gateway-touching calls will fail."
+      );
+    }
+    return null;
+  }
+  try {
+    return await accessTokenProvider();
+  } catch (err) {
+    if (import.meta.env.DEV) console.warn("[use-signing-worker] access-token provider threw:", err);
+    return null;
+  }
+}
+
 function getWorker(): Worker {
   if (sharedWorker) return sharedWorker;
   sharedWorker = new Worker(
@@ -93,19 +148,33 @@ type RequestArgs<T extends WorkerRequest["type"]> =
  * const mnemonic = await callSigningWorker("generateMnemonic", {});
  * const vault    = await callSigningWorker("encryptVault", { data: mnemonic, password, origin });
  */
-export function callSigningWorker<T = unknown>(
+export async function callSigningWorker<T = unknown>(
   type: WorkerRequest["type"],
   args: RequestArgs<typeof type>
 ): Promise<T> {
   const id = `cvw-${++callSeq}-${Date.now()}`;
   const worker = getWorker();
 
+  const payload: any = { id, type, ...args };
+
+  // ── Access-token injection ──────────────────────────────────────────────
+  // For any message type whose worker handler talks to the chain-gateway,
+  // ensure request.accessToken is present. We always fetch a fresh token
+  // here rather than trusting a caller-supplied one, since callers building
+  // `request` by hand (or forwarding a stale `signRequest` from an earlier
+  // prepare step) have no reliable way to know if it's still valid — and a
+  // short-lived Supabase session token is exactly the kind of thing that
+  // goes stale between a user unlocking their wallet and confirming a send.
+  if (GATEWAY_REQUEST_TYPES.has(type) && payload.request && typeof payload.request === "object") {
+    const accessToken = await resolveAccessToken();
+    payload.request = { ...payload.request, accessToken };
+  }
+
   // ── Transferable password hardening ────────────────────────────────────────
   // If args contains a `password` string, encode it to a Uint8Array and send
   // the underlying ArrayBuffer as a Transferable. After transfer the buffer is
   // detached on the main thread (byteLength → 0) so no other code can read it.
   // The worker receives it as `passwordBytes` and zero-fills it after the KDF.
-  const payload: any = { id, type, ...args };
   const transfer: Transferable[] = [];
   if (typeof (args as any).password === "string" && (args as any).password.length > 0) {
     const pwBytes = new TextEncoder().encode((args as any).password);
@@ -155,10 +224,28 @@ export function useSigningWorker() {
 
 // ─── Convenience wrappers ─────────────────────────────────────────────────────
 // These are thin wrappers so callers don't have to remember the message type strings.
+//
+// ⚠️ NOT CONNECTED TO THE CURRENT WORKER: everything in this block
+// (generateMnemonic, getEVMAddress, getBitcoinAddress, getSolanaAddress,
+// getTronAddress, getXRPAddress, getAllAddresses) calls a message `type` that
+// does not exist in signing.worker.ts's WorkerRequest union as it stands today
+// — that union only has validateMnemonic, encryptVault(Batch), clearSessionCache,
+// validateVaultPassword, migrateLegacyVault, hash, hmacSha256, createSecureWallet,
+// getMnemonicForBackup, the prepare/sign pairs for BTC/SOL/TRX/SPL/TRC-20/EVM, and
+// the two EVM vault-signing calls. Calling any of these today throws "Unknown
+// worker message type" at runtime, and `as any` below is only there so this file
+// still type-checks — it is NOT a sign these are safe to call.
+// This strongly suggests this file predates a worker rewrite that deliberately
+// dropped the "derive an address / mnemonic from a plaintext mnemonic argument"
+// API (consistent with vault-crypto.ts's own createMultiChainWallet being
+// disabled). If your app still needs plaintext-mnemonic address derivation,
+// that's a worker feature to design and add deliberately — not something to
+// leave silently broken behind a working-looking wrapper. If nothing calls
+// these, delete them; if something does, that call site is currently broken.
 
 /** Generate a fresh BIP-39 mnemonic inside the worker */
 export const generateMnemonic = (strength: 128 | 256 = 256) =>
-  callSigningWorker<string>("generateMnemonic", { strength });
+  callSigningWorker<string>("generateMnemonic" as any, { strength } as any);
 
 /** Validate a BIP-39 mnemonic */
 export const validateMnemonic = (mnemonic: string) =>
@@ -166,28 +253,28 @@ export const validateMnemonic = (mnemonic: string) =>
 
 /** Derive the EVM (ETH/BSC/ARB/…) address for a mnemonic */
 export const getEVMAddress = (mnemonic: string) =>
-  callSigningWorker<string>("getEVMAddress", { mnemonic });
+  callSigningWorker<string>("getEVMAddress" as any, { mnemonic } as any);
 
 /** Derive the Bitcoin SegWit (P2WPKH / bc1q…) address */
 export const getBitcoinAddress = (mnemonic: string) =>
-  callSigningWorker<string>("getBitcoinAddress", { mnemonic });
+  callSigningWorker<string>("getBitcoinAddress" as any, { mnemonic } as any);
 
 /** Derive the Solana address */
 export const getSolanaAddress = (mnemonic: string) =>
-  callSigningWorker<string>("getSolanaAddress", { mnemonic });
+  callSigningWorker<string>("getSolanaAddress" as any, { mnemonic } as any);
 
 /** Derive the Tron (TRC-20) address */
 export const getTronAddress = (mnemonic: string) =>
-  callSigningWorker<string>("getTronAddress", { mnemonic });
+  callSigningWorker<string>("getTronAddress" as any, { mnemonic } as any);
 
 /** Derive the XRP address */
 export const getXRPAddress = (mnemonic: string) =>
-  callSigningWorker<string>("getXRPAddress", { mnemonic });
+  callSigningWorker<string>("getXRPAddress" as any, { mnemonic } as any);
 
 /** Derive ALL chain addresses in one call */
 export const getAllAddresses = (mnemonic: string) =>
   callSigningWorker<{ EVM: string; BTC: string; SOL: string; TRX: string; XRP: string }>(
-    "getAllAddresses", { mnemonic }
+    "getAllAddresses" as any, { mnemonic } as any
   );
 
 /** Encrypt a secret (mnemonic or private key) with scrypt + AES-256-GCM */
@@ -199,12 +286,22 @@ export const encryptVaultBatch = (items: Array<{ data: string }>, password: stri
   callSigningWorker("encryptVaultBatch", { items, password, origin });
 
 /** Decrypt a vault */
+// ⚠️ NOT CONNECTED: no "decryptVault" message type exists in the current
+// worker, and deliberately so — the whole point of the vault-based API this
+// file otherwise wraps (signEVMTransactionFromVault etc.) is that the mnemonic
+// is decrypted, used, and wiped INSIDE the worker and never crosses
+// postMessage. A general-purpose "decrypt and return plaintext" handler would
+// undo that. The one intentional exception is getMnemonicForBackup, which is
+// rate-limited to a single display per session for exactly this reason. If
+// you need this, don't just re-add a generic decrypt handler — it reopens the
+// thing the vault-based API was built to close.
 export const decryptVault = (vault: unknown, password: string) =>
-  callSigningWorker<string>("decryptVault", { vault, password });
+  callSigningWorker<string>("decryptVault" as any, { vault, password } as any);
 
 /** Decrypt a passkey vault (WebAuthn PRF) — no scrypt, pure AES-GCM in worker */
+// ⚠️ NOT CONNECTED — see decryptVault above; same reasoning applies.
 export const decryptVaultWithRawKey = (vault: import("./signing.worker").PasskeyVault, rawKey: ArrayBuffer) =>
-  callSigningWorker<string>("decryptVaultWithRawKey", { vault, rawKey });
+  callSigningWorker<string>("decryptVaultWithRawKey" as any, { vault, rawKey } as any);
 
 /** Validate a vault password without returning the plaintext */
 export const validateVaultPassword = (vault: unknown, password: string) =>
@@ -215,8 +312,11 @@ export const migrateLegacyVault = (legacyData: any, password: string, userId: st
   callSigningWorker("migrateLegacyVault", { legacyData, password, userId, origin });
 
 /** Create a full multi-chain wallet with a single scrypt round */
+// ⚠️ NOT CONNECTED — vault-crypto.ts's createMultiChainWallet is itself
+// deliberately disabled (it throws) pending a tested implementation per chain.
+// Use createSecureWallet below instead.
 export const createMultiChainWallet = (password: string, origin?: string, existingMnemonic?: string) =>
-  callSigningWorker("createMultiChainWallet", { password, origin, existingMnemonic });
+  callSigningWorker("createMultiChainWallet" as any, { password, origin, existingMnemonic } as any);
 
 /** Hash arbitrary data */
 export const hash = (algorithm: "keccak256" | "sha256" | "sha512" | "ripemd160", hex: string) =>
@@ -257,12 +357,14 @@ export const signEVMTransactionFromVault = (vault: unknown, password: string, re
 export const signEVMContractCallFromVault = (vault: unknown, password: string, request: any) =>
   callSigningWorker("signEVMContractCallFromVault", { vault, password, request });
 
+// ⚠️ NOT CONNECTED — no "signEVMRawHashFromVault" message type in the current worker.
 export const signEVMRawHashFromVault = (vault: unknown, password: string, hashHex: string) =>
-  callSigningWorker<string>("signEVMRawHashFromVault", { vault, password, hashHex });
+  callSigningWorker<string>("signEVMRawHashFromVault" as any, { vault, password, hashHex } as any);
 
 /** Sign an EIP-191 personal_sign message from vault */
+// ⚠️ NOT CONNECTED — no "signEVMMessageFromVault" message type in the current worker.
 export const signEVMMessageFromVault = (vault: unknown, password: string, message: string) =>
-  callSigningWorker<string>("signEVMMessageFromVault", { vault, password, message });
+  callSigningWorker<string>("signEVMMessageFromVault" as any, { vault, password, message } as any);
 
 /** Sign a Bitcoin SegWit transaction from vault */
 export const signBitcoinTransactionFromVault = (vault: unknown, password: string, request: any) =>
@@ -275,6 +377,81 @@ export const signSolanaTransactionFromVault = (vault: unknown, password: string,
 /** Sign a Tron transaction from vault */
 export const signTronTransactionFromVault = (vault: unknown, password: string, request: any) =>
   callSigningWorker("signTronTransactionFromVault", { vault, password, request });
+
+// ─── Two-step approval: prepare, then sign ───────────────────────────────────
+// Every chain's signing handler requires a prior `prepare*` call: the worker
+// resolves all network-derived values (nonce, fees, UTXOs, blockhash, token
+// account addresses, ...), stores the exact intent, and returns a single-use
+// `approvalDigest` plus a ready-to-use `signRequest`. The corresponding
+// `sign*FromVault` call MUST be given that `signRequest` object as-is — it
+// carries the approvalDigest and the exact resolved fields the sign step
+// checks against. Building your own request object for the sign step (rather
+// than passing through what prepare returned) will fail the approval-digest
+// check by design; that check is what stops a value from being changed
+// between "user approved this" and "this got signed."
+//
+//   const prepared = await prepareEVMTransferIntent(vault, password, { to, amount, currency });
+//   const result   = await signEVMTransactionFromVault(vault, password, prepared.signRequest);
+
+/** Resolve nonce + gas/fee fields for an EVM transfer, returns { signRequest, approvalDigest, intent } */
+export const prepareEVMTransferIntent = (vault: unknown, password: string, request: any) =>
+  callSigningWorker<{ from: string; intent: unknown; approvalDigest: string; signRequest: any }>(
+    "prepareEVMTransferIntent", { vault, password, request }
+  );
+
+/** Resolve nonce + gas/fee fields for an EVM contract call, returns { signRequest, approvalDigest, intent } */
+export const prepareEVMContractIntent = (vault: unknown, password: string, request: any) =>
+  callSigningWorker<{ from: string; intent: unknown; approvalDigest: string; signRequest: any }>(
+    "prepareEVMContractIntent", { vault, password, request }
+  );
+
+/** Verify UTXOs on-chain + compute fee/change for a Bitcoin send, returns { signRequest, approvalDigest, intent } */
+export const prepareBitcoinTransferIntent = (vault: unknown, password: string, request: any) =>
+  callSigningWorker<{ from: string; intent: unknown; approvalDigest: string; signRequest: any }>(
+    "prepareBitcoinTransferIntent", { vault, password, request }
+  );
+
+/** Fetch a fresh blockhash for a native SOL transfer, returns { signRequest, approvalDigest, intent } */
+export const prepareSolanaTransferIntent = (vault: unknown, password: string, request: any) =>
+  callSigningWorker<{ from: string; intent: unknown; approvalDigest: string; signRequest: any }>(
+    "prepareSolanaTransferIntent", { vault, password, request }
+  );
+
+/** Build + verify a native TRX transfer via the gateway, returns { signRequest, approvalDigest, intent } */
+export const prepareTronTransferIntent = (vault: unknown, password: string, request: any) =>
+  callSigningWorker<{ from: string; intent: unknown; approvalDigest: string; signRequest: any }>(
+    "prepareTronTransferIntent", { vault, password, request }
+  );
+
+/**
+ * Derive + verify sender/recipient Associated Token Accounts for a USDC/USDT
+ * (SPL) transfer on Solana. `request.currency` must be "USDC_SOL" or
+ * "USDT_SOL". Throws if the recipient has no token account for that mint yet
+ * — this signer does not create one on their behalf (see signing.worker.ts).
+ * Returns { signRequest, approvalDigest, intent }.
+ */
+export const prepareSplTokenTransferIntent = (vault: unknown, password: string, request: any) =>
+  callSigningWorker<{ from: string; intent: unknown; approvalDigest: string; signRequest: any }>(
+    "prepareSplTokenTransferIntent", { vault, password, request }
+  );
+
+/** Sign a prepared USDC/USDT (SPL) transfer on Solana. Pass prepare's signRequest through as-is. */
+export const signSplTokenTransactionFromVault = (vault: unknown, password: string, request: any) =>
+  callSigningWorker("signSplTokenTransactionFromVault", { vault, password, request });
+
+/**
+ * Build + verify a USDC/USDT (TRC-20) transfer on TRON via the gateway.
+ * `request.currency` must be "USDC_TRX" or "USDT_TRX". Returns
+ * { signRequest, approvalDigest, intent }.
+ */
+export const prepareTrc20TransferIntent = (vault: unknown, password: string, request: any) =>
+  callSigningWorker<{ from: string; intent: unknown; approvalDigest: string; signRequest: any }>(
+    "prepareTrc20TransferIntent", { vault, password, request }
+  );
+
+/** Sign a prepared USDC/USDT (TRC-20) transfer on TRON. Pass prepare's signRequest through as-is. */
+export const signTrc20TransactionFromVault = (vault: unknown, password: string, request: any) =>
+  callSigningWorker("signTrc20TransactionFromVault", { vault, password, request });
 
 /**
  * Wipe the worker's session key cache.
