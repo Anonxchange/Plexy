@@ -421,10 +421,24 @@ const TopupDetailView = ({
         <button
           disabled={!amount || !phoneNumber}
           onClick={handleCheckout}
-          className="w-full flex items-center justify-center gap-2.5 py-4 px-6 rounded-full bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground font-bold text-base transition-all active:scale-[0.98] shadow-md"
+          className="w-full flex items-center justify-center gap-2 py-4 px-6 rounded-full bg-[#FFC439] hover:bg-[#f0b429] active:bg-[#e0a420] disabled:opacity-50 disabled:cursor-not-allowed text-[#003087] font-bold text-base transition-colors shadow-md"
         >
-          <ShoppingCart className="w-5 h-5" />
-          Add to cart
+          <span>Add to cart</span>
+          <div className="flex items-center gap-1">
+            {[
+              { symbol: "BTC", label: "Bitcoin" },
+              { symbol: "USDT", label: "USDT" },
+              { symbol: "USDC", label: "USDC" },
+              { symbol: "SOL", label: "Solana" },
+            ].map(({ symbol, label }) => (
+              <div
+                key={label}
+                className="h-6 w-6 rounded-full bg-white flex items-center justify-center overflow-hidden ring-1 ring-black/5"
+              >
+                <img src={SYMBOL_ICON_MAP[symbol]} alt={label} className="h-4 w-4 object-contain" />
+              </div>
+            ))}
+          </div>
         </button>
         <button
           disabled={!amount || !phoneNumber}
