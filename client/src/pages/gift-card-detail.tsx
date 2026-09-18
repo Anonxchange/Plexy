@@ -135,12 +135,15 @@ function RelatedProductCard({
       className="group w-full self-start text-left rounded-3xl focus-visible:ring-2 focus-visible:ring-primary/50"
     >
       {/* Image box only — matches the mobile top-up operator cards: bordered
-          rounded-3xl box, no outer card padding/border, text sits below it. */}
-      <div className="relative bg-card rounded-3xl aspect-[4/3] flex items-center justify-center transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lg overflow-hidden border border-border p-4">
+          rounded-3xl box, no outer card padding/border, text sits below it.
+          The logo is absolutely filled (inset-0) rather than flex-centered
+          so the discount badge — also absolute — can never be pulled into
+          flex layout alongside it and bleed past the box's edge. */}
+      <div className="relative bg-card rounded-3xl aspect-[4/3] overflow-hidden border border-border transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lg">
         {product.discountPercentage > 0 && (
-          <Badge className="pointer-events-none absolute left-2 top-2 z-10 border-none bg-[#B4F22E] px-2 py-0.5 text-[10px] font-bold text-black shadow-sm">
+          <span className="pointer-events-none absolute left-2 top-2 z-10 rounded-full bg-[#B4F22E] px-2 py-0.5 text-[10px] font-bold text-black shadow-sm">
             Save {product.discountPercentage}%
-          </Badge>
+          </span>
         )}
         {imageUrl && !imageFailed ? (
           <img
@@ -149,11 +152,13 @@ function RelatedProductCard({
             loading="lazy"
             decoding="async"
             onError={() => setImageFailed(true)}
-            className="w-full h-full object-contain"
+            className="absolute inset-0 h-full w-full object-contain p-4"
           />
         ) : (
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <Gift className="h-6 w-6" aria-hidden="true" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <Gift className="h-6 w-6" aria-hidden="true" />
+            </div>
           </div>
         )}
       </div>
