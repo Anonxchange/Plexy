@@ -1294,6 +1294,16 @@ export type WorkerRequest =
   | { id: string; type: "createSecureWallet"; passwordBytes: Uint8Array; origin?: string; existingMnemonic?: string }
   // ⑬ One-time mnemonic backup display (user must confirm backup before calling)
   | { id: string; type: "getMnemonicForBackup"; vault: EncryptedVault | unknown; passwordBytes: Uint8Array }
+  // Repeatable, password-gated vault decrypt for "reveal my seed phrase /
+  // private key" style UI (non-custodial-wallet.ts's decryptPrivateKey).
+  // Deliberately separate from getMnemonicForBackup above: this has no
+  // one-time-per-session limit and doesn't assume the plaintext is a BIP-39
+  // mnemonic (it may be a raw private key), so it can't reuse that function.
+  // The caller (decryptPrivateKey) already gates repeated attempts through
+  // runWithUnlockGate's server-side lockout before a request reaches here —
+  // this is a user-initiated, password-required reveal, not an open decrypt
+  // endpoint, which is why it's fine for this one to not be one-time.
+  | { id: string; type: "decryptVault"; vault: EncryptedVault | unknown; passwordBytes: Uint8Array }
   | { id: string; type: "prepareBitcoinTransferIntent"; vault: EncryptedVault | unknown; passwordBytes: Uint8Array; request: any & { accessToken?: string } }
   | { id: string; type: "signBitcoinTransactionFromVault"; vault: EncryptedVault | unknown; passwordBytes: Uint8Array; request: any & { accessToken?: string } }
   | { id: string; type: "prepareSolanaTransferIntent"; vault: EncryptedVault | unknown; passwordBytes: Uint8Array; request: any & { accessToken?: string } }
@@ -1361,7 +1371,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     const passwordTypes = new Set([
       "encryptVault", "encryptVaultBatch",
       "validateVaultPassword",
-      "migrateLegacyVault", "createSecureWallet", "getMnemonicForBackup",
+      "migrateLegacyVault", "createSecureWallet", "getMnemonicForBackup", "decryptVault",
       "prepareEVMTransferIntent", "prepareEVMContractIntent",
       "prepareBitcoinTransferIntent", "signBitcoinTransactionFromVault",
       "prepareSolanaTransferIntent", "signSolanaTransactionFromVault",
@@ -1402,6 +1412,11 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       // ⑬ Mnemonic backup display (one-time, controlled)
       case "getMnemonicForBackup":
         result = await getMnemonicForBackup(msg.vault, pw!); break;
+      // Repeatable vault decrypt for "reveal my seed phrase / private key" —
+      // see the WorkerRequest union entry above for why this is separate
+      // from getMnemonicForBackup.
+      case "decryptVault":
+        result = await openVault(msg.vault, pw!); break;
       case "prepareBitcoinTransferIntent": { const mnemonic=await openVault(msg.vault,pw!); result=await prepareBitcoinTransferIntent(mnemonic,msg.request); break; }
       case "signBitcoinTransactionFromVault": { const mnemonic=await openVault(msg.vault,pw!); result=await signBitcoinPrepared(mnemonic,msg.request); break; }
       case "prepareSolanaTransferIntent": { const mnemonic=await openVault(msg.vault,pw!); result=await prepareSolanaTransferIntent(mnemonic,msg.request); break; }
