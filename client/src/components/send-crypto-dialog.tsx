@@ -501,12 +501,15 @@ export function SendCryptoDialog({
       const txData = { to: toAddress, amount: cryptoAmountNum.toString(), currency: workerCurrency as any };
       const prepared = await prepareEVMTransferIntent(vault, password, txData);
       const result = await signEVMTransactionFromVault(vault, password, prepared.signRequest) as any;
-      txHash = await broadcastEVMTransaction(result.signedTx, chainKey);
+      // broadcastEVMTransaction(chain, signedTxHex) => { txHash }. Previous
+      // version called it with the arguments reversed and assigned the whole
+      // returned object to txHash instead of pulling .txHash out of it.
+      txHash = (await broadcastEVMTransaction(chainKey, result.signedTx)).txHash;
     } else if (selectedNetwork.includes("Avalanche") || selectedCrypto === "AVAX") {
       const txData = { to: toAddress, amount: cryptoAmountNum.toString(), currency: "AVAX" as any };
       const prepared = await prepareEVMTransferIntent(vault, password, txData);
       const result = await signEVMTransactionFromVault(vault, password, prepared.signRequest) as any;
-      txHash = await broadcastEVMTransaction(result.signedTx, "AVAX");
+      txHash = (await broadcastEVMTransaction("AVAX", result.signedTx)).txHash;
     } else if (selectedNetwork.includes("Solana")) {
       // BUG FIXED: this branch previously matched on `selectedNetwork.includes("Solana")`,
       // which is also true for the "Solana (SPL)" network entry — but it
@@ -520,7 +523,8 @@ export function SendCryptoDialog({
           currency: workerCurrency as any, // "USDC_SOL" | "USDT_SOL"
         });
         const result = await signSplTokenTransactionFromVault(vault, password, prepared.signRequest) as any;
-        txHash = await broadcastSolanaTransaction(result.signedTx);
+        // broadcastSolanaTransaction returns { signature }, not a bare string.
+        txHash = (await broadcastSolanaTransaction(result.signedTx)).signature;
       } else {
         const prepared = await prepareSolanaTransferIntent(vault, password, {
           to: toAddress,
@@ -528,7 +532,7 @@ export function SendCryptoDialog({
           currency: "SOL",
         });
         const result = await signSolanaTransactionFromVault(vault, password, prepared.signRequest) as any;
-        txHash = await broadcastSolanaTransaction(result.signedTx);
+        txHash = (await broadcastSolanaTransaction(result.signedTx)).signature;
       }
     } else if (selectedNetwork.includes("Tron")) {
       // Same class of bug as Solana above: native TRX vs TRC-20 USDC/USDT
@@ -541,14 +545,15 @@ export function SendCryptoDialog({
           currency: workerCurrency as any, // "USDC_TRX" | "USDT_TRX"
         });
         const result = await signTrc20TransactionFromVault(vault, password, prepared.signRequest) as any;
-        txHash = await broadcastTronTransaction(result.signedTx);
+        // broadcastTronTransaction returns { txID }, not a bare string.
+        txHash = (await broadcastTronTransaction(result.signedTx)).txID;
       } else {
         const prepared = await prepareTronTransferIntent(vault, password, {
           to: toAddress,
           amount: cryptoAmountNum.toString(),
         });
         const result = await signTronTransactionFromVault(vault, password, prepared.signRequest) as any;
-        txHash = await broadcastTronTransaction(result.signedTx);
+        txHash = (await broadcastTronTransaction(result.signedTx)).txID;
       }
     } else {
       throw new Error(`Signing not supported for ${selectedNetwork}`);
