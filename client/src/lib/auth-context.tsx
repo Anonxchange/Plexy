@@ -6,6 +6,7 @@ import { getClientLocation } from "./get-client-ip";
 import { devLog } from "./dev-logger";
 import { sendLoginNotificationIfEnabled, fetchAndCreateMarketMoversNotifications } from "./notifications-api";
 import { deviceFingerprint } from "./security/device-fingerprint";
+import { setAccessTokenProvider } from "@/hooks/use-signing-worker";
 
 interface PendingAuth {
   userId: string;
@@ -451,6 +452,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
     }
+  }, []);
+
+  // Wire the signing worker's chain-gateway calls (BTC/SOL/TRON/EVM prepare
+  // + sign, SPL/TRC-20 transfers) to this app's real Supabase session.
+  //
+  // Deliberately pull-based rather than capturing `session` from closure: it
+  // calls getSupabase().auth.getSession() fresh on every gateway request,
+  // the same pattern completeTOTPSignIn/cancelTOTPSignIn above use for the
+  // same reason — a token captured once via closure over `session` state
+  // could go stale between a user unlocking their wallet and confirming a
+  // send, especially across the multi-second scrypt KDF delay on first use.
+  // Registered once per AuthProvider mount; setAccessTokenProvider just
+  // swaps a module-level function reference, so re-registering on every
+  // render isn't needed and would just add noise.
+  useEffect(() => {
+    setAccessTokenProvider(async () => {
+      const supabase = await getSupabase();
+      const { data } = await supabase.auth.getSession();
+      return data.session?.access_token ?? null;
+    });
   }, []);
 
   const lockWalletDueToInactivity = useCallback(() => {
