@@ -1227,8 +1227,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const supabase = await getSupabase();
     await supabase.auth.signOut();
 
-    // Clear the worker's in-memory session key cache first (zero-fills the
-    // cached scrypt-derived key bytes in the worker heap immediately).
+    // Call clearWorkerSessionCache on logout as a matter of habit — but note
+    // it's currently a no-op: vault-crypto.ts deliberately keeps no reusable
+    // derived-key cache in production (every prepare/sign call re-derives
+    // and wipes its own key immediately after use), so there's nothing
+    // cached in the worker heap for this to clear. Kept here in case that
+    // changes later; harmless either way.
     try {
       const { clearWorkerSessionCache } = await import("@/hooks/use-signing-worker");
       await clearWorkerSessionCache();
