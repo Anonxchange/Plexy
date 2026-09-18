@@ -6,8 +6,14 @@ import {
   prepareSplTokenTransferIntent,
   signSplTokenTransactionFromVault,
 } from '@/hooks/use-signing-worker';
-import { broadcastEVMTransaction, EVMTransactionRequest } from './evmSigner';
+import { broadcastEVMTransaction, TOKEN_CONTRACTS } from './evmSigner';
 import { broadcastSolanaTransaction } from './solanaSigner';
+
+// evmSigner.ts exports TOKEN_CONTRACTS (a plain Record) but no
+// "EVMTransactionRequest" type — that type doesn't exist there. The worker's
+// currency key is just "one of TOKEN_CONTRACTS' keys, or a native chain key",
+// so that's what's typed here instead of importing something that isn't exported.
+type EVMCurrency = keyof typeof TOKEN_CONTRACTS | 'ETH' | 'BSC' | 'ARB' | 'AVAX';
 
 // NOTE ON THIS REWRITE — read before changing the prepare/sign pairs below:
 //
@@ -45,7 +51,7 @@ const EXPLORER_BASE: Record<string, string> = {
 
 // Map well-known coin+network combos to the static token-contract keys that
 // signing.worker.ts's TOKEN_CONTRACTS actually recognizes.
-const STATIC_CURRENCY_MAP: Record<string, EVMTransactionRequest['currency']> = {
+const STATIC_CURRENCY_MAP: Record<string, EVMCurrency> = {
   'USDT_ETH': 'USDT_ETH', 'USDC_ETH': 'USDC_ETH',
   'USDT_BSC': 'USDT_BSC', 'USDC_BSC': 'USDC_BSC',
   'USDT_BNB': 'USDT_BSC', 'USDC_BNB': 'USDC_BSC',
@@ -136,7 +142,7 @@ async function broadcastEvmDeposit({
 
   // Native coin (BNB, ETH, etc.) — no token contract needed.
   if (isNative) {
-    const nativeCurrencyMap: Record<string, EVMTransactionRequest['currency']> = {
+    const nativeCurrencyMap: Record<string, EVMCurrency> = {
       BSC: 'BSC', BNB: 'BSC', ETH: 'ETH', ARB: 'ARB',
     };
     const nativeCurrency = nativeCurrencyMap[chainKey];
@@ -149,7 +155,10 @@ async function broadcastEvmDeposit({
       currency: nativeCurrency,
     });
     const result = await signEVMTransactionFromVault(vault, password, prepared.signRequest) as any;
-    await broadcastEVMTransaction(result.signedTx, chainKey);
+    // broadcastEVMTransaction(chain, signedTxHex) — was called with the
+    // arguments reversed, which would throw immediately since chainKey
+    // ("ETH"/"BSC"/...) doesn't start with "0x".
+    await broadcastEVMTransaction(chainKey, result.signedTx);
     return {
       txHash: result.txHash,
       explorerUrl: `${EXPLORER_BASE[chainKey] ?? EXPLORER_BASE.ETH}/${result.txHash}`,
@@ -162,7 +171,7 @@ async function broadcastEvmDeposit({
   if (currency) {
     const prepared = await prepareEVMTransferIntent(vault, password, { to: depositAddress, amount, currency });
     const result = await signEVMTransactionFromVault(vault, password, prepared.signRequest) as any;
-    await broadcastEVMTransaction(result.signedTx, chainKey);
+    await broadcastEVMTransaction(chainKey, result.signedTx);
     return { txHash: result.txHash, explorerUrl: `${EXPLORER_BASE[chainKey] ?? EXPLORER_BASE.ETH}/${result.txHash}` };
   }
 
@@ -185,8 +194,9 @@ async function broadcastSolDeposit({
       currency: 'SOL',
     });
     const result = await signSolanaTransactionFromVault(vault, password, prepared.signRequest) as any;
-    const sig = await broadcastSolanaTransaction(result.signedTx);
-    return { txHash: sig, explorerUrl: `${EXPLORER_BASE.SOL}/${sig}` };
+    // broadcastSolanaTransaction returns { signature }, not a bare string.
+    const { signature } = await broadcastSolanaTransaction(result.signedTx);
+    return { txHash: signature, explorerUrl: `${EXPLORER_BASE.SOL}/${signature}` };
   }
 
   // SPL token path (USDC/USDT only — the worker's SPL_TOKENS table). The
@@ -208,6 +218,6 @@ async function broadcastSolDeposit({
     currency,
   });
   const result = await signSplTokenTransactionFromVault(vault, password, prepared.signRequest) as any;
-  const sig = await broadcastSolanaTransaction(result.signedTx);
-  return { txHash: sig, explorerUrl: `${EXPLORER_BASE.SOL}/${sig}` };
+  const { signature } = await broadcastSolanaTransaction(result.signedTx);
+  return { txHash: signature, explorerUrl: `${EXPLORER_BASE.SOL}/${signature}` };
 }
