@@ -144,6 +144,11 @@ export function GiftCardCartSheet({ open, onOpenChange }: { open: boolean, onOpe
 
           <Button 
             onClick={() => {
+              // A leftover "Buy Now" order in localStorage takes priority over
+              // the cart on the checkout page, so it must be cleared here or
+              // the cart's Checkout button can land on a stale single-item
+              // order instead of these cart items.
+              localStorage.removeItem("pexly_pending_order");
               onOpenChange(false);
               window.open(getLocalizedCheckoutPath(), "_blank");
             }}
