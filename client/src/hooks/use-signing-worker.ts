@@ -285,21 +285,31 @@ export const encryptVault = (data: string, password: string, origin?: string) =>
 export const encryptVaultBatch = (items: Array<{ data: string }>, password: string, origin?: string) =>
   callSigningWorker("encryptVaultBatch", { items, password, origin });
 
-/** Decrypt a vault */
-// ⚠️ NOT CONNECTED: no "decryptVault" message type exists in the current
-// worker, and deliberately so — the whole point of the vault-based API this
-// file otherwise wraps (signEVMTransactionFromVault etc.) is that the mnemonic
-// is decrypted, used, and wiped INSIDE the worker and never crosses
-// postMessage. A general-purpose "decrypt and return plaintext" handler would
-// undo that. The one intentional exception is getMnemonicForBackup, which is
-// rate-limited to a single display per session for exactly this reason. If
-// you need this, don't just re-add a generic decrypt handler — it reopens the
-// thing the vault-based API was built to close.
+/**
+ * Decrypt a vault and return the plaintext (mnemonic or raw private key).
+ * Unlike getMnemonicForBackup, this has no one-time-per-session limit and
+ * doesn't validate the output as a BIP-39 mnemonic — it's used by
+ * non-custodial-wallet.ts's decryptPrivateKey for "reveal my seed phrase /
+ * private key" style UI. That caller already gates repeated attempts behind
+ * a server-side lockout (runWithUnlockGate) before a request gets here, so
+ * this being repeatable (rather than one-time like getMnemonicForBackup) is
+ * an intentional difference, not an oversight — see signing.worker.ts's
+ * WorkerRequest entry for "decryptVault" for the full reasoning. Every call
+ * here puts the plaintext on the main thread; callers must discard it from
+ * component state as soon as the UI no longer needs it displayed.
+ */
 export const decryptVault = (vault: unknown, password: string) =>
-  callSigningWorker<string>("decryptVault" as any, { vault, password } as any);
+  callSigningWorker<string>("decryptVault", { vault, password });
 
 /** Decrypt a passkey vault (WebAuthn PRF) — no scrypt, pure AES-GCM in worker */
-// ⚠️ NOT CONNECTED — see decryptVault above; same reasoning applies.
+// ⚠️ NOT CONNECTED: no "decryptVaultWithRawKey" message type exists in the
+// current worker. The live passkey decrypt path is webCrypto.ts's own
+// decryptVaultWithRawKey, called directly on the main thread (WebAuthn PRF
+// output can't easily cross into a Worker) — this wrapper is a leftover
+// pointing at a worker capability that was never built. Don't wire this one
+// the way decryptVault above just was without first checking whether
+// anything actually calls this main-thread version; if nothing does, delete
+// this wrapper instead.
 export const decryptVaultWithRawKey = (vault: import("./signing.worker").PasskeyVault, rawKey: ArrayBuffer) =>
   callSigningWorker<string>("decryptVaultWithRawKey" as any, { vault, rawKey } as any);
 
