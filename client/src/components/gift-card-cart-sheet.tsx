@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { X, Minus, Plus, Trash2, Lock, Star, ShoppingBag } from '@/lib/icons';
 import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
 import { getLocalizedCheckoutPath } from "@/lib/checkout-navigation";
+import { getExchangeRates } from "@/lib/crypto-prices";
+import { SYMBOL_ICON_MAP } from "@/lib/crypto-icons";
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: '$', EUR: '€', GBP: '£', JPY: '¥', CAD: 'CA$', AUD: 'A$',
@@ -23,6 +25,60 @@ export function GiftCardCartSheet({ open, onOpenChange }: { open: boolean, onOpe
   const currencies = [...new Set(items.map(i => i.currency))];
   const singleCurrency = currencies.length === 1 ? currencies[0] : null;
   const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+
+  // Bundle every cart item into a single Buy Now order — that flow only
+  // supports one amount/currency, so when the cart spans more than one
+  // sender currency, normalize everything to USD via live exchange rates.
+  const handleCheckout = async () => {
+    if (items.length === 0) return;
+
+    let currency = singleCurrency;
+    let amount = total;
+
+    if (!currency) {
+      const rates = await getExchangeRates().catch(() => ({ USD: 1 } as Record<string, number>));
+      const toUsd = (price: number, cur: string) => {
+        const code = cur.toUpperCase();
+        if (code === "USD") return price;
+        const rate = rates[code];
+        return rate ? price / rate : price;
+      };
+      amount = items.reduce((acc, item) => acc + toUsd(item.price, item.currency) * item.quantity, 0);
+      currency = "usd";
+    }
+
+    const totalQty = items.reduce((acc, i) => acc + i.quantity, 0);
+    const title = items.length === 1
+      ? `${items[0].title} Gift Card`
+      : `${totalQty} Gift Cards`;
+    const description = items.map((i) => `${i.quantity}x ${i.title}`).join(", ");
+
+    localStorage.setItem("pexly_pending_order", JSON.stringify({
+      type: "giftcard",
+      title,
+      description,
+      amount,
+      currency: currency.toLowerCase(),
+      image: items[0]?.image,
+      metadata: {
+        service: "gift-card",
+        // Tells the checkout page this order came from the cart, so the
+        // cart can be cleared once payment actually succeeds.
+        fromCart: true,
+        items: items.map((item) => ({
+          productId: String(item.productId),
+          productName: item.title,
+          // Reloadly expects the recipient face value, not the sender-side
+          // converted charge shown in the cart.
+          unitPrice: item.recipientAmount ?? item.price,
+          quantity: item.quantity,
+        })),
+      },
+    }));
+
+    onOpenChange(false);
+    window.open(getLocalizedCheckoutPath(), "_blank");
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -143,15 +199,7 @@ export function GiftCardCartSheet({ open, onOpenChange }: { open: boolean, onOpe
           </div>
 
           <Button 
-            onClick={() => {
-              // A leftover "Buy Now" order in localStorage takes priority over
-              // the cart on the checkout page, so it must be cleared here or
-              // the cart's Checkout button can land on a stale single-item
-              // order instead of these cart items.
-              localStorage.removeItem("pexly_pending_order");
-              onOpenChange(false);
-              window.open(getLocalizedCheckoutPath(), "_blank");
-            }}
+            onClick={handleCheckout}
             className="w-full h-14 bg-gradient-to-r from-orange-400 to-yellow-500 text-white font-bold text-lg rounded-xl shadow-lg shadow-orange-500/20 gap-2"
           >
             <Lock className="h-5 w-5" />
@@ -159,10 +207,14 @@ export function GiftCardCartSheet({ open, onOpenChange }: { open: boolean, onOpe
           </Button>
 
           <div className="flex justify-center gap-4 opacity-50 grayscale">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" className="h-3" alt="Visa" />
-            <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" className="h-5" alt="Mastercard" />
-            <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" className="h-4" alt="Paypal" />
-            <img src="https://upload.wikimedia.org/wikipedia/commons/4/46/Bitcoin.svg" className="h-4" alt="Bitcoin" />
+            {[
+              { src: SYMBOL_ICON_MAP.BTC, alt: "Bitcoin" },
+              { src: SYMBOL_ICON_MAP.USDT, alt: "USDT" },
+              { src: SYMBOL_ICON_MAP.USDC, alt: "USDC" },
+              { src: SYMBOL_ICON_MAP.SOL, alt: "Solana" },
+            ].map(({ src, alt }) => (
+              <img key={alt} src={src} className="h-4 w-4" alt={alt} />
+            ))}
           </div>
         </div>
       </SheetContent>
