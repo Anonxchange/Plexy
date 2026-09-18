@@ -3,7 +3,6 @@ import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
-import { fetchGiftCardProductFromReloadly } from "@/hooks/use-reloadly";
 import { placeReloadlyOrder } from "@/hooks/use-utility-billers";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,6 @@ import {
   Plus,
   Trash2,
   ChevronDown,
-  ChevronRight,
   ShieldCheck,
   Zap,
   Mail,
@@ -26,7 +24,6 @@ import {
   TicketPercent,
   Smartphone,
   CheckCircle2,
-  HeartHandshake,
   Loader2,
 } from '@/lib/icons';
 
@@ -45,15 +42,8 @@ import { getExchangeRates } from "@/lib/crypto-prices";
 import NowPaymentsCheckout from "@/components/nowpayments-checkout";
 import { SYMBOL_ICON_MAP } from "@/lib/crypto-icons";
 // ── Fee config — all service fees defined in one place ────────────────────────
-import { calcServiceFee, calcGiftCardFee } from "@/lib/checkout-config";
-import {
-  getRecipientAmountForSenderPrice,
-  getRecipientDenominationRange,
-  getSenderDenominationRange,
-  getSenderPriceForRecipientAmount,
-} from "@/lib/gift-card-denominations";
+import { calcServiceFee } from "@/lib/checkout-config";
 
-type DeliveryTarget = "self" | "gift";
 type PaymentMethod = "card" | "crypto";
 type CheckoutStep = "contact" | "payment" | "paying";
 
@@ -389,10 +379,8 @@ function KoraPayTrigger({
 export function Checkout() {
   const { user, loading } = useAuth();
   const [, setLocation] = useLocation();
-  const { items, updateItem, updateQuantity, removeItem, clearCart } = useGiftCardCart();
-  const [deliveryTarget, setDeliveryTarget] = useState<DeliveryTarget>("self");
+  const { clearCart } = useGiftCardCart();
   const [activePayment, setActivePayment] = useState<PaymentMethod>("card");
-  const [fulfilling, setFulfilling] = useState(false);
   const [showOrderSummary, setShowOrderSummary] = useState(true);
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("contact");
   const [sendAsGift, setSendAsGift] = useState(false);
@@ -414,13 +402,6 @@ export function Checkout() {
   const [pendingGiftRecipientEmail, setPendingGiftRecipientEmail] = useState("");
   const [pendingGiftRecipientName, setPendingGiftRecipientName] = useState("");
   const [pendingGiftMessageText, setPendingGiftMessageText] = useState("");
-  const [recipientEmail, setRecipientEmail] = useState("");
-  const [recipientName, setRecipientName] = useState("");
-  const [giftMessage, setGiftMessage] = useState("");
-  const [scheduleDate, setScheduleDate] = useState("");
-  const [refreshAttempt, setRefreshAttempt] = useState(0);
-  const [refreshingGiftCardPrices, setRefreshingGiftCardPrices] = useState(items.length > 0);
-  const [giftCardRefreshError, setGiftCardRefreshError] = useState<string | null>(null);
 
   const [promoCode, setPromoCode] = useState("");
   const [promoApplied, setPromoApplied] = useState(false);
@@ -433,99 +414,16 @@ export function Checkout() {
     return () => { cancelled = true; };
   }, []);
 
-  // localStorage can contain prices from an earlier Reloadly response. Refresh
-  // every cart item from the individual product endpoint before allowing
-  // payment, and replace the stored sender-side price with the current one.
-  const cartRefreshSignature = items
-    .map((item) => `${item.id}:${item.productId}:${item.recipientAmount ?? ""}`)
-    .join("|");
-
-  useEffect(() => {
-    if (items.length === 0) {
-      setRefreshingGiftCardPrices(false);
-      setGiftCardRefreshError(null);
-      return;
-    }
-
-    let cancelled = false;
-    setRefreshingGiftCardPrices(true);
-    setGiftCardRefreshError(null);
-
-    Promise.all(items.map(async (item) => {
-      const product = await fetchGiftCardProductFromReloadly(String(item.productId));
-      const recipientRange = getRecipientDenominationRange(product);
-      const storedRecipientAmount = Number(item.recipientAmount);
-      const recoveredRecipientAmount = Number.isFinite(storedRecipientAmount) && storedRecipientAmount > 0
-        ? storedRecipientAmount
-        : getRecipientAmountForSenderPrice(product, item.price);
-      const recipientAmount = recoveredRecipientAmount
-        ?? recipientRange.fixed[0]
-        ?? recipientRange.min;
-
-      if (recipientAmount == null) {
-        throw new Error(`${item.title} has no available Reloadly denomination`);
-      }
-      const validRecipientAmount = recipientRange.isFixed
-        ? recipientRange.fixed.some((amount) => Math.abs(amount - recipientAmount) < 0.01)
-        : (recipientRange.min == null || recipientAmount >= recipientRange.min)
-          && (recipientRange.max == null || recipientAmount <= recipientRange.max);
-      if (!validRecipientAmount) {
-        throw new Error(
-          `${item.title} changed on Reloadly. Reopen the gift card and choose a current denomination.`,
-        );
-      }
-
-      const senderPrice = getSenderPriceForRecipientAmount(product, recipientAmount);
-      const senderRange = getSenderDenominationRange(product);
-      return {
-        id: item.id,
-        patch: {
-          title: product.productName,
-          price: senderPrice ?? recipientAmount,
-          currency: senderRange.currencyCode ?? product.recipientCurrencyCode,
-          recipientAmount,
-          recipientCurrency: recipientRange.currencyCode ?? product.recipientCurrencyCode,
-          image: product.logoUrls?.[0] ?? item.image,
-        },
-      };
-    }))
-      .then((refreshed) => {
-        if (cancelled) return;
-        refreshed.forEach(({ id, patch }) => updateItem(id, patch));
-        setRefreshingGiftCardPrices(false);
-      })
-      .catch((error) => {
-        if (cancelled) return;
-        setRefreshingGiftCardPrices(false);
-        setGiftCardRefreshError(
-          error instanceof Error ? error.message : "Could not refresh gift-card prices from Reloadly",
-        );
-      });
-
-    return () => {
-      cancelled = true;
-    };
-    // The signature intentionally excludes the stored sender price. Updating
-    // that price must not trigger an endless refresh loop.
-  }, [cartRefreshSignature, refreshAttempt]);
-
-  useEffect(() => {
-    const refreshOnFocus = () => setRefreshAttempt((attempt) => attempt + 1);
-    window.addEventListener("focus", refreshOnFocus);
-    return () => window.removeEventListener("focus", refreshOnFocus);
-  }, []);
-
-
   const buyerEmail = user?.email || "";
 
-  if ((!items || items.length === 0) && !pendingOrder) {
+  if (!pendingOrder) {
     return (
       <BrandShell>
         <div className="max-w-md mx-auto text-center py-20 px-4">
           <div className="h-16 w-16 mx-auto rounded-2xl bg-secondary flex items-center justify-center mb-5">
             <ShoppingBag className="h-7 w-7 text-muted-foreground" />
           </div>
-          <h2 className="text-2xl font-bold">Your cart is empty</h2>
+          <h2 className="text-2xl font-bold">Nothing to check out</h2>
           <p className="text-sm text-muted-foreground mt-2">
             Browse our gift card catalog to get started.
           </p>
@@ -626,6 +524,11 @@ export function Checkout() {
 
       // ── Standard order success ─────────────────────────────────────────────
       localStorage.removeItem("pexly_pending_order");
+      // Bundled cart checkouts (metadata.fromCart) leave the cart items intact
+      // in storage until payment actually succeeds — clear them now.
+      if (pendingOrder.metadata?.fromCart) {
+        clearCart();
+      }
       try {
         const saved = JSON.parse(localStorage.getItem("pexly_digital_orders") || "[]");
         saved.unshift({
@@ -649,9 +552,16 @@ export function Checkout() {
     const displayAmount = pendingOrder.amount;
     const displayTotal = pendingTotalUsd;
 
+    // A cart bundled into one order carries metadata.items — show the item
+    // count instead of a single quantity in that case.
+    const cartItemCount = Array.isArray(pendingOrder.metadata?.items)
+      ? pendingOrder.metadata.items.reduce((acc: number, i: any) => acc + (i.quantity || 1), 0)
+      : 0;
+
     // Sub-line shown under product name in summary (phone / account / qty)
     const orderSubline = pendingOrder.metadata?.recipientPhone
       || pendingOrder.metadata?.accountNumber
+      || (cartItemCount > 1 ? `${cartItemCount} gift cards` : "")
       || (pendingOrder.metadata?.quantity > 1 ? `Qty: ${pendingOrder.metadata.quantity}` : "")
       || "";
 
@@ -1320,436 +1230,9 @@ export function Checkout() {
     );
   }
 
-  const toUsd = (price: number, currency?: string) => {
-    const code = (currency || "USD").toUpperCase();
-    if (code === "USD") return price;
-    const rate = rates[code];
-    if (!rate || rate <= 0) return price;
-    return price / rate;
-  };
-
-  const itemsUsd = items.map((item) => {
-    const price = typeof item?.price === "number" ? item.price : parseFloat(String(item?.price || 0));
-    const qty = typeof item?.quantity === "number" ? item.quantity : parseInt(String(item?.quantity || 0));
-    const unitUsd = toUsd(price, item?.currency);
-    return { ...item, _unitUsd: unitUsd, _qty: qty, _lineUsd: unitUsd * qty };
-  });
-
-  const subtotal = itemsUsd.reduce((acc, i) => acc + i._lineUsd, 0);
-  // ── Cart service fee — driven by checkout-config.ts ───────────────────────
-  const processingFee = calcGiftCardFee(subtotal);
-  const discount = promoApplied ? Math.min(subtotal * 0.05, 10) : 0;
-  const total = Math.max(0, subtotal + processingFee - discount);
-  const totalItems = items.reduce((acc, i) => acc + (i.quantity || 0), 0);
-
-  const deliveryEmail = deliveryTarget === "gift" ? recipientEmail : buyerEmail;
-  const recipientValid = deliveryTarget === "self" || /^\S+@\S+\.\S+$/.test(recipientEmail);
-  const giftCardPaymentMetadata = {
-    service: "gift_card",
-    recipientEmail: deliveryEmail || undefined,
-    // Gift cards do not require a phone number or user ID.
-    items: items.map((item: any) => ({
-      // This must resolve to the numeric Reloadly product ID.
-      productId:
-        item.reloadlyProductId ??
-        item.reloadly_product_id ??
-        item.productId ??
-        item.product_id ??
-        item.id,
-      productName:
-        item.productName ??
-        item.product_name ??
-        item.name ??
-        item.title,
-      // Reloadly expects the recipient face value, never the sender-side
-      // converted charge that is displayed in the cart.
-      unitPrice: item.recipientAmount ?? item.unitPrice ?? item.unit_price ?? item.price,
-      quantity: item.quantity || 1,
-    })),
-  };
-
-  return (
-    <BrandShell>
-      {/* Mobile order summary toggle */}
-      <div className="lg:hidden border-b border-border/60 bg-secondary/30">
-        <button
-          onClick={() => setShowOrderSummary((v) => !v)}
-          className="w-full flex items-center justify-between px-4 py-3"
-        >
-          <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-            <ShoppingBag className="h-4 w-4" />
-            {showOrderSummary ? "Hide" : "Show"} order summary ({totalItems} item{totalItems !== 1 ? "s" : ""})
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-bold">${total.toFixed(2)}</span>
-            <ChevronDown className={`h-4 w-4 transition-transform ${showOrderSummary ? "rotate-180" : ""}`} />
-          </div>
-        </button>
-        {showOrderSummary && (
-          <div className="px-4 pb-4">
-            <OrderSummaryItems
-              items={itemsUsd}
-              updateQuantity={updateQuantity}
-              removeItem={removeItem}
-              subtotal={subtotal}
-              processingFee={processingFee}
-              discount={discount}
-              total={total}
-            />
-          </div>
-        )}
-      </div>
-
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* Hero / progress */}
-        <div className="mb-8 flex items-end justify-between flex-wrap gap-4">
-          <div>
-            <p className="text-xs font-semibold text-primary tracking-widest uppercase">
-              Secure checkout
-            </p>
-            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mt-1">
-              Complete your purchase
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1.5 flex items-center gap-1.5">
-              <Zap className="h-3.5 w-3.5 text-primary" />
-              Digital codes are emailed within minutes after payment confirms.
-            </p>
-          </div>
-          <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="h-4 w-4 text-primary" /> Cart
-            </span>
-            <ChevronRight className="h-3.5 w-3.5" />
-            <span className="flex items-center gap-1.5 text-foreground font-semibold">
-              <span className="h-4 w-4 rounded-full bg-foreground text-background text-[10px] flex items-center justify-center">2</span>
-              Checkout
-            </span>
-            <ChevronRight className="h-3.5 w-3.5" />
-            <span>Confirmation</span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-12">
-          {/* ── LEFT: Form ── */}
-          <div className="space-y-8">
-            {/* Contact */}
-            <section>
-              <SectionTitle step={1} title="Contact" sub="We send your receipt and account updates here." />
-              <div className="space-y-3 rounded-2xl border border-border/60 bg-card p-5">
-                <div>
-                  <FieldLabel>Email</FieldLabel>
-                  <Input
-                    type="email"
-                    placeholder="you@example.com"
-                    defaultValue={buyerEmail}
-                    className="h-11"
-                  />
-                </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-                  <span>
-                    Signed in as <strong className="text-foreground">{buyerEmail}</strong>
-                  </span>
-                  <button className="text-primary font-semibold hover:underline">Change</button>
-                </div>
-              </div>
-            </section>
-
-            {/* Delivery (digital) */}
-            <section>
-              <SectionTitle
-                step={2}
-                title="Delivery"
-                sub="Codes are delivered instantly by email — no shipping required."
-              />
-
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                {[
-                  { id: "self" as const, label: "Send to me", icon: Mail },
-                  { id: "gift" as const, label: "Send as gift", icon: Gift },
-                ].map(({ id, label, icon: Icon }) => {
-                  const active = deliveryTarget === id;
-                  return (
-                    <button
-                      key={id}
-                      onClick={() => setDeliveryTarget(id)}
-                      className={`flex items-center gap-3 rounded-2xl border p-4 transition-colors text-left ${
-                        active
-                          ? "border-primary bg-primary/5"
-                          : "border-border/60 bg-card hover:border-border"
-                      }`}
-                    >
-                      <div className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                        active ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"
-                      }`}>
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className={`text-sm font-semibold ${active ? "text-foreground" : "text-foreground"}`}>
-                          {label}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {id === "self" ? buyerEmail : "Email a friend"}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {deliveryTarget === "gift" && (
-                <div className="space-y-3 rounded-2xl border border-border/60 bg-card p-5">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <FieldLabel>Recipient email</FieldLabel>
-                      <Input
-                        type="email"
-                        placeholder="friend@example.com"
-                        value={recipientEmail}
-                        onChange={(e) => setRecipientEmail(e.target.value)}
-                        className="h-11"
-                      />
-                    </div>
-                    <div>
-                      <FieldLabel>Recipient name (optional)</FieldLabel>
-                      <Input
-                        placeholder="Their name"
-                        value={recipientName}
-                        onChange={(e) => setRecipientName(e.target.value)}
-                        className="h-11"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <FieldLabel>Personal message (optional)</FieldLabel>
-                    <Textarea
-                      placeholder="Add a short note that arrives with the gift…"
-                      value={giftMessage}
-                      onChange={(e) => setGiftMessage(e.target.value)}
-                      maxLength={250}
-                      className="min-h-[80px] resize-none"
-                    />
-                    <p className="text-[11px] text-muted-foreground mt-1 text-right">
-                      {giftMessage.length}/250
-                    </p>
-                  </div>
-                  <div>
-                    <FieldLabel>Schedule delivery (optional)</FieldLabel>
-                    <Input
-                      type="datetime-local"
-                      value={scheduleDate}
-                      onChange={(e) => setScheduleDate(e.target.value)}
-                      className="h-11"
-                    />
-                    <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1.5">
-                      <HeartHandshake className="h-3 w-3" />
-                      Leave blank to deliver immediately after payment.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </section>
-
-            {/* Payment */}
-            <section>
-              <SectionTitle step={3} title="Payment" sub="All transactions are encrypted end-to-end." />
-              <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">
-                {/* Method selector tiles */}
-                <div className="grid grid-cols-3 gap-px bg-border/60">
-                  {(
-                    [
-                      {
-                        id: "card" as PaymentMethod,
-                        logo: (
-                          <div className="flex items-center gap-1">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" className="h-3" alt="Visa" />
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" className="h-4" alt="MC" />
-                          </div>
-                        ),
-                        label: "Card",
-                        sub: "Visa, Mastercard",
-                      },
-                      {
-                        id: "crypto" as PaymentMethod,
-                        logo: <span className="text-xl">₿</span>,
-                        label: "Crypto",
-                        sub: "BTC, ETH, USDT…",
-                      },
-                    ] as const
-                  ).map((tab) => {
-                    const active = activePayment === tab.id;
-                    return (
-                      <button
-                        key={tab.id}
-                        onClick={() => setActivePayment(tab.id)}
-                        className={`flex flex-col items-center gap-1.5 py-4 text-xs font-semibold transition-colors relative ${
-                          active ? "bg-card text-foreground" : "bg-card/60 text-muted-foreground hover:text-foreground hover:bg-card"
-                        }`}
-                      >
-                        {tab.logo}
-                        <span>{tab.label}</span>
-                        <span className="text-[10px] text-muted-foreground font-medium">{tab.sub}</span>
-                        {active && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground rounded-t-full" />}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="p-5">
-                  {activePayment === "card" && (
-                    <div className="space-y-3">
-                      <div>
-                        <FieldLabel>Card number</FieldLabel>
-                        <Input placeholder="1234 5678 9012 3456" className="h-11" />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <FieldLabel>Expiry date</FieldLabel>
-                          <Input placeholder="MM / YY" className="h-11" />
-                        </div>
-                        <div>
-                          <FieldLabel>CVV</FieldLabel>
-                          <Input placeholder="•••" className="h-11" />
-                        </div>
-                      </div>
-                      <div>
-                        <FieldLabel>Name on card</FieldLabel>
-                        <Input placeholder="Full name" className="h-11" />
-                      </div>
-                    </div>
-                  )}
-
-                  {activePayment === "crypto" && refreshingGiftCardPrices && (
-                    <div className="rounded-xl border border-border bg-secondary/30 p-4 text-sm text-muted-foreground">
-                      Refreshing gift-card prices from Reloadly…
-                    </div>
-                  )}
-
-                  {activePayment === "crypto" && giftCardRefreshError && !refreshingGiftCardPrices && (
-                    <div className="space-y-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-                      <p className="text-sm text-destructive">
-                        {giftCardRefreshError}
-                      </p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setRefreshAttempt((attempt) => attempt + 1)}
-                      >
-                        Refresh prices from Reloadly
-                      </Button>
-                    </div>
-                  )}
-
-                  {activePayment === "crypto" && !refreshingGiftCardPrices && !giftCardRefreshError && (
-                    <NowPaymentsCheckout
-                      amount={total}
-                      currency="usd"
-                      description={`Gift card purchase — ${items.length} item(s)`}
-                      metadata={giftCardPaymentMetadata}
-                      onPaymentSuccess={() => {
-                        clearCart();
-                        toast({ title: "Order placed!", description: "Your gift cards will be emailed to you shortly." });
-                        setLocation("/account-settings?section=shop-history");
-                      }}
-                    />
-                  )}
-                </div>
-              </div>
-
-              {activePayment === "card" && (
-                <Button className="mt-4 w-full h-14 text-base font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 shadow-lg gap-2">
-                  <Lock className="h-5 w-5" />
-                  Pay now · ${total.toFixed(2)}
-                </Button>
-              )}
-            </section>
-
-            <p className="text-center text-xs text-muted-foreground pb-8">
-              By placing your order you agree to our{" "}
-              <a href="/terms" className="underline hover:text-foreground">Terms of service</a>{" "}
-              and{" "}
-              <a href="/privacy" className="underline hover:text-foreground">Privacy policy</a>
-            </p>
-          </div>
-
-          {/* ── RIGHT: Order summary ── */}
-          <aside className="hidden lg:block">
-            <div className="sticky top-20 space-y-4">
-              <div className="rounded-2xl border border-border/60 bg-card p-6 space-y-5">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold">Order summary</h3>
-                  <span className="text-xs text-muted-foreground">
-                    {totalItems} item{totalItems !== 1 ? "s" : ""}
-                  </span>
-                </div>
-                <OrderSummaryItems
-                  items={itemsUsd}
-                  updateQuantity={updateQuantity}
-                  removeItem={removeItem}
-                  subtotal={subtotal}
-                  processingFee={processingFee}
-                  discount={discount}
-                  total={total}
-                />
-
-                {/* Promo */}
-                <div>
-                  <FieldLabel>Promo code</FieldLabel>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <TicketPercent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Enter code"
-                        value={promoCode}
-                        onChange={(e) => {
-                          setPromoCode(e.target.value);
-                          setPromoApplied(false);
-                        }}
-                        className="h-10 pl-9"
-                      />
-                    </div>
-                    <Button
-                      variant="outline"
-                      className="h-10"
-                      disabled={!promoCode.trim() || promoApplied}
-                      onClick={() => setPromoApplied(true)}
-                    >
-                      {promoApplied ? "Applied" : "Apply"}
-                    </Button>
-                  </div>
-                  {promoApplied && (
-                    <p className="text-xs text-emerald-500 mt-1.5 flex items-center gap-1">
-                      <CheckCircle2 className="h-3 w-3" /> 5% off applied (max $10)
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Trust badges */}
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { icon: Zap, label: "Instant delivery", sub: "5–15 min" },
-                  { icon: ShieldCheck, label: "Secure payment", sub: "256-bit SSL" },
-                  { icon: HeartHandshake, label: "24/7 support", sub: "Live agents" },
-                  { icon: Mail, label: "Emailed code", sub: "PDF + text" },
-                ].map(({ icon: Icon, label, sub }) => (
-                  <div
-                    key={label}
-                    className="rounded-xl border border-border/60 bg-card/50 p-3 flex items-center gap-2.5"
-                  >
-                    <Icon className="h-4 w-4 text-primary flex-shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold leading-tight">{label}</p>
-                      <p className="text-xs text-muted-foreground leading-tight">{sub}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </aside>
-        </div>
-      </main>
-    </BrandShell>
-  );
+  // Unreachable — the guard above already redirects away when there is no
+  // pending order — but keep an explicit fallback rather than assume it.
+  return null;
 }
 
 /* ── Slim brand-only shell (no marketing nav, no footer) ──────────── */
@@ -1775,158 +1258,5 @@ function BrandShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-/* ── Quantity dropdown for cart items ─────────────────────────────── */
-function CartItemRow({
-  item,
-  updateQuantity,
-  removeItem,
-}: {
-  item: any;
-  updateQuantity: (id: string, qty: number) => void;
-  removeItem: (id: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  const lineUsd = Number(item._lineUsd ?? Number(item.price) * Number(item.quantity || 0));
-
-  return (
-    <div className="flex gap-3 items-start">
-      {/* Thumbnail with qty badge */}
-      <div className="relative flex-shrink-0">
-        <div className="h-14 w-14 rounded-xl bg-muted overflow-hidden flex items-center justify-center p-1.5">
-          <img src={item.image} alt={item.title} className="max-w-full max-h-full object-contain" />
-        </div>
-        <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-foreground text-background text-[10px] font-bold flex items-center justify-center">
-          {item.quantity}
-        </span>
-      </div>
-
-      {/* Info + qty control */}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium leading-snug">{item.title}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Qty: {item.quantity}
-        </p>
-
-        {/* Qty dropdown + delete */}
-        <div className="flex items-center gap-2 mt-2" ref={ref}>
-          <div className="relative">
-            <button
-              onClick={() => setOpen(v => !v)}
-              className="flex items-center gap-1.5 h-8 px-3 rounded-full border border-border bg-background hover:bg-muted text-sm font-medium transition-colors"
-            >
-              {item.quantity}
-              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-            </button>
-
-            {open && (
-              <div className="absolute left-0 top-10 z-50 w-28 max-h-64 overflow-y-auto rounded-2xl border border-border bg-popover shadow-xl">
-                {Array.from({ length: 20 }, (_, i) => i + 1).map((qty) => (
-                  <button
-                    key={qty}
-                    onClick={() => { updateQuantity(item.id, qty); setOpen(false); }}
-                    className={cn(
-                      "w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors flex items-center gap-2",
-                      qty === item.quantity ? "font-bold text-foreground" : "text-foreground/80"
-                    )}
-                  >
-                    {qty === item.quantity && <span className="text-primary text-xs">✓</span>}
-                    {qty !== item.quantity && <span className="w-3" />}
-                    {qty}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <button
-            onClick={() => removeItem(item.id)}
-            className="text-muted-foreground hover:text-destructive transition-colors p-1"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Line total */}
-      <p className="text-sm font-bold flex-shrink-0 pt-1">
-        ${lineUsd.toFixed(2)}
-      </p>
-    </div>
-  );
-}
-
-/* ── Order summary items + totals ─────────────────────────────────── */
-function OrderSummaryItems({
-  items,
-  updateQuantity,
-  removeItem,
-  subtotal,
-  processingFee,
-  discount,
-  total,
-}: {
-  items: any[];
-  updateQuantity: (id: string, qty: number) => void;
-  removeItem: (id: string) => void;
-  subtotal: number;
-  processingFee: number;
-  discount: number;
-  total: number;
-}) {
-  return (
-    <div className="space-y-4">
-      <div className="space-y-4">
-        {items.map((item) => (
-          <CartItemRow
-            key={item.id}
-            item={item}
-            updateQuantity={updateQuantity}
-            removeItem={removeItem}
-          />
-        ))}
-      </div>
-
-      <Separator />
-
-      <div className="space-y-2 text-sm">
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Subtotal</span>
-          <span>${subtotal.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Service fee</span>
-          <span>${processingFee.toFixed(2)}</span>
-        </div>
-        {discount > 0 && (
-          <div className="flex justify-between text-emerald-500">
-            <span>Promo discount</span>
-            <span>−${discount.toFixed(2)}</span>
-          </div>
-        )}
-      </div>
-
-      <Separator />
-
-      <div className="flex items-baseline justify-between">
-        <span className="text-base font-semibold">Total</span>
-        <div className="text-right">
-          <span className="text-2xl font-extrabold">${total.toFixed(2)}</span>
-          <p className="text-[11px] text-muted-foreground">USD · taxes included where applicable</p>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default Checkout;
