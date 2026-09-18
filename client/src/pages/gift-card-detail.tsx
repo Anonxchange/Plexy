@@ -132,36 +132,32 @@ function RelatedProductCard({
       data-testid={`button-related-gift-card-${product.productId}`}
       aria-label={`View ${product.productName} gift card`}
       onClick={() => onSelect(String(product.productId))}
-      className="group w-full self-start text-left rounded-2xl border border-border/60 bg-card p-2.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary/50"
+      className="group w-full self-start text-left rounded-3xl focus-visible:ring-2 focus-visible:ring-primary/50"
     >
-      {/* Fixed height (not aspect-ratio) so this never resizes when the grid
-          row stretches to match a taller sibling card. The badge is
-          absolutely positioned + pointer-events-none so it's purely a visual
-          overlay and can never push the image or logo down. */}
-      <div className="relative h-32 sm:h-36 w-full shrink-0 overflow-hidden rounded-xl border border-border/50 bg-secondary/55">
+      {/* Image box only — matches the mobile top-up operator cards: bordered
+          rounded-3xl box, no outer card padding/border, text sits below it. */}
+      <div className="relative bg-card rounded-3xl aspect-[4/3] flex items-center justify-center transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lg overflow-hidden border border-border p-4">
         {product.discountPercentage > 0 && (
           <Badge className="pointer-events-none absolute left-2 top-2 z-10 border-none bg-[#B4F22E] px-2 py-0.5 text-[10px] font-bold text-black shadow-sm">
             Save {product.discountPercentage}%
           </Badge>
         )}
-        <div className="flex h-full items-center justify-center p-2">
-          {imageUrl && !imageFailed ? (
-            <img
-              src={imageUrl}
-              alt={product.productName}
-              loading="lazy"
-              decoding="async"
-              onError={() => setImageFailed(true)}
-              className="h-full w-full object-contain transition-transform duration-200 group-hover:scale-105"
-            />
-          ) : (
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <Gift className="h-6 w-6" aria-hidden="true" />
-            </div>
-          )}
-        </div>
+        {imageUrl && !imageFailed ? (
+          <img
+            src={imageUrl}
+            alt={product.productName}
+            loading="lazy"
+            decoding="async"
+            onError={() => setImageFailed(true)}
+            className="w-full h-full object-contain"
+          />
+        ) : (
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <Gift className="h-6 w-6" aria-hidden="true" />
+          </div>
+        )}
       </div>
-      <div className="px-1 pb-1 pt-3">
+      <div className="mt-3 px-1">
         <p
           data-testid={`text-related-product-name-${product.productId}`}
           className="line-clamp-2 min-h-10 text-sm font-semibold leading-snug text-foreground"
@@ -208,7 +204,7 @@ function RelatedGiftCards({
         <div className="grid grid-cols-2 gap-4 items-start">
           {[...Array(4)].map((_, index) => (
             <div key={index} className="space-y-3">
-              <div className="h-32 sm:h-36 w-full animate-pulse rounded-2xl bg-secondary" />
+              <div className="aspect-[4/3] w-full animate-pulse rounded-3xl bg-secondary" />
               <div className="space-y-2">
                 <div className="h-4 w-4/5 animate-pulse rounded bg-secondary" />
                 <div className="h-3 w-1/2 animate-pulse rounded bg-secondary" />
