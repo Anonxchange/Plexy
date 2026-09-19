@@ -59,6 +59,10 @@ export default function WalletPage() {
       <br />
       wd: {wallet ? `assets=${wallet.assets.length}` : "undefined"} wdErr={String(isWalletError)} wdLoading=
       {String(isWalletLoading)} skeleton={String(showSkeleton)}
+      <br />
+      rows: {(bal.data ?? []).map((w) => `${w.crypto_symbol}=${w.balance}${w.is_stale ? "(STALE)" : "(live)"}`).join(" ")}
+      <br />
+      live read: {bal.dataUpdatedAt ? `${Math.round((Date.now() - bal.dataUpdatedAt) / 1000)}s ago` : "NEVER (cache only)"}
     </div>
   );
 
