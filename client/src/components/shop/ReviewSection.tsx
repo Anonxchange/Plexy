@@ -52,6 +52,11 @@ function countryCodeToFlag(code?: string): string | null {
 interface ReviewSectionProps {
   productId: string;
   importedReviews?: ImportedReview[];
+  // When the caller already provides its own top divider/spacing (e.g. the
+  // mobile Description/Reviews tab section on the product page), pass
+  // `compact` to skip this component's own leading margin + separator so
+  // the two don't stack into a double divider with a big empty gap.
+  compact?: boolean;
 }
 
 /** Inline SVG "verified" badge — blue circle, white check, Twitter/X style.
@@ -108,9 +113,10 @@ function StarRating({
           <Star
             className={`${dim} transition-colors ${
               star <= (hovered || value)
-                ? "fill-yellow-400 text-yellow-400"
-                : "fill-muted text-muted-foreground"
+                ? "fill-[url(#pexly-review-star-gradient)] text-amber-500 drop-shadow-[0_1px_1.5px_rgba(180,83,9,0.3)]"
+                : "fill-muted text-muted-foreground/40"
             }`}
+            strokeWidth={1.5}
           />
         </button>
       ))}
@@ -170,7 +176,7 @@ function reviewMedia(r: UnifiedReview): ReviewMedia[] {
   ];
 }
 
-export function ReviewSection({ productId, importedReviews = [] }: ReviewSectionProps) {
+export function ReviewSection({ productId, importedReviews = [], compact = false }: ReviewSectionProps) {
   const { user } = useAuth();
   const [dbReviews, setDbReviews] = useState<UnifiedReview[]>([]);
   const [loading, setLoading] = useState(true);
@@ -407,8 +413,20 @@ export function ReviewSection({ productId, importedReviews = [] }: ReviewSection
   }
 
   return (
-    <div className="mt-12 space-y-8">
-      <Separator />
+    <div className={compact ? "space-y-6" : "mt-12 space-y-8"}>
+      {/* Gradient definition shared by every star in this component — one
+          copy in the DOM, referenced by id from each filled star below.
+          0×0 and aria-hidden: no layout, no network request. */}
+      <svg width="0" height="0" className="absolute" aria-hidden="true">
+        <defs>
+          <linearGradient id="pexly-review-star-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#fde68a" />
+            <stop offset="55%" stopColor="#f5b942" />
+            <stop offset="100%" stopColor="#d97706" />
+          </linearGradient>
+        </defs>
+      </svg>
+      {!compact && <Separator />}
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -437,10 +455,13 @@ export function ReviewSection({ productId, importedReviews = [] }: ReviewSection
               {ratingCounts.map(({ star, count }) => (
                 <div key={star} className="flex items-center gap-2 text-sm">
                   <span className="w-4 text-right text-muted-foreground">{star}</span>
-                  <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                  <Star
+                    className="h-3.5 w-3.5 fill-[url(#pexly-review-star-gradient)] text-amber-500 drop-shadow-[0_1px_1px_rgba(180,83,9,0.3)]"
+                    strokeWidth={1.5}
+                  />
                   <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
                     <div
-                      className="h-full bg-yellow-400 rounded-full transition-all"
+                      className="h-full bg-gradient-to-r from-amber-300 to-amber-500 rounded-full transition-all"
                       style={{ width: reviews.length ? `${(count / reviews.length) * 100}%` : "0%" }}
                     />
                   </div>
