@@ -35,6 +35,13 @@ export default function WalletPage() {
     const t = setInterval(() => debugTick((n) => n + 1), 1000);
     return () => clearInterval(t);
   }, []); // DEBUG-BANNER
+  const [idbCount, setIdbCount] = useState("checking"); // DEBUG-BANNER
+  useEffect(() => {
+    if (!user) return;
+    Promise.resolve((nonCustodialWalletManager as any).getWalletsFromStorage(user.id))
+      .then((ws: any[]) => setIdbCount(String(ws?.length ?? 0)))
+      .catch((e: any) => setIdbCount(`ERR ${String(e?.message ?? e).slice(0, 40)}`));
+  }, [user]); // DEBUG-BANNER
   const [setupDialogOpen, setSetupDialogOpen] = useState(false);
   // Address of an existing server-side wallet — when set, the dialog opens in
   // "import / sync" mode instead of "create new" mode. Prevents the dangerous
@@ -66,6 +73,8 @@ export default function WalletPage() {
       {String(isWalletLoading)} skeleton={String(showSkeleton)}
       <br />
       rows: {(bal.data ?? []).map((w) => `${w.crypto_symbol}=${w.balance}${w.is_stale ? "(STALE)" : "(live)"}`).join(" ")}
+      <br />
+      local wallet cache (source of receive address): {idbCount} | indexedDB: {typeof indexedDB}
       <br />
       stage: {walletDebug.stage} | rpc: {walletDebug.rpc}
       <br />
