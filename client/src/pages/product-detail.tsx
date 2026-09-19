@@ -1214,19 +1214,19 @@ export function ProductDetail() {
             {relatedProducts.length > 0 && (
               <div className="space-y-4">
                 <h2 className="text-xl font-bold">You may also like</h2>
-                {/* Mobile: CSS masonry (browser balances column heights by
-                    actual rendered size, not just item count). */}
-                <div className="-mx-4">
-                  <div className="columns-2 gap-0.5">
-                    {relatedProducts.map((related) => (
-                      <div key={related.id} className="mb-0.5 break-inside-avoid">
-                        <ShopItemCard
-                          product={related}
-                          onViewDetails={() => navigate(`/shop/product/${encodeURIComponent(related.id)}`)}
-                        />
-                      </div>
-                    ))}
-                  </div>
+                {/* Horizontal scroll row — each card a fixed width, snapping
+                    into place. -mx-4 + matching px-4 lets the row bleed to
+                    the screen edges while the first/last card still lines
+                    up with the page's normal content padding. */}
+                <div className="-mx-4 px-4 flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-pl-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                  {relatedProducts.map((related) => (
+                    <div key={related.id} className="w-[42%] min-w-[150px] max-w-[190px] flex-shrink-0 snap-start">
+                      <ShopItemCard
+                        product={related}
+                        onViewDetails={() => navigate(`/shop/product/${encodeURIComponent(related.id)}`)}
+                      />
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
