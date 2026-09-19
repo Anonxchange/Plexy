@@ -4,6 +4,7 @@ import { getSupabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
 import { resolveWalletChain } from '@/lib/wallet-chain-monitor';
 import { minConfirmationsFor } from '@/lib/chain-rules';
+import { fetchWalletRows, isActiveRow, walletRowsQueryOptions, type WalletRow } from '@/lib/wallet-rows';
 
 /* =========================================
    TYPES
@@ -238,8 +239,11 @@ function readUnconfirmed(scope: any): number {
 /* =========================================
    GET USER WALLETS (non-custodial, chain-first)
 
-   Reads wallet *addresses* from user_wallets
-   (metadata only — never balances). Fetches live
+   Reads wallet *addresses* from the shared wallet
+   rows (metadata only — never balances). Rows come
+   from the deduplicated ['wallet-rows', userId]
+   query when the caller passes them, otherwise from
+   the same fetcher. Fetches live
    balances directly from each chain via the
    monitor-deposits edge function in `balances`
    mode, which returns:
@@ -258,6 +262,7 @@ function readUnconfirmed(scope: any): number {
 export async function getUserWallets(
   userId: string,
   previous?: Wallet[],
+  rows?: WalletRow[],
 ): Promise<Wallet[]> {
   const client = await getSupabase();
 
@@ -269,15 +274,11 @@ export async function getUserWallets(
   if (!user) throw new Error("AUTH_REQUIRED");
   if (user.id !== userId) throw new Error("AUTH_USER_MISMATCH");
 
-  // user_wallets is locked down server-side — reads now go through the
-  // get_my_wallet RPC, which is scoped to auth.uid() and already filters
-  // to is_active = true, so no .eq()/.select() chaining is needed here.
-  const { data: dbWallets, error: dbError } = await client.rpc('get_my_wallet');
-
-  if (dbError) {
-    throw dbError;
-  }
-  if (!dbWallets || dbWallets.length === 0) return [];
+  // Wallet rows come from the shared get_my_wallet-backed reader (public
+  // fields only). Balance reads below stay completely separate from it.
+  // Explicitly-inactive rows are skipped, matching the RPC's old is_active filter.
+  const dbWallets = (rows ?? (await fetchWalletRows(userId))).filter(isActiveRow);
+  if (dbWallets.length === 0) return [];
 
   const prevById = new Map<string, Wallet>();
   const prevByKey = new Map<string, Wallet>();
@@ -541,7 +542,17 @@ export function useWalletBalances() {
       // Fetch live balances from the chain (non-custodial, no server balance store).
       // Awaited: returning early with stale data made the query settle before the
       // real numbers arrived, so a failed chain read looked like a successful one.
-      const fresh = await getUserWallets(userId, cached).catch((err) => {
+      //
+      // Wallet rows are resolved through the shared query cache (deduplicated
+      // with every other consumer). retry is off here: this query already
+      // retries as a whole, and stacking retries would multiply the delay.
+      const fresh = await (async () => {
+        const rows = await queryClient.fetchQuery({
+          ...walletRowsQueryOptions(userId),
+          retry: false,
+        });
+        return getUserWallets(userId, cached, rows);
+      })().catch((err) => {
         if (import.meta.env.DEV) {
           console.warn('[wallet-balances] chain refresh failed:', err);
         }
