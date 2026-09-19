@@ -200,6 +200,11 @@ export function ProductDetail() {
   const [relatedProducts, setRelatedProducts] = useState<Listing[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [specsExpanded, setSpecsExpanded] = useState(true);
+  // Mobile-only Description/Reviews tab switch, shown under the
+  // "You may also like" carousel (see the !isDesktopLayout block near the
+  // bottom of the JSX). Desktop keeps its own separate, always-visible
+  // description + reviews layout untouched.
+  const [mobileInfoTab, setMobileInfoTab] = useState<'description' | 'reviews'>('description');
   // Pinned to 768px (Tailwind's `md`) to match every other desktop/mobile
   // split already in this component (md:grid-cols-2, md:hidden, etc).
   // Deliberately not the shared useIsMobile hook, which trips at 640px —
@@ -245,6 +250,22 @@ export function ProductDetail() {
     [product, id]
   );
   useSchema(productSchema, 'product-schema');
+
+  // Average rating + count derived from imported reviews, for the star
+  // display below. Defensive about shape since ImportedReview's exact
+  // fields aren't guaranteed here — falls back to a full 5-star display
+  // with no count badge when nothing usable is present.
+  const ratingSummary = useMemo(() => {
+    const reviews = product?.importedReviews;
+    if (!Array.isArray(reviews) || reviews.length === 0) return null;
+    const values = reviews
+      .map((r: any) => Number(r?.rating))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    if (values.length === 0) return null;
+    const avg = values.reduce((sum, n) => sum + n, 0) / values.length;
+    return { avg: Math.min(5, Math.max(0, avg)), count: values.length };
+  }, [product?.importedReviews]);
+  const displayRating = ratingSummary?.avg ?? 5;
 
   // Images pulled from the description HTML (or the media carousel as a
   // fallback) shown in the "Product Details" showcase strip. Computed once
@@ -925,10 +946,48 @@ export function ProductDetail() {
 
               <h1 className="text-2xl md:text-3xl font-bold">{product.title}</h1>
 
-              <div className="flex items-center gap-1">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                ))}
+              <div className="flex items-center gap-2">
+                <div className="relative inline-flex" style={{ lineHeight: 0 }}>
+                  {/* Track: five outlined stars in a soft neutral tone */}
+                  <div className="flex items-center gap-0.5">
+                    {[0, 1, 2, 3, 4].map((i) => (
+                      <Star key={`track-${i}`} className="h-4 w-4 text-muted-foreground/25" strokeWidth={1.5} />
+                    ))}
+                  </div>
+                  {/* Fill: same five stars, gradient-filled, clipped to the
+                      rating percentage so partial ratings render as a
+                      partial last star — no extra assets, pure CSS width. */}
+                  <div
+                    className="absolute inset-0 flex items-center gap-0.5 overflow-hidden"
+                    style={{ width: `${(displayRating / 5) * 100}%` }}
+                  >
+                    {[0, 1, 2, 3, 4].map((i) => (
+                      <Star
+                        key={`fill-${i}`}
+                        className="h-4 w-4 flex-shrink-0 fill-[url(#pexly-star-gradient)] text-amber-500 drop-shadow-[0_1px_1.5px_rgba(180,83,9,0.35)]"
+                        strokeWidth={1.5}
+                      />
+                    ))}
+                  </div>
+                  {/* Gradient definition referenced by the fill above.
+                      0×0 and aria-hidden — contributes no layout, no
+                      network request, just an inline SVG def. */}
+                  <svg width="0" height="0" className="absolute" aria-hidden="true">
+                    <defs>
+                      <linearGradient id="pexly-star-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor="#fde68a" />
+                        <stop offset="55%" stopColor="#f5b942" />
+                        <stop offset="100%" stopColor="#d97706" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                {ratingSummary && (
+                  <span className="flex items-baseline gap-1 text-sm">
+                    <span className="font-bold text-foreground">{ratingSummary.avg.toFixed(1)}</span>
+                    <span className="text-muted-foreground">({ratingSummary.count})</span>
+                  </span>
+                )}
               </div>
 
               <div className="flex items-baseline gap-3">
@@ -1115,64 +1174,20 @@ export function ProductDetail() {
                 </div>
               )}
 
-              {/* Description + store — mobile only (desktop version is in col 1 under images) */}
-              <div className="space-y-3 md:hidden">
-                <div className="flex items-center justify-between border-b border-border/60 pb-3">
-                  <p className="text-base font-bold">Item description</p>
-                  <button
-                    onClick={() => setReportOpen(true)}
-                    className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-2"
-                  >
-                    report
-                  </button>
-                </div>
-                <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground overflow-x-auto [&_*]:!max-w-full [&_*]:!box-border [&_p]:!whitespace-normal [&_div]:!whitespace-normal [&_p]:!my-3">
-                  {product.description
-                    ? parse(stripImgTags(product.description), descriptionParseOptions)
-                    : "No description provided for this item."}
-                </div>
-              </div>
-
-              {/* Product image showcase — phones only here, directly under
-                  the description and closer to it (smaller top margin) than
-                  the desktop/tablet placement above. Gated on
-                  !isDesktopLayout so this is the only copy that renders
-                  below 768px (see gate above). */}
-              {!isDesktopLayout && renderProductShowcase("mt-4")}
-
-              <div className="grid grid-cols-2 gap-4 text-sm md:hidden">
-                <div className="flex items-center gap-2">
-                  <Store className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">Store</p>
-                    <p className="text-muted-foreground">{product.user_id === 'shopify' ? 'Verified Store' : 'Marketplace'}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Package className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">Shipping</p>
-                    <p className="text-muted-foreground">Fast Delivery</p>
-                  </div>
-                </div>
-              </div>
             </div>
             </div>
           </div>
         </div>}
 
-        {/* Related Products */}
-        {relatedProducts.length > 0 && (
+        {/* ───────── Desktop: unchanged — related products, then reviews,
+            each in their own always-visible section below the grid. ───────── */}
+        {isDesktopLayout && relatedProducts.length > 0 && (
           <div className="mt-16 space-y-6">
             <h2 className="text-xl font-bold">You may also like</h2>
-            {/* Match the shop's Pinterest-style flow:
-                natural-height images on mobile, regular grid on desktop. */}
-            {/* Mobile: CSS masonry (browser balances column heights by actual
-                rendered size, not just item count) | Tablet & up: 4-col grid */}
-            <div className="-mx-4 md:mx-0 md:grid md:grid-cols-4 md:gap-4">
-              <div className="columns-2 gap-0.5 md:contents">
+            <div className="md:grid md:grid-cols-4 md:gap-4">
+              <div className="md:contents">
                 {relatedProducts.map((related) => (
-                  <div key={related.id} className="mb-0.5 break-inside-avoid md:contents">
+                  <div key={related.id} className="md:contents">
                     <ShopItemCard
                       product={related}
                       onViewDetails={() => navigate(`/shop/product/${encodeURIComponent(related.id)}`)}
@@ -1184,9 +1199,109 @@ export function ProductDetail() {
           </div>
         )}
 
-        {/* Reviews */}
-        {!isLoading && product && (
+        {isDesktopLayout && !isLoading && product && (
           <ReviewSection productId={product.id} importedReviews={product.importedReviews} />
+        )}
+
+        {/* ───────── Mobile: "You may also like" now sits ABOVE the
+            description, and description/reviews are switched via tabs
+            (Description | Reviews), matching the reference layout. Gated
+            on !isDesktopLayout (rather than a CSS-only "md:hidden") so this
+            never mounts on desktop — avoids double-loading the related
+            product images and the showcase images below. ───────── */}
+        {!isDesktopLayout && !isLoading && product && (
+          <div className="mt-10 space-y-8">
+            {relatedProducts.length > 0 && (
+              <div className="space-y-4">
+                <h2 className="text-xl font-bold">You may also like</h2>
+                {/* Mobile: CSS masonry (browser balances column heights by
+                    actual rendered size, not just item count). */}
+                <div className="-mx-4">
+                  <div className="columns-2 gap-0.5">
+                    {relatedProducts.map((related) => (
+                      <div key={related.id} className="mb-0.5 break-inside-avoid">
+                        <ShopItemCard
+                          product={related}
+                          onViewDetails={() => navigate(`/shop/product/${encodeURIComponent(related.id)}`)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Description / Reviews tab switch */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                <h2 className="text-base font-bold">{product.title}</h2>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setMobileInfoTab('description')}
+                    className={`text-sm pb-1 transition-colors ${
+                      mobileInfoTab === 'description'
+                        ? 'font-bold text-foreground'
+                        : 'font-medium text-muted-foreground'
+                    }`}
+                  >
+                    Description
+                  </button>
+                  <button
+                    onClick={() => setMobileInfoTab('reviews')}
+                    className={`text-sm pb-1 transition-colors ${
+                      mobileInfoTab === 'reviews'
+                        ? 'font-bold text-foreground'
+                        : 'font-medium text-muted-foreground'
+                    }`}
+                  >
+                    Reviews
+                  </button>
+                </div>
+              </div>
+
+              {mobileInfoTab === 'description' ? (
+                <div className="space-y-3">
+                  <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground overflow-x-auto [&_*]:!max-w-full [&_*]:!box-border [&_p]:!whitespace-normal [&_div]:!whitespace-normal [&_p]:!my-3">
+                    {product.description
+                      ? parse(stripImgTags(product.description), descriptionParseOptions)
+                      : "No description provided for this item."}
+                  </div>
+
+                  {/* Product image showcase — phones only, part of the
+                      Description tab. Only one copy of this ever mounts
+                      (see the isDesktopLayout gate above it, and this
+                      whole block is itself gated on !isDesktopLayout). */}
+                  {renderProductShowcase("mt-4")}
+
+                  <div className="grid grid-cols-2 gap-4 text-sm pt-2">
+                    <div className="flex items-center gap-2">
+                      <Store className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">Store</p>
+                        <p className="text-muted-foreground">{product.user_id === 'shopify' ? 'Verified Store' : 'Marketplace'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">Shipping</p>
+                        <p className="text-muted-foreground">Fast Delivery</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setReportOpen(true)}
+                    className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-2"
+                  >
+                    report
+                  </button>
+                </div>
+              ) : (
+                <ReviewSection productId={product.id} importedReviews={product.importedReviews} />
+              )}
+            </div>
+          </div>
         )}
       </div>
 
