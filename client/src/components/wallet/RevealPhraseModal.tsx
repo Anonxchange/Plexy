@@ -141,9 +141,35 @@ function useRevealState(onOpenChange: (v: boolean) => void) {
     setIsLoading(true);
     try {
       const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
-      const wallets = await nonCustodialWalletManager.getNonCustodialWallets(userId);
-      if (wallets.length === 0) throw new Error("No non-custodial wallet found.");
-      const phrase = await nonCustodialWalletManager.getWalletMnemonic(wallets[0].id, password, userId);
+      let wallets = await nonCustodialWalletManager.getNonCustodialWallets(userId);
+
+      // New device / cleared cache: the encrypted vault only exists on the
+      // server. Load it (this also re-caches it) instead of failing.
+      if (!wallets.some((w) => w.encryptedMnemonic)) {
+        try {
+          const { getSupabase } = await import("@/lib/supabase");
+          const supabase = await getSupabase();
+          wallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
+        } catch {
+          toast({
+            title: "Couldn't load your wallet",
+            description: "Check your connection and try again.",
+            variant: "destructive",
+          });
+          return; // not a password failure: do not count toward lockout
+        }
+      }
+
+      const target = wallets.find((w) => w.encryptedMnemonic) ?? wallets[0];
+      if (!target) {
+        toast({
+          title: "Wallet not found",
+          description: "No wallet was found for this account.",
+          variant: "destructive",
+        });
+        return; // not a password failure: do not count toward lockout
+      }
+      const phrase = await nonCustodialWalletManager.getMnemonicFromWallet(target, password, userId);
       if (!phrase) throw new Error("Failed to decrypt recovery phrase. Check your password.");
       rateLimit.reset();
       setVolatileMnemonic(instanceId, phrase);
