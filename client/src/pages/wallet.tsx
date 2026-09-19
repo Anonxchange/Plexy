@@ -10,7 +10,6 @@ import { type Wallet, getUserWallets } from "@/lib/wallet-api";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { getSupabase } from "@/lib/supabase";
 import { useWalletData } from "@/hooks/use-wallet-data";
-import { useWalletBalances, walletDebug } from "@/hooks/use-wallet-balances"; // DEBUG-BANNER
 import { WalletHeader } from "@/components/wallet/WalletHeader";
 import { AssetList } from "@/components/wallet/AssetList";
 import { WalletSetupDialog } from "@/components/wallet/WalletSetupDialog";
@@ -29,19 +28,6 @@ export default function WalletPage() {
   const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
   const [receiveMethodDialogOpen, setReceiveMethodDialogOpen] = useState(false);
   const { data: wallet, isLoading: isWalletLoading, isError: isWalletError, isRefetching } = useWalletData();
-  const bal = useWalletBalances(); // DEBUG-BANNER (same query key as useWalletData, no extra fetch)
-  const [, debugTick] = useState(0); // DEBUG-BANNER
-  useEffect(() => {
-    const t = setInterval(() => debugTick((n) => n + 1), 1000);
-    return () => clearInterval(t);
-  }, []); // DEBUG-BANNER
-  const [idbCount, setIdbCount] = useState("checking"); // DEBUG-BANNER
-  useEffect(() => {
-    if (!user) return;
-    Promise.resolve((nonCustodialWalletManager as any).getWalletsFromStorage(user.id))
-      .then((ws: any[]) => setIdbCount(String(ws?.length ?? 0)))
-      .catch((e: any) => setIdbCount(`ERR ${String(e?.message ?? e).slice(0, 40)}`));
-  }, [user]); // DEBUG-BANNER
   const [setupDialogOpen, setSetupDialogOpen] = useState(false);
   // Address of an existing server-side wallet — when set, the dialog opens in
   // "import / sync" mode instead of "create new" mode. Prevents the dangerous
@@ -54,35 +40,6 @@ export default function WalletPage() {
   // showSkeleton is true while loading (includes live balance fetch) or fetching without existing data.
   // Only show skeleton on error when there's no cached data to fall back to.
   const showSkeleton = isWalletLoading || (isRefetching && !wallet) || (isWalletError && !wallet);
-
-  // DEBUG-BANNER: temporary on-screen diagnostics. Remove when done.
-  const debugBanner = (
-    <div
-      style={{
-        position: "fixed", top: 0, left: 0, right: 0, zIndex: 9999,
-        background: "#000", color: "#0f0", fontSize: 11, lineHeight: 1.3,
-        padding: 4, pointerEvents: "none", wordBreak: "break-all",
-      }}
-    >
-      auth: loading={String(loading)} uid={user?.id ? user.id.slice(0, 8) : "none"}
-      <br />
-      bal: {bal.status}/{bal.fetchStatus} n={bal.data?.length ?? "none"} fails={bal.failureCount} err=
-      {bal.error ? String((bal.error as any)?.message ?? bal.error) : "none"}
-      <br />
-      wd: {wallet ? `assets=${wallet.assets.length}` : "undefined"} wdErr={String(isWalletError)} wdLoading=
-      {String(isWalletLoading)} skeleton={String(showSkeleton)}
-      <br />
-      rows: {(bal.data ?? []).map((w) => `${w.crypto_symbol}=${w.balance}${w.is_stale ? "(STALE)" : "(live)"}`).join(" ")}
-      <br />
-      local wallet cache (source of receive address): {idbCount} | indexedDB: {typeof indexedDB}
-      <br />
-      stage: {walletDebug.stage} | rpc: {walletDebug.rpc}
-      <br />
-      chains: {Object.entries(walletDebug.chains).map(([k, v]) => `${k}=${v}`).join(" | ") || "none yet"}
-      <br />
-      live read: {bal.dataUpdatedAt ? `${Math.round((Date.now() - bal.dataUpdatedAt) / 1000)}s ago` : "NEVER (cache only)"}
-    </div>
-  );
 
   useEffect(() => {
     if (!loading && !user) {
@@ -188,7 +145,7 @@ export default function WalletPage() {
     return null;
   }
 
-  if (loading || showSkeleton) return <>{debugBanner}<WalletPageSkeleton /></>; // DEBUG-BANNER
+  if (loading || showSkeleton) return <WalletPageSkeleton />;
 
   const walletsForDialog = (wallet?.assets || []).map(asset => ({
     symbol: asset.symbol,
@@ -222,7 +179,6 @@ export default function WalletPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8F9FA] dark:bg-background transition-colors">
-      {debugBanner} {/* DEBUG-BANNER */}
       <div className="flex-1 w-full mx-auto px-0 sm:px-6 lg:px-8 py-4 sm:py-8 max-w-7xl">
         <h1 className="text-3xl font-bold mb-6 sm:mb-8 px-4 sm:px-0 text-foreground">My assets</h1>
 
