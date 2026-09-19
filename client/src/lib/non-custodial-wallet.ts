@@ -181,7 +181,18 @@ export async function createMyWallets(
   wallets: NonCustodialWallet[],
   expectedUserId: string,
 ): Promise<NonCustodialWallet[]> {
-  if (walletInitializationPromise) return walletInitializationPromise;
+  // Wait for any in-flight load/create to finish, then run OUR OWN create.
+  // Returning the in-flight promise instead meant a concurrent auth-time load
+  // (which sees zero rows) was handed back as if creation had happened, and
+  // the wallet was never created. The existing-rows check below keeps this
+  // idempotent when two creates queue up.
+  while (walletInitializationPromise) {
+    try {
+      await walletInitializationPromise;
+    } catch {
+      // The other operation's failure is not ours; proceed with our create.
+    }
+  }
 
   const operation = (async () => {
     const existing = await getMyWalletRows(supabase, expectedUserId);
@@ -385,8 +396,15 @@ class NonCustodialWalletManager {
     if (legacyData) {
       try {
         const wallets = JSON.parse(legacyData);
-        await this.saveWalletsToStorage(wallets, userId);
-        localStorage.removeItem(this.getStorageKey(userId));
+        try {
+          await this.saveWalletsToStorage(wallets, userId);
+          // Only drop the legacy copy once the new cache is verified.
+          localStorage.removeItem(this.getStorageKey(userId));
+        } catch (cacheError) {
+          devLog.error("Legacy wallet migration could not be cached; keeping legacy copy", {
+            message: cacheError instanceof Error ? cacheError.message : String(cacheError),
+          });
+        }
         return wallets;
       } catch (e) {
         devLog.error("Failed to migrate legacy wallets:", e);
@@ -402,7 +420,17 @@ class NonCustodialWalletManager {
   public async getWalletMnemonic(walletId: string, password: string, userId: string): Promise<string | null> {
     const wallets = await this.getWalletsFromStorage(userId);
     const wallet = wallets.find(w => w.id === walletId);
-    if (!wallet || !wallet.encryptedMnemonic) return null;
+    if (!wallet) return null;
+    return this.getMnemonicFromWallet(wallet, password, userId);
+  }
+
+  /**
+   * Same as getWalletMnemonic but for a wallet object the caller already holds
+   * (e.g. just loaded from the server), so a failed local cache write cannot
+   * turn into a false "wrong password".
+   */
+  public async getMnemonicFromWallet(wallet: NonCustodialWallet, password: string, userId: string): Promise<string | null> {
+    if (!wallet.encryptedMnemonic) return null;
     return runWithUnlockGate(userId, () =>
       this.decryptPrivateKey(wallet.encryptedMnemonic!, password)
     );
@@ -445,8 +473,24 @@ class NonCustodialWalletManager {
     await this.saveWalletsToSupabase(supabase, [wallet], userId);
   }
 
+  /**
+   * Writes the wallet cache and reads it straight back. Throws
+   * WALLET_CACHE_VERIFY_FAILED if the write did not stick, so a silently
+   * failing IndexedDB can no longer look like a successful cache.
+   * Best-effort callers (cacheWalletsBestEffort) catch and log it.
+   */
   public async saveWalletsToStorage(wallets: NonCustodialWallet[], userId: string): Promise<void> {
-    await setValue('wallets', this.getStorageKey(userId), wallets);
+    const key = this.getStorageKey(userId);
+    await setValue('wallets', key, wallets);
+
+    const stored = await getValue('wallets', key);
+    const verified =
+      Array.isArray(stored) &&
+      stored.length === wallets.length &&
+      stored.every((w: any, i: number) => w?.id === wallets[i]?.id);
+    if (!verified) {
+      throw new Error("WALLET_CACHE_VERIFY_FAILED");
+    }
   }
 
   async decryptPrivateKey(
