@@ -207,6 +207,24 @@ function computeAvailable(balance: number, unconfirmed: number, locked: number):
   return available > 0 ? available : 0;
 }
 
+/* DEBUG-BANNER: temporary diagnostics, read by the banner in wallet.tsx. Remove when done. */
+export const walletDebug: { stage: string; rpc: string; chains: Record<string, string> } = {
+  stage: 'idle',
+  rpc: 'not run',
+  chains: {},
+};
+
+/** Turns a request that never answers into an error, so one hung chain cannot freeze the whole query. */
+function withTimeout<T>(p: PromiseLike<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    Promise.resolve(p).then(
+      (v) => { clearTimeout(t); resolve(v); },
+      (e) => { clearTimeout(t); reject(e); },
+    );
+  });
+}
+
 /**
  * Read the unconfirmed (below-minimum) inbound slice from a balances payload.
  * Providers spell this differently; anything unparsable is treated as 0
@@ -248,6 +266,8 @@ export async function getUserWallets(
   userId: string,
   previous?: Wallet[],
 ): Promise<Wallet[]> {
+  walletDebug.stage = 'getSupabase/getUser'; // DEBUG-BANNER
+  walletDebug.chains = {}; // DEBUG-BANNER
   const client = await getSupabase();
 
   const {
@@ -261,7 +281,10 @@ export async function getUserWallets(
   // user_wallets is locked down server-side — reads now go through the
   // get_my_wallet RPC, which is scoped to auth.uid() and already filters
   // to is_active = true, so no .eq()/.select() chaining is needed here.
+  walletDebug.stage = 'rpc get_my_wallet'; // DEBUG-BANNER
   const { data: dbWallets, error: dbError } = await client.rpc('get_my_wallet');
+  walletDebug.rpc = dbError ? `err: ${dbError.message}` : `ok rows=${dbWallets?.length ?? 'null'}`; // DEBUG-BANNER
+  walletDebug.stage = 'chain reads'; // DEBUG-BANNER
 
   if (dbError) {
     throw dbError;
@@ -359,8 +382,10 @@ export async function getUserWallets(
     let data: any = null;
     let fetchFailed = false;
 
+    const t0 = Date.now(); // DEBUG-BANNER
+    walletDebug.chains[entry.chain] = 'pending'; // DEBUG-BANNER
     try {
-      const res = await client.functions.invoke('monitor-deposits', {
+      const res = await withTimeout(client.functions.invoke('monitor-deposits', {
         body: {
           address: entry.address,
           chain: entry.chain,
@@ -369,7 +394,13 @@ export async function getUserWallets(
           // policy the deposit scanner applies.
           minConfirmations: minConfirmationsFor(entry.chain),
         },
-      });
+      }), 20_000, 'monitor-deposits');
+      // DEBUG-BANNER
+      walletDebug.chains[entry.chain] = res.error
+        ? `ERR ${(res.error as any)?.context?.status ?? ''} ${String((res.error as any)?.message ?? '').slice(0, 60)}`
+        : !res.data?.success || !res.data?.native
+          ? `BAD ${String(res.data?.error ?? 'no native').slice(0, 60)}`
+          : `ok ${Date.now() - t0}ms bal=${res.data.native.balance}`;
       if (res.error || !res.data?.success || !res.data?.native) {
         console.warn('[getUserWallets] balance read failed:', entry.chain, res.error ?? res.data?.error);
         fetchFailed = true;
@@ -377,6 +408,7 @@ export async function getUserWallets(
         data = res.data;
       }
     } catch (err) {
+      walletDebug.chains[entry.chain] = `EXC ${String((err as any)?.message ?? err).slice(0, 70)}`; // DEBUG-BANNER
       console.error('[getUserWallets] Exception for chain:', entry.chain, err);
       fetchFailed = true;
     }
