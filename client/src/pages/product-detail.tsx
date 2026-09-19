@@ -1242,15 +1242,18 @@ export function ProductDetail() {
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b border-border/60 pb-3">
                 <h2 className="text-base font-bold">{product.title}</h2>
-                <div className="flex items-center gap-4">
+                {/* Tag-style pill container around the tab pair — light,
+                    transparent background with a thin border, same visual
+                    language as the outline Badge tags elsewhere on the page. */}
+                <div className="flex items-center gap-1 rounded-full border border-border/60 bg-transparent p-1">
                   <button
                     onClick={() => {
                       setMobileInfoTab('description');
                       mobileDescRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }}
-                    className={`text-sm pb-1 transition-colors ${
+                    className={`rounded-full px-3 py-1 text-xs transition-colors ${
                       mobileInfoTab === 'description'
-                        ? 'font-bold text-foreground'
+                        ? 'font-bold text-foreground bg-muted'
                         : 'font-medium text-muted-foreground'
                     }`}
                   >
@@ -1261,9 +1264,9 @@ export function ProductDetail() {
                       setMobileInfoTab('reviews');
                       mobileReviewsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }}
-                    className={`text-sm pb-1 transition-colors ${
+                    className={`rounded-full px-3 py-1 text-xs transition-colors ${
                       mobileInfoTab === 'reviews'
-                        ? 'font-bold text-foreground'
+                        ? 'font-bold text-foreground bg-muted'
                         : 'font-medium text-muted-foreground'
                     }`}
                   >
@@ -1272,7 +1275,7 @@ export function ProductDetail() {
                 </div>
               </div>
 
-              <div ref={mobileDescRef} className="space-y-3 scroll-mt-4 rounded-2xl border border-border/60 bg-transparent p-4">
+              <div ref={mobileDescRef} className="space-y-3 scroll-mt-4">
                 <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground overflow-x-auto [&_*]:!max-w-full [&_*]:!box-border [&_p]:!whitespace-normal [&_div]:!whitespace-normal [&_p]:!my-3">
                   {product.description
                     ? parse(stripImgTags(product.description), descriptionParseOptions)
@@ -1311,10 +1314,8 @@ export function ProductDetail() {
 
               {/* Reviews — always rendered below the description, not
                   conditionally swapped in. The "Reviews" tab above just
-                  scrolls the page down to this block. Same transparent,
-                  bordered "tag" styling as the description container above,
-                  for visual consistency between the two. */}
-              <div ref={mobileReviewsRef} className="scroll-mt-4 rounded-2xl border border-border/60 bg-transparent p-4">
+                  scrolls the page down to this block. */}
+              <div ref={mobileReviewsRef} className="pt-6 border-t border-border/60 scroll-mt-4">
                 <ReviewSection productId={product.id} importedReviews={product.importedReviews} />
               </div>
             </div>
