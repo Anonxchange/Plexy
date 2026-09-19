@@ -10,6 +10,8 @@ import {
   Shield,
   ChevronDown,
   ChevronUp,
+  Plus,
+  Minus,
   Tag,
   Gift,
 } from '@/lib/icons';
@@ -109,6 +111,27 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
   );
 }
 
+function RedeemInstructions({ text }: { text: string }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="rounded-xl border border-border/60 bg-card p-5">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between gap-4 text-left"
+        aria-expanded={open}
+      >
+        <h3 className="font-semibold text-sm">How to redeem</h3>
+        <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-secondary/70 text-muted-foreground">
+          {open ? <Minus className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+        </div>
+      </button>
+      {open && (
+        <p className="text-sm text-muted-foreground leading-relaxed mt-2">{text}</p>
+      )}
+    </div>
+  );
+}
+
 function RelatedProductCard({
   product,
   onSelect,
@@ -165,11 +188,11 @@ function RelatedProductCard({
       <div className="mt-3 px-1">
         <p
           data-testid={`text-related-product-name-${product.productId}`}
-          className="line-clamp-2 min-h-10 text-sm font-semibold leading-snug text-foreground"
+          className="line-clamp-2 text-sm font-semibold leading-snug text-foreground"
         >
           {product.productName}
         </p>
-        <div className="mt-1.5 flex items-center justify-between gap-2">
+        <div className="mt-1 flex items-center justify-between gap-2">
           <p className="truncate text-xs text-muted-foreground">{priceRange}</p>
           {product.country?.isoName && (
             <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/75">
@@ -766,12 +789,7 @@ export function GiftCardDetail() {
             )}
 
             {/* How to redeem */}
-            {fullInstructions && (
-              <div className="rounded-xl border border-border/60 bg-card p-5 space-y-2">
-                <h3 className="font-semibold text-sm">How to redeem</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{fullInstructions}</p>
-              </div>
-            )}
+            {fullInstructions && <RedeemInstructions text={fullInstructions} />}
 
             {/* Accepted networks */}
             <div className="space-y-3">
@@ -794,16 +812,6 @@ export function GiftCardDetail() {
               </div>
             </div>
 
-            {/* FAQ */}
-            <div className="rounded-xl border border-border/60 bg-card p-5">
-              <h3 className="font-semibold mb-1">Frequently asked questions</h3>
-              <div className="divide-y divide-border/60">
-                {faqs.map((faq, i) => (
-                  <FaqItem key={i} question={faq.question} answer={faq.answer} />
-                ))}
-              </div>
-            </div>
-
             <RelatedGiftCards
               products={(relatedProductsData?.content ?? [])
                 .filter((product) => String(product.productId) !== String(card.productId))
@@ -817,6 +825,16 @@ export function GiftCardDetail() {
               isLoading={relatedProductsLoading}
               onSelect={(id) => setLocation(`/gift-cards/${id}`)}
             />
+
+            {/* FAQ */}
+            <div className="rounded-xl border border-border/60 bg-card p-5">
+              <h3 className="font-semibold mb-1">Frequently asked questions</h3>
+              <div className="divide-y divide-border/60">
+                {faqs.map((faq, i) => (
+                  <FaqItem key={i} question={faq.question} answer={faq.answer} />
+                ))}
+              </div>
+            </div>
           </div>
 
         </div>
