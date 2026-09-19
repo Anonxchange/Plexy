@@ -23,6 +23,20 @@ let dbPromise: Promise<IDBPDatabase<PexlyDB>> | null = null;
 export function getDB() {
   if (!dbPromise) {
     dbPromise = openDB<PexlyDB>(DB_NAME, DB_VERSION, {
+      // Another tab is trying to delete/upgrade the DB (e.g. logout wipe):
+      // release our connection so it is not blocked, and reopen on next use.
+      blocking(_current, _blocked, event) {
+        dbPromise = null;
+        try {
+          (event?.target as IDBDatabase | undefined)?.close();
+        } catch {
+          // already closed
+        }
+      },
+      // The browser dropped the connection (storage cleared, etc.).
+      terminated() {
+        dbPromise = null;
+      },
       upgrade(db) {
         if (!db.objectStoreNames.contains('wallets')) {
           db.createObjectStore('wallets');
@@ -34,6 +48,11 @@ export function getDB() {
           db.createObjectStore('settings');
         }
       },
+    }).catch((err) => {
+      // Do not cache a failed open: otherwise every later read/write in this
+      // tab rejects with the same error until a full page reload.
+      dbPromise = null;
+      throw err;
     });
   }
   return dbPromise;
