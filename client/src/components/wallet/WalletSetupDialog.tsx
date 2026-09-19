@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { usePasswordRateLimit } from "@/hooks/use-password-rate-limit";
 import {
   Dialog,
@@ -9,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { requestWalletRefresh } from "@/hooks/use-wallet-balances";
 import { getSupabase } from "@/lib/supabase";
+import { walletRowsQueryKey } from "@/lib/wallet-rows";
 import { AlertTriangle, X } from '@/lib/icons';
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
@@ -72,6 +74,7 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expec
   const [backupConfirmedCheckbox, setBackupConfirmedCheckbox] = useState(false);
   const [backupUnavailable, setBackupUnavailable] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const rateLimit = usePasswordRateLimit({ maxAttempts: 3, baseDelayMs: 15_000 });
 
   const passwordValidation = useMemo(() => validateWalletPassword(password), [password]);
@@ -192,31 +195,56 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expec
 
       // BNB and Avalanche share the same EVM key/address/vault — pure
       // relabeling via addEvmChainVariant, no extra derivation needed.
-      const [bnbWallet, avalancheWallet] = await Promise.all([
+      // Polygon/Arbitrum/Optimism get their own rows too. Without them the
+      // receive dialog could show the shared EVM address for these networks
+      // while balance monitoring never read those chains.
+      const [bnbWallet, avalancheWallet, polygonWallet, arbitrumWallet, optimismWallet] = await Promise.all([
         nonCustodialWalletManager.addEvmChainVariant(
           evmWallet, "BNB", "binance", userId, undefined, undefined, { persist: false },
         ),
         nonCustodialWalletManager.addEvmChainVariant(
           evmWallet, "Avalanche", "ethereum", userId, undefined, undefined, { persist: false },
         ),
+        nonCustodialWalletManager.addEvmChainVariant(
+          evmWallet, "Polygon", "ethereum", userId, undefined, undefined, { persist: false },
+        ),
+        nonCustodialWalletManager.addEvmChainVariant(
+          evmWallet, "Arbitrum", "ethereum", userId, undefined, undefined, { persist: false },
+        ),
+        nonCustodialWalletManager.addEvmChainVariant(
+          evmWallet, "Optimism", "ethereum", userId, undefined, undefined, { persist: false },
+        ),
       ]);
 
-      const generatedWallets = [
+      const coreWallets = [
         ...baseWallets.map((w) =>
           w.chainId === "bitcoin" ? { ...w, chainId: "Bitcoin (SegWit)" } : w
         ),
         bnbWallet,
         avalancheWallet,
       ];
+      const generatedWallets = [...coreWallets, polygonWallet, arbitrumWallet, optimismWallet];
 
       // The RPC write is authoritative. Only cache the canonical rows returned
       // by the RPC-backed reload; never make failed writes look successful
       // through local storage.
-      canonicalWallets = await createMyWallets(supabase, generatedWallets, userId);
+      try {
+        canonicalWallets = await createMyWallets(supabase, generatedWallets, userId);
+      } catch (fullSetError: any) {
+        // If the server rejects the extra L2 chain rows (e.g. a chain_id
+        // allow-list), fall back to the original wallet set so creation is
+        // never blocked by them. createMyWallets is idempotent: if the first
+        // attempt actually landed, this returns the existing rows.
+        console.warn("Wallet creation with L2 rows failed, retrying core set:", fullSetError?.code ?? fullSetError?.message);
+        canonicalWallets = await createMyWallets(supabase, coreWallets, userId);
+      }
       if (canonicalWallets.length === 0) {
         throw new Error("Wallet creation returned no saved wallets.");
       }
 
+      // The shared wallet-rows query may be holding an empty pre-creation
+      // result; refresh it so receive addresses appear immediately.
+      void queryClient.invalidateQueries({ queryKey: walletRowsQueryKey(userId) });
       requestWalletRefresh();
       rateLimit.reset();
     } catch (error: any) {
