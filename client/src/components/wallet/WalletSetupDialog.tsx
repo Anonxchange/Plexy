@@ -12,10 +12,29 @@ import { getSupabase } from "@/lib/supabase";
 import { AlertTriangle, X } from '@/lib/icons';
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
+// A curated slice of the most common breached/weak passwords. This is NOT a
+// substitute for a real breach-corpus check (a proper one has thousands to
+// millions of entries, e.g. via an HaveIBeenPwned range query) — it's here so
+// the "not a common password" requirement below rejects real garbage instead
+// of just the 18 most obvious strings, closing most of the gap between
+// "looks strong on paper" and "is in the first breach dump an attacker tries."
 const COMMON_PASSWORDS = [
-  "password","password1","password123","12345678","123456789","1234567890",
-  "qwerty123","iloveyou","admin123","letmein","welcome1","monkey123",
-  "dragon123","master123","abc12345","passw0rd","p@ssword","p@ssw0rd",
+  "password","password1","password123","password1234","passw0rd","p@ssword","p@ssw0rd",
+  "12345678","123456789","1234567890","123123123","12341234","1q2w3e4r","1qaz2wsx",
+  "qwerty123","qwertyuiop","qwerty1234","asdfghjkl","zxcvbnm123",
+  "iloveyou","iloveyou1","iloveyou123","letmein","letmein123","welcome1","welcome123",
+  "admin123","administrator","monkey123","dragon123","master123","superman123",
+  "abc123456","abc12345","abcd1234","a1b2c3d4","trustno1","freedom123","whatever123",
+  "football1","football123","baseball1","basketball1","soccer123","hockey123",
+  "shadow123","michael123","jennifer1","jordan23","daniel123","matthew123","andrew123",
+  "starwars1","batman123","pokemon123","minecraft1","hunter123","tigger123",
+  "sunshine1","princess1","flower123","summer2023","summer2024","winter2023","winter2024",
+  "chocolate1","cheese123","coffee123","banana123","orange123",
+  "changeme1","changeit1","letmeinplz","opensesame","backdoor1","secret123","private123",
+  "wallet123","crypto123","bitcoin123","satoshi123","blockchain1","money123","richman123",
+  "correcthorsebatterystaple","test1234","testtest1","demo12345","sample123",
+  "121212121","112233445","1111111111","0000000000","9876543210",
+  "aaaaaaaa1","zzzzzzzz1","asdasdasd","qazwsxedc","1a2b3c4d5",
 ];
 
 function validateWalletPassword(password: string): { isValid: boolean; score: number; errors: string[] } {
@@ -43,11 +62,15 @@ interface WalletSetupDialogProps {
 }
 
 export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expectedAddress }: WalletSetupDialogProps) {
-  const [step, setStep] = useState<"intro" | "password" | "generating" | "success">("intro");
+  const [step, setStep] = useState<"intro" | "password" | "generating" | "backup" | "success">("intro");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [walletStateVerified, setWalletStateVerified] = useState(false);
+  const [mnemonic, setMnemonic] = useState("");
+  const [mnemonicRevealed, setMnemonicRevealed] = useState(false);
+  const [backupConfirmedCheckbox, setBackupConfirmedCheckbox] = useState(false);
+  const [backupUnavailable, setBackupUnavailable] = useState(false);
   const { toast } = useToast();
   const rateLimit = usePasswordRateLimit({ maxAttempts: 3, baseDelayMs: 15_000 });
 
@@ -115,6 +138,10 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expec
       return;
     }
 
+    // Capture before any state clearing below — needed again after creation
+    // to decrypt the recovery phrase for the backup step.
+    const walletPassword = password;
+
     setStep("generating");
     setIsGenerating(true);
 
@@ -122,6 +149,8 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expec
     // scrypt saturates the CPU. Without this, the button stays in its pressed
     // state for the full 1–3 s KDF duration before the loading screen appears.
     await new Promise<void>(r => setTimeout(r, 32));
+
+    let canonicalWallets: Awaited<ReturnType<typeof import("@/lib/non-custodial-wallet").createMyWallets>> | null = null;
 
     try {
       const supabase = await getSupabase();
@@ -140,7 +169,7 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expec
       // manager also persist directly would race a second, uncoordinated
       // write against that RPC call.
       const { wallets: baseWallets } = await nonCustodialWalletManager.generateNonCustodialWallets(
-        password,
+        walletPassword,
         undefined,
         userId,
         undefined,
@@ -150,6 +179,15 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expec
       const evmWallet = baseWallets.find((w) => w.chainId === "ethereum");
       if (!evmWallet) {
         throw new Error("Wallet generator returned no Ethereum wallet.");
+      }
+
+      // Verify BEFORE persisting, not after. The previous version checked
+      // this against canonicalWallets (post-RPC-write) — if it ever actually
+      // failed, the mismatched wallet was already saved server-side with
+      // nothing to clean it up. Checking the locally generated address first
+      // means a mismatch never reaches the database at all.
+      if (expectedAddress && evmWallet.address.toLowerCase() !== expectedAddress.toLowerCase()) {
+        throw new Error("Generated wallet address did not match the expected address.");
       }
 
       // BNB and Avalanche share the same EVM key/address/vault — pure
@@ -174,38 +212,83 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expec
       // The RPC write is authoritative. Only cache the canonical rows returned
       // by the RPC-backed reload; never make failed writes look successful
       // through local storage.
-      const canonicalWallets = await createMyWallets(supabase, generatedWallets, userId);
+      canonicalWallets = await createMyWallets(supabase, generatedWallets, userId);
       if (canonicalWallets.length === 0) {
         throw new Error("Wallet creation returned no saved wallets.");
       }
 
-      if (expectedAddress) {
-        const ethWallet = canonicalWallets.find((w) => w.walletType === "ethereum");
-        if (ethWallet?.address.toLowerCase() !== expectedAddress.toLowerCase()) {
-          throw new Error("Created wallet address did not match the expected address.");
-        }
-      }
-
       requestWalletRefresh();
-
       rateLimit.reset();
-      setPassword("");
-      setConfirmPassword("");
-      setStep("success");
     } catch (error: any) {
       console.error("Wallet creation failed:", error?.message ?? error, error);
       rateLimit.recordFailure();
       setPassword("");
       setConfirmPassword("");
       setStep("password");
+      setIsGenerating(false);
       toast({
         title: "Generation failed",
         description: "We could not secure your wallet. No wallet was saved. Please try again.",
         variant: "destructive",
       });
+      return;
+    }
+
+    // Wallet is now persisted. From here on, creation itself cannot be
+    // retried from scratch (re-opening this dialog will see the wallet
+    // already exists and skip straight past creation) — so a failure in
+    // THIS step must never be presented as "please try again" the same way
+    // a creation failure is. The user's funds-recovery phrase is what's at
+    // stake here, not whether the wallet exists.
+    try {
+      const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
+      const mnemonicVault = canonicalWallets.find((w) => w.encryptedMnemonic)?.encryptedMnemonic;
+      if (!mnemonicVault) {
+        throw new Error("No recovery-phrase vault was returned for this wallet.");
+      }
+      const revealedMnemonic = await nonCustodialWalletManager.getWalletMnemonicForBackup(
+        mnemonicVault as any,
+        walletPassword,
+      );
+      setMnemonic(revealedMnemonic);
+      setPassword("");
+      setConfirmPassword("");
+      setStep("backup");
+    } catch (error: any) {
+      console.error("Recovery phrase retrieval failed after wallet creation:", error?.message ?? error, error);
+      setPassword("");
+      setConfirmPassword("");
+      setBackupUnavailable(true);
+      setStep("success");
+      toast({
+        title: "Wallet created — backup phrase unavailable",
+        description: "Your wallet was created, but we couldn't display your recovery phrase right now. Go to Settings → Security to view and back it up before adding funds.",
+        variant: "destructive",
+      });
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleBackupContinue = async () => {
+    if (!backupConfirmedCheckbox) return;
+
+    // Best-effort only: this app's Supabase access goes exclusively through
+    // RPCs (create_my_wallets, get_my_wallet) everywhere else in
+    // non-custodial-wallet.ts — there's no existing RPC to flip isBackedUp,
+    // and a raw table update from the client would likely be rejected by RLS
+    // anyway (or worse, silently succeed via an unintended policy). Rather
+    // than guess at a write this codebase doesn't otherwise make, this is
+    // left as a no-op with a clear TODO: add a `mark_wallet_backed_up` (or
+    // similar) RPC and call it here once it exists.
+    // TODO: await supabase.rpc("mark_wallet_backed_up", { wallet_id: ... });
+
+    // Drop the mnemonic from component state as soon as it's no longer
+    // needed on screen — it's a plain JS string (can't be actively wiped
+    // the way the worker wipes its Uint8Arrays), so the best available
+    // mitigation is minimizing how long a reference to it exists at all.
+    setMnemonic("");
+    setStep("success");
   };
 
   const handleFinish = () => {
@@ -215,7 +298,7 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expec
   };
 
   return (
-    <Dialog open={open} onOpenChange={isGenerating ? undefined : (open) => {
+    <Dialog open={open} onOpenChange={(isGenerating || step === "backup") ? undefined : (open) => {
       if (step === "success") {
         onOpenChange(open);
       }
@@ -357,6 +440,73 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expec
               </div>
             )}
 
+            {step === "backup" && (
+              <div className="space-y-5 text-center animate-in fade-in slide-in-from-right-4 duration-500">
+                <div className="space-y-1">
+                  <h2 className="text-2xl font-bold text-black">Back Up Your Recovery Phrase</h2>
+                  <p className="text-gray-500 text-sm">
+                    Write these {mnemonic.split(/\s+/).filter(Boolean).length} words down in order and store them somewhere safe. This is the only way to recover your wallet.
+                  </p>
+                </div>
+
+                <div className="bg-red-50 border border-red-100 p-3 rounded-2xl flex gap-2 text-left">
+                  <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-red-800 leading-snug font-medium">
+                    This phrase will not be shown again after you continue. Anyone with these words can take your funds — never share them, and never enter them anywhere except this app.
+                  </p>
+                </div>
+
+                <div className="relative">
+                  <div
+                    className={`grid grid-cols-3 gap-2 bg-gray-50 border border-gray-100 rounded-2xl p-4 select-none transition-all ${
+                      mnemonicRevealed ? "" : "blur-md pointer-events-none"
+                    }`}
+                  >
+                    {mnemonic.split(/\s+/).filter(Boolean).map((word, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-1.5 bg-white border border-gray-100 rounded-lg px-2 py-1.5 text-left"
+                      >
+                        <span className="text-[10px] text-gray-400 font-semibold w-4 shrink-0">{i + 1}</span>
+                        <span className="text-xs font-mono font-medium text-black truncate">{word}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {!mnemonicRevealed && (
+                    <button
+                      type="button"
+                      onClick={() => setMnemonicRevealed(true)}
+                      className="absolute inset-0 flex items-center justify-center"
+                    >
+                      <span className="bg-black/80 text-white text-xs font-bold px-4 py-2 rounded-full">
+                        Tap to reveal
+                      </span>
+                    </button>
+                  )}
+                </div>
+
+                <label className="flex items-start gap-2.5 text-left px-1 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={backupConfirmedCheckbox}
+                    onChange={(e) => setBackupConfirmedCheckbox(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 accent-[#B4F22E] shrink-0"
+                  />
+                  <span className="text-xs text-gray-600 leading-snug">
+                    I've written down my recovery phrase and stored it somewhere safe. I understand Pexly cannot recover it for me.
+                  </span>
+                </label>
+
+                <Button
+                  className="w-full h-14 bg-[#B4F22E] hover:bg-[#a3db29] text-black font-bold text-lg rounded-full transition-all hover:scale-[1.02] shadow-[0_4px_12px_rgba(180,242,46,0.2)] disabled:opacity-50"
+                  onClick={handleBackupContinue}
+                  disabled={!backupConfirmedCheckbox || !mnemonicRevealed}
+                >
+                  Continue
+                </Button>
+              </div>
+            )}
+
             {step === "success" && (
               <div className="space-y-6 text-center animate-in fade-in zoom-in-95 duration-500">
                 <div className="space-y-3">
@@ -365,6 +515,15 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expec
                     Your non-custodial wallet is now ready.
                   </p>
                 </div>
+                {backupUnavailable && (
+                  <div className="bg-red-50 border border-red-100 p-4 rounded-2xl flex gap-3 text-left">
+                    <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                    <p className="text-xs text-red-800 leading-relaxed font-medium">
+                      We couldn't display your recovery phrase due to an error. Your wallet was still created — go to
+                      Settings → Security to view and back it up before adding funds.
+                    </p>
+                  </div>
+                )}
                 <div className="bg-gray-50 p-5 rounded-[24px] border border-gray-100">
                   <p className="text-[10px] text-[#8BB424] font-bold uppercase tracking-[0.2em] mb-3">Supported Networks</p>
                   <div className="flex flex-wrap gap-2 justify-center">
