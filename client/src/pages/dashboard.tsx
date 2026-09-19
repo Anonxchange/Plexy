@@ -1,12 +1,11 @@
 import { useHead } from "@unhead/react";
-import React, { useState, useEffect, useMemo, lazy, Suspense } from "react";
+import React, { useState, useMemo, lazy, Suspense } from "react";
 import { Eye, EyeOff, ChevronDown, TrendingDown, TrendingUp, MoreHorizontal, Star, ChevronRight, Gift, ShieldAlert, Search } from '@/lib/icons';
 import { PexlyFooter } from "@/components/pexly-footer";
 import { DashboardMoreModal } from "@/components/dashboard-more-modal";
 import { useAuth } from "@/lib/auth-context";
 import { useCryptoPrices, type CryptoPrice } from "@/lib/crypto-prices";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
-import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/page-skeleton";
 import { AssetCardSkeleton } from "@/components/dashboard/AssetCard";
@@ -52,10 +51,9 @@ const QuickActionIcon = ({ type, color }: { type: string; color: string }) => {
 
 export const Dashboard = () => {
   useHead({ title: "Dashboard | Pexly", meta: [{ name: "description", content: "An overview of your portfolio value, activity history, and account stats." }] });
-  const { user, isLoading: authLoading } = useAuth();
+  const { isLoading: authLoading } = useAuth();
   const [showBalance, setShowBalance] = useState(true);
   const [isMoreModalOpen, setIsMoreModalOpen] = useState(false);
-  const [walletBackupProcessed, setWalletBackupProcessed] = useState(false);
   const [, setLocation] = useLocation();
 
   const actions = [
@@ -78,7 +76,11 @@ export const Dashboard = () => {
   const { data: cryptoPricesMap, isLoading: pricesLoading, error: pricesError } = useCryptoPrices(symbols);
   
   if (walletError || pricesError) {
-    console.error("Dashboard data fetch error:", { walletError, pricesError });
+    // Log messages only, never whole error objects.
+    console.error("Dashboard data fetch error:", {
+      wallet: (walletError as Error | null)?.message ?? null,
+      prices: (pricesError as Error | null)?.message ?? null,
+    });
     // Prevent blank page by allowing the UI to render with default/cached values
   }
 
@@ -89,16 +91,6 @@ export const Dashboard = () => {
   const pnlUSD     = walletData?.pnlUSD     ?? 0;
   const pnlPercent = walletData?.pnlPercent ?? 0;
 
-
-  useEffect(() => {
-    if (user) {
-      const checkWallets = async () => {
-        const existingWallets = await nonCustodialWalletManager.getWalletsFromStorage(user.id);
-        setWalletBackupProcessed(existingWallets.length > 0);
-      };
-      checkWallets();
-    }
-  }, [user]);
 
   return (
     <div className="min-h-screen bg-background pb-8">
