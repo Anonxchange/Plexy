@@ -223,6 +223,11 @@ export function ProductDetail() {
   
   // Store the raw Shopify product data so we don't re-fetch on add-to-cart
   const shopifyDataRef = useRef<any>(null);
+  // Mobile Description/Reviews tabs no longer swap content — both sections
+  // stay mounted and visible, and the tabs just smooth-scroll to whichever
+  // one was tapped (reviews are always reachable by scrolling down too).
+  const mobileDescRef = useRef<HTMLDivElement>(null);
+  const mobileReviewsRef = useRef<HTMLDivElement>(null);
   
   const { addToCart, isLoading: isAddingToCart } = useCart();
   const { user } = useAuth();
@@ -1231,13 +1236,18 @@ export function ProductDetail() {
               </div>
             )}
 
-            {/* Description / Reviews tab switch */}
+            {/* Description / Reviews tabs — both sections stay mounted;
+                tapping a tab just smooth-scrolls down to it, like a
+                same-page jump link, rather than swapping content out. */}
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b border-border/60 pb-3">
                 <h2 className="text-base font-bold">{product.title}</h2>
                 <div className="flex items-center gap-4">
                   <button
-                    onClick={() => setMobileInfoTab('description')}
+                    onClick={() => {
+                      setMobileInfoTab('description');
+                      mobileDescRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }}
                     className={`text-sm pb-1 transition-colors ${
                       mobileInfoTab === 'description'
                         ? 'font-bold text-foreground'
@@ -1247,7 +1257,10 @@ export function ProductDetail() {
                     Description
                   </button>
                   <button
-                    onClick={() => setMobileInfoTab('reviews')}
+                    onClick={() => {
+                      setMobileInfoTab('reviews');
+                      mobileReviewsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }}
                     className={`text-sm pb-1 transition-colors ${
                       mobileInfoTab === 'reviews'
                         ? 'font-bold text-foreground'
@@ -1259,47 +1272,49 @@ export function ProductDetail() {
                 </div>
               </div>
 
-              {mobileInfoTab === 'description' ? (
-                <div className="space-y-3">
-                  <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground overflow-x-auto [&_*]:!max-w-full [&_*]:!box-border [&_p]:!whitespace-normal [&_div]:!whitespace-normal [&_p]:!my-3">
-                    {product.description
-                      ? parse(stripImgTags(product.description), descriptionParseOptions)
-                      : "No description provided for this item."}
-                  </div>
-
-                  {/* Product image showcase — phones only, part of the
-                      Description tab. Only one copy of this ever mounts
-                      (see the isDesktopLayout gate above it, and this
-                      whole block is itself gated on !isDesktopLayout). */}
-                  {renderProductShowcase("mt-4")}
-
-                  <div className="grid grid-cols-2 gap-4 text-sm pt-2">
-                    <div className="flex items-center gap-2">
-                      <Store className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">Store</p>
-                        <p className="text-muted-foreground">{product.user_id === 'shopify' ? 'Verified Store' : 'Marketplace'}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Package className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">Shipping</p>
-                        <p className="text-muted-foreground">Fast Delivery</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => setReportOpen(true)}
-                    className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-2"
-                  >
-                    report
-                  </button>
+              <div ref={mobileDescRef} className="space-y-3 scroll-mt-4">
+                <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground overflow-x-auto [&_*]:!max-w-full [&_*]:!box-border [&_p]:!whitespace-normal [&_div]:!whitespace-normal [&_p]:!my-3">
+                  {product.description
+                    ? parse(stripImgTags(product.description), descriptionParseOptions)
+                    : "No description provided for this item."}
                 </div>
-              ) : (
+
+                {/* Product image showcase — phones only. Only one copy of
+                    this ever mounts (see the isDesktopLayout gate above it,
+                    and this whole block is itself gated on !isDesktopLayout). */}
+                {renderProductShowcase("mt-4")}
+
+                <div className="grid grid-cols-2 gap-4 text-sm pt-2">
+                  <div className="flex items-center gap-2">
+                    <Store className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">Store</p>
+                      <p className="text-muted-foreground">{product.user_id === 'shopify' ? 'Verified Store' : 'Marketplace'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">Shipping</p>
+                      <p className="text-muted-foreground">Fast Delivery</p>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setReportOpen(true)}
+                  className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-2"
+                >
+                  report
+                </button>
+              </div>
+
+              {/* Reviews — always rendered below the description, not
+                  conditionally swapped in. The "Reviews" tab above just
+                  scrolls the page down to this block. */}
+              <div ref={mobileReviewsRef} className="pt-6 border-t border-border/60 scroll-mt-4">
                 <ReviewSection productId={product.id} importedReviews={product.importedReviews} />
-              )}
+              </div>
             </div>
           </div>
         )}
