@@ -976,10 +976,10 @@ export function Shop() {
             ) : (
               <>
                 {/* Mobile: 2-col masonry | Tablet & up: 4-col grid via md:contents */}
-                <div className="flex gap-0.5 -mx-4 md:grid md:grid-cols-4 md:gap-4 md:mx-0">
+                <div className="flex gap-0.5 -mx-4 min-w-0 md:grid md:grid-cols-4 md:gap-4 md:mx-0">
                   <Suspense fallback={<ShopSkeleton />}>
                     {/* Left column (mobile) — md:contents collapses it into the parent grid */}
-                    <div className="flex flex-col gap-0.5 flex-1 md:contents">
+                    <div className="flex flex-col gap-0.5 flex-1 min-w-0 md:contents">
                       {visibleProducts
                         .filter((_, i) => i % 2 === 0)
                         .map((product) => (
@@ -992,7 +992,7 @@ export function Shop() {
                         ))}
                     </div>
                     {/* Right column (mobile) — md:contents collapses it into the parent grid */}
-                    <div className="flex flex-col gap-0.5 flex-1 md:contents">
+                    <div className="flex flex-col gap-0.5 flex-1 min-w-0 md:contents">
                       {visibleProducts
                         .filter((_, i) => i % 2 === 1)
                         .map((product) => (
