@@ -7,10 +7,10 @@ import { SendCryptoDialog } from "@/components/send-crypto-dialog";
 import { ReceiveCryptoDialog } from "@/components/receive-crypto-dialog";
 import { ReceiveMethodDialog } from "@/components/receive-method-dialog";
 import { type Wallet, getUserWallets } from "@/lib/wallet-api";
-import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
-import { getSupabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { useRegisterWalletQueryClient } from "@/lib/wallet-query-cache";
 import { useQueryClient } from "@tanstack/react-query";
-import { walletRowsQueryOptions, walletRowsQueryKey } from "@/lib/wallet-rows";
+import { walletRowsQueryOptions } from "@/lib/wallet-rows";
 import { useWalletData } from "@/hooks/use-wallet-data";
 import { WalletHeader } from "@/components/wallet/WalletHeader";
 import { AssetList } from "@/components/wallet/AssetList";
@@ -26,6 +26,8 @@ export default function WalletPage() {
   useHead({ title: "My Wallet | Pexly", meta: [{ name: "description", content: "Send, receive, swap, stake, pay bills, and manage all your crypto assets in one place." }] });
   const { user, loading } = useAuth();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
+  useRegisterWalletQueryClient();
   const [, setLocation] = useLocation();
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
@@ -82,11 +84,10 @@ export default function WalletPage() {
     let cancelled = false;
 
     const checkWalletsRaceSafe = async () => {
-      // Step 1: ask local cache (fast, offline-capable)
-      const localWallets = await (nonCustodialWalletManager as any).getWalletsFromStorage(user.id);
-      if (cancelled) return;
+      // The server (get_my_wallet) is the ONLY authority on whether a wallet
+      // exists. The local cache is never used to create or register wallets.
 
-      // Step 2: ask the RPC as the source of truth, with retry
+      // Ask the RPC as the source of truth, with retry
       const fetchServerWallets = async (): Promise<{ ok: boolean; address: string | null }> => {
         try {
           // Deliberately a FRESH read (staleTime 0), not a cached one: a stale
@@ -98,13 +99,6 @@ export default function WalletPage() {
             staleTime: 0,
             retry: false,
           });
-          if (data.length === 0 && localWallets.length > 0) {
-            const supabase = await getSupabase();
-            const { createMyWallets } = await import("@/lib/non-custodial-wallet");
-            await createMyWallets(supabase, localWallets, user.id);
-            void queryClient.invalidateQueries({ queryKey: walletRowsQueryKey(user.id) });
-            return { ok: true, address: localWallets[0]?.address ?? null };
-          }
           // Prefer the ETH wallet's address as the canonical "expected" address
           const eth = data.find((r: any) =>
             (r.chain_id || '').toLowerCase().includes('ethereum')
@@ -139,6 +133,27 @@ export default function WalletPage() {
         // Server has wallets — IDB will be populated by auth-context's
         // loadWalletsFromSupabase. Do not open the dialog.
         return;
+      }
+
+      // The server confirms there is no wallet. If this browser still holds a
+      // cached wallet that the account does not own, do NOT auto-register it
+      // and do NOT open the create flow over it (logout wipes the cache, which
+      // would strand any funds sent to that address). Surface it instead.
+      try {
+        const { readOfflinePublicWallets } = await import("@/lib/wallet-offline-fallback");
+        const orphaned = await readOfflinePublicWallets(user.id);
+        if (cancelled) return;
+        if (orphaned.length > 0) {
+          toast({
+            title: "Unregistered wallet found on this device",
+            description:
+              "This browser has a wallet that isn't linked to your account. Don't log out or clear browser data yet — contact support so it can be recovered.",
+            variant: "destructive",
+          });
+          return;
+        }
+      } catch {
+        // cache unreadable: nothing local to protect
       }
 
       // Genuinely no wallet anywhere — fresh creation flow
