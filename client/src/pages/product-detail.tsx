@@ -1309,7 +1309,7 @@ export function ProductDetail() {
                   conditionally swapped in. The "Reviews" tab above just
                   scrolls the page down to this block. */}
               <div ref={mobileReviewsRef} className="pt-3 border-t border-border/60 scroll-mt-4">
-                <ReviewSection productId={product.id} importedReviews={product.importedReviews} />
+                <ReviewSection productId={product.id} importedReviews={product.importedReviews} compact />
               </div>
             </div>
           </div>
