@@ -38,6 +38,10 @@ const ASSET_NAMES: Record<string, string> = {
 
 const VALID_CRYPTO_SYMBOLS = Object.keys(ASSET_NAMES);
 
+// Polygon's native token was renamed MATIC -> POL (1:1). The monitor reports POL;
+// fold it into the MATIC row so the balance is not filtered out.
+const SYMBOL_ALIASES: Record<string, string> = { POL: "MATIC" };
+
 const SORT_ORDER: Record<string, number> = {
   BTC: 1,
   ETH: 2,
@@ -122,7 +126,8 @@ export function useWalletData() {
       const normalizedWallets = wallets
         .map(w => {
           const raw = (w.crypto_symbol || "").toUpperCase();
-          const baseSymbol = raw.split("-")[0];
+          const rawBase = raw.split("-")[0];
+          const baseSymbol = SYMBOL_ALIASES[rawBase] ?? rawBase;
           return { symbol: baseSymbol, balance: typeof w.balance === "number" ? w.balance : 0 };
         })
         .filter(w => VALID_CRYPTO_SYMBOLS.includes(w.symbol));
