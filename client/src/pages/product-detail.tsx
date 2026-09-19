@@ -1303,19 +1303,12 @@ export function ProductDetail() {
                     </div>
                   </div>
                 </div>
-
-                <button
-                  onClick={() => setReportOpen(true)}
-                  className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-2"
-                >
-                  report
-                </button>
               </div>
 
               {/* Reviews — always rendered below the description, not
                   conditionally swapped in. The "Reviews" tab above just
                   scrolls the page down to this block. */}
-              <div ref={mobileReviewsRef} className="pt-6 border-t border-border/60 scroll-mt-4">
+              <div ref={mobileReviewsRef} className="pt-3 border-t border-border/60 scroll-mt-4">
                 <ReviewSection productId={product.id} importedReviews={product.importedReviews} />
               </div>
             </div>
