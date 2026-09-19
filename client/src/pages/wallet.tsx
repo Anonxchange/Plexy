@@ -10,7 +10,7 @@ import { type Wallet, getUserWallets } from "@/lib/wallet-api";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { getSupabase } from "@/lib/supabase";
 import { useWalletData } from "@/hooks/use-wallet-data";
-import { useWalletBalances } from "@/hooks/use-wallet-balances"; // DEBUG-BANNER
+import { useWalletBalances, walletDebug } from "@/hooks/use-wallet-balances"; // DEBUG-BANNER
 import { WalletHeader } from "@/components/wallet/WalletHeader";
 import { AssetList } from "@/components/wallet/AssetList";
 import { WalletSetupDialog } from "@/components/wallet/WalletSetupDialog";
@@ -30,6 +30,11 @@ export default function WalletPage() {
   const [receiveMethodDialogOpen, setReceiveMethodDialogOpen] = useState(false);
   const { data: wallet, isLoading: isWalletLoading, isError: isWalletError, isRefetching } = useWalletData();
   const bal = useWalletBalances(); // DEBUG-BANNER (same query key as useWalletData, no extra fetch)
+  const [, debugTick] = useState(0); // DEBUG-BANNER
+  useEffect(() => {
+    const t = setInterval(() => debugTick((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, []); // DEBUG-BANNER
   const [setupDialogOpen, setSetupDialogOpen] = useState(false);
   // Address of an existing server-side wallet — when set, the dialog opens in
   // "import / sync" mode instead of "create new" mode. Prevents the dangerous
@@ -61,6 +66,10 @@ export default function WalletPage() {
       {String(isWalletLoading)} skeleton={String(showSkeleton)}
       <br />
       rows: {(bal.data ?? []).map((w) => `${w.crypto_symbol}=${w.balance}${w.is_stale ? "(STALE)" : "(live)"}`).join(" ")}
+      <br />
+      stage: {walletDebug.stage} | rpc: {walletDebug.rpc}
+      <br />
+      chains: {Object.entries(walletDebug.chains).map(([k, v]) => `${k}=${v}`).join(" | ") || "none yet"}
       <br />
       live read: {bal.dataUpdatedAt ? `${Math.round((Date.now() - bal.dataUpdatedAt) / 1000)}s ago` : "NEVER (cache only)"}
     </div>
