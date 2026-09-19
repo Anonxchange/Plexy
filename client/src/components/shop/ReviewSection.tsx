@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Star, Loader2, MessageSquare, Share2, Flag } from '@/lib/icons';
+import { Star, Loader2, MessageSquare, Share2, Flag, ChevronRight } from '@/lib/icons';
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
@@ -127,14 +127,6 @@ function StarRating({
 function averageRating(reviews: UnifiedReview[]) {
   if (!reviews.length) return 0;
   return reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
-}
-
-function ratingLabel(n: number) {
-  if (n >= 4.5) return "Excellent";
-  if (n >= 3.5) return "Good";
-  if (n >= 2.5) return "Average";
-  if (n >= 1.5) return "Poor";
-  return "Terrible";
 }
 
 function timeAgo(dateStr: string) {
@@ -317,6 +309,10 @@ export function ReviewSection({ productId, importedReviews = [], compact = false
   );
 
   const avg = averageRating(reviews);
+  // With zero reviews there's nothing to average yet — show a neutral full
+  // rating (matching the "5.0 (0)" placeholder pattern) rather than 0.0,
+  // which would look like the product scored badly.
+  const displayAvg = reviews.length ? avg : 5;
   const ratingCounts = [5, 4, 3, 2, 1].map((star) => ({
     star,
     count: reviews.filter((r) => r.rating === star).length,
@@ -428,49 +424,65 @@ export function ReviewSection({ productId, importedReviews = [], compact = false
       </svg>
       {!compact && <Separator />}
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            <h2 className="text-xl font-bold">Reviews</h2>
-            {reviews.length > 0 && (
-              <span className="text-sm text-muted-foreground">({reviews.length})</span>
-            )}
-          </div>
-          {user && !showForm && (
-            <Button variant="outline" size="sm" onClick={() => setShowForm(true)}>
-              {myReview ? "Edit your review" : "Write a review"}
-            </Button>
+        <div className="flex items-center gap-2">
+          <MessageSquare className="h-5 w-5" />
+          <h2 className="text-xl font-bold">Reviews</h2>
+          {reviews.length > 0 && (
+            <span className="text-sm text-muted-foreground">({reviews.length})</span>
           )}
         </div>
 
-        {/* Summary */}
-        {reviews.length > 0 && (
-          <div className="flex flex-col sm:flex-row gap-6 p-5 rounded-xl border border-border/60 bg-card/50">
-            <div className="flex flex-col items-center justify-center gap-1 min-w-[90px]">
-              <span className="text-4xl font-bold">{avg.toFixed(1)}</span>
-              <StarRating value={Math.round(avg)} readonly size="sm" />
-              <span className="text-xs text-muted-foreground">{ratingLabel(avg)}</span>
-            </div>
-            <div className="flex-1 space-y-1.5">
-              {ratingCounts.map(({ star, count }) => (
-                <div key={star} className="flex items-center gap-2 text-sm">
-                  <span className="w-4 text-right text-muted-foreground">{star}</span>
-                  <Star
-                    className="h-3.5 w-3.5 fill-[url(#pexly-review-star-gradient)] text-amber-500 drop-shadow-[0_1px_1px_rgba(180,83,9,0.3)]"
-                    strokeWidth={1.5}
-                  />
-                  <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-amber-300 to-amber-500 rounded-full transition-all"
-                      style={{ width: reviews.length ? `${(count / reviews.length) * 100}%` : "0%" }}
-                    />
-                  </div>
-                  <span className="w-4 text-muted-foreground">{count}</span>
-                </div>
-              ))}
-            </div>
+        {/* Summary — always visible, even with zero reviews or logged out,
+            so there's always something to look at and a clear way in. */}
+        <div className="space-y-4 p-5 rounded-xl border border-border/60 bg-card/50">
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-sm font-semibold text-muted-foreground">Overall Rating</p>
+            {user ? (
+              !showForm && (
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="flex items-center text-sm font-medium text-foreground hover:underline underline-offset-2 whitespace-nowrap"
+                >
+                  {myReview ? "Edit your review" : "Write a review"}
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              )
+            ) : (
+              <a
+                href="/signin"
+                className="flex items-center text-sm font-medium text-foreground hover:underline underline-offset-2 whitespace-nowrap"
+              >
+                Add your review
+                <ChevronRight className="h-4 w-4" />
+              </a>
+            )}
           </div>
-        )}
+
+          <div className="flex items-center gap-2">
+            <span className="text-3xl font-bold">{displayAvg.toFixed(1)}</span>
+            <StarRating value={Math.round(displayAvg)} readonly size="sm" />
+            <span className="text-sm text-muted-foreground">({reviews.length})</span>
+          </div>
+
+          <div className="space-y-1.5">
+            {ratingCounts.map(({ star, count }) => (
+              <div key={star} className="flex items-center gap-2 text-sm">
+                <span className="w-4 text-right text-muted-foreground">{star}</span>
+                <Star
+                  className="h-3.5 w-3.5 fill-[url(#pexly-review-star-gradient)] text-amber-500 drop-shadow-[0_1px_1px_rgba(180,83,9,0.3)]"
+                  strokeWidth={1.5}
+                />
+                <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-amber-300 to-amber-500 rounded-full transition-all"
+                    style={{ width: reviews.length ? `${(count / reviews.length) * 100}%` : "0%" }}
+                  />
+                </div>
+                <span className="w-4 text-muted-foreground">{count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {/* Write / Edit form */}
         {showForm && user && (
@@ -503,11 +515,6 @@ export function ReviewSection({ productId, importedReviews = [], compact = false
           </div>
         )}
 
-        {!user && (
-          <p className="text-sm text-muted-foreground">
-            <a href="/signin" className="underline hover:text-foreground">Sign in</a> to leave a review.
-          </p>
-        )}
 
         {/* Review list */}
         {loading ? (
