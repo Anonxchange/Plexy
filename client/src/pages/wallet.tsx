@@ -7,7 +7,6 @@ import { SendCryptoDialog } from "@/components/send-crypto-dialog";
 import { ReceiveCryptoDialog } from "@/components/receive-crypto-dialog";
 import { ReceiveMethodDialog } from "@/components/receive-method-dialog";
 import { type Wallet, getUserWallets } from "@/lib/wallet-api";
-import { useToast } from "@/hooks/use-toast";
 import { useRegisterWalletQueryClient } from "@/lib/wallet-query-cache";
 import { useQueryClient } from "@tanstack/react-query";
 import { walletRowsQueryOptions } from "@/lib/wallet-rows";
@@ -26,7 +25,6 @@ export default function WalletPage() {
   useHead({ title: "My Wallet | Pexly", meta: [{ name: "description", content: "Send, receive, swap, stake, pay bills, and manage all your crypto assets in one place." }] });
   const { user, loading } = useAuth();
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   useRegisterWalletQueryClient();
   const [, setLocation] = useLocation();
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
@@ -85,7 +83,7 @@ export default function WalletPage() {
 
     const checkWalletsRaceSafe = async () => {
       // The server (get_my_wallet) is the ONLY authority on whether a wallet
-      // exists. The local cache is never used to create or register wallets.
+      // exists. Nothing is cached or registered from the browser.
 
       // Ask the RPC as the source of truth, with retry
       const fetchServerWallets = async (): Promise<{ ok: boolean; address: string | null }> => {
@@ -133,27 +131,6 @@ export default function WalletPage() {
         // Server has wallets — IDB will be populated by auth-context's
         // loadWalletsFromSupabase. Do not open the dialog.
         return;
-      }
-
-      // The server confirms there is no wallet. If this browser still holds a
-      // cached wallet that the account does not own, do NOT auto-register it
-      // and do NOT open the create flow over it (logout wipes the cache, which
-      // would strand any funds sent to that address). Surface it instead.
-      try {
-        const { readOfflinePublicWallets } = await import("@/lib/wallet-offline-fallback");
-        const orphaned = await readOfflinePublicWallets(user.id);
-        if (cancelled) return;
-        if (orphaned.length > 0) {
-          toast({
-            title: "Unregistered wallet found on this device",
-            description:
-              "This browser has a wallet that isn't linked to your account. Don't log out or clear browser data yet — contact support so it can be recovered.",
-            variant: "destructive",
-          });
-          return;
-        }
-      } catch {
-        // cache unreadable: nothing local to protect
       }
 
       // Genuinely no wallet anywhere — fresh creation flow
