@@ -1,5 +1,4 @@
-import { getSupabase } from "@/lib/supabase";
-import { getMyWalletRows } from "@/lib/non-custodial-wallet";
+import { fetchWalletRows, type WalletRow } from "@/lib/wallet-rows";
 
 export interface WalletMonitorTarget {
   address: string;
@@ -78,9 +77,13 @@ export function resolveWalletChain(chainId: string): {
  * Return the unique public-address/chain pairs used by both balance and
  * activity reads. No private key or transaction table is involved.
  */
-export async function getWalletMonitorTargets(userId: string): Promise<WalletMonitorTarget[]> {
-  const client = await getSupabase();
-  const data = await getMyWalletRows(client, userId);
+export async function getWalletMonitorTargets(
+  userId: string,
+  rows?: WalletRow[],
+): Promise<WalletMonitorTarget[]> {
+  // Pass the shared ['wallet-rows', userId] data when you have it to skip the
+  // request entirely; otherwise this uses the same single fetcher.
+  const data = rows ?? (await fetchWalletRows(userId));
 
   const seen = new Set<string>();
   const targets: WalletMonitorTarget[] = [];
