@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +27,9 @@ import { QRCodeCanvas } from "qrcode.react";
 import { CoinIcon } from "@/components/trading/CoinIcon";
 import { cryptoIconUrls } from "@/lib/crypto-icons";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useWalletRows } from "@/hooks/use-wallet-rows";
+import { isActiveRow } from "@/lib/wallet-rows";
+import { findWalletForNetwork } from "@/lib/wallet-address-match";
 
 interface ReceiveCryptoDialogProps {
   open: boolean;
@@ -41,7 +44,6 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
   const isMobile = useIsMobile();
   const [selectedCrypto, setSelectedCrypto] = useState<string>("");
   const [selectedNetwork, setSelectedNetwork] = useState<string>("");
-  const [walletAddress, setWalletAddress] = useState<string>("");
 
   const networkMap: Record<string, string[]> = {
     BTC: ["Bitcoin (SegWit)"],
@@ -76,88 +78,104 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
   const handleClose = () => onOpenChange(false);
 
   const handleCopyAddress = () => {
-    if (walletAddress) {
-      navigator.clipboard.writeText(walletAddress);
-      toast({ title: "Copied", description: "Wallet address copied to clipboard" });
-    }
+    if (!walletAddress) return;
+    navigator.clipboard
+      .writeText(walletAddress)
+      .then(() => toast({ title: "Copied", description: "Wallet address copied to clipboard" }))
+      .catch(() => toast({ title: "Copy failed", description: "Select the address and copy it manually" }));
   };
 
-  const getNetworkSpecificSymbol = (crypto: string, network: string): string => {
-    if (crypto === 'USDT' || crypto === 'USDC') {
-      if (network.includes('ERC-20')) return `${crypto}-ERC20`;
-      if (network.includes('BEP-20')) return `${crypto}-BEP20`;
-      if (network.includes('TRC-20')) return `${crypto}-TRC20`;
-      if (network.includes('SPL')) return `${crypto}-SOL`;
-    }
-    return crypto;
-  };
+  // ── Address resolution ────────────────────────────────────────────────
+  // Server rows (shared, deduplicated query) are the source of truth. The
+  // local IndexedDB cache is only consulted when the server request failed or
+  // has no row for the selected network. The address is DERIVED from the
+  // current selection, so it can never show a previous asset's address and a
+  // slow local read can never overwrite a newer selection.
+  const userId = user?.id;
+  const selectionReady = open && !!userId && !!selectedCrypto && !!selectedNetwork;
+  const rowsQuery = useWalletRows(open ? userId : undefined);
+  const [retryNonce, setRetryNonce] = useState(0);
+  const [localResult, setLocalResult] = useState<{ key: string; address: string | null } | null>(null);
+
+  const serverMatch = useMemo(() => {
+    if (!selectionReady || !rowsQuery.data) return null;
+    const rows = rowsQuery.data
+      .filter(isActiveRow)
+      .map((r) => ({ chainId: r.chain_id, address: r.address }));
+    return findWalletForNetwork(rows, selectedCrypto, selectedNetwork);
+  }, [selectionReady, rowsQuery.data, selectedCrypto, selectedNetwork]);
+
+  // Addresses the server knows about. If the server answered with rows but none
+  // matches the network, a local-cache address is only trusted when it is one of
+  // these; otherwise a stale cache (another device, re-created wallet) could show
+  // an address the user no longer controls.
+  const serverAddressKey = (rowsQuery.data ?? [])
+    .map((r) => r.address.toLowerCase())
+    .filter(Boolean)
+    .sort()
+    .join(",");
+
+  const serverSettled = !rowsQuery.isFetching && (rowsQuery.isSuccess || rowsQuery.isError);
+  const needsLocalFallback = selectionReady && !serverMatch && serverSettled;
+  const localKey = `${selectedCrypto}|${selectedNetwork}|${retryNonce}`;
 
   useEffect(() => {
-    if (!selectedCrypto || !user || !selectedNetwork) {
-      setWalletAddress("");
-      return;
-    }
-
-    const symbolToUse = getNetworkSpecificSymbol(selectedCrypto, selectedNetwork);
-
-    const fetchAddress = async () => {
-      const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
-      const userWallets = await (nonCustodialWalletManager as any).getWalletsFromStorage(user.id);
-
-      const targetWallet = userWallets.find((w: any) => {
-        const normalizedChainId = w.chainId.toUpperCase();
-        const normalizedSymbolToUse = symbolToUse.toUpperCase();
-        const normalizedSelectedCrypto = selectedCrypto.toUpperCase();
-
-        if (selectedNetwork.includes('TRC-20')) {
-          return normalizedChainId.includes('TRC20') || (normalizedChainId === 'TRX' && normalizedSelectedCrypto === 'TRX') || (normalizedChainId === 'TRON (TRC-20)');
+    if (!needsLocalFallback || !userId) return;
+    let cancelled = false;
+    (async () => {
+      let address: string | null = null;
+      try {
+        const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
+        const local = await nonCustodialWalletManager.getWalletsFromStorage(userId);
+        // Only chainId + address leave this block; encrypted fields are never read.
+        const rows = (Array.isArray(local) ? local : [])
+          .filter((w: any) => w?.isActive !== false)
+          .map((w: any) => ({
+            chainId: String(w?.chainId ?? ""),
+            address: String(w?.address ?? ""),
+          }));
+        address = findWalletForNetwork(rows, selectedCrypto, selectedNetwork)?.address ?? null;
+        if (address && serverAddressKey) {
+          const known = new Set(serverAddressKey.split(","));
+          if (!known.has(address.trim().toLowerCase())) address = null;
         }
-        if (selectedNetwork.includes('Avalanche') || selectedCrypto === 'AVAX') {
-          return normalizedChainId === 'AVALANCHE' || normalizedChainId === 'AVAX' ||
-            normalizedChainId.includes('AVALANCHE');
+      } catch (err: any) {
+        if (import.meta.env.DEV) {
+          console.warn("[receive] local wallet cache read failed:", err?.name, err?.message);
         }
-        if (selectedNetwork.includes('ERC-20') || ['POLYGON', 'OPTIMISM', 'ARBITRUM'].includes(selectedNetwork.toUpperCase())) {
-          return normalizedChainId.includes('ERC-20') ||
-            ['ETH', 'MATIC', 'OP', 'ARB'].includes(normalizedChainId) ||
-            normalizedChainId === 'ETHEREUM' || normalizedChainId === normalizedSelectedCrypto ||
-            (normalizedSelectedCrypto === 'USDT' && (normalizedChainId === 'USDT' || normalizedChainId === 'USDT-ERC20' || normalizedChainId === 'ETH')) ||
-            (normalizedSelectedCrypto === 'USDC' && (normalizedChainId === 'USDC' || normalizedChainId === 'USDC-ERC20' || normalizedChainId === 'ETH'));
-        }
-        if (selectedNetwork.includes('BEP-20')) {
-          return normalizedChainId.includes('BEP20') ||
-            normalizedChainId === 'BNB' ||
-            normalizedChainId === 'BSC' ||
-            normalizedChainId.includes('BINANCE') ||
-            (normalizedSelectedCrypto === 'USDT' && (normalizedChainId === 'USDT-BEP20' || normalizedChainId === 'BNB' || normalizedChainId === 'BSC' || normalizedChainId === 'BINANCE SMART CHAIN (BEP-20)')) ||
-            (normalizedSelectedCrypto === 'USDC' && (normalizedChainId === 'USDC-BEP20' || normalizedChainId === 'BNB' || normalizedChainId === 'BSC' || normalizedChainId === 'BINANCE SMART CHAIN (BEP-20)'));
-        }
-        if (selectedNetwork.includes('SPL') || selectedNetwork === 'Solana') {
-          return normalizedChainId.includes('SOL') || (normalizedChainId === 'SOLANA' && normalizedSelectedCrypto === 'SOL') || (normalizedChainId === 'SOLANA');
-        }
-        if (selectedNetwork.includes('SegWit') || selectedNetwork === 'Bitcoin') {
-          return normalizedChainId.includes('BITCOIN') || (normalizedChainId === 'BTC' && normalizedSelectedCrypto === 'BTC');
-        }
-        if (selectedNetwork.includes('BEP-20') || ['BNB', 'BSC'].includes(normalizedSelectedCrypto)) {
-          return normalizedChainId.includes('BEP20') ||
-            normalizedChainId === 'BNB' ||
-            normalizedChainId === 'BSC' ||
-            normalizedChainId.includes('BINANCE');
-        }
-        if (selectedNetwork === 'Ripple' || selectedCrypto === 'XRP') {
-          return normalizedChainId === 'XRP' || normalizedChainId.includes('RIPPLE');
-        }
-
-        return normalizedChainId === normalizedSymbolToUse ||
-          normalizedChainId === normalizedSelectedCrypto ||
-          normalizedChainId.startsWith(`${normalizedSelectedCrypto}-`) ||
-          normalizedChainId.includes(normalizedSelectedCrypto);
-      });
-
-      setWalletAddress(targetWallet ? targetWallet.address : "");
+      }
+      if (!cancelled) setLocalResult({ key: localKey, address });
+    })();
+    return () => {
+      cancelled = true;
     };
+  }, [needsLocalFallback, userId, selectedCrypto, selectedNetwork, localKey, serverAddressKey]);
 
-    fetchAddress();
-  }, [selectedCrypto, selectedNetwork, user]);
+  const local = localResult && localResult.key === localKey ? localResult : null;
+  let addressStatus: "idle" | "loading" | "ready" | "error";
+  let walletAddress = "";
+  if (!selectionReady) {
+    addressStatus = "idle";
+  } else if (serverMatch) {
+    addressStatus = "ready";
+    walletAddress = serverMatch.address.trim();
+  } else if (local?.address) {
+    addressStatus = "ready";
+    walletAddress = local.address.trim();
+  } else if (!serverSettled || !local) {
+    addressStatus = "loading";
+  } else {
+    addressStatus = "error";
+  }
+
+  const addressError = rowsQuery.isError
+    ? "We couldn't load your wallet address. Check your connection and try again."
+    : "No deposit address is available for this network yet. Try again, or pick a different network.";
+
+  const handleRetry = () => {
+    setRetryNonce((n) => n + 1);
+    void rowsQuery.refetch();
+  };
 
   const handleAssetChange = (value: string) => {
     setSelectedCrypto(value);
@@ -223,18 +241,25 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
 
         <div className="flex flex-col items-center gap-4">
           <div className="bg-white p-3 rounded-xl shadow-sm border border-border/10">
-            <QRCodeCanvas
-              value={walletAddress || "No address"}
-              size={148}
-              level="M"
-              includeMargin={false}
-              imageSettings={{
-                src: cryptoIconUrls[selectedCrypto],
-                height: 30,
-                width: 30,
-                excavate: true,
-              }}
-            />
+            {addressStatus === "ready" ? (
+              <QRCodeCanvas
+                value={walletAddress}
+                size={148}
+                level="M"
+                includeMargin={false}
+                imageSettings={{
+                  src: cryptoIconUrls[selectedCrypto],
+                  height: 30,
+                  width: 30,
+                  excavate: true,
+                }}
+              />
+            ) : (
+              <div
+                className={`w-[148px] h-[148px] rounded-md bg-muted/40 ${addressStatus === "loading" ? "animate-pulse" : ""}`}
+                aria-hidden="true"
+              />
+            )}
           </div>
 
           <div className="w-full space-y-2">
@@ -246,17 +271,30 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
                 variant="ghost"
                 size="icon"
                 onClick={handleCopyAddress}
+                disabled={!walletAddress}
                 className="h-7 w-7 text-muted-foreground hover:text-foreground"
               >
                 <Copy className="h-3.5 w-3.5" />
               </Button>
             </div>
-            <div
-              className="p-3 bg-muted/30 rounded-lg break-all text-sm font-mono leading-relaxed tracking-tight border border-border/50 shadow-inner cursor-pointer select-all"
-              onClick={handleCopyAddress}
-            >
-              {walletAddress || "Generating address…"}
-            </div>
+            {addressStatus === "error" ? (
+              <div
+                role="alert"
+                className="p-3 rounded-lg border border-destructive/40 bg-destructive/5 space-y-2"
+              >
+                <p className="text-xs text-destructive leading-snug">{addressError}</p>
+                <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleRetry}>
+                  Retry
+                </Button>
+              </div>
+            ) : (
+              <div
+                className="p-3 bg-muted/30 rounded-lg break-all text-sm font-mono leading-relaxed tracking-tight border border-border/50 shadow-inner cursor-pointer select-all"
+                onClick={handleCopyAddress}
+              >
+                {walletAddress || "Loading address…"}
+              </div>
+            )}
           </div>
         </div>
 
