@@ -9,6 +9,8 @@ import { ReceiveMethodDialog } from "@/components/receive-method-dialog";
 import { type Wallet, getUserWallets } from "@/lib/wallet-api";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
 import { getSupabase } from "@/lib/supabase";
+import { useQueryClient } from "@tanstack/react-query";
+import { walletRowsQueryOptions, walletRowsQueryKey } from "@/lib/wallet-rows";
 import { useWalletData } from "@/hooks/use-wallet-data";
 import { WalletHeader } from "@/components/wallet/WalletHeader";
 import { AssetList } from "@/components/wallet/AssetList";
@@ -23,6 +25,7 @@ import { Wallet as WalletIcon, Landmark, ChevronRight, Gift } from '@/lib/icons'
 export default function WalletPage() {
   useHead({ title: "My Wallet | Pexly", meta: [{ name: "description", content: "Send, receive, swap, stake, pay bills, and manage all your crypto assets in one place." }] });
   const { user, loading } = useAuth();
+  const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
@@ -86,11 +89,20 @@ export default function WalletPage() {
       // Step 2: ask the RPC as the source of truth, with retry
       const fetchServerWallets = async (): Promise<{ ok: boolean; address: string | null }> => {
         try {
-          const supabase = await getSupabase();
-          const { getMyWalletRows, createMyWallets } = await import("@/lib/non-custodial-wallet");
-          const data = await getMyWalletRows(supabase, user.id);
+          // Deliberately a FRESH read (staleTime 0), not a cached one: a stale
+          // empty result here would open the "create wallet" dialog over real
+          // funds. It still goes through the shared fetcher/cache key, so the
+          // result also refreshes every other consumer of the wallet rows.
+          const data = await queryClient.fetchQuery({
+            ...walletRowsQueryOptions(user.id),
+            staleTime: 0,
+            retry: false,
+          });
           if (data.length === 0 && localWallets.length > 0) {
+            const supabase = await getSupabase();
+            const { createMyWallets } = await import("@/lib/non-custodial-wallet");
             await createMyWallets(supabase, localWallets, user.id);
+            void queryClient.invalidateQueries({ queryKey: walletRowsQueryKey(user.id) });
             return { ok: true, address: localWallets[0]?.address ?? null };
           }
           // Prefer the ETH wallet's address as the canonical "expected" address
@@ -138,7 +150,7 @@ export default function WalletPage() {
     return () => {
       cancelled = true;
     };
-  }, [user, isWalletLoading, isRefetching, isWalletError, wallet, setupDialogOpen]);
+  }, [user, isWalletLoading, isRefetching, isWalletError, wallet, setupDialogOpen, queryClient]);
 
   if (!loading && !user) {
     setLocation("/signin");
