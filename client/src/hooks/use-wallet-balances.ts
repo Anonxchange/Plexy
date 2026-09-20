@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth-context';
 import { resolveWalletChain } from '@/lib/wallet-chain-monitor';
 import { minConfirmationsFor } from '@/lib/chain-rules';
 import { fetchWalletRows, isActiveRow, walletRowsQueryOptions, type WalletRow } from '@/lib/wallet-rows';
+import { useRegisterWalletQueryClient } from '@/lib/wallet-query-cache';
 
 /* =========================================
    TYPES
@@ -505,6 +506,7 @@ function markStale(w: Wallet): Wallet {
 export function useWalletBalances() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  useRegisterWalletQueryClient();
   const userId = user?.id;
 
   // Keep the in-memory query key in sync with the cache key used below
