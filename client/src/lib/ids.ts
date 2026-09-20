@@ -65,12 +65,36 @@ export async function getValue(store: keyof PexlyDB, key: string) {
 
 export async function setValue(store: keyof PexlyDB, key: string, value: any) {
   const db = await getDB();
-  return db.put(store, value, key);
+  await db.put(store, value, key);
+  // Read back: a put that resolved but did not persist must not be accepted.
+  const stored = await db.get(store, key);
+  if (stored === undefined) {
+    throw new Error("IDB_WRITE_VERIFY_FAILED");
+  }
 }
 
 export async function deleteValue(store: keyof PexlyDB, key: string) {
   const db = await getDB();
   return db.delete(store, key);
+}
+
+export async function getAllKeys(store: keyof PexlyDB): Promise<string[]> {
+  const db = await getDB();
+  return (await db.getAllKeys(store)).map(String);
+}
+
+/**
+ * Empties every object store and verifies they are empty. Used by the logout
+ * wipe when deleteDatabase() is blocked by another connection.
+ */
+export async function clearAllStores(): Promise<boolean> {
+  const stores: Array<keyof PexlyDB> = ["wallets", "swap_history", "settings"];
+  const db = await getDB();
+  for (const store of stores) {
+    await db.clear(store);
+    if ((await db.count(store)) !== 0) return false;
+  }
+  return true;
 }
 
 export async function getAllValues(store: keyof PexlyDB) {
