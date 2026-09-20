@@ -166,16 +166,8 @@ function useAccountModalValue(props: AccountModalProps & { children?: React.Reac
     setWalletLoading(true);
     try {
       const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
-      let wallets: NonCustodialWallet[] = await nonCustodialWalletManager.getWalletsFromStorage(user.id);
-
-      // If local IndexedDB is empty (new device / cleared cache), sync from Supabase first.
-      if (wallets.length === 0) {
-        try {
-          wallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, user.id);
-        } catch {
-          // Supabase unreachable — continue with empty list; user will see "create wallet" prompt.
-        }
-      }
+      // Server rows are the only source for wallet identity (address + vault).
+      const wallets: NonCustodialWallet[] = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, user.id);
 
       const evm = wallets.find(w =>
         ["ethereum", "eth", "bsc", "bnb", "binance", "arb", "arbitrum"].some(k =>
