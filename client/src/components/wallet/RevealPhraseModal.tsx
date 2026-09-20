@@ -520,4 +520,65 @@ function PhraseReveal({
       </div>
 
       {/* Hold-to-reveal button */}
-      <butt
+      <button
+        type="button"
+        onPointerDown={startReveal}
+        onPointerUp={stopReveal}
+        onPointerLeave={stopReveal}
+        onPointerCancel={stopReveal}
+        className={`w-full h-12 rounded-full font-bold text-sm select-none touch-none transition-all ${
+          isRevealed
+            ? "bg-amber-500 text-white shadow-[0_4px_14px_rgba(245,158,11,0.35)] scale-[0.98]"
+            : "bg-muted border border-border text-foreground hover:bg-muted/80"
+        }`}
+      >
+        {isRevealed ? "Release to hide" : "Hold to Reveal"}
+      </button>
+
+      <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2.5">
+        <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+        <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
+          Never share your secret phrase with anyone, and store it securely!
+        </p>
+      </div>
+
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          onClick={handleCopy}
+          className="flex-1 h-11 rounded-full text-sm font-semibold gap-2"
+        >
+          {copied ? <Check className="w-4 h-4 text-[#B4F22E]" /> : <Copy className="w-4 h-4" />}
+          {copied ? "Copied!" : "Copy"}
+        </Button>
+        <Button
+          onClick={() => handleClose(false)}
+          className="flex-1 h-11 bg-[#B4F22E] hover:bg-[#c8ff44] text-black font-bold rounded-full text-sm shadow-[0_4px_14px_rgba(180,242,46,0.25)]"
+        >
+          Done
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function CheckRow({ checked, onToggle, label }: { checked: boolean; onToggle: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="w-full flex items-start gap-3 bg-muted/60 hover:bg-muted border border-border hover:border-border/80 rounded-2xl px-4 py-3.5 text-left transition-all group"
+    >
+      <span
+        className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${
+          checked
+            ? "bg-[#B4F22E] border-[#B4F22E]"
+            : "border-border group-hover:border-muted-foreground/50"
+        }`}
+      >
+        {checked && <Check className="w-3 h-3 text-black" strokeWidth={3} />}
+      </span>
+      <span className="text-sm text-muted-foreground leading-snug">{label}</span>
+    </button>
+  );
+}
