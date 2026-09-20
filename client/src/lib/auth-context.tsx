@@ -561,6 +561,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     activeUserIdRef.current = user?.id ?? null;
   }, [user?.id]);
 
+  // Account isolation: when the signed-in user changes (or disappears), drop
+  // every wallet cache and in-flight wallet operation that belonged to the
+  // previous user. React Query wallet rows/balances/data and any volatile
+  // secrets must not survive a switch.
+  const prevWalletUserIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const prev = prevWalletUserIdRef.current;
+    const next = user?.id ?? null;
+    prevWalletUserIdRef.current = next;
+    if (prev && prev !== next) {
+      void import("./wallet-query-cache").then(({ clearWalletQueryCaches }) => clearWalletQueryCaches());
+      void import("./non-custodial-wallet").then(({ clearWalletStateFromMemory }) => clearWalletStateFromMemory(prev));
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     isWalletUnlockedRef.current = isWalletUnlocked;
   }, [isWalletUnlocked]);
@@ -585,9 +600,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const supabase = await getSupabase();
 
+      // A previous logout may have failed to wipe IndexedDB. Finish that first
+      // and refuse to load wallet data while stale data may still be present.
+      const { completePendingWipeIfNeeded } = await import("./secure-storage-wiper");
+      if (!(await completePendingWipeIfNeeded())) {
+        devLog.error("Wallet check aborted — previous session storage could not be wiped");
+        checkedUsersRef.current.delete(userId);
+        return;
+      }
+
       // DECISION FLOW:
       // 1. Fetch authoritative encrypted blobs from Supabase (source of truth).
-      //    Cache them in IndexedDB for offline fallback. Never store decrypted keys.
+      //    Nothing is cached in the browser. Never store decrypted keys.
       // 2. If wallet is already unlocked in memory -> Wallet Ready
       // 3. If encrypted blobs exist (Supabase or IDB cache) -> Password Required
       // 4. If wallet address exists in profile but no blob -> Import Required
@@ -612,15 +636,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Keep the actual RPC failure visible in development diagnostics.
         // Only safe PostgREST error metadata is logged; wallet row contents
         // and encrypted fields are never logged.
-        devLog.error("Supabase wallet sync failed, falling back to IDB cache", {
+        devLog.error("Supabase wallet sync failed", {
           code: walletSyncError?.code ?? null,
           message: walletSyncError?.message ?? String(walletSyncError),
           details: walletSyncError?.details ?? null,
           hint: walletSyncError?.hint ?? null,
         });
-        // supabaseReachable stays false — network was unavailable
-        const { nonCustodialWalletManager } = await import("./non-custodial-wallet");
-        wallets = await nonCustodialWalletManager.getWalletsFromStorage(userId);
+        // supabaseReachable stays false — the server is the only wallet
+        // source, so there is nothing to fall back to. The gate below keeps
+        // the create dialog closed until the server can confirm the state.
       }
 
       // 2. If wallet is already unlocked in memory -> Wallet Ready
@@ -823,6 +847,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           void import("./non-custodial-wallet").then(({ clearWalletStateFromMemory }) => {
             clearWalletStateFromMemory();
           });
+          void import("./wallet-query-cache").then(({ clearWalletQueryCaches }) => clearWalletQueryCaches());
           checkedUsersRef.current.clear();
           lastTrackedTokenRef.current = null; // reset so next sign-in always runs trackDevice
           return;
@@ -1219,6 +1244,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void import("./non-custodial-wallet").then(({ clearWalletStateFromMemory }) => {
       clearWalletStateFromMemory();
     });
+    // Drop cached wallet rows / balances / data and any volatile secrets now,
+    // before the network sign-out, so nothing stale is visible or reusable.
+    const { clearWalletQueryCaches } = await import("./wallet-query-cache");
+    await clearWalletQueryCaches();
     checkedUsersRef.current.clear();
     setPendingOTPWithTimestamp(null);
     setPendingSession(null);
@@ -1241,7 +1270,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Wipe all browser storage: localStorage, sessionStorage, and IndexedDB.
     // This ensures no decrypted wallet data, cached keys, or session tokens remain.
     const { wipeSecureStorage } = await import("./secure-storage-wiper");
-    await wipeSecureStorage();
+    const wipe = await wipeSecureStorage();
+    if (!wipe.ok) {
+      // The session is already revoked, but wallet data may still be on this
+      // device. Do NOT pretend the wipe succeeded: a pending-wipe marker was
+      // left, and the next session will finish it before loading any wallet
+      // data (see checkWalletOnAuth).
+      devLog.error("Logout storage wipe incomplete; will retry before next wallet load", {
+        indexedDb: wipe.indexedDb,
+      });
+    }
+    // Clear once more: queries that resolved during the awaits above could
+    // have re-populated the cache.
+    await clearWalletQueryCaches();
   }, [setSessionPassword, setPendingOTPWithTimestamp]);
 
   const value = {
