@@ -242,7 +242,7 @@ function ProductInfoSections({ html }: { html?: string }) {
   }
 
   return (
-    <div className="border-t border-border/60">
+    <div>
       {hasDescription && (
         <InfoSection title="Description" open={descOpen} onToggle={() => setDescOpen((v) => !v)}>
           <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground overflow-x-auto [&_*]:!max-w-full [&_*]:!box-border [&_p]:!whitespace-normal [&_div]:!whitespace-normal [&_p]:!my-3">
@@ -1391,7 +1391,7 @@ export function ProductDetail() {
             {/* Description / Reviews tabs — both sections stay mounted;
                 tapping a tab just smooth-scrolls down to it, like a
                 same-page jump link, rather than swapping content out. */}
-            <div className="space-y-4">
+            <div className="space-y-0">
               <div className="flex items-center justify-between border-b border-border/60 pb-3">
                 <h2 className="text-base font-bold">{product.title}</h2>
                 {/* Tag-style pill container around the tab pair — light,
@@ -1456,7 +1456,7 @@ export function ProductDetail() {
               {/* Reviews — always rendered below the description, not
                   conditionally swapped in. The "Reviews" tab above just
                   scrolls the page down to this block. */}
-              <div ref={mobileReviewsRef} className="pt-3 border-t border-border/60 scroll-mt-4">
+              <div ref={mobileReviewsRef} className="mt-4 pt-3 border-t border-border/60 scroll-mt-4">
                 <ReviewSection productId={product.id} importedReviews={product.importedReviews} compact />
               </div>
             </div>
