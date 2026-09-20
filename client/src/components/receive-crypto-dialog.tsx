@@ -86,16 +86,12 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
   };
 
   // ── Address resolution ────────────────────────────────────────────────
-  // Server rows (shared, deduplicated query) are the source of truth. The
-  // local IndexedDB cache is only consulted when the server request failed or
-  // has no row for the selected network. The address is DERIVED from the
-  // current selection, so it can never show a previous asset's address and a
-  // slow local read can never overwrite a newer selection.
+  // Server rows (shared, deduplicated query) are the ONLY source; there is no
+  // local copy. The address is DERIVED from the current selection, so it can
+  // never show a previous asset's address.
   const userId = user?.id;
   const selectionReady = open && !!userId && !!selectedCrypto && !!selectedNetwork;
   const rowsQuery = useWalletRows(open ? userId : undefined);
-  const [retryNonce, setRetryNonce] = useState(0);
-  const [localResult, setLocalResult] = useState<{ key: string; address: string | null } | null>(null);
 
   const serverMatch = useMemo(() => {
     if (!selectionReady || !rowsQuery.data) return null;
@@ -105,53 +101,8 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
     return findWalletForNetwork(rows, selectedCrypto, selectedNetwork);
   }, [selectionReady, rowsQuery.data, selectedCrypto, selectedNetwork]);
 
-  // Addresses the server knows about. If the server answered with rows but none
-  // matches the network, a local-cache address is only trusted when it is one of
-  // these; otherwise a stale cache (another device, re-created wallet) could show
-  // an address the user no longer controls.
-  const serverAddressKey = (rowsQuery.data ?? [])
-    .map((r) => r.address.toLowerCase())
-    .filter(Boolean)
-    .sort()
-    .join(",");
-
   const serverSettled = !rowsQuery.isFetching && (rowsQuery.isSuccess || rowsQuery.isError);
-  const needsLocalFallback = selectionReady && !serverMatch && serverSettled;
-  const localKey = `${selectedCrypto}|${selectedNetwork}|${retryNonce}`;
 
-  useEffect(() => {
-    if (!needsLocalFallback || !userId) return;
-    let cancelled = false;
-    (async () => {
-      let address: string | null = null;
-      try {
-        const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
-        const local = await nonCustodialWalletManager.getWalletsFromStorage(userId);
-        // Only chainId + address leave this block; encrypted fields are never read.
-        const rows = (Array.isArray(local) ? local : [])
-          .filter((w: any) => w?.isActive !== false)
-          .map((w: any) => ({
-            chainId: String(w?.chainId ?? ""),
-            address: String(w?.address ?? ""),
-          }));
-        address = findWalletForNetwork(rows, selectedCrypto, selectedNetwork)?.address ?? null;
-        if (address && serverAddressKey) {
-          const known = new Set(serverAddressKey.split(","));
-          if (!known.has(address.trim().toLowerCase())) address = null;
-        }
-      } catch (err: any) {
-        if (import.meta.env.DEV) {
-          console.warn("[receive] local wallet cache read failed:", err?.name, err?.message);
-        }
-      }
-      if (!cancelled) setLocalResult({ key: localKey, address });
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [needsLocalFallback, userId, selectedCrypto, selectedNetwork, localKey, serverAddressKey]);
-
-  const local = localResult && localResult.key === localKey ? localResult : null;
   let addressStatus: "idle" | "loading" | "ready" | "error";
   let walletAddress = "";
   if (!selectionReady) {
@@ -159,10 +110,7 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
   } else if (serverMatch) {
     addressStatus = "ready";
     walletAddress = serverMatch.address.trim();
-  } else if (local?.address) {
-    addressStatus = "ready";
-    walletAddress = local.address.trim();
-  } else if (!serverSettled || !local) {
+  } else if (!serverSettled) {
     addressStatus = "loading";
   } else {
     addressStatus = "error";
@@ -173,7 +121,6 @@ export function ReceiveCryptoDialog({ open, onOpenChange, wallets, initialSymbol
     : "No deposit address is available for this network yet. Try again, or pick a different network.";
 
   const handleRetry = () => {
-    setRetryNonce((n) => n + 1);
     void rowsQuery.refetch();
   };
 
