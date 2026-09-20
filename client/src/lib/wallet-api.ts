@@ -1,4 +1,4 @@
-import { nonCustodialWalletManager } from "./non-custodial-wallet";
+import { fetchWalletRows, isActiveRow } from "./wallet-rows";
 import { getSupabase, supabase } from "./supabase";
 import { getWalletMonitorTargets } from "./wallet-chain-monitor";
 import { monitorWithdrawal } from "./withdrawal-monitor";
@@ -151,16 +151,18 @@ async function readAddressBalances(
 /**
  * Wallets for a user.
  *
- * Addresses come from the local non-custodial wallet store, but BALANCES ARE
- * NEVER read from local storage: that value is user-writable and cannot be
- * trusted for anything financial. Every balance below is read live from the
+ * Addresses come from the server-backed public wallet rows (get_my_wallet).
+ * The local browser cache is NOT consulted, not even as a fallback: this
+ * function feeds balance/spend logic, and cached addresses must never decide
+ * what is monitored or spendable. BALANCES ARE NEVER read from local storage
+ * either: that value is user-writable and cannot be trusted for anything
+ * financial. Every balance below is read live from the
  * chain, split into confirmed / unconfirmed / locked, and any chain that could
  * not be read is returned as is_stale with available_balance 0.
  */
 export async function getUserWallets(userId: string): Promise<Wallet[]> {
   try {
-    const localWallets = await (nonCustodialWalletManager as any).getWalletsFromStorage(userId);
-    if (import.meta.env.DEV) console.log(`[getUserWallets] Found ${localWallets.length} local wallets`);
+    const serverRows = (await fetchWalletRows(userId)).filter(isActiveRow);
 
     const client = await getSupabase();
     const now = new Date().toISOString();
@@ -174,8 +176,8 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
     };
 
     return await Promise.all(
-      localWallets.map(async (w: any): Promise<Wallet> => {
-        const symbol = mapChainIdToSymbol(w.chainId);
+      serverRows.map(async (w): Promise<Wallet> => {
+        const symbol = mapChainIdToSymbol(w.chain_id);
         const address = typeof w.address === 'string' ? w.address.trim() : '';
         const chain = toMonitorChainKey(symbol);
 
@@ -189,8 +191,8 @@ export async function getUserWallets(userId: string): Promise<Wallet[]> {
           available_balance: 0,
           is_stale: true,
           deposit_address: address || null,
-          created_at: w.createdAt,
-          updated_at: w.createdAt,
+          created_at: now,
+          updated_at: now,
           isNonCustodial: true,
         };
 
