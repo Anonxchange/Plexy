@@ -19,45 +19,21 @@ import securityIllustration from "@/assets/svg-image-1 20.svg";
 
 type Step = "warning" | "password" | "phrase";
 
+import { setVolatileSecret, getVolatileSecret, wipeVolatileSecret } from "@/lib/volatile-secret-store";
+
 interface RevealPhraseModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId: string;
 }
 
-/**
- * Volatile, module-scoped mnemonic holder.
- *
- * The decrypted mnemonic is intentionally kept OUTSIDE the React tree:
- * not in useState, not in useRef, not in props, not in context.
- * React DevTools enumerates state/props/refs/context for every component;
- * anything stored there is one click away in any browser. By holding the
- * value in this Map keyed by a useId() instance ID — and reading it at
- * render time without ever passing it down — the React component tree
- * sees only a non-secret string ID.
- *
- * The plaintext lives here only between the password-decrypt call and
- * the next modal close (or unmount, or tab-hide), and is wiped on every
- * exit path.
- */
-const volatileMnemonics = new Map<string, string>();
-
-function setVolatileMnemonic(instanceId: string, value: string) {
-  volatileMnemonics.set(instanceId, value);
-}
-
-function getVolatileMnemonic(instanceId: string): string {
-  return volatileMnemonics.get(instanceId) ?? "";
-}
-
-function wipeVolatileMnemonic(instanceId: string) {
-  // Best-effort overwrite before delete. JS strings are immutable so we
-  // can't zero the bytes, but dropping the only reference lets GC reclaim
-  // it on the next cycle. The Map.delete() makes it unreachable from the
-  // app immediately.
-  volatileMnemonics.set(instanceId, "");
-  volatileMnemonics.delete(instanceId);
-}
+// The decrypted phrase lives in the shared volatile store (module scope, TTL,
+// wiped on close/unmount/logout/account switch), never in React state, refs,
+// props, context, or a React Query cache. See lib/volatile-secret-store.ts.
+const setVolatileMnemonic = (id: string, value: string, onExpire?: () => void) =>
+  setVolatileSecret(id, value, { ttlMs: 2 * 60_000, onExpire });
+const getVolatileMnemonic = getVolatileSecret;
+const wipeVolatileMnemonic = wipeVolatileSecret;
 
 export function RevealPhraseModal(props: RevealPhraseModalProps) {
   const isMobile = useIsMobile();
@@ -141,23 +117,21 @@ function useRevealState(onOpenChange: (v: boolean) => void) {
     setIsLoading(true);
     try {
       const { nonCustodialWalletManager } = await import("@/lib/non-custodial-wallet");
-      let wallets = await nonCustodialWalletManager.getNonCustodialWallets(userId);
 
-      // New device / cleared cache: the encrypted vault only exists on the
-      // server. Load it (this also re-caches it) instead of failing.
-      if (!wallets.some((w) => w.encryptedMnemonic)) {
-        try {
-          const { getSupabase } = await import("@/lib/supabase");
-          const supabase = await getSupabase();
-          wallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
-        } catch {
-          toast({
-            title: "Couldn't load your wallet",
-            description: "Check your connection and try again.",
-            variant: "destructive",
-          });
-          return; // not a password failure: do not count toward lockout
-        }
+      // Server-authoritative: the encrypted vault is resolved from the
+      // account's server rows. There is no local copy to fall back to.
+      let wallets: Awaited<ReturnType<typeof nonCustodialWalletManager.loadWalletsFromSupabase>>;
+      try {
+        const { getSupabase } = await import("@/lib/supabase");
+        const supabase = await getSupabase();
+        wallets = await nonCustodialWalletManager.loadWalletsFromSupabase(supabase, userId);
+      } catch {
+        toast({
+          title: "Couldn't load your wallet",
+          description: "Check your connection and try again.",
+          variant: "destructive",
+        });
+        return; // not a password failure: do not count toward lockout
       }
 
       const target = wallets.find((w) => w.encryptedMnemonic) ?? wallets[0];
@@ -172,13 +146,18 @@ function useRevealState(onOpenChange: (v: boolean) => void) {
       const phrase = await nonCustodialWalletManager.getMnemonicFromWallet(target, password, userId);
       if (!phrase) throw new Error("Failed to decrypt recovery phrase. Check your password.");
       rateLimit.reset();
-      setVolatileMnemonic(instanceId, phrase);
+      setVolatileMnemonic(instanceId, phrase, () => {
+        // TTL expired: leave the phrase screen so nothing blank/stale shows.
+        setStep("warning");
+        setRevealNonce((n) => n + 1);
+      });
       setPassword("");
       setStep("phrase");
       setRevealNonce((n) => n + 1);
-    } catch (error: any) {
+    } catch {
       rateLimit.recordFailure();
-      toast({ title: "Incorrect password", description: error.message || "Could not decrypt your recovery phrase.", variant: "destructive" });
+      // Fixed message only: never surface error objects from the crypto path.
+      toast({ title: "Incorrect password", description: "Could not decrypt your recovery phrase. Check your password and try again.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -541,65 +520,4 @@ function PhraseReveal({
       </div>
 
       {/* Hold-to-reveal button */}
-      <button
-        type="button"
-        onPointerDown={startReveal}
-        onPointerUp={stopReveal}
-        onPointerLeave={stopReveal}
-        onPointerCancel={stopReveal}
-        className={`w-full h-12 rounded-full font-bold text-sm select-none touch-none transition-all ${
-          isRevealed
-            ? "bg-amber-500 text-white shadow-[0_4px_14px_rgba(245,158,11,0.35)] scale-[0.98]"
-            : "bg-muted border border-border text-foreground hover:bg-muted/80"
-        }`}
-      >
-        {isRevealed ? "Release to hide" : "Hold to Reveal"}
-      </button>
-
-      <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2.5">
-        <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-        <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
-          Never share your secret phrase with anyone, and store it securely!
-        </p>
-      </div>
-
-      <div className="flex gap-2">
-        <Button
-          variant="outline"
-          onClick={handleCopy}
-          className="flex-1 h-11 rounded-full text-sm font-semibold gap-2"
-        >
-          {copied ? <Check className="w-4 h-4 text-[#B4F22E]" /> : <Copy className="w-4 h-4" />}
-          {copied ? "Copied!" : "Copy"}
-        </Button>
-        <Button
-          onClick={() => handleClose(false)}
-          className="flex-1 h-11 bg-[#B4F22E] hover:bg-[#c8ff44] text-black font-bold rounded-full text-sm shadow-[0_4px_14px_rgba(180,242,46,0.25)]"
-        >
-          Done
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function CheckRow({ checked, onToggle, label }: { checked: boolean; onToggle: () => void; label: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className="w-full flex items-start gap-3 bg-muted/60 hover:bg-muted border border-border hover:border-border/80 rounded-2xl px-4 py-3.5 text-left transition-all group"
-    >
-      <span
-        className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${
-          checked
-            ? "bg-[#B4F22E] border-[#B4F22E]"
-            : "border-border group-hover:border-muted-foreground/50"
-        }`}
-      >
-        {checked && <Check className="w-3 h-3 text-black" strokeWidth={3} />}
-      </span>
-      <span className="text-sm text-muted-foreground leading-snug">{label}</span>
-    </button>
-  );
-}
+      <butt
