@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, type ReactNode } from "react";
 import { useParams, useLocation } from "wouter";
 import { useHead } from "@unhead/react";
 import { useSchema, createProductSchema } from "@/hooks/use-schema";
@@ -76,6 +76,192 @@ function stripImgTags(html: string): string {
     .replace(/\b(?:min-)?(?:width|height)\s*:\s*\d+(?:px|pt)\s*;?/gi, '')
     // Strip white-space:nowrap, which keeps long text/table rows from wrapping
     .replace(/white-space\s*:\s*nowrap\s*;?/gi, '');
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Description / Specifications sections (Shop-app style)
+ *
+ * Scraped listings (CJ / AliExpress) ship specs either as an HTML <table> or
+ * as plain "Label: Value" lines mixed into the description. splitSpecs()
+ * pulls those out so they can render as their own collapsible
+ * "Specifications" section, leaving the rest as the "Description".
+ * ──────────────────────────────────────────────────────────────────────── */
+interface SpecRow {
+  label: string;
+  value: string;
+}
+
+function htmlToText(html: string): string {
+  if (typeof DOMParser === "undefined") return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  return (doc.body.textContent || "").replace(/\s+/g, " ").trim();
+}
+
+const SPEC_LINE_RE = /^([^:：]{2,40}?)\s*[:：]\s*(.+)$/;
+const SPEC_HEADING_RE = /^(product\s+)?specifications?\s*:?$/i;
+
+function isSpecLine(text: string): SpecRow | null {
+  const m = SPEC_LINE_RE.exec(text);
+  if (!m) return null;
+  const label = m[1].trim();
+  const value = m[2].trim();
+  if (!label || !value) return null;
+  if (/https?|www\./i.test(label)) return null; // "Note: see http://..." etc.
+  if (label.split(/\s+/).length > 6) return null; // a sentence, not a label
+  if (value.length > 300) return null;
+  return { label, value };
+}
+
+function splitSpecs(html: string): { descriptionHtml: string; specs: SpecRow[] } {
+  if (!html || typeof DOMParser === "undefined") return { descriptionHtml: html || "", specs: [] };
+
+  const specs: SpecRow[] = [];
+
+  // 1) Real tables: every row with a label cell + value cell becomes a spec.
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  doc.body.querySelectorAll("table").forEach((table) => {
+    const rows: SpecRow[] = [];
+    table.querySelectorAll("tr").forEach((tr) => {
+      const cells = Array.from(tr.children).filter((c) => /^(td|th)$/i.test(c.tagName));
+      if (cells.length < 2) return;
+      const label = (cells[0].textContent || "").replace(/\s+/g, " ").trim().replace(/[:：]\s*$/, "");
+      const value = cells.slice(1).map((c) => (c.textContent || "").replace(/\s+/g, " ").trim()).filter(Boolean).join(" ");
+      if (label && value) rows.push({ label, value });
+    });
+    if (rows.length >= 1) {
+      specs.push(...rows);
+      table.remove();
+    }
+  });
+  let working = doc.body.innerHTML;
+
+  // 2) "Label: Value" lines. Split into segments at block/line boundaries,
+  //    then treat any run of 3+ consecutive matching segments as a spec list.
+  const tokens = working.split(/(<br\s*\/?>|<\/?(?:p|li|div|h[1-6]|ul|ol|tr|td|th)\b[^>]*>)/i);
+  const segInfo: { idx: number; text: string; spec: SpecRow | null }[] = [];
+  for (let i = 0; i < tokens.length; i += 2) {
+    const text = htmlToText(tokens[i]);
+    segInfo.push({ idx: i, text, spec: text ? isSpecLine(text) : null });
+  }
+
+  const removeIdx = new Set<number>();
+  let run: typeof segInfo = [];
+  const flush = () => {
+    if (run.length >= 3) {
+      run.forEach((r) => {
+        specs.push(r.spec as SpecRow);
+        removeIdx.add(r.idx);
+      });
+    }
+    run = [];
+  };
+  for (const seg of segInfo) {
+    if (!seg.text) continue; // blank segments don't break a run
+    if (seg.spec) run.push(seg);
+    else flush();
+  }
+  flush();
+
+  // Drop a leftover "SPECIFICATIONS" heading once we've extracted specs.
+  if (specs.length > 0) {
+    segInfo.forEach((seg) => {
+      if (SPEC_HEADING_RE.test(seg.text)) removeIdx.add(seg.idx);
+    });
+  }
+
+  removeIdx.forEach((i) => { tokens[i] = ""; });
+  working = tokens.join("");
+
+  // Tidy up the empty wrappers / stray breaks the removals leave behind.
+  for (let pass = 0; pass < 3; pass += 1) {
+    working = working.replace(/<(p|div|li|span|strong|b|em|u|ul|ol|h[1-6])\b[^>]*>(?:\s|&nbsp;|<br\s*\/?>)*<\/\1>/gi, "");
+  }
+  working = working.replace(/(<br\s*\/?>\s*){2,}/gi, "<br />").trim();
+
+  return { descriptionHtml: working, specs };
+}
+
+/** Fallback for tables we could not read as label/value rows. */
+const descriptionParseOptions = {
+  replace: (domNode: any) => {
+    if (domNode.type === "tag" && domNode.name === "table") {
+      return (
+        <div className="not-prose my-3 overflow-x-auto">
+          <table className="w-full table-fixed border-collapse [&_td]:whitespace-normal [&_td]:break-words [&_td]:py-2 [&_td]:pr-3 [&_td]:align-top [&_tr]:border-b [&_tr]:border-border/60">
+            {domToReact(domNode.children as any, descriptionParseOptions)}
+          </table>
+        </div>
+      );
+    }
+  },
+};
+
+function InfoSection({
+  title,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="border-b border-border/60">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between py-4 text-left"
+      >
+        <span className="text-lg font-bold text-foreground">{title}</span>
+        <ChevronRight
+          className={`h-5 w-5 text-foreground transition-transform ${open ? "-rotate-90" : "rotate-90"}`}
+        />
+      </button>
+      {open && <div className="pb-4">{children}</div>}
+    </div>
+  );
+}
+
+function ProductInfoSections({ html }: { html?: string }) {
+  const { descriptionHtml, specs } = useMemo(() => splitSpecs(stripImgTags(html || "")), [html]);
+  const hasDescription = useMemo(() => htmlToText(descriptionHtml).length > 0, [descriptionHtml]);
+  const hasSpecs = specs.length > 0;
+
+  // Like Shop: Specifications open, Description collapsed — but if there are
+  // no specs, the description opens by default so nothing important is hidden.
+  const [descOpen, setDescOpen] = useState(!hasSpecs);
+  const [specsOpen, setSpecsOpen] = useState(true);
+
+  if (!hasDescription && !hasSpecs) {
+    return <p className="text-sm text-muted-foreground">No description provided for this item.</p>;
+  }
+
+  return (
+    <div className="border-t border-border/60">
+      {hasDescription && (
+        <InfoSection title="Description" open={descOpen} onToggle={() => setDescOpen((v) => !v)}>
+          <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground overflow-x-auto [&_*]:!max-w-full [&_*]:!box-border [&_p]:!whitespace-normal [&_div]:!whitespace-normal [&_p]:!my-3">
+            {parse(descriptionHtml, descriptionParseOptions)}
+          </div>
+        </InfoSection>
+      )}
+      {hasSpecs && (
+        <InfoSection title="Specifications" open={specsOpen} onToggle={() => setSpecsOpen((v) => !v)}>
+          <dl>
+            {specs.map((row, i) => (
+              <div key={`${row.label}-${i}`} className="py-3 border-b border-border/60 last:border-b-0">
+                <dt className="text-sm text-muted-foreground">{row.label}</dt>
+                <dd className="mt-0.5 text-base text-foreground break-words">{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </InfoSection>
+      )}
+    </div>
+  );
 }
 
 function shuffleArray<T>(items: T[]): T[] {
@@ -199,7 +385,6 @@ export function ProductDetail() {
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [relatedProducts, setRelatedProducts] = useState<Listing[]>([]);
   const [quantity, setQuantity] = useState(1);
-  const [specsExpanded, setSpecsExpanded] = useState(true);
   // Mobile-only Description/Reviews tab switch, shown under the
   // "You may also like" carousel (see the !isDesktopLayout block near the
   // bottom of the JSX). Desktop keeps its own separate, always-visible
@@ -727,37 +912,6 @@ export function ProductDetail() {
     }
   };
 
-  // Pulls any <table> out of the parsed description HTML and wraps it with a
-  // collapsible "Specifications" header, matching the AliExpress-style layout.
-  // Everything else in the description (paragraphs, headings, etc.) renders as-is.
-  const descriptionParseOptions = {
-    replace: (domNode: any) => {
-      if (domNode.type === "tag" && domNode.name === "table") {
-        return (
-          <div className="not-prose my-4">
-            <button
-              type="button"
-              onClick={() => setSpecsExpanded((v) => !v)}
-              className="w-full flex items-center justify-between border-b border-border/60 pb-3 mb-3"
-            >
-              <span className="text-base font-bold text-foreground">Specifications</span>
-              <ChevronRight
-                className={`h-4 w-4 text-muted-foreground transition-transform ${
-                  specsExpanded ? "rotate-90" : ""
-                }`}
-              />
-            </button>
-            {specsExpanded && (
-              <table className="w-full table-fixed bg-muted/40 rounded-xl overflow-hidden border-separate border-spacing-0 [&_tr]:border-b [&_tr]:border-border/50 [&_tr:last-child]:border-b-0 [&_td]:whitespace-normal [&_td]:break-words [&_td]:py-2.5 [&_td]:px-3 [&_td]:align-top [&_td:first-child]:text-muted-foreground [&_td:first-child]:font-normal [&_td:first-child]:w-2/5 [&_td:last-child]:text-foreground [&_td:last-child]:font-medium">
-                {domToReact(domNode.children as any, descriptionParseOptions)}
-              </table>
-            )}
-          </div>
-        );
-      }
-    },
-  };
-
   return (
     <div>
       <div className="container mx-auto pt-0 sm:pt-3 pb-8 md:py-8 max-w-6xl px-4">
@@ -868,11 +1022,7 @@ export function ProductDetail() {
                       report
                     </button>
                   </div>
-                  <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground overflow-x-auto [&_*]:!max-w-full [&_*]:!box-border [&_p]:!whitespace-normal [&_div]:!whitespace-normal [&_p]:!my-3">
-                    {product.description
-                      ? parse(stripImgTags(product.description), descriptionParseOptions)
-                      : "No description provided for this item."}
-                  </div>
+                  <ProductInfoSections key={product.id} html={product.description} />
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="flex items-center gap-2">
@@ -1276,11 +1426,7 @@ export function ProductDetail() {
               </div>
 
               <div ref={mobileDescRef} className="space-y-3 scroll-mt-4">
-                <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground overflow-x-auto [&_*]:!max-w-full [&_*]:!box-border [&_p]:!whitespace-normal [&_div]:!whitespace-normal [&_p]:!my-3">
-                  {product.description
-                    ? parse(stripImgTags(product.description), descriptionParseOptions)
-                    : "No description provided for this item."}
-                </div>
+                <ProductInfoSections key={product.id} html={product.description} />
 
                 {/* Product image showcase — phones only. Only one copy of
                     this ever mounts (see the isDesktopLayout gate above it,
