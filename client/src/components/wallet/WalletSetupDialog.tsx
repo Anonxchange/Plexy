@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useId } from "react";
+import { setVolatileSecret, getVolatileSecret, wipeVolatileSecret } from "@/lib/volatile-secret-store";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePasswordRateLimit } from "@/hooks/use-password-rate-limit";
 import {
@@ -69,7 +70,24 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expec
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [walletStateVerified, setWalletStateVerified] = useState(false);
-  const [mnemonic, setMnemonic] = useState("");
+  // The recovery phrase is NOT React state. It lives in the volatile store
+  // (module scope, TTL, wiped on confirm/unmount/logout); React only holds a
+  // non-secret id and a counter that forces a re-render when it changes.
+  const phraseId = useId();
+  const [, setPhraseNonce] = useState(0);
+  const mnemonic = getVolatileSecret(phraseId);
+  const setMnemonic = (value: string) => {
+    if (value) {
+      setVolatileSecret(phraseId, value, {
+        ttlMs: 10 * 60_000,
+        onExpire: () => setPhraseNonce((n) => n + 1),
+      });
+    } else {
+      wipeVolatileSecret(phraseId);
+    }
+    setPhraseNonce((n) => n + 1);
+  };
+  useEffect(() => () => wipeVolatileSecret(phraseId), [phraseId]);
   const [mnemonicRevealed, setMnemonicRevealed] = useState(false);
   const [backupConfirmedCheckbox, setBackupConfirmedCheckbox] = useState(false);
   const [backupUnavailable, setBackupUnavailable] = useState(false);
@@ -283,7 +301,8 @@ export function WalletSetupDialog({ open, onOpenChange, userId, onSuccess, expec
       setConfirmPassword("");
       setStep("backup");
     } catch (error: any) {
-      console.error("Recovery phrase retrieval failed after wallet creation:", error?.message ?? error, error);
+      // Never log the error object: it can originate in the crypto path.
+      console.error("Recovery phrase retrieval failed after wallet creation", { name: error?.name ?? null });
       setPassword("");
       setConfirmPassword("");
       setBackupUnavailable(true);
