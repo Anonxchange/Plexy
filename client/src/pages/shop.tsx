@@ -828,7 +828,16 @@ export function Shop() {
               <SelectItem value="price-high">Price: High to Low</SelectItem>
             </SelectContent>
           </Select>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => {
+              if (value === "marketplace") {
+                window.location.href = "https://www.pexly.app/gift-cards";
+                return;
+              }
+              setActiveTab(value);
+            }}
+          >
             <TabsList>
               <TabsTrigger value="shopify" className="gap-1.5">
                 <Store className="h-3.5 w-3.5" />
@@ -836,7 +845,7 @@ export function Shop() {
               </TabsTrigger>
               <TabsTrigger value="marketplace" className="gap-1.5">
                 <Package className="h-3.5 w-3.5" />
-                Marketplace
+                Gift Marketplace
               </TabsTrigger>
             </TabsList>
           </Tabs>
