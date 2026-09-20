@@ -131,13 +131,15 @@ function splitSpecs(html: string): { descriptionHtml: string; specs: SpecRow[] }
     if (rows.length >= 1) {
       specs.push(...rows);
       table.remove();
+    } else if (!(table.textContent || "").trim()) {
+      table.remove(); // empty table — would otherwise render as a blank box
     }
   });
   let working = doc.body.innerHTML;
 
   // 2) "Label: Value" lines. Split into segments at block/line boundaries,
   //    then treat any run of 3+ consecutive matching segments as a spec list.
-  const tokens = working.split(/(<br\s*\/?>|<\/?(?:p|li|div|h[1-6]|ul|ol|tr|td|th)\b[^>]*>)/i);
+  const tokens = working.split(/(<br\s*\/?>|<\/?(?:p|li|div|h[1-6]|ul|ol|tr|td|th)\b[^>]*>|\r?\n)/i);
   const segInfo: { idx: number; text: string; spec: SpecRow | null }[] = [];
   for (let i = 0; i < tokens.length; i += 2) {
     const text = htmlToText(tokens[i]);
