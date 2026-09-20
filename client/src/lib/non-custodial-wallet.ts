@@ -1,4 +1,3 @@
-import { getValue, setValue } from "./ids";
 import { devLog } from "./dev-logger";
 import {
   callSigningWorker,
@@ -37,7 +36,6 @@ export interface NonCustodialWallet {
   balance?: number;
 }
 
-const STORAGE_KEY_PREFIX = "pexly_non_custodial_wallets";
 
 /**
  * Normalises a vault field that may arrive from the DB as a JSON string.
@@ -80,18 +78,23 @@ export type WalletRpcRow = {
   created_at: string;
 };
 
-let walletInitializationPromise: Promise<NonCustodialWallet[]> | null = null;
+// In-flight wallet operations, keyed by userId so one user's promise can never
+// be handed to another user, and load/create are serialized PER USER only.
+const walletOps = new Map<string, Promise<NonCustodialWallet[]>>();
+// Bumped on sign-out / account switch. Operations started before a bump must
+// not write to the cache or return results afterwards.
+let walletEpoch = 0;
 
-async function cacheWalletsBestEffort(wallets: NonCustodialWallet[], userId: string): Promise<void> {
-  try {
-    await nonCustodialWalletManager.saveWalletsToStorage(wallets, userId);
-  } catch (error) {
-    // Supabase is authoritative. A browser cache failure must never turn a
-    // successful server read/write into "no wallet was saved".
-    devLog.warn("Wallet cache unavailable; continuing with server wallet state", {
-      message: error instanceof Error ? error.message : String(error),
-    });
-  }
+function assertSameEpoch(epoch: number): void {
+  if (epoch !== walletEpoch) throw new Error("WALLET_SESSION_CHANGED");
+}
+
+async function resolveUserId(supabase: SupabaseClient, expectedUserId?: string): Promise<string> {
+  if (expectedUserId) return expectedUserId;
+  const { data, error } = await supabase.auth.getUser();
+  if (error) throw error;
+  if (!data.user) throw new Error("AUTH_REQUIRED");
+  return data.user.id;
 }
 
 function asBoolean(value: string | boolean | null | undefined): boolean {
@@ -140,65 +143,64 @@ export async function getMyWalletRows(
 
 /**
  * Loads the authenticated user's canonical wallet rows and caches the
- * encrypted blobs in the existing IndexedDB-backed wallet store.
+ * encrypted blobs. Nothing is written to browser storage.
  *
- * Calls are serialized so auth events, route mounts, and wallet setup cannot
- * initialize the same wallet concurrently.
+ * Deduplicated and serialized PER USER: concurrent callers for the same user
+ * share one request; different users never share state.
  */
 export async function loadMyWallets(
   supabase: SupabaseClient,
   expectedUserId?: string,
 ): Promise<NonCustodialWallet[]> {
-  if (walletInitializationPromise) return walletInitializationPromise;
+  const userId = await resolveUserId(supabase, expectedUserId);
+  const inflight = walletOps.get(userId);
+  if (inflight) return inflight;
 
+  const epoch = walletEpoch;
   const operation = (async () => {
-    const rows = await getMyWalletRows(supabase, expectedUserId);
+    const rows = await getMyWalletRows(supabase, userId);
+    assertSameEpoch(epoch);
     const wallets = rows.map(mapWalletRpcRow);
-    const userId = expectedUserId ?? (await supabase.auth.getUser()).data.user?.id;
-    if (!userId) throw new Error("AUTH_REQUIRED");
-    if (wallets.length > 0) {
-      await cacheWalletsBestEffort(wallets, userId);
-    }
+    assertSameEpoch(epoch);
     return wallets;
   })();
 
-  walletInitializationPromise = operation;
+  walletOps.set(userId, operation);
   try {
     return await operation;
   } finally {
-    if (walletInitializationPromise === operation) {
-      walletInitializationPromise = null;
-    }
+    if (walletOps.get(userId) === operation) walletOps.delete(userId);
   }
 }
 
 /**
  * Persists a newly generated wallet set through the RPC, then reloads the
  * database response as the only canonical frontend state.
+ *
+ * Waits for any in-flight operation FOR THIS USER, then runs its own create.
+ * The existing-rows check keeps it idempotent. Callers must pass freshly
+ * generated wallets, never wallets rebuilt from the local browser cache.
  */
 export async function createMyWallets(
   supabase: SupabaseClient,
   wallets: NonCustodialWallet[],
   expectedUserId: string,
 ): Promise<NonCustodialWallet[]> {
-  // Wait for any in-flight load/create to finish, then run OUR OWN create.
-  // Returning the in-flight promise instead meant a concurrent auth-time load
-  // (which sees zero rows) was handed back as if creation had happened, and
-  // the wallet was never created. The existing-rows check below keeps this
-  // idempotent when two creates queue up.
-  while (walletInitializationPromise) {
+  let inflight: Promise<NonCustodialWallet[]> | undefined;
+  while ((inflight = walletOps.get(expectedUserId))) {
     try {
-      await walletInitializationPromise;
+      await inflight;
     } catch {
       // The other operation's failure is not ours; proceed with our create.
     }
   }
 
+  const epoch = walletEpoch;
   const operation = (async () => {
     const existing = await getMyWalletRows(supabase, expectedUserId);
+    assertSameEpoch(epoch);
     if (existing.length > 0) {
       const canonical = existing.map(mapWalletRpcRow);
-      await cacheWalletsBestEffort(canonical, expectedUserId);
       return canonical;
     }
 
@@ -224,34 +226,33 @@ export async function createMyWallets(
     if (createError) throw createError;
 
     const savedRows = await getMyWalletRows(supabase, expectedUserId);
+    assertSameEpoch(epoch);
     if (savedRows.length === 0) throw new Error("WALLET_CREATE_EMPTY");
 
     const canonical = savedRows.map(mapWalletRpcRow);
-    await cacheWalletsBestEffort(canonical, expectedUserId);
     return canonical;
   })();
 
-  walletInitializationPromise = operation;
+  walletOps.set(expectedUserId, operation);
   try {
     return await operation;
   } finally {
-    if (walletInitializationPromise === operation) {
-      walletInitializationPromise = null;
-    }
+    if (walletOps.get(expectedUserId) === operation) walletOps.delete(expectedUserId);
   }
 }
 
-/** Clears transient in-memory coordination state on sign-out. */
-export function clearWalletStateFromMemory(): void {
-  walletInitializationPromise = null;
+/**
+ * Clears in-memory coordination state on sign-out / account switch and
+ * invalidates every operation still in flight (they will not cache or return).
+ * Pass a userId to drop only that user's entry; omit to drop all.
+ */
+export function clearWalletStateFromMemory(userId?: string): void {
+  walletEpoch += 1;
+  if (userId) walletOps.delete(userId);
+  else walletOps.clear();
 }
 
 class NonCustodialWalletManager {
-  private getStorageKey(userId?: string): string {
-    if (!userId) throw new Error("userId is required");
-    return `${STORAGE_KEY_PREFIX}_${userId}`;
-  }
-
   /**
    * Generates a full wallet set (EVM + Bitcoin + Solana + Tron + XRP) with a
    * single call into the signing worker.
@@ -283,7 +284,12 @@ class NonCustodialWalletManager {
   ): Promise<{ wallets: NonCustodialWallet[]; mnemonicVault: EncryptedVault }> {
     if (!userId) throw new Error("userId is required");
     if (!userPassword) throw new Error("Password is required");
-    const persist = options?.persist ?? true;
+    // Local-cache-to-server registration is removed. Generation only returns
+    // wallet objects; the caller registers them through createMyWallets, which
+    // is server-authoritative (checks existing rows, reloads canonical rows).
+    if (options?.persist) {
+      throw new Error("PERSIST_REMOVED: use createMyWallets to register generated wallets");
+    }
 
     const origin = typeof window !== "undefined" ? window.location.origin : undefined;
 
@@ -321,18 +327,6 @@ class NonCustodialWalletManager {
       baseWallet("XRP", "xrp", addresses.XRP, encryptedVaults.XRP),
     ];
 
-    // persist:false lets a caller that owns its own atomic write path (e.g.
-    // WalletSetupDialog's RPC-canonical createMyWallets, which checks for an
-    // existing wallet server-side and reloads canonical rows afterward)
-    // build these wallet objects without this method ALSO writing them
-    // independently. Skipping this section is what avoids two uncoordinated
-    // write paths racing each other into Supabase.
-    if (persist) {
-      const existing = await this.getWalletsFromStorage(userId);
-      await this.saveWalletsToStorage([...existing, ...wallets], userId);
-      if (supabase) await this.saveWalletsToSupabase(supabase, wallets, userId);
-    }
-
     return { wallets, mnemonicVault: encryptedVaults.mnemonic };
   }
 
@@ -352,7 +346,9 @@ class NonCustodialWalletManager {
     assetType?: string,
     options?: { persist?: boolean },
   ): Promise<NonCustodialWallet> {
-    const persist = options?.persist ?? true;
+    if (options?.persist) {
+      throw new Error("PERSIST_REMOVED: use createMyWallets to register wallet rows");
+    }
     const variant: NonCustodialWallet = {
       id: crypto.randomUUID(),
       chainId,
@@ -365,15 +361,6 @@ class NonCustodialWalletManager {
       isBackedUp: false,
       ...(assetType ? { assetType } : {}),
     };
-
-    // See generateNonCustodialWallets: persist:false lets a caller batch this
-    // variant into its own atomic write (e.g. createMyWallets) instead of
-    // this method writing it separately.
-    if (persist) {
-      const wallets = await this.getWalletsFromStorage(userId);
-      await this.saveWalletsToStorage([...wallets, variant], userId);
-      if (supabase) await this.saveWalletToSupabase(supabase, variant, userId);
-    }
 
     return variant;
   }
@@ -388,37 +375,33 @@ class NonCustodialWalletManager {
     return getMnemonicForBackup(mnemonicVault, password);
   }
 
+  /**
+   * The server (get_my_wallet) is the ONLY wallet source. Nothing is cached in
+   * the browser: vaults are fetched when needed and live in memory only for
+   * the operation that uses them. Identity failures (signed out, wrong user,
+   * session changed) surface as errors, never as an empty/other-user result.
+   */
+  private async fetchWallets(userId: string): Promise<NonCustodialWallet[]> {
+    const { getSupabase } = await import("./supabase");
+    const supabase = await getSupabase();
+    return loadMyWallets(supabase as SupabaseClient, userId);
+  }
+
+  /**
+   * @deprecated There is no local wallet storage any more. Kept so existing
+   * callers keep compiling; it now returns the server's wallets.
+   */
   public async getWalletsFromStorage(userId: string): Promise<NonCustodialWallet[]> {
-    const data = await getValue('wallets', this.getStorageKey(userId));
-    if (data) return data;
-    
-    const legacyData = localStorage.getItem(this.getStorageKey(userId));
-    if (legacyData) {
-      try {
-        const wallets = JSON.parse(legacyData);
-        try {
-          await this.saveWalletsToStorage(wallets, userId);
-          // Only drop the legacy copy once the new cache is verified.
-          localStorage.removeItem(this.getStorageKey(userId));
-        } catch (cacheError) {
-          devLog.error("Legacy wallet migration could not be cached; keeping legacy copy", {
-            message: cacheError instanceof Error ? cacheError.message : String(cacheError),
-          });
-        }
-        return wallets;
-      } catch (e) {
-        devLog.error("Failed to migrate legacy wallets:", e);
-      }
-    }
-    return [];
+    return this.fetchWallets(userId);
   }
 
   public async getNonCustodialWallets(userId: string): Promise<NonCustodialWallet[]> {
-    return this.getWalletsFromStorage(userId);
+    return this.fetchWallets(userId);
   }
 
   public async getWalletMnemonic(walletId: string, password: string, userId: string): Promise<string | null> {
-    const wallets = await this.getWalletsFromStorage(userId);
+    // Server-first: the wallet id must exist on the account's server rows.
+    const wallets = await this.fetchWallets(userId);
     const wallet = wallets.find(w => w.id === walletId);
     if (!wallet) return null;
     return this.getMnemonicFromWallet(wallet, password, userId);
@@ -473,26 +456,6 @@ class NonCustodialWalletManager {
     await this.saveWalletsToSupabase(supabase, [wallet], userId);
   }
 
-  /**
-   * Writes the wallet cache and reads it straight back. Throws
-   * WALLET_CACHE_VERIFY_FAILED if the write did not stick, so a silently
-   * failing IndexedDB can no longer look like a successful cache.
-   * Best-effort callers (cacheWalletsBestEffort) catch and log it.
-   */
-  public async saveWalletsToStorage(wallets: NonCustodialWallet[], userId: string): Promise<void> {
-    const key = this.getStorageKey(userId);
-    await setValue('wallets', key, wallets);
-
-    const stored = await getValue('wallets', key);
-    const verified =
-      Array.isArray(stored) &&
-      stored.length === wallets.length &&
-      stored.every((w: any, i: number) => w?.id === wallets[i]?.id);
-    if (!verified) {
-      throw new Error("WALLET_CACHE_VERIFY_FAILED");
-    }
-  }
-
   async decryptPrivateKey(
     vault: string | EncryptedVault,
     password: string,
@@ -521,7 +484,7 @@ class NonCustodialWalletManager {
    * wallets to decide whether to prompt migration.
    */
   async hasLegacyVaults(userId: string): Promise<boolean> {
-    const wallets = await this.getWalletsFromStorage(userId);
+    const wallets = await this.fetchWallets(userId);
     return wallets.some(
       (w) => isLegacyVault(w.encryptedPrivateKey) || isLegacyVault(w.encryptedMnemonic)
     );
@@ -535,7 +498,11 @@ class NonCustodialWalletManager {
    * Safe to call multiple times — wallets already in the modern format are skipped.
    */
   async migrateLegacyVaults(userId: string, password: string, supabase?: any): Promise<void> {
-    const wallets = await this.getWalletsFromStorage(userId);
+    // Server rows are the source. Migrating from the local cache and then
+    // pushing the result up would let browser state define what gets written
+    // to the account. Without a server client we only upgrade the local copy.
+    if (!supabase) throw new Error("SUPABASE_REQUIRED");
+    const wallets = await loadMyWallets(supabase as SupabaseClient, userId);
     let anyMigrated = false;
 
     const upgraded = await Promise.all(
@@ -567,12 +534,9 @@ class NonCustodialWalletManager {
 
     if (!anyMigrated) return;
 
-    await this.saveWalletsToStorage(upgraded, userId);
-    if (supabase) {
-      await Promise.all(
-        upgraded.map((w) => this.saveWalletToSupabase(supabase, w, userId))
-      );
-    }
+    await Promise.all(
+      upgraded.map((w) => this.saveWalletToSupabase(supabase, w, userId))
+    );
   }
 }
 
