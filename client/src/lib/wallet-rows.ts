@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { getSupabase } from "@/lib/supabase";
-import { getMyWalletRows } from "@/lib/non-custodial-wallet";
+import { getMyPublicWalletRows } from "@/lib/non-custodial-wallet";
 
 /**
  * Public, non-secret view of a `get_my_wallet` row.
@@ -13,7 +13,10 @@ export interface WalletRow {
   id: string;
   chain_id: string;
   address: string;
+  wallet_type?: string | null;
   is_active?: boolean | string | null;
+  is_backed_up?: boolean | string | null;
+  created_at?: string | null;
 }
 
 export const walletRowsQueryKey = (userId: string | undefined) =>
@@ -31,13 +34,17 @@ function toPublicRow(raw: any): WalletRow {
     id: String(raw?.id ?? ""),
     chain_id: String(raw?.chain_id ?? raw?.chainId ?? "").trim(),
     address: String(raw?.address ?? "").trim(),
+    wallet_type: raw?.wallet_type ?? null,
     is_active: raw?.is_active,
+    is_backed_up: raw?.is_backed_up ?? null,
+    created_at: raw?.created_at ?? null,
   };
 }
 
 async function loadRows(userId: string): Promise<WalletRow[]> {
   const supabase = await getSupabase();
-  const rows = await getMyWalletRows(supabase, userId);
+  // Public-only RPC: encrypted vaults never enter the public wallet-UI path.
+  const rows = await getMyPublicWalletRows(supabase, userId);
   return (Array.isArray(rows) ? rows : []).map(toPublicRow);
 }
 
