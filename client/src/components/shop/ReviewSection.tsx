@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Star, Loader2, MessageSquare, Share2, Flag, ChevronRight } from '@/lib/icons';
+import { createPortal } from "react-dom";
+import { Star, Loader2, MessageSquare, Share2, Flag, ChevronRight, ChevronDown } from '@/lib/icons';
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
@@ -142,6 +143,48 @@ function timeAgo(dateStr: string) {
   return `${months}mo ago`;
 }
 
+// Soft pastel avatar tones (Shop-app style) instead of the brand-primary tint.
+// Full class strings so Tailwind can see them. Picked deterministically from
+// the reviewer's name so a person always gets the same colour.
+const AVATAR_TONES = [
+  "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
+  "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300",
+  "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300",
+  "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
+  "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300",
+  "bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300",
+  "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300",
+  "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-500/20 dark:text-fuchsia-300",
+];
+
+function avatarTone(name: string | null): string {
+  const str = name || "U";
+  let hash = 0;
+  for (let i = 0; i < str.length; i += 1) hash = (hash * 31 + str.charCodeAt(i)) | 0;
+  return AVATAR_TONES[Math.abs(hash) % AVATAR_TONES.length];
+}
+
+function ReviewAvatar({ name, className = "h-8 w-8 text-xs" }: { name: string | null; className?: string }) {
+  return (
+    <div
+      className={`shrink-0 rounded-full flex items-center justify-center font-bold ${avatarTone(name)} ${className}`}
+      aria-hidden="true"
+    >
+      {(name || "U")[0].toUpperCase()}
+    </div>
+  );
+}
+
+function formatReviewDate(dateStr: string) {
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+}
+
+type ReviewSort = "recent" | "oldest" | "high" | "low";
+
+const HIDE_SCROLLBAR = "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
+
 // Local-only "helpful" state, keyed by `${source}-${id}`.
 // NOTE: this is client-side/session-only for now — no persistence yet.
 // A real implementation needs a `review_votes` table (or a `helpful_count`
@@ -185,6 +228,12 @@ export function ReviewSection({ productId, importedReviews = [], compact = false
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   const [lightbox, setLightbox] = useState<LightboxState | null>(null);
+
+  // Mobile (compact) full-screen "all reviews" view + its search/sort/filter.
+  const [showAll, setShowAll] = useState(false);
+  const [query, setQuery] = useState("");
+  const [sortBy, setSortBy] = useState<ReviewSort>("recent");
+  const [ratingFilter, setRatingFilter] = useState<number | "all">("all");
   const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
@@ -203,6 +252,25 @@ export function ReviewSection({ productId, importedReviews = [], compact = false
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lightbox]);
+
+  // Lock page scroll behind the full-screen reviews view.
+  useEffect(() => {
+    if (!showAll) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [showAll]);
+
+  useEffect(() => {
+    if (!showAll) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !lightbox && !reportingReview) setShowAll(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showAll, lightbox, reportingReview]);
 
   async function fetchReviews() {
     try {
@@ -322,6 +390,28 @@ export function ReviewSection({ productId, importedReviews = [], compact = false
     return `${r.source}-${r.id}`;
   }
 
+  // Every review photo, for the thumbnail strip. Images come first in a
+  // review's media gallery, so the image index is also the gallery index.
+  const allPhotos = reviews.flatMap((r) => r.images.map((url, index) => ({ review: r, index, url })));
+
+  // Full-screen view: search + rating filter + sort.
+  const visibleReviews = reviews
+    .filter((r) => ratingFilter === "all" || r.rating === ratingFilter)
+    .filter((r) => {
+      const q = query.trim().toLowerCase();
+      if (!q) return true;
+      return (
+        (r.comment || "").toLowerCase().includes(q) ||
+        (r.displayName || "").toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      if (sortBy === "oldest") return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      if (sortBy === "high") return b.rating - a.rating;
+      if (sortBy === "low") return a.rating - b.rating;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
   function toggleHelpful(r: UnifiedReview) {
     const key = reviewKey(r);
     setHelpful((prev) => {
@@ -408,6 +498,382 @@ export function ReviewSection({ productId, importedReviews = [], compact = false
     touchStartX.current = null;
   }
 
+  const writeForm = (
+    <>
+    {showForm && user && (
+              <div className="rounded-xl border border-primary/30 bg-card p-5 space-y-4">
+                <p className="font-semibold text-sm">{myReview ? "Update your review" : "Your review"}</p>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Rating</p>
+                  <StarRating value={myRating} onChange={setMyRating} />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Comment (optional)</p>
+                  <Textarea
+                    value={myComment}
+                    onChange={(e) => setMyComment(e.target.value)}
+                    placeholder="Share your experience with this product..."
+                    rows={3}
+                    maxLength={1000}
+                  />
+                  <p className="text-xs text-muted-foreground text-right">{myComment.length}/1000</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={submitReview} disabled={submitting}>
+                    {submitting && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                    {myReview ? "Update" : "Submit"}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setShowForm(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+    </>
+  );
+
+  const renderStars = (rating: number) => (
+    <StarRating value={rating} readonly size="sm" />
+  );
+
+  const renderMediaThumbs = (review: UnifiedReview) => {
+    const media = reviewMedia(review);
+    if (media.length === 0) return null;
+    return (
+      <div className="flex flex-wrap gap-2 pt-1">
+        {media.slice(0, 4).map((m, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => openLightbox(review, i)}
+            className="relative h-24 w-24 sm:h-28 sm:w-28 rounded-lg overflow-hidden border border-border/60 group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary bg-muted"
+            aria-label={`View ${m.type} ${i + 1} from ${review.displayName || "reviewer"}`}
+          >
+            {m.type === "video" ? (
+              <video
+                src={m.url}
+                muted
+                playsInline
+                preload="metadata"
+                className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+              />
+            ) : (
+              <img
+                src={m.url}
+                alt={`${review.displayName || "Reviewer"}'s photo ${i + 1}`}
+                loading="lazy"
+                className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+              />
+            )}
+            {m.type === "video" && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                <div className="h-8 w-8 rounded-full bg-black/50 flex items-center justify-center text-white text-sm">▶</div>
+              </div>
+            )}
+            {i === 3 && media.length > 4 && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white text-sm font-semibold">
+                +{media.length - 4}
+              </div>
+            )}
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+  // Full review card — desktop list and the mobile full-screen view.
+  const renderFullCard = (review: UnifiedReview) => {
+    const key = reviewKey(review);
+    const hs = helpful[key];
+    return (
+      <div key={key} className="rounded-xl border border-border/60 bg-card p-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ReviewAvatar name={review.displayName} />
+            <div>
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-semibold">{review.displayName || "Anonymous"}</p>
+                {countryCodeToFlag(review.countryCode) && (
+                  <span aria-label={review.countryCode} title={review.countryCode} className="text-sm leading-none">
+                    {countryCodeToFlag(review.countryCode)}
+                  </span>
+                )}
+                {review.verified && <VerifiedBadge />}
+              </div>
+              <p className="text-xs text-muted-foreground">{timeAgo(review.createdAt)}</p>
+            </div>
+          </div>
+          {renderStars(review.rating)}
+        </div>
+
+        {review.comment && (
+          <p className="text-sm text-muted-foreground leading-relaxed">{review.comment}</p>
+        )}
+
+        {renderMediaThumbs(review)}
+
+        <div className="flex items-center gap-4 pt-1 text-xs font-medium text-muted-foreground">
+          <button
+            type="button"
+            onClick={() => shareReview(review)}
+            className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+          >
+            <Share2 className="h-3.5 w-3.5" />
+            Share
+          </button>
+          <button
+            type="button"
+            onClick={() => toggleHelpful(review)}
+            className={`flex items-center gap-1.5 transition-colors ${
+              hs?.clicked ? "text-primary" : "hover:text-foreground"
+            }`}
+          >
+            👍 Helpful{hs?.count ? ` (${hs.count})` : ""}
+          </button>
+          <button
+            type="button"
+            onClick={() => openReport(review)}
+            className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+          >
+            <Flag className="h-3.5 w-3.5" />
+            Report
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  /* ── Mobile (compact) layout ─────────────────────────────────────────── */
+
+  const renderSummary = () => (
+    <div className="flex items-center justify-between gap-6">
+      <div className="shrink-0">
+        <p className="text-5xl font-bold leading-none">{displayAvg.toFixed(1)}</p>
+        <div className="mt-2">
+          <StarRating value={Math.round(displayAvg)} readonly />
+        </div>
+        <p className="mt-1.5 text-sm text-foreground">
+          {reviews.length} rating{reviews.length === 1 ? "" : "s"}
+        </p>
+      </div>
+      <div className="flex-1 space-y-1.5">
+        {ratingCounts.map(({ star, count }) => (
+          <div key={star} className="flex items-center gap-2">
+            <span className="w-3 text-sm text-foreground">{star}</span>
+            <div className="h-2.5 flex-1 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-foreground"
+                style={{ width: reviews.length ? `${(count / reviews.length) * 100}%` : "0%" }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderPhotoStrip = (sizeClass: string, bleedClass: string) => {
+    if (allPhotos.length === 0) return null;
+    return (
+      <div className={`flex gap-2 overflow-x-auto ${HIDE_SCROLLBAR} ${bleedClass}`}>
+        {allPhotos.slice(0, 20).map((ph) => (
+          <button
+            key={`${reviewKey(ph.review)}-${ph.index}`}
+            type="button"
+            onClick={() => openLightbox(ph.review, ph.index)}
+            className={`shrink-0 overflow-hidden rounded-xl bg-muted ${sizeClass}`}
+            aria-label={`View photo from ${ph.review.displayName || "reviewer"}`}
+          >
+            <img src={ph.url} alt="" loading="lazy" className="h-full w-full object-cover" />
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+  const renderCarouselCard = (review: UnifiedReview) => (
+    <div
+      key={reviewKey(review)}
+      role="button"
+      tabIndex={0}
+      onClick={() => setShowAll(true)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") setShowAll(true);
+      }}
+      className="snap-start shrink-0 w-[82%] rounded-2xl border border-border/60 bg-card p-4 flex flex-col gap-2 cursor-pointer"
+    >
+      {renderStars(review.rating)}
+      {review.comment ? (
+        <p
+          className="text-base text-foreground leading-snug"
+          style={{ display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+        >
+          {review.comment}
+        </p>
+      ) : (
+        <p className="text-base text-muted-foreground">Rated {review.rating} out of 5</p>
+      )}
+      <div className="mt-auto flex items-center gap-2 pt-2">
+        <ReviewAvatar name={review.displayName} className="h-9 w-9 text-sm" />
+        <div className="min-w-0 flex items-center gap-1.5 text-sm text-muted-foreground">
+          <span className="truncate">{review.displayName || "Anonymous"}</span>
+          {countryCodeToFlag(review.countryCode) && (
+            <span className="leading-none">{countryCodeToFlag(review.countryCode)}</span>
+          )}
+          {review.verified && <VerifiedBadge />}
+          <span className="shrink-0">· {formatReviewDate(review.createdAt)}</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  const writeLink = user ? (
+    !showForm && (
+      <button
+        onClick={() => setShowForm(true)}
+        className="flex items-center text-sm font-medium text-foreground whitespace-nowrap"
+      >
+        {myReview ? "Edit your review" : "Write a review"}
+        <ChevronRight className="h-4 w-4" />
+      </button>
+    )
+  ) : (
+    <a href="/signin" className="flex items-center text-sm font-medium text-foreground whitespace-nowrap">
+      Add your review
+      <ChevronRight className="h-4 w-4" />
+    </a>
+  );
+
+  const renderCompact = () => (
+    <div className="rounded-3xl border border-border/60 bg-card p-5 space-y-5">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-2xl font-bold">Reviews</h2>
+        {writeLink}
+      </div>
+
+      {writeForm}
+
+      {loading ? (
+        <div className="flex justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : reviews.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground">
+          <MessageSquare className="h-10 w-10 mx-auto mb-2 opacity-30" />
+          <p className="text-sm">No reviews yet. Be the first!</p>
+        </div>
+      ) : (
+        <>
+          {renderSummary()}
+          {renderPhotoStrip("h-[60px] w-[60px]", "-mx-5 px-5")}
+
+          {/* Horizontal, snap-scrolling review cards */}
+          <div className={`-mx-5 px-5 flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-px-5 pb-1 ${HIDE_SCROLLBAR}`}>
+            {reviews.slice(0, 10).map((review) => renderCarouselCard(review))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowAll(true)}
+            className="w-full rounded-full bg-muted py-4 text-lg font-medium text-foreground active:opacity-80 transition-opacity"
+          >
+            Read more reviews
+          </button>
+        </>
+      )}
+    </div>
+  );
+
+  const renderAllReviewsSheet = () => {
+    if (!showAll || typeof document === "undefined") return null;
+    const selectClass =
+      "appearance-none rounded-full border border-border/60 bg-background pl-4 pr-10 py-3 text-base font-medium text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary";
+    return createPortal(
+      <div
+        // Drops below the report dialog (z-50) while it's open so the dialog
+        // isn't hidden behind this full-screen view.
+        className={`fixed inset-0 ${reportingReview ? "z-40" : "z-[95]"} bg-background overflow-y-auto`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="All reviews"
+      >
+        <div className="mx-auto max-w-2xl space-y-5 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))]">
+          <button
+            type="button"
+            onClick={() => setShowAll(false)}
+            aria-label="Close reviews"
+            className="h-12 w-12 rounded-full border border-border/60 bg-card shadow-sm flex items-center justify-center"
+          >
+            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+
+          <h2 className="text-4xl font-bold">Reviews</h2>
+
+          {reviews.length > 0 && renderSummary()}
+          {renderPhotoStrip("h-20 w-20", "-mx-5 px-5")}
+
+          {/* Search */}
+          <div className="flex items-center gap-3 rounded-full border border-border/60 bg-background px-4 py-3">
+            <svg viewBox="0 0 24 24" className="h-5 w-5 text-muted-foreground shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <circle cx="11" cy="11" r="7" />
+              <path d="M20 20l-3.5-3.5" />
+            </svg>
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search"
+              className="w-full bg-transparent text-base outline-none placeholder:text-muted-foreground"
+            />
+          </div>
+
+          {/* Sort / rating filters */}
+          <div className="flex flex-wrap gap-2">
+            <div className="relative">
+              <select
+                aria-label="Sort by"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as ReviewSort)}
+                className={selectClass}
+              >
+                <option value="recent">Most recent</option>
+                <option value="oldest">Oldest</option>
+                <option value="high">Highest rating</option>
+                <option value="low">Lowest rating</option>
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2" />
+            </div>
+            <div className="relative">
+              <select
+                aria-label="Rating"
+                value={String(ratingFilter)}
+                onChange={(e) => setRatingFilter(e.target.value === "all" ? "all" : Number(e.target.value))}
+                className={selectClass}
+              >
+                <option value="all">Rating</option>
+                {[5, 4, 3, 2, 1].map((n) => (
+                  <option key={n} value={n}>
+                    {n} star{n === 1 ? "" : "s"}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2" />
+            </div>
+          </div>
+
+          {visibleReviews.length === 0 ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">No reviews match your search.</p>
+          ) : (
+            <div className="space-y-4">{visibleReviews.map((review) => renderFullCard(review))}</div>
+          )}
+        </div>
+      </div>,
+      document.body
+    );
+  };
+
   return (
     <div className={compact ? "space-y-6" : "mt-12 space-y-8"}>
       {/* Gradient definition shared by every star in this component — one
@@ -422,7 +888,10 @@ export function ReviewSection({ productId, importedReviews = [], compact = false
           </linearGradient>
         </defs>
       </svg>
+      {compact && renderCompact()}
+      {compact && renderAllReviewsSheet()}
       {!compact && <Separator />}
+      {!compact && (
       <div className="space-y-6">
         <div className="flex items-center gap-2">
           <MessageSquare className="h-5 w-5" />
@@ -484,37 +953,7 @@ export function ReviewSection({ productId, importedReviews = [], compact = false
           </div>
         </div>
 
-        {/* Write / Edit form */}
-        {showForm && user && (
-          <div className="rounded-xl border border-primary/30 bg-card p-5 space-y-4">
-            <p className="font-semibold text-sm">{myReview ? "Update your review" : "Your review"}</p>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Rating</p>
-              <StarRating value={myRating} onChange={setMyRating} />
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Comment (optional)</p>
-              <Textarea
-                value={myComment}
-                onChange={(e) => setMyComment(e.target.value)}
-                placeholder="Share your experience with this product..."
-                rows={3}
-                maxLength={1000}
-              />
-              <p className="text-xs text-muted-foreground text-right">{myComment.length}/1000</p>
-            </div>
-            <div className="flex gap-2">
-              <Button size="sm" onClick={submitReview} disabled={submitting}>
-                {submitting && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-                {myReview ? "Update" : "Submit"}
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => setShowForm(false)}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        )}
-
+        {writeForm}
 
         {/* Review list */}
         {loading ? (
@@ -527,116 +966,10 @@ export function ReviewSection({ productId, importedReviews = [], compact = false
             <p className="text-sm">No reviews yet. Be the first!</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {reviews.map((review) => {
-              const key = reviewKey(review);
-              const hs = helpful[key];
-              return (
-                <div key={key} className="rounded-xl border border-border/60 bg-card p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                        {(review.displayName || "U")[0].toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-sm font-semibold">{review.displayName || "Anonymous"}</p>
-                          {countryCodeToFlag(review.countryCode) && (
-                            <span aria-label={review.countryCode} title={review.countryCode} className="text-sm leading-none">
-                              {countryCodeToFlag(review.countryCode)}
-                            </span>
-                          )}
-                          {review.verified && <VerifiedBadge />}
-                        </div>
-                        <p className="text-xs text-muted-foreground">{timeAgo(review.createdAt)}</p>
-                      </div>
-                    </div>
-                    <StarRating value={review.rating} readonly size="sm" />
-                  </div>
-
-                  {review.comment && (
-                    <p className="text-sm text-muted-foreground leading-relaxed">{review.comment}</p>
-                  )}
-
-                  {(() => {
-                    const media = reviewMedia(review);
-                    if (media.length === 0) return null;
-                    return (
-                      <div className="flex flex-wrap gap-2 pt-1">
-                        {media.slice(0, 4).map((m, i) => (
-                          <button
-                            key={i}
-                            type="button"
-                            onClick={() => openLightbox(review, i)}
-                            className="relative h-24 w-24 sm:h-28 sm:w-28 rounded-lg overflow-hidden border border-border/60 group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary bg-muted"
-                            aria-label={`View ${m.type} ${i + 1} from ${review.displayName || "reviewer"}`}
-                          >
-                            {m.type === "video" ? (
-                              <video
-                                src={m.url}
-                                muted
-                                playsInline
-                                preload="metadata"
-                                className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-                              />
-                            ) : (
-                              <img
-                                src={m.url}
-                                alt={`${review.displayName || "Reviewer"}'s photo ${i + 1}`}
-                                loading="lazy"
-                                className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-                              />
-                            )}
-                            {m.type === "video" && (
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                                <div className="h-8 w-8 rounded-full bg-black/50 flex items-center justify-center text-white text-sm">▶</div>
-                              </div>
-                            )}
-                            {i === 3 && media.length > 4 && (
-                              <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white text-sm font-semibold">
-                                +{media.length - 4}
-                              </div>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    );
-                  })()}
-
-                  {/* Share / Helpful / Report row */}
-                  <div className="flex items-center gap-4 pt-1 text-xs font-medium text-muted-foreground">
-                    <button
-                      type="button"
-                      onClick={() => shareReview(review)}
-                      className="flex items-center gap-1.5 hover:text-foreground transition-colors"
-                    >
-                      <Share2 className="h-3.5 w-3.5" />
-                      Share
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleHelpful(review)}
-                      className={`flex items-center gap-1.5 transition-colors ${
-                        hs?.clicked ? "text-primary" : "hover:text-foreground"
-                      }`}
-                    >
-                      👍 Helpful{hs?.count ? ` (${hs.count})` : ""}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openReport(review)}
-                      className="flex items-center gap-1.5 hover:text-foreground transition-colors"
-                    >
-                      <Flag className="h-3.5 w-3.5" />
-                      Report
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <div className="space-y-4">{reviews.map((review) => renderFullCard(review))}</div>
         )}
       </div>
+      )}
 
       {/* Fullscreen scrollable image viewer */}
       {lightbox && (
