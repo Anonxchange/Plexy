@@ -75,7 +75,7 @@ function useRevealState(onOpenChange: (v: boolean) => void) {
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const rateLimit = usePasswordRateLimit({ maxAttempts: 5, baseDelayMs: 10_000 });
-  // Clipboard auto-clear: overwrite the clipboard 60 s after a phrase copy.
+  // Clipboard auto-clear: overwrite the clipboard 30 s after a phrase copy.
   const clipboardClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Bumped after a successful decrypt to trigger a re-render that will
   // pull the words from the volatile Map. The number itself reveals
@@ -167,14 +167,20 @@ function useRevealState(onOpenChange: (v: boolean) => void) {
     const phrase = getVolatileMnemonic(instanceId);
     if (!phrase) return;
     if (clipboardClearRef.current) clearTimeout(clipboardClearRef.current);
-    navigator.clipboard.writeText(phrase);
-    setCopied(true);
-    toast({ title: "Copied", description: "Clipboard clears automatically in 60s" });
-    setTimeout(() => setCopied(false), 3000);
-    clipboardClearRef.current = setTimeout(() => {
-      navigator.clipboard.writeText("").catch(() => {});
-      clipboardClearRef.current = null;
-    }, 60_000);
+    navigator.clipboard
+      .writeText(phrase)
+      .then(() => {
+        setCopied(true);
+        toast({ title: "Copied", description: "Clipboard clears automatically in 30s" });
+        setTimeout(() => setCopied(false), 3000);
+        clipboardClearRef.current = setTimeout(() => {
+          navigator.clipboard.writeText("").catch(() => {});
+          clipboardClearRef.current = null;
+        }, 30_000);
+      })
+      .catch(() => {
+        toast({ title: "Copy failed", description: "Write the phrase down by hand instead.", variant: "destructive" });
+      });
   };
 
   return {
