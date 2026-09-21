@@ -1456,7 +1456,7 @@ export function ProductDetail() {
               {/* Reviews — always rendered below the description, not
                   conditionally swapped in. The "Reviews" tab above just
                   scrolls the page down to this block. */}
-              <div ref={mobileReviewsRef} className="mt-4 pt-3 border-t border-border/60 scroll-mt-4">
+              <div ref={mobileReviewsRef} className="mt-4 scroll-mt-4">
                 <ReviewSection productId={product.id} importedReviews={product.importedReviews} compact />
               </div>
             </div>
