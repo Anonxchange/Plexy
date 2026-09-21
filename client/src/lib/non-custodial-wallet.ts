@@ -141,6 +141,61 @@ export async function getMyWalletRows(
   return Array.isArray(data) ? (data as WalletRpcRow[]) : [];
 }
 
+/** Public wallet metadata only: no encrypted vault fields exist on this shape. */
+export interface WalletPublicRpcRow {
+  id: string;
+  chain_id: string;
+  address: string;
+  wallet_type?: string | null;
+  is_active?: string | boolean | null;
+  is_backed_up?: string | boolean | null;
+  created_at?: string | null;
+}
+
+/**
+ * Reads the account's PUBLIC wallet rows through get_my_wallet_public, which
+ * never returns encrypted_private_key / encrypted_mnemonic. Public UI (receive
+ * addresses, balances, monitoring) must use this, so vault ciphertext never
+ * reaches the main thread for those flows. Vaults are fetched only by the
+ * explicit secure flows via getMyWalletRows (sign, reveal phrase, unlock).
+ *
+ * If the RPC has not been deployed yet, falls back to get_my_wallet and
+ * strips to public fields, so shipping the client first does not break the
+ * app. Remove the fallback once the migration is live.
+ */
+export async function getMyPublicWalletRows(
+  supabase: SupabaseClient,
+  expectedUserId?: string,
+): Promise<WalletPublicRpcRow[]> {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+  if (userError) throw userError;
+  if (!user) throw new Error("AUTH_REQUIRED");
+  if (expectedUserId && expectedUserId !== user.id) {
+    throw new Error("AUTH_USER_MISMATCH");
+  }
+
+  const { data, error } = await supabase.rpc("get_my_wallet_public");
+  if (!error) return Array.isArray(data) ? (data as WalletPublicRpcRow[]) : [];
+
+  // 42883 = undefined_function, PGRST202 = function not found in schema cache.
+  if (error.code === "42883" || error.code === "PGRST202") {
+    const full = await getMyWalletRows(supabase, expectedUserId);
+    return full.map((r) => ({
+      id: r.id,
+      chain_id: r.chain_id,
+      address: r.address,
+      wallet_type: (r as any).wallet_type ?? null,
+      is_active: r.is_active,
+      is_backed_up: (r as any).is_backed_up ?? null,
+      created_at: (r as any).created_at ?? null,
+    }));
+  }
+  throw error;
+}
+
 /**
  * Loads the authenticated user's canonical wallet rows and caches the
  * encrypted blobs. Nothing is written to browser storage.
