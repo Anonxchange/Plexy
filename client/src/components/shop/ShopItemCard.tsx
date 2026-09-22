@@ -91,15 +91,21 @@ export const ShopItemCard = ({ product, onViewDetails, onAddToCart }: ShopItemCa
           {product.title}
         </p>
 
-        {soldLabel && (
-          <p className="text-[11px] text-muted-foreground">
-            🔥 {soldLabel}
+        {(soldLabel || product.rating) && (
+          <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+            {soldLabel && <span>🔥 {soldLabel}</span>}
+            {product.rating && (
+              <span className="flex items-center gap-0.5">
+                <span className="text-foreground">★</span>
+                {product.rating.toFixed(1)}
+              </span>
+            )}
           </p>
         )}
 
         <div className="flex items-center justify-between mt-auto pt-0.5">
           <div className="flex flex-col gap-0.5">
-            <span className="text-[14px] font-bold text-amber-500 leading-none">
+            <span className={`text-[14px] font-bold leading-none ${disc ? 'text-amber-500' : 'text-foreground'}`}>
               {product.currency} {product.price.toLocaleString()}
             </span>
             {product.originalPrice && product.originalPrice > product.price && (
