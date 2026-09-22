@@ -87,7 +87,7 @@ export const ShopItemCard = ({ product, onViewDetails, onAddToCart }: ShopItemCa
 
       {/* Info */}
       <div className="flex flex-col flex-1 px-1.5 pt-1.5 pb-2 gap-1">
-        <p className="text-[12px] leading-snug text-foreground line-clamp-2">
+        <p className="text-[12px] leading-snug text-foreground/90 line-clamp-2">
           {product.title}
         </p>
 
@@ -99,7 +99,7 @@ export const ShopItemCard = ({ product, onViewDetails, onAddToCart }: ShopItemCa
 
         <div className="flex items-center justify-between mt-auto pt-0.5">
           <div className="flex flex-col gap-0.5">
-            <span className="text-[14px] font-bold text-foreground leading-none">
+            <span className="text-[14px] font-bold text-amber-500 leading-none">
               {product.currency} {product.price.toLocaleString()}
             </span>
             {product.originalPrice && product.originalPrice > product.price && (
