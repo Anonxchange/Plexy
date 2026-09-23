@@ -74,6 +74,7 @@ export function SignIn() {
   const captchaTokenRef = useRef<string | null>(null);
   const googleRedirectingRef = useRef(false);
   const googleCallbackHandledRef = useRef(false);
+  const verifyInFlightRef = useRef(false);
   const { signIn, signOut, user, session, pendingOTPVerification, completeOTPVerification, cancelOTPVerification, completeTOTPSignIn, cancelTOTPSignIn, pauseSessionForTOTP, beginPasskeyAuth, releasePasskeyAuth } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -445,6 +446,12 @@ export function SignIn() {
         return;
       }
 
+      // Gate the generic `user && !checking2FA && !show2FAInput` redirect
+      // effect below BEFORE the phone-OTP verification can establish a
+      // Supabase session. Without this, that effect fires the instant the
+      // session appears and sends the user to /dashboard before the AAL
+      // check in handlePhoneVerified ever runs.
+      setChecking2FA(true);
       setShowPhoneVerification(true);
       return;
     }
@@ -575,19 +582,66 @@ export function SignIn() {
   };
 
   const handlePhoneVerified = async (verifiedPhoneNumber: string) => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (sessionData?.session?.user?.id) {
-      try {
-        await deviceFingerprint.registerDeviceAsTrusted(sessionData.session.user.id);
-      } catch (error) {
-        console.error('Error registering device during phone signin:', error);
+    // Phone OTP establishes a Supabase session just like password/Google
+    // sign-in. It must go through the same AAL2/TOTP gate — otherwise a
+    // user with TOTP enabled can bypass their second factor entirely by
+    // signing in with their phone number instead.
+    try {
+      const sb = await getSupabase();
+      const { data: aalData, error: aalError } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aalError) throw aalError;
+
+      if (aalData.currentLevel === "aal1" && aalData.nextLevel === "aal2") {
+        const { data: factorsData, error: factorsError } = await sb.auth.mfa.listFactors();
+        if (factorsError) throw factorsError;
+
+        const factor = (factorsData?.totp ?? []).find((f: any) => f.status === "verified");
+        if (!factor) throw new Error("Your account requires 2FA, but no verified authenticator factor was found.");
+
+        const { data: challengeData, error: challengeError } = await sb.auth.mfa.challenge({
+          factorId: factor.id,
+        });
+        if (challengeError || !challengeData) {
+          throw challengeError ?? new Error("Failed to start the 2FA challenge.");
+        }
+
+        // Park the AAL1 session — do not let it reach app state.
+        pauseSessionForTOTP();
+        setShowPhoneVerification(false);
+        setTotpFactorId(factor.id);
+        setTotpChallengeId(challengeData.id);
+        setShow2FAInput(true);
+        setChecking2FA(false);
+        return;
       }
+
+      // No 2FA enrolled — safe to proceed.
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData?.session?.user?.id) {
+        try {
+          await deviceFingerprint.registerDeviceAsTrusted(sessionData.session.user.id);
+        } catch (error) {
+          console.error('Error registering device during phone signin:', error);
+        }
+      }
+      setChecking2FA(false);
+      toast({
+        title: "Success!",
+        description: "Phone verified! Signing you in...",
+      });
+      navigateSafely("/dashboard");
+    } catch (error) {
+      await signOut();
+      setChecking2FA(false);
+      setShowPhoneVerification(false);
+      toast({
+        title: "Sign-in failed",
+        description: error instanceof Error
+          ? error.message
+          : "We couldn't verify your account security settings. Please try again.",
+        variant: "destructive",
+      });
     }
-    toast({
-      title: "Success!",
-      description: "Phone verified! Signing you in...",
-    });
-    setLocation("/dashboard");
   };
 
   const handleDeviceVerified = async () => {
@@ -691,11 +745,19 @@ export function SignIn() {
 
   const handleVerify2FA = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Synchronous lock: setLoading(true) below is async (React state), so a
+    // second Enter-key submit or duplicate event fired in the same tick
+    // could otherwise slip past the `disabled={loading}` check and race two
+    // concurrent mfa.verify() calls against the same challenge.
+    if (verifyInFlightRef.current) return;
+    verifyInFlightRef.current = true;
     setLoading(true);
 
     if (!totpFactorId || !totpChallengeId) {
       toast({ title: "Error", description: "Invalid session. Please sign in again.", variant: "destructive" });
       setLoading(false);
+      verifyInFlightRef.current = false;
       return;
     }
 
@@ -713,6 +775,7 @@ export function SignIn() {
           variant: "destructive",
         });
         setLoading(false);
+        verifyInFlightRef.current = false;
         return;
       }
 
@@ -731,6 +794,11 @@ export function SignIn() {
         }
       }
 
+      // Clear the challenge/code immediately so a stale UI or replayed
+      // event can't resubmit the same (now-consumed) challenge.
+      setTwoFactorCode("");
+      setTotpFactorId(null);
+      setTotpChallengeId(null);
       setShow2FAInput(false);
       setChecking2FA(false);
       sessionStorage.removeItem("pexly.oauth.intent");
@@ -738,12 +806,14 @@ export function SignIn() {
 
       setTimeout(() => {
         setLoading(false);
+        verifyInFlightRef.current = false;
         setLocation("/dashboard");
       }, 100);
     } catch (error: any) {
       console.error('2FA verification error:', error);
       toast({ title: "Error", description: error?.message || "Failed to verify 2FA code", variant: "destructive" });
       setLoading(false);
+      verifyInFlightRef.current = false;
     }
   };
 
@@ -834,7 +904,12 @@ export function SignIn() {
             />
             <button
               type="button"
-              onClick={() => setShowPhoneVerification(false)}
+              onClick={() => {
+                setShowPhoneVerification(false);
+                // Release the redirect gate set when phone verification opened,
+                // in case the user backs out without completing it.
+                setChecking2FA(false);
+              }}
               className={`w-full mt-4 py-3 rounded-xl text-sm transition-colors ${
                 isDark 
                   ? 'text-gray-400 hover:text-white hover:bg-gray-800' 
