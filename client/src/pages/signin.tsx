@@ -363,6 +363,11 @@ export function SignIn() {
         }
       } catch (error) {
         if (cancelled) return;
+        // Clear the gate on every exit, or a failed callback leaves
+        // "pexly.oauth.intent" stuck as "signin" — which would make the
+        // OTHER effect above treat any later sign-in in this tab as still
+        // being an in-progress Google callback and skip its redirect.
+        sessionStorage.removeItem("pexly.oauth.intent");
         await signOut();
         toast({
           title: "Google sign-in failed",
@@ -447,11 +452,15 @@ export function SignIn() {
       }
 
       // Gate the generic `user && !checking2FA && !show2FAInput` redirect
-      // effect below BEFORE the phone-OTP verification can establish a
-      // Supabase session. Without this, that effect fires the instant the
-      // session appears and sends the user to /dashboard before the AAL
-      // check in handlePhoneVerified ever runs.
+      // effect below, and prevent the AAL1 session phone verification is
+      // about to create from ever reaching user/session state, the same way
+      // beginPasskeyAuth()/pauseSessionForTOTP() do for the passkey flow.
+      // handlePhoneVerified reads the session directly via
+      // supabase.auth.getSession() rather than through context, so this is
+      // safe — unlike the Google OAuth callback, nothing here depends on
+      // `user`/`session` being set to do its job.
       setChecking2FA(true);
+      pauseSessionForTOTP();
       setShowPhoneVerification(true);
       return;
     }
@@ -615,7 +624,11 @@ export function SignIn() {
         return;
       }
 
-      // No 2FA enrolled — safe to proceed.
+      // No 2FA enrolled — safe to proceed. Session was withheld by the
+      // pauseSessionForTOTP() call made before phone verification opened
+      // (totpPendingRef is true), so it must be explicitly committed now —
+      // otherwise the app would treat this user as signed out indefinitely.
+      await completeTOTPSignIn();
       const { data: sessionData } = await supabase.auth.getSession();
       if (sessionData?.session?.user?.id) {
         try {
@@ -631,7 +644,13 @@ export function SignIn() {
       });
       navigateSafely("/dashboard");
     } catch (error) {
-      await signOut();
+      // pauseSessionForTOTP() ran before phone verification opened, so
+      // totpPendingRef is true here. signOut() alone doesn't clear it —
+      // cancelTOTPSignIn() does both (clears the gate + signs out), the
+      // same as the "Back to Sign In" button uses elsewhere. Without this,
+      // an error here would leave every future sign-in in this tab looking
+      // signed-out even after a valid session exists.
+      await cancelTOTPSignIn();
       setChecking2FA(false);
       setShowPhoneVerification(false);
       toast({
@@ -906,9 +925,12 @@ export function SignIn() {
               type="button"
               onClick={() => {
                 setShowPhoneVerification(false);
-                // Release the redirect gate set when phone verification opened,
-                // in case the user backs out without completing it.
+                // Release both gates set when phone verification opened:
+                // the local redirect gate, and totpPendingRef via
+                // cancelTOTPSignIn() (which also signs out any partial
+                // session, same as the 2FA "Back to Login" button).
                 setChecking2FA(false);
+                void cancelTOTPSignIn();
               }}
               className={`w-full mt-4 py-3 rounded-xl text-sm transition-colors ${
                 isDark 
