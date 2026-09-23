@@ -148,15 +148,30 @@ function useAuthGuard() {
     if (!user)   { setState('unauthed'); return; }
 
     let cancelled = false;
-    supabase.auth.mfa.getAuthenticatorAssuranceLevel().then(({ data }) => {
+    supabase.auth.mfa.getAuthenticatorAssuranceLevel().then(({ data, error }) => {
       if (cancelled) return;
-      if (data?.currentLevel === 'aal1' && data?.nextLevel === 'aal2') {
+      if (error || !data?.currentLevel) {
+        // Unknown/malformed assurance-level response — do not default to
+        // "authed". Treat exactly like a failed check (see .catch below).
+        setState('unauthed');
+        return;
+      }
+      if (data.currentLevel === 'aal1' && data.nextLevel === 'aal2') {
         setState('needs-mfa');
+      } else if (data.currentLevel === 'aal2' && data.nextLevel === 'aal2') {
+        setState('authed'); // fully assured
+      } else if (data.currentLevel === 'aal1' && data.nextLevel === 'aal1') {
+        setState('authed'); // no 2FA enrolled — AAL1 is the max for this account
       } else {
-        setState('authed');
+        // Any other combination is an assurance state we don't recognize —
+        // fail closed rather than assume it's safe.
+        setState('unauthed');
       }
     }).catch(() => {
-      if (!cancelled) setState('authed');
+      // Fail CLOSED: if the AAL check itself errors (network blip, stale
+      // client, Supabase outage), never treat that as "authenticated". An
+      // unknown assurance level must not grant access to protected routes.
+      if (!cancelled) setState('unauthed');
     });
     return () => { cancelled = true; };
   }, [user, loading]);
