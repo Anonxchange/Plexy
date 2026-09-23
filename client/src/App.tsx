@@ -335,6 +335,23 @@ function AppRoutes() {
 function AppContent() {
   const { user, walletImportState, setWalletImportState } = useAuth();
   const [location] = useLocation();
+  // A Google OAuth callback briefly commits an AAL1 (pre-2FA) session to
+  // `user` before signin.tsx's callback effect has a chance to call
+  // pauseSessionForTOTP() and hide it again. Without this check, that
+  // window is enough for WalletSetupDialog to mount, kick off its own wallet
+  // check, and (for accounts with MFA) get abruptly unmounted a moment
+  // later when the session is hidden — then mount again once 2FA
+  // completes. That mount → unmount → mount is the "glitching" MFA
+  // accounts see and non-MFA accounts don't (they never hit the pause).
+  // This only gates what's rendered here — it intentionally doesn't touch
+  // the Google callback's own logic in signin.tsx.
+  const isGoogleSignInSettling = (() => {
+    try {
+      return sessionStorage.getItem("pexly.oauth.intent") === "signin";
+    } catch {
+      return false;
+    }
+  })();
   const hideAppFooter = ["/", "/about", "/spot", "/perpetual", "/swap", "/wallet", "/analysis", "/wallet/virtual-numbers", "/wallet/mobile-topup", "/wallet/utility-bill", "/utility", "/wallet/buy-crypto", "/gift-cards", "/dashboard", "/profile", "/shop", "/shop/post", "/account-settings", "/verification", "/admin", "/admin/verifications", "/admin/blog", "/admin/gift-cards", "/notifications", "/signin", "/signup", "/verify-email", "/blog", "/careers", "/reviews", "/support", "/contact", "/referral", "/rewards", "/terms", "/privacy", "/cookie-policy", "/restricted-countries", "/rewards-program", "/risk-disclosure", "/refund-policy", "/submit-idea", "/explorer", "/shop/product", "/buy-crypto", "/bitcoin-calculator", "/checkout"].some(path => location === path || location.startsWith(path + "/")) || location.startsWith("/explorer/") || location.startsWith("/blog/") || location.startsWith("/gift-cards/");
   const hideHeaderAndNav = ["/signin", "/signup", "/verify-email", "/support", "/contact", "/explorer", "/checkout"].includes(location) || location.startsWith("/explorer/") || location.startsWith("/support/") || location.startsWith("/checkout/");
   const hidePageNav = ["/terms", "/refund-policy", "/explorer"].includes(location) || location.startsWith("/explorer/");
@@ -348,7 +365,7 @@ function AppContent() {
       </main>
       {!hideAppFooter && <AppFooter />}
 
-      {user && (
+      {user && !isGoogleSignInSettling && (
         <Suspense fallback={null}>
           <WalletSetupDialog
             open={walletImportState.required}
