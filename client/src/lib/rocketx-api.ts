@@ -20,7 +20,18 @@ export interface RocketXQuote {
   rateId?: string;
   priceImpact?: number;
   savingUsd?: number;
-  exchangeId?: string;
+  exchangeId?: string;              // exchangeInfo.keyword (e.g. "BYBIT") — the value excludedExchanges expects
+  exchangeType?: string;            // "CEX" | "DEX"
+  expiresAt?: string | number;      // expiry of rateId (fixed-rate quotes)
+  allowanceAddress?: string;        // DEX routes: ERC-20 approval spender
+  isRefundAddressRequired?: boolean; // true => swap needs refundAddress (+ refundMemo)
+  memoRequired?: boolean;
+  // Source-token details needed to approve + sign a DEX swap
+  fromTokenAddress?: string;
+  fromTokenDecimals?: number;
+  fromChainId?: string;             // hex, e.g. "0x1"
+  fromNetworkType?: string;         // "EVM" | ...
+  fromIsNative?: boolean;
 }
 
 export interface RocketXToken {
@@ -79,7 +90,7 @@ async function callRocketX(action: string, params: Record<string, any> = {}) {
 function getRocketXNetworkId(chain: string): string {
   if (!chain) return "";
   const map: Record<string, string> = {
-    'BTC': 'bitcoin',
+    'BTC': 'bitcoin',   // UNVERIFIED — not confirmed by the docs; check the real ID via GET /v1/configs
     'BITCOIN': 'bitcoin',
     'ETH': 'ethereum',
     'ETHEREUM': 'ethereum',
@@ -95,72 +106,78 @@ function getRocketXNetworkId(chain: string): string {
     'OPTIMISM': 'optimism',
     'BASE': 'base',
     'AVALANCHE': 'avaxc-mainnet',
-    'NEAR': 'near',
+    'NEAR': 'near',     // UNVERIFIED — check via GET /v1/configs
     'XRP': 'ripple',
   };
   return map[chain.toUpperCase()] || chain.toLowerCase();
 }
 
+// Native asset symbol(s) per chain. NOTE: ETH is native on Base/Arbitrum/Optimism too.
+const NATIVE_SYMBOLS: Record<string, string[]> = {
+  BTC: ['BTC'], BITCOIN: ['BTC'],
+  ETH: ['ETH'], ETHEREUM: ['ETH'], BASE: ['ETH'], ARBITRUM: ['ETH'], OPTIMISM: ['ETH'],
+  BSC: ['BNB'], BINANCE: ['BNB'],
+  POLYGON: ['POL', 'MATIC'], MATIC: ['POL', 'MATIC'],
+  TRX: ['TRX'], TRON: ['TRX'],
+  SOL: ['SOL'], SOLANA: ['SOL'],
+  AVALANCHE: ['AVAX'],
+  NEAR: ['NEAR'],
+  XRP: ['XRP'],
+};
+
 function isNativeToken(symbol: string, chain: string): boolean {
   const s = symbol.toUpperCase();
   const c = chain.toUpperCase();
-  return (
-    s === c ||
-    (s === 'BTC'  && (c === 'BTC'  || c === 'BITCOIN')) ||
-    (s === 'BNB'  && (c === 'BSC'  || c === 'BINANCE')) ||
-    (s === 'ETH'  && (c === 'ETH'  || c === 'ETHEREUM')) ||
-    (s === 'MATIC'&& (c === 'POLYGON' || c === 'MATIC')) ||
-    (s === 'TRX'  && (c === 'TRX'  || c === 'TRON')) ||
-    (s === 'SOL'  && (c === 'SOL'  || c === 'SOLANA')) ||
-    (s === 'NEAR' &&  c === 'NEAR') ||
-    (s === 'XRP'  &&  c === 'XRP')
-  );
+  return NATIVE_SYMBOLS[c]?.includes(s) ?? s === c;
 }
 
-function getRocketXTokenAddress(symbol: string, chain: string): string | null {
-  if (!chain || !symbol) return null;
-  const chainUpper = chain.toUpperCase();
-  const symbolUpper = symbol.toUpperCase();
+/**
+ * Returns: contract address (string) | null (native token) | undefined (unknown — do NOT quote).
+ * EVM addresses are lowercase (matches the docs' examples; avoids EIP-55 checksum rejections).
+ */
+function getRocketXTokenAddress(symbol: string, chain: string): string | null | undefined {
+  if (!chain || !symbol) return undefined;
+  const c = chain.toUpperCase();
+  const s = symbol.toUpperCase();
+
+  if (isNativeToken(s, c)) return null;
 
   const tokenMap: Record<string, Record<string, string>> = {
-    'USDT': {
-      'ETH': '0xdac17f958d2ee523a2206206994597C13D831ec7',
-      'ETHEREUM': '0xdac17f958d2ee523a2206206994597C13D831ec7',
-      'BSC': '0x55d398326f99059ff775485246999027b3197955',
-      'BINANCE': '0x55d398326f99059ff775485246999027b3197955',
-      'TRX': 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
-      'TRON': 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
-      'POLYGON': '0xc2132d05d31c914a87c6611c10748aeb04b58e8f',
-      'SOLANA': 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
-      'SOL': 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
-      'ARBITRUM': '0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9',
-      'OPTIMISM': '0x94b008aa205766a30e1ed85f482b439f76a8a489',
+    USDT: {
+      ETH: '0xdac17f958d2ee523a2206206994597c13d831ec7',
+      ETHEREUM: '0xdac17f958d2ee523a2206206994597c13d831ec7',
+      BSC: '0x55d398326f99059ff775485246999027b3197955',
+      BINANCE: '0x55d398326f99059ff775485246999027b3197955',
+      TRX: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
+      TRON: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
+      POLYGON: '0xc2132d05d31c914a87c6611c10748aeb04b58e8f',
+      SOLANA: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+      SOL: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+      ARBITRUM: '0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9',
+      OPTIMISM: '0x94b008aa205766a30e1ed85f482b439f76a8a489',
     },
-    'USDC': {
-      'ETH': '0xa0b86991c6218b36c1d19D4a2e9Eb0ce3606eb48',
-      'ETHEREUM': '0xa0b86991c6218b36c1d19D4a2e9Eb0ce3606eb48',
-      'BSC': '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
-      'BINANCE': '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
-      'BASE': '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913',
-      'SOLANA': 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-      'SOL': 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-      'POLYGON': '0x3c499c542cef5e3811e1192ce70d8cc03d5c3359',
-      'ARBITRUM': '0xaf88d065e77c8cc2239327c5edb3a432268e5831',
-      'OPTIMISM': '0x0b2c639c533813f4aa9d7837caf62653d097ff85',
-    }
+    USDC: {
+      ETH: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+      ETHEREUM: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+      BSC: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
+      BINANCE: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
+      BASE: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913',
+      SOLANA: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+      SOL: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+      POLYGON: '0x3c499c542cef5e3811e1192ce70d8cc03d5c3359',
+      ARBITRUM: '0xaf88d065e77c8cc2239327c5edb3a432268e5831',
+      OPTIMISM: '0x0b2c639c533813f4aa9d7837caf62653d097ff85',
+    },
   };
 
-  const addr = tokenMap[symbolUpper]?.[chainUpper];
-  if (addr) return addr;
-
-  if (isNativeToken(symbolUpper, chainUpper)) return null;
-
-  return symbol;
+  // Unknown non-native token: return undefined instead of guessing (the old code sent the ticker as an address).
+  return tokenMap[s]?.[c];
 }
 
-// RocketX quotation API expects decimal amounts (e.g. 0.2 BTC, 100 USDT), NOT wei.
+// Decimal string, never scientific notation ((0.0000001).toString() === "1e-7").
 function formatAmountForRocketX(amount: number): string {
-  return amount.toString();
+  if (!isFinite(amount) || amount <= 0) return '0';
+  return amount.toFixed(12).replace(/\.?0+$/, '');
 }
 
 export async function getRocketxRate(
@@ -172,81 +189,88 @@ export async function getRocketxRate(
   params: Record<string, any> = {}
 ): Promise<RocketXQuote | null> {
   try {
+    // Docs: toToken + toNetwork are required.
+    if (!from || !to || !fromNetwork || !toNetwork) return null;
+
     const fromNetId = getRocketXNetworkId(fromNetwork);
-    const toNetId = toNetwork ? getRocketXNetworkId(toNetwork) : undefined;
+    const toNetId = getRocketXNetworkId(toNetwork);
+    const fromAddr = getRocketXTokenAddress(from, fromNetwork);
+    const toAddr = getRocketXTokenAddress(to, toNetwork);
 
-    const fromAddr = getRocketXTokenAddress(from || "", fromNetwork || "");
-    const toAddr = to ? getRocketXTokenAddress(to, toNetwork || fromNetwork) : null;
-
-    if (import.meta.env.DEV) {
-      console.log(`RocketX Quote: ${from}(${fromNetId}) -> ${to ?? '?'}(${toNetId}) amount=${amount}`);
+    if (fromAddr === undefined || toAddr === undefined) {
+      console.warn(`RocketX: no token mapping for ${from}@${fromNetwork} or ${to}@${toNetwork}`);
+      return null;
     }
 
-    // Addresses are optional for quotes — attach when available for better gas estimates.
+    // Only parameters documented for GET /v1/quotation. (fromAddress/toAddress are NOT quotation params.)
     const quotationParams: any = {
-      fromToken: fromAddr,
+      fromToken: fromAddr ?? 'null', // docs: literal "null" = native token
       fromNetwork: fromNetId,
-      toToken: toAddr,
+      toToken: toAddr ?? 'null',
       toNetwork: toNetId,
       amount: formatAmountForRocketX(amount || 0),
-      slippage: params.slippage || 1,
+      slippage: params.slippage ?? 1,
     };
-
-    if (params.fromAddress) quotationParams.fromAddress = params.fromAddress;
-    if (params.toAddress) quotationParams.toAddress = params.toAddress;
+    if (params.fixedRate) quotationParams.fixedRate = true;
     if (params.excludedExchanges) quotationParams.excludedExchanges = params.excludedExchanges;
-    if (params.fixedRate) quotationParams.fixedRate = params.fixedRate;
+    if (params.includedExchanges) quotationParams.includedExchanges = params.includedExchanges;
+    if (params.disableRoutesWithMemo) quotationParams.disableRoutesWithMemo = true;
 
-    if (import.meta.env.DEV) console.log('RocketX quotationParams:', JSON.stringify(quotationParams, null, 2));
+    if (import.meta.env.DEV) console.log('RocketX quotationParams:', quotationParams);
 
+    // callRocketX already unwraps the edge-function envelope; RocketX returns { platformToken, quotes, alternateRoute }.
     const data = await rocketXApi.getQuotation(quotationParams);
-    if (import.meta.env.DEV) console.log('RocketX raw response:', data);
+    const quotes = data?.quotes;
+    if (!Array.isArray(quotes) || quotes.length === 0) return null;
 
-    const actualData = data?.data?.data || data?.data || data;
-    const quotes = actualData?.quotes;
+    // This app executes DEX routes only (user signs from their own wallet), and signing is EVM-only for now.
+    // Pass { dexOnly: false } to see every route.
+    const dexOnly = params.dexOnly !== false;
 
-    if (quotes && Array.isArray(quotes) && quotes.length > 0) {
-      const mappedQuotes: RocketXQuote[] = quotes.map((q: any) => {
-        const toAmt  = Number(q.toAmount || q.toTokenAmount || 0);
-        const fromAmt = Number(q.fromAmount || q.fromTokenAmount || amount);
-
+    const mapped: RocketXQuote[] = quotes
+      .filter((q: any) => q.isTxnAllowed !== false)
+      .filter((q: any) => !dexOnly || (q.exchangeInfo?.exchange_type === 'DEX' && q.fromTokenInfo?.network_type === 'EVM'))
+      .map((q: any) => {
+        const toAmt = Number(q.toAmount || 0);
+        const fromAmt = Number(q.fromAmount || amount);
+        const ex = q.exchangeInfo ?? {};
         return {
-          exchange: q.exchangeInfo?.title || q.exchange || 'Unknown',
-          exchangeIcon: q.exchangeInfo?.logo || q.exchangeLogo || '',
-          exchangeId: q.exchangeInfo?.id || q.exchangeId,
+          exchange: ex.title || 'Unknown',
+          exchangeIcon: ex.logo || '',
+          exchangeId: ex.keyword,               // was ex.id (numeric) — excludedExchanges expects the keyword
+          exchangeType: ex.exchange_type,
           type: q.type || 'swap',
           fromAmount: fromAmt,
           fromToken: q.fromTokenInfo?.token_symbol || from,
-          fromTokenId: q.fromTokenInfo?.id,        // ← needed for /v1/swap
+          fromTokenId: q.fromTokenInfo?.id,     // required by /v1/swap
           toAmount: toAmt,
-          toToken: q.toTokenInfo?.token_symbol || (to || ""),
-          toTokenId: q.toTokenInfo?.id,            // ← needed for /v1/swap
-          gasFee: q.gasFeeUsd || q.totalFeeUsd || 0,
-          estimatedTime: q.estTimeInSeconds?.avg
-            ? `~${Math.ceil(q.estTimeInSeconds.avg / 60)}m`
-            : 'Unknown',
-          walletless: q.exchangeInfo?.walletLess ?? q.walletLess,
-          fromAmountInUsd: q.fromTokenInfo?.price
-            ? fromAmt * q.fromTokenInfo.price
-            : undefined,
-          toAmountInUsd: q.toTokenInfo?.price
-            ? toAmt * q.toTokenInfo.price
-            : undefined,
-          minAmount: q.additionalInfo?.minReceived || q.additionalInfo?.minRecieved,
-          priceImpact: q.additionalInfo?.priceImpact || q.priceImpact,
+          toToken: q.toTokenInfo?.token_symbol || to,
+          toTokenId: q.toTokenInfo?.id,         // required by /v1/swap
+          gasFee: q.gasFeeUsd ?? q.additionalInfo?.totalFeeUsd ?? 0,
+          estimatedTime: q.estTimeInSeconds?.avg ? `~${Math.ceil(q.estTimeInSeconds.avg / 60)}m` : 'Unknown',
+          walletless: ex.walletLess,
+          isRefundAddressRequired: ex.isRefundAddressRequired,
+          memoRequired: ex.memoRequired,
+          fromAmountInUsd: q.fromTokenInfo?.price ? fromAmt * q.fromTokenInfo.price : undefined,
+          toAmountInUsd: q.toTokenInfo?.price ? toAmt * q.toTokenInfo.price : undefined,
+          // The live API spells it "minRecieved"; the docs spell it "minReceived".
+          minAmount: q.additionalInfo?.minReceived ?? q.additionalInfo?.minRecieved,
+          priceImpact: q.additionalInfo?.priceImpact,
           savingUsd: q.additionalInfo?.savingUsd,
-          rateId: q.rateId,                        // ← fixed-rate lock
+          rateId: q.rateId,
+          expiresAt: q.expiresAt,
+          allowanceAddress: q.allowanceAddress,
+          fromTokenAddress: q.fromTokenInfo?.contract_address,
+          fromTokenDecimals: q.fromTokenInfo?.token_decimals,
+          fromChainId: q.fromTokenInfo?.chainId,
+          fromNetworkType: q.fromTokenInfo?.network_type,
+          fromIsNative: q.fromTokenInfo?.is_native_token === 1 || q.fromTokenInfo?.is_native_token === true,
         };
-      });
+      })
+      .filter((q) => q.toAmount > 0);
 
-      const valid = mappedQuotes.filter(q => q.toAmount > 0);
-      if (valid.length === 0) return null;
-
-      // Return the quote with the highest output amount
-      return valid.reduce((best, q) => q.toAmount > best.toAmount ? q : best);
-    }
-
-    return null;
+    if (mapped.length === 0) return null;
+    return mapped.reduce((best, q) => (q.toAmount > best.toAmount ? q : best));
   } catch (error) {
     console.error('Error fetching RocketX rate:', error);
     return null;
@@ -271,22 +295,19 @@ export const rocketXApi = {
     toNetwork?: string;
     amount: string;
     slippage?: number;
-    fromAddress?: string;
-    toAddress?: string;
     fixedRate?: boolean;
     excludedExchanges?: string;
+    includedExchanges?: string;
+    disableRoutesWithMemo?: boolean;
   }) {
     return callRocketX('quotation', params);
   },
 
   /**
-   * Execute a swap. Params must match the RocketX /v1/swap body exactly.
-   *
-   * Required: fromTokenId, toTokenId, userAddress, destinationAddress, amount
-   * Optional: fee (default 0.6%), slippage, rateId, referrerAddress, disableEstimate
-   *
-   * For walletless exchanges: only destinationAddress is required (userAddress still sent for record-keeping).
-   * For DEX routes: referrerAddress is required to receive partner fee.
+   * Execute a swap. `fee` and `referrerAddress` are set by the edge function — do NOT send them.
+   * If the chosen quote has isRefundAddressRequired, pass refundAddress (+ refundMemo).
+   * Response (per the PDF): { requestId, txId (INTERNAL integer — NOT the on-chain hash), swap: { depositAddress, ..., tx: { from, to, data, value, gas, gasPrice, memo } } }.
+   * For DEX routes the `tx` object is what the user's wallet signs and broadcasts; the resulting hash is what /status calls `txId`.
    */
   async executeSwap(params: {
     fromTokenId: number;
@@ -294,10 +315,10 @@ export const rocketXApi = {
     userAddress: string;
     destinationAddress: string;
     amount: number;
-    fee?: number;
     slippage?: number;
     rateId?: string;
-    referrerAddress?: string;
+    refundAddress?: string;
+    refundMemo?: string;
     disableEstimate?: boolean;
   }) {
     return callRocketX('swap', params);
