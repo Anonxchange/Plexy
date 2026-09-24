@@ -87,29 +87,31 @@ async function callRocketX(action: string, params: Record<string, any> = {}) {
   }
 }
 
+// Network IDs are the `id` field of GET /v1/configs -> supported_network[] (verified against a live response).
+// NOTE: `id` is NOT the same as `chainId` (e.g. Bitcoin: id "BTC", chainId "bitcoin"; Base: id "Base Chain", chainId "0x2105").
 function getRocketXNetworkId(chain: string): string {
   if (!chain) return "";
   const map: Record<string, string> = {
-    'BTC': 'bitcoin',   // UNVERIFIED — not confirmed by the docs; check the real ID via GET /v1/configs
-    'BITCOIN': 'bitcoin',
+    'BTC': 'BTC',
+    'BITCOIN': 'BTC',
     'ETH': 'ethereum',
     'ETHEREUM': 'ethereum',
     'BSC': 'binance',
     'BINANCE': 'binance',
-    'TRX': 'tron',
-    'TRON': 'tron',
+    'TRX': 'TRON',
+    'TRON': 'TRON',
     'SOL': 'solana',
     'SOLANA': 'solana',
     'POLYGON': 'polygon',
     'MATIC': 'polygon',
     'ARBITRUM': 'arbitrum',
     'OPTIMISM': 'optimism',
-    'BASE': 'base',
+    'BASE': 'Base Chain',
     'AVALANCHE': 'avaxc-mainnet',
-    'NEAR': 'near',     // UNVERIFIED — check via GET /v1/configs
-    'XRP': 'ripple',
+    'NEAR': 'NEAR Protocol',
+    'XRP': 'XRP',
   };
-  return map[chain.toUpperCase()] || chain.toLowerCase();
+  return map[chain.toUpperCase()] || chain; // unknown: pass through untouched (IDs are case/space sensitive)
 }
 
 // Native asset symbol(s) per chain. NOTE: ETH is native on Base/Arbitrum/Optimism too.
