@@ -231,7 +231,11 @@ export async function getRocketxRate(
 
     const mapped: RocketXQuote[] = quotes
       .filter((q: any) => q.isTxnAllowed !== false)
-      .filter((q: any) => !dexOnly || (q.exchangeInfo?.exchange_type === 'DEX' && q.fromTokenInfo?.network_type === 'EVM'))
+      .filter((q: any) => !dexOnly || (
+        q.exchangeInfo?.exchange_type === 'DEX' &&
+        q.fromTokenInfo?.network_type === 'EVM' &&
+        q.exchangeInfo?.walletLess === false // DEX + walletLess:true (e.g. NEAR_INTENT) is deposit-address based, not a signable tx
+      ))
       .map((q: any) => {
         const toAmt = Number(q.toAmount || 0);
         const fromAmt = Number(q.fromAmount || amount);
