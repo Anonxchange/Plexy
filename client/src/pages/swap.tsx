@@ -1,4 +1,3 @@
-
 import { useHead } from "@unhead/react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect, useRef } from "react";
@@ -22,8 +21,9 @@ import { usePasswordRateLimit } from "@/hooks/use-password-rate-limit";
 import { useWalletBalances } from "@/hooks/use-wallet-balances";
 import { getCryptoPrices } from "@/lib/crypto-prices";
 import { useToast } from "@/hooks/use-toast";
-import { rocketXApi } from "@/lib/rocketx-api";
 import { nonCustodialWalletManager } from "@/lib/non-custodial-wallet";
+import { executeDexSwap, pollSwapStatus } from "@/lib/rocketx-dex";
+import { createEvmTxSender } from "@/lib/rocketx-signer";
 
 
 const formatDistanceToNow = (date: Date | number | string, _options?: any) => {
@@ -416,6 +416,11 @@ export function Swap() {
           if (net === 'trx' || net === 'tron') return wWalletType === 'tron' || wChainId.includes('tron');
           if (net === 'sol' || net === 'solana') return wWalletType === 'solana' || wChainId.includes('solana');
           if (net === 'polygon' || net === 'matic') return wWalletType === 'polygon' || wChainId.includes('polygon');
+          // Every EVM chain shares the same keypair/address, so Base/Arbitrum/Optimism/Avalanche
+          // fall back to the base Ethereum wallet row.
+          if (['base', 'arbitrum', 'optimism', 'avalanche', 'avaxc-mainnet'].includes(net)) {
+            return wChainId === 'ethereum' || wWalletType === 'ethereum';
+          }
           return false;
         });
       };
@@ -429,80 +434,41 @@ export function Swap() {
         throw new Error(`Please generate a ${missing} wallet first. Go to the Assets page to create it.`);
       }
 
-      // Validate we have the token IDs from the quote (required by RocketX /v1/swap)
-      if (!activeQuoteToUse?.fromTokenId || !activeQuoteToUse?.toTokenId) {
+      // STEP 2: DEX flow — approve (if needed) -> create swap -> sign + broadcast `tx` -> poll status.
+      // Only EVM DEX routes reach here (getRocketxRate filters the rest).
+      const q = activeQuoteToUse;
+      if (!q?.fromChainId) {
         throw new Error("Quote data is incomplete — please wait for a fresh quote and try again.");
       }
 
-      // STEP 2: Build swap payload per RocketX docs
-      // - fromTokenId / toTokenId come from the quotation response (not token addresses)
-      // - userAddress = sender, destinationAddress = recipient
-      // - For walletless exchanges only destinationAddress is strictly required,
-      //   but we always send userAddress for record-keeping
-      // - referrerAddress earns us 70% of the partner fee on DEX routes
-      const swapResponse = await rocketXApi.executeSwap({
-        fromTokenId: activeQuoteToUse.fromTokenId,
-        toTokenId: activeQuoteToUse.toTokenId,
+      const sendTx = await createEvmTxSender(fromWallet, password, q.fromChainId, user!.id);
+
+      const { requestId, txHash } = await executeDexSwap({
+        quote: q,
         userAddress: fromWallet.address,
         destinationAddress: toWallet.address,
-        amount: activeQuoteToUse.fromAmount || fromAmountNum,
-        fee: 0.6,                    // partner fee % (0–3%)
         slippage: 1,
-        ...(activeQuoteToUse.rateId ? { rateId: activeQuoteToUse.rateId } : {}),
+        sendTx,
+        onStep: (step) => {
+          if (!isMountedRef.current) return;
+          toast({
+            title: step === "approving" ? "Approving token…" : step === "creating" ? "Creating swap…" : "Sending transaction…",
+            description: step === "approving" ? "Waiting for the approval to confirm on-chain." : "Please wait.",
+          });
+        },
       });
 
-      if (!swapResponse?.requestId) {
-        throw new Error("Swap creation failed — no requestId returned.");
-      }
-
-      const requestId: string = swapResponse.requestId;
-      // txId is the on-chain tx hash (for DEX/non-walletless routes the swap response may include it)
-      let onChainTxId: string | undefined = swapResponse.txId || undefined;
-
       if (isMountedRef.current) {
-        toast({
-          title: "Swap Initiated",
-          description: activeQuoteToUse.walletless
-            ? `Send ${activeQuoteToUse.fromAmount} ${fromCurrency} to the deposit address to complete the swap.`
-            : "Waiting for blockchain confirmation...",
-        });
+        toast({ title: "Swap submitted", description: "Waiting for the swap to complete…" });
       }
 
-      // STEP 3: Poll status using requestId (and txId when available)
-      // subState lifecycle: transaction_pending → pending → approved → executed → withdrawal → withdraw_success
-      // Completion: status === "success" OR subState === "withdraw_success"
-      // Failure:    status === "failed"  OR subState === "invalid"
-      let attempts = 0;
-      let completed = false;
-
-      while (attempts < 40 && isMountedRef.current) {
-        await new Promise(r => setTimeout(r, 5000));
-
-        const statusRes = await rocketXApi.getStatus(requestId, onChainTxId);
-        const status   = statusRes?.status;
-        const subState = statusRes?.subState;
-
-        // Capture tx hash if returned in a later poll (DEX routes)
-        if (statusRes?.originTransactionHash && !onChainTxId) {
-          onChainTxId = statusRes.originTransactionHash;
-        }
-
-        if (status === "success" || subState === "withdraw_success") {
-          completed = true;
-          break;
-        }
-
-        if (status === "failed" || subState === "invalid") {
-          const reason = statusRes?.remarks || "Swap failed or timed out on the exchange.";
-          throw new Error(reason);
-        }
-
-        attempts++;
-      }
-
-      if (!completed && isMountedRef.current) {
-        throw new Error("Swap is taking longer than expected. Check your wallet history — funds may still arrive.");
-      }
+      // STEP 3: status needs requestId + the ON-CHAIN tx hash (not the swap response's internal txId).
+      const finalStatus = await pollSwapStatus({
+        requestId,
+        txHash,
+        isCancelled: () => !isMountedRef.current,
+      });
+      if (!finalStatus) return; // component unmounted
 
       if (isMountedRef.current) {
         rateLimit.reset();
