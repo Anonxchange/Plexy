@@ -51,6 +51,7 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
   useEffect(() => {
     let isMounted = true;
     let intervalId: NodeJS.Timeout;
+    let requestId = 0;
 
     // cacheKey is derived from debounced amount so the effect only re-runs when
     // typing has settled, not on every individual keystroke
@@ -58,6 +59,8 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
 
     const fetchPrices = async (showLoading = false) => {
       if (!isMounted) return;
+      const myRequestId = ++requestId;
+      const isCurrent = () => isMounted && myRequestId === requestId;
 
       // Don't fetch if amount is 0 or invalid
       if (debouncedAmount <= 0 || isNaN(debouncedAmount)) {
@@ -99,7 +102,7 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
             error: null,
             bestQuote: null,
           };
-          if (isMounted) {
+          if (isCurrent()) {
             setPriceData(data);
             priceCache[cacheKey] = { data, timestamp: Date.now() };
           }
@@ -154,14 +157,21 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
           { ...(fromAddress ? { fromAddress } : {}), ...(toAddress ? { toAddress } : {}) }
         );
         
-        // Ensure we prioritize RocketX quote. If it's missing, we wait or show error instead of jumping to market rate
+        // Ensure we prioritize RocketX quote. If it's missing, clear the stale quote instead of
+        // leaving the previous pair's bestQuote/rates in state (was causing the UI to look frozen
+        // on the old coin's price after switching to a pair with no available route).
         if (!rocketxQuote) {
-          if (isMounted) {
-            setPriceData(prev => ({ 
-              ...prev, 
-              isLoading: false, 
-              error: 'Fetching best exchange rate...' 
-            }));
+          if (isCurrent()) {
+            const data = {
+              marketRate: 0,
+              swapRate: 0,
+              percentageDiff: 0,
+              isLoading: false,
+              error: 'No route available for this pair',
+              bestQuote: null,
+            };
+            setPriceData(data);
+            priceCache[cacheKey] = { data, timestamp: Date.now() };
           }
           return;
         }
@@ -186,11 +196,14 @@ export function useSwapPrice(fromCrypto: string, toCrypto: string, fromNetwork: 
       } catch (error) {
         console.error('Error fetching swap prices:', error);
         if (isMounted) {
-          setPriceData((prev) => ({
-            ...prev,
+          setPriceData({
+            marketRate: 0,
+            swapRate: 0,
+            percentageDiff: 0,
             isLoading: false,
             error: 'Failed to fetch live prices',
-          }));
+            bestQuote: null,
+          });
         }
       }
     };
