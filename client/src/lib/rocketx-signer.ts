@@ -1,4 +1,4 @@
-import { prepareEVMContractIntent, signEVMContractCallFromVault } from '@/lib/use-signing-worker';
+import { prepareEVMContractIntent, signEVMContractCallFromVault } from '@/hook/use-signing-worker';
 import { rpcUrlFor, type SendTx } from '@/lib/rocketx-dex';
 
 /**
