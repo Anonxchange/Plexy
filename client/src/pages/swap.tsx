@@ -35,12 +35,15 @@ const formatDistanceToNow = (date: Date | number | string, _options?: any) => {
   return `${Math.floor(diff / 86400)}d ago`;
 };
 
+// NOTE: BTC, TRX, XRP (and USDT/USDC on Tron) are temporarily hidden — RocketX has no
+// non-custodial (DEX) route for them, only CEX/deposit-address routes, which this
+// non-custodial platform intentionally doesn't support. Re-add once an alternative is found.
+// SOL (and USDT/USDC on Solana) ARE shown — real DEX routes exist for it — but the Swap
+// button is disabled for Solana pairs below until a Solana transaction signer is built.
 const currencies = [
-  { symbol: "BTC", name: "Bitcoin", iconUrl: cryptoIconUrls.BTC, chain: "BTC", identifier: "BTC.BTC" },
   { symbol: "USDT", name: "Tether", iconUrl: cryptoIconUrls.USDT, networks: [
     { chain: "ETH", identifier: "ETH.USDT-0xdac17f958d2ee523a2206206994597C13D831ec7", name: "Ether (ERC20)" },
     { chain: "BSC", identifier: "BSC.USDT-0x55d398326f99059ff775485246999027b3197955", name: "BNB  (BEP20)" },
-    { chain: "TRX", identifier: "TRX.USDT-TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", name: "Tron (TRC20)" },
     { chain: "SOL", identifier: "SOL.USDT-Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", name: "Solana" },
     { chain: "ARBITRUM", identifier: "ARBITRUM.USDT-0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9", name: "Arbitrum One" },
     { chain: "POLYGON", identifier: "POLYGON.USDT-0xc2132d05d31c914a87c6611c10748aeb04b58e8f", name: "Polygon" },
@@ -57,9 +60,7 @@ const currencies = [
     { chain: "OPTIMISM", identifier: "OPTIMISM.USDC-0x0b2c639c533813f4aa9d7837caf62653d097ff85", name: "Optimism" },
   ]},
   { symbol: "SOL", name: "Solana", iconUrl: cryptoIconUrls.SOL, chain: "SOL", identifier: "SOL.SOL" },
-  { symbol: "TRX", name: "Tron", iconUrl: cryptoIconUrls.TRX, chain: "TRX", identifier: "TRX.TRX" },
   { symbol: "BNB", name: "BNB", iconUrl: cryptoIconUrls.BNB, chain: "BSC", identifier: "BSC.BNB" },
-  { symbol: "XRP", name: "XRP", iconUrl: cryptoIconUrls.XRP, chain: "XRP", identifier: "XRP.XRP" },
   { symbol: "MATIC", name: "Polygon", iconUrl: cryptoIconUrls.MATIC, chain: "POLYGON", identifier: "POLYGON.MATIC" },
   { symbol: "ARB", name: "Arbitrum", iconUrl: cryptoIconUrls.ARB, chain: "ARBITRUM", identifier: "ARBITRUM.ARB" },
   { symbol: "OP", name: "Optimism", iconUrl: cryptoIconUrls.OP, chain: "OPTIMISM", identifier: "OPTIMISM.OP" },
@@ -73,9 +74,9 @@ export function Swap() {
   const { toast } = useToast();
   const [fromAmount, setFromAmount] = useState("0.00");
   const [toAmount, setToAmount] = useState("0.00");
-  const [fromCurrency, setFromCurrency] = useState("BTC");
+  const [fromCurrency, setFromCurrency] = useState("ETH");
   const [toCurrency, setToCurrency] = useState("USDT");
-  const [fromNetwork, setFromNetwork] = useState("BTC");
+  const [fromNetwork, setFromNetwork] = useState("ETH");
   const [toNetwork, setToNetwork] = useState("ETH");
   const [isUpdatingFromInput, setIsUpdatingFromInput] = useState(true);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
@@ -364,6 +365,17 @@ export function Swap() {
 
     const fromAmountNum = parseFloat(fromAmount);
     if (fromAmountNum <= 0) return;
+
+    // Belt-and-suspenders: button is disabled for this too, but guard here in case
+    // handleSwap is ever reachable another way (keyboard submit, etc).
+    if (fromNetwork === "SOL" || toNetwork === "SOL") {
+      toast({
+        title: "Not Available Yet",
+        description: "Solana swaps are coming soon — execution isn't wired up for this chain yet.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (balance !== null && fromAmountNum > balance) {
       toast({
@@ -1202,13 +1214,17 @@ export function Swap() {
                   </div>
 
                   {/* Swap Button */}
+                  {/* Solana quotes are shown for pricing/comparison, but execution only supports
+                      EVM signing so far (see createEvmTxSender) — block the swap itself for now. */}
                   <Button 
                     className="w-full h-14 text-lg font-black bg-[#B4F22E] hover:bg-[#B4F22E]/90 text-black rounded-xl shadow-lg transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
                     onClick={handleSwap}
-                    disabled={isSwapping || (balance !== null && parseFloat(fromAmount) > balance)}
+                    disabled={isSwapping || (balance !== null && parseFloat(fromAmount) > balance) || fromNetwork === "SOL" || toNetwork === "SOL"}
                   >
                     {isSwapping ? (
                       <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                    ) : (fromNetwork === "SOL" || toNetwork === "SOL") ? (
+                      "Solana Swaps Coming Soon"
                     ) : (balance !== null && parseFloat(fromAmount) > balance) ? (
                       "Insufficient Balance"
                     ) : (
