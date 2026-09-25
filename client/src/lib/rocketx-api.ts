@@ -225,16 +225,20 @@ export async function getRocketxRate(
     const quotes = data?.quotes;
     if (!Array.isArray(quotes) || quotes.length === 0) return null;
 
-    // This app executes DEX routes only (user signs from their own wallet), and signing is EVM-only for now.
-    // Pass { dexOnly: false } to see every route.
+    // This app executes DEX routes only (user signs from their own wallet). Previously restricted
+    // to network_type === 'EVM', which also silently excluded Solana (which DOES have real DEX
+    // liquidity/routes, unlike BTC/XRP/Tron which are CEX-only here). Dropping that restriction:
+    // Solana DEX quotes now come through; BTC/XRP/Tron still naturally resolve to zero DEX quotes
+    // since RocketX has no non-custodial route for them. Execution (Swap.tsx) still only supports
+    // signing EVM txs — the Swap button is disabled for non-EVM pairs until a Solana signer exists.
+    // Pass { dexOnly: false } to see every route (including CEX/deposit-address ones).
     const dexOnly = params.dexOnly !== false;
 
     const mapped: RocketXQuote[] = quotes
       .filter((q: any) => q.isTxnAllowed !== false)
       .filter((q: any) => !dexOnly || (
         q.exchangeInfo?.exchange_type === 'DEX' &&
-        q.fromTokenInfo?.network_type === 'EVM' &&
-        q.exchangeInfo?.walletLess === false // DEX + walletLess:true (e.g. NEAR_INTENT) is deposit-address based, not a signable tx
+        q.exchangeInfo?.walletLess === false // DEX + walletLess:true is deposit-address based, not a signable tx
       ))
       .map((q: any) => {
         const toAmt = Number(q.toAmount || 0);
