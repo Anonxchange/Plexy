@@ -142,6 +142,7 @@ export function ShippingEstimator({
   const [selectedCountry, setSelectedCountry] = useState<string>("");
   const [selectedMethodIdx, setSelectedMethodIdx] = useState(0);
   const [shippingExpanded, setShippingExpanded] = useState(false);
+  const [refundOpen, setRefundOpen] = useState(false);
 
   const { rates, isLoading: isLoadingRates, error: ratesError, calculate, reset } = useShippingRates();
 
@@ -224,6 +225,30 @@ export function ShippingEstimator({
         <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
           Service commitment
         </p>
+      </div>
+
+      {/* Trust & info bar */}
+      <div className="px-4 pb-2 flex flex-col gap-1.5">
+        <div className="flex items-center gap-1.5">
+          <Truck className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <span className="text-sm font-semibold text-foreground">
+            Est. delivery: 7–20 business days, with tracking
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pl-[1.375rem] text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+            Secure checkout via Shopify
+          </span>
+          <button
+            type="button"
+            onClick={() => setRefundOpen(true)}
+            className="flex items-center gap-1.5 hover:text-foreground underline decoration-dotted underline-offset-2"
+          >
+            <RotateCcw className="h-3.5 w-3.5 shrink-0" />
+            Easy returns &amp; refunds
+          </button>
+        </div>
       </div>
 
       {/* Shipping — tap to expand destination & method */}
@@ -345,18 +370,17 @@ export function ShippingEstimator({
       <Separator />
 
       {/* Return & refund policy */}
-      <a
-        href="https://www.pexly.app/en/refund-policy"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center justify-between px-4 py-3.5 hover:bg-muted/40 transition-colors"
+      <button
+        type="button"
+        onClick={() => setRefundOpen(true)}
+        className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-muted/40 transition-colors text-left"
       >
         <div className="flex items-center gap-3">
           <RotateCcw className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
           <span className="text-sm font-semibold">Return &amp; refund policy</span>
         </div>
         <ChevronRight className="h-4 w-4 text-muted-foreground" />
-      </a>
+      </button>
 
       <Separator />
 
@@ -374,6 +398,52 @@ export function ShippingEstimator({
           <p>Secure personal details: We protect your privacy and keep your data safe.</p>
         </div>
       </div>
+
+      {/* Return & refund — bottom sheet on mobile, centered popup from sm breakpoint up */}
+      {refundOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50"
+          onClick={() => setRefundOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="refund-sheet-title"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:max-w-md bg-background rounded-t-2xl sm:rounded-2xl p-5 max-h-[80vh] overflow-y-auto sm:shadow-xl"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h2 id="refund-sheet-title" className="text-sm font-bold flex items-center gap-2">
+                <RotateCcw className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                Returns &amp; refunds
+              </h2>
+              <button
+                type="button"
+                onClick={() => setRefundOpen(false)}
+                aria-label="Close"
+                className="text-muted-foreground hover:text-foreground text-lg leading-none px-1"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-2.5 text-sm text-muted-foreground">
+              <p>
+                New to us and not sure what happens if something goes wrong? Here's how it works:
+              </p>
+              <p>
+                If your item arrives damaged, defective, or doesn't match what you ordered, contact our support team with photos of the item and packaging, and we'll sort out a replacement or refund.
+              </p>
+              <p>
+                Approved refunds go back to your original payment method. If you've simply changed your mind, reach out before your order ships and we'll do what we can to help.
+              </p>
+              <p>
+                We review every request individually and respond as quickly as we can — no bots, no runaround.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
