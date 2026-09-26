@@ -15,7 +15,6 @@ import {
   Clock,
   ShieldCheck,
   Home as HomeIcon,
-  Phone,
 } from '@/lib/icons';
 import { useState, useRef } from "react";
 import {
@@ -675,30 +674,6 @@ const ContactPage = () => {
 
                   <p className="text-xs text-muted-foreground mt-1">
                     For urgent issues or if the form isn't working.
-                  </p>
-                </div>
-
-                {/* Phone */}
-                <div className="bg-card border border-border rounded-xl p-5">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                      <Phone className="w-4 h-4 text-primary" />
-                    </div>
-
-                    <h3 className="text-sm font-semibold text-foreground">
-                      Call us
-                    </h3>
-                  </div>
-
-                  <a
-                    href="tel:+2348134478949"
-                    className="text-sm text-primary font-medium hover:underline underline-offset-2"
-                  >
-                    +234 813 447 8949
-                  </a>
-
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Available for support and business enquiries.
                   </p>
                 </div>
 
