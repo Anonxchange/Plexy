@@ -14,17 +14,58 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCart } from "@/hooks/use-shopify-cart";
 import { useState, useEffect } from "react";
 
-// Payment-method badges, styled after the real brand colors but rendered as
-// plain text on a colored pill — no logo artwork, no <img>, no external
-// requests of any kind. Nothing here for a CSP img-src rule to ever block.
-function PaymentBadge({ label, bg, fg }: { label: string; bg: string; fg: string }) {
+// Payment-method badges as pure inline SVG — drawn directly as markup, not
+// loaded as a resource, so img-src (which only governs <img>/background-image/
+// SVG <image href>) never enters the picture. Colors use SVG *attributes*
+// (fill="...") rather than the style prop, so a strict style-src without
+// 'unsafe-inline' can't strip them either. These are simplified, original
+// glyphs suggestive of each brand — not traced copies of the official
+// trademarked logos. If you need the exact official marks (some brands'
+// usage guidelines require their unmodified asset), download each one from
+// the provider's brand-kit, host it locally, and allow that path in img-src.
+function AmazonPayBadge() {
   return (
-    <div
-      className="flex-1 h-10 rounded-full flex items-center justify-center text-xs font-bold tracking-tight select-none"
-      style={{ backgroundColor: bg, color: fg }}
-    >
-      {label}
-    </div>
+    <svg viewBox="0 0 120 40" className="flex-1 h-10" xmlns="http://www.w3.org/2000/svg">
+      <rect width="120" height="40" rx="20" fill="#E8DCC8" />
+      <text x="60" y="19" textAnchor="middle" fontSize="11" fontWeight="700" fill="#111111" fontFamily="sans-serif">amazon</text>
+      <path d="M 40 25 Q 60 32 80 25" stroke="#111111" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      <text x="60" y="34" textAnchor="middle" fontSize="7" fontWeight="600" fill="#111111" fontFamily="sans-serif">pay</text>
+    </svg>
+  );
+}
+
+function GooglePayBadge() {
+  return (
+    <svg viewBox="0 0 120 40" className="flex-1 h-10" xmlns="http://www.w3.org/2000/svg">
+      <rect width="120" height="40" rx="20" fill="#111111" />
+      <circle cx="38" cy="20" r="7" fill="#4285F4" />
+      <path d="M38 20 A7 7 0 0 1 45 20" fill="#EA4335" />
+      <path d="M38 13 A7 7 0 0 0 31.5 23" fill="#FBBC05" />
+      <path d="M33 26 A7 7 0 0 0 45 20" fill="#34A853" />
+      <text x="72" y="25" textAnchor="middle" fontSize="12" fontWeight="600" fill="#FFFFFF" fontFamily="sans-serif">Pay</text>
+    </svg>
+  );
+}
+
+function PayPalBadge() {
+  return (
+    <svg viewBox="0 0 120 40" className="flex-1 h-10" xmlns="http://www.w3.org/2000/svg">
+      <rect width="120" height="40" rx="20" fill="#FFC439" />
+      <path d="M35 12 h8 a6 6 0 0 1 0 12 h-5 l-1 6 h-5 z" fill="#003087" />
+      <path d="M41 12 h8 a6 6 0 0 1 0 12 h-5 l-1 6 h-5 z" fill="#009CDE" transform="translate(4,0)" />
+      <text x="78" y="25" textAnchor="middle" fontSize="12" fontWeight="700" fill="#1A2C56" fontFamily="sans-serif">PayPal</text>
+    </svg>
+  );
+}
+
+function ShopPayBadge() {
+  return (
+    <svg viewBox="0 0 120 40" className="flex-1 h-10" xmlns="http://www.w3.org/2000/svg">
+      <rect width="120" height="40" rx="20" fill="#5A31F4" />
+      <path d="M32 15 h10 l2 12 h-14 z" fill="#FFFFFF" />
+      <path d="M35 15 v-2 a3 3 0 0 1 6 0 v2" stroke="#FFFFFF" strokeWidth="1.5" fill="none" />
+      <text x="72" y="25" textAnchor="middle" fontSize="12" fontWeight="600" fill="#FFFFFF" fontFamily="sans-serif">Pay</text>
+    </svg>
   );
 }
 
@@ -211,10 +252,10 @@ export function CartSheet() {
 
             {/* Payment badges — plain colored text pills, no logo images, nothing for CSP to block */}
             <div className="flex items-center gap-2 pt-1">
-              <PaymentBadge label="amazon pay" bg="#E8DCC8" fg="#111111" />
-              <PaymentBadge label="G Pay" bg="#111111" fg="#FFFFFF" />
-              <PaymentBadge label="PayPal" bg="#FFC439" fg="#1A2C56" />
-              <PaymentBadge label="shop Pay" bg="#5A31F4" fg="#FFFFFF" />
+              <AmazonPayBadge />
+              <GooglePayBadge />
+              <PayPalBadge />
+              <ShopPayBadge />
             </div>
           </div>
         )}
