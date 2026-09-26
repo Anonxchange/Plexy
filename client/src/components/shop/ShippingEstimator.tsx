@@ -268,7 +268,7 @@ export function ShippingEstimator({
               </p>
             )}
             <p className="mt-0.5 text-xs text-muted-foreground">
-              {isLoadingRates ? "Calculating…" : `Est. delivery: ${deliveryTime}`}
+              {isLoadingRates ? "Calculating…" : "Tap to choose destination & method"}
             </p>
           </div>
         </div>
@@ -352,6 +352,10 @@ export function ShippingEstimator({
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5" />
+              Delivery: {deliveryTime}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5" />
               Processing: {processingTime}
             </span>
             <span className="flex items-center gap-1.5">
@@ -366,21 +370,6 @@ export function ShippingEstimator({
           </div>
         </div>
       )}
-
-      <Separator />
-
-      {/* Return & refund policy */}
-      <button
-        type="button"
-        onClick={() => setRefundOpen(true)}
-        className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-muted/40 transition-colors text-left"
-      >
-        <div className="flex items-center gap-3">
-          <RotateCcw className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-          <span className="text-sm font-semibold">Return &amp; refund policy</span>
-        </div>
-        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-      </button>
 
       <Separator />
 
@@ -427,19 +416,39 @@ export function ShippingEstimator({
               </button>
             </div>
 
-            <div className="space-y-2.5 text-sm text-muted-foreground">
+            <div className="space-y-3 text-sm text-muted-foreground">
+              <div>
+                <p className="text-xs font-semibold text-foreground mb-1">You're covered if:</p>
+                <ul className="space-y-1 list-disc pl-4">
+                  <li>Your order isn't delivered within the stated delivery window</li>
+                  <li>You receive the wrong item or one that doesn't match the listing</li>
+                  <li>The item arrives damaged or defective — report it within 7 days of delivery</li>
+                </ul>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold text-foreground mb-1">Not covered:</p>
+                <ul className="space-y-1 list-disc pl-4">
+                  <li>Change of mind after an order has shipped</li>
+                  <li>Custom, personalised, or made-to-order items (unless defective)</li>
+                </ul>
+              </div>
+
               <p>
-                New to us and not sure what happens if something goes wrong? Here's how it works:
+                To request a refund, open the order in your dashboard and submit a request with photos of the issue. Most decisions are made within 10 business days (up to 21 for complex or cross-border cases), and approved refunds are processed within 3 business days of that decision.
               </p>
               <p>
-                If your item arrives damaged, defective, or doesn't match what you ordered, contact our support team with photos of the item and packaging, and we'll sort out a replacement or refund.
+                If a return is required, ship the item back within 14 days of approval; a restocking fee of up to 15% may apply to non-defective returns.
               </p>
-              <p>
-                Approved refunds go back to your original payment method. If you've simply changed your mind, reach out before your order ships and we'll do what we can to help.
-              </p>
-              <p>
-                We review every request individually and respond as quickly as we can — no bots, no runaround.
-              </p>
+
+              <a
+                href="https://www.pexly.app/en/refund-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block text-primary font-medium hover:underline underline-offset-2 pt-1"
+              >
+                View full refund policy →
+              </a>
             </div>
           </div>
         </div>
