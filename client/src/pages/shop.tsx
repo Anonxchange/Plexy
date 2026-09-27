@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useLocation } from "wouter";
 import { getSupabase } from "@/lib/supabase";
-import { shopifyService } from "@/lib/shopify-service";
+import { shopifyService, getMarketCountry } from "@/lib/shopify-service";
 import { ShopSkeleton } from "@/components/shop/ShopSkeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShopPageSkeleton } from "@/components/page-skeleton";
@@ -139,9 +139,15 @@ const CAT_SEPARATOR = " > ";
 const SHOP_CACHE_KEY = "pexly_shop_cache";
 const SHOP_CACHE_TTL = 5 * 60 * 1000;
 
+function shopCacheKey(): string {
+  // Prices/currency now depend on the resolved market, so a cache entry from
+  // one country must never be served under a different one.
+  return `${SHOP_CACHE_KEY}_${getMarketCountry() ?? "auto"}`;
+}
+
 function readShopCache(): { products: Listing[]; categories: string[] } | null {
   try {
-    const raw = sessionStorage.getItem(SHOP_CACHE_KEY);
+    const raw = sessionStorage.getItem(shopCacheKey());
     if (!raw) return null;
     const { products, categories, ts } = JSON.parse(raw);
     if (Date.now() - ts > SHOP_CACHE_TTL) return null;
@@ -151,7 +157,7 @@ function readShopCache(): { products: Listing[]; categories: string[] } | null {
 
 function writeShopCache(products: Listing[], categories: string[]) {
   try {
-    sessionStorage.setItem(SHOP_CACHE_KEY, JSON.stringify({ products, categories, ts: Date.now() }));
+    sessionStorage.setItem(shopCacheKey(), JSON.stringify({ products, categories, ts: Date.now() }));
   } catch { /* silent */ }
 }
 
