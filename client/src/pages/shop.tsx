@@ -17,7 +17,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { Search, Package, Plus, Store, LayoutGrid, ChevronRight, Shuffle, SlidersHorizontal, Check } from '@/lib/icons';
+import { Search, Package, Store, LayoutGrid, ChevronRight, Shuffle, SlidersHorizontal, Check } from '@/lib/icons';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,7 +27,7 @@ import {
 import { useLocation } from "wouter";
 import { getSupabase } from "@/lib/supabase";
 import { shopifyService, getMarketCountry } from "@/lib/shopify-service";
-import { MarketSelector } from "@/components/shop/market-selector";
+import { MarketSelector } from "@/components/market-selector";
 import { ShopSkeleton } from "@/components/shop/ShopSkeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShopPageSkeleton } from "@/components/page-skeleton";
@@ -403,7 +403,6 @@ export function Shop() {
   const [visibleCount, setVisibleCount] = useState(SHOPIFY_DISPLAY_PAGE_SIZE);
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [modalInitialL1, setModalInitialL1] = useState<string | null>(null);
-  const [marketCountry, setMarketCountryState] = useState(() => getMarketCountry() ?? "US");
 
   const shopifyFetchIdRef = useRef(0);
 
@@ -766,13 +765,6 @@ export function Shop() {
           </div>
           <div className="flex items-center gap-2">
             <MarketSelector />
-            {/* Peer-to-peer ad posting is Nigeria-only for now; GB/US/CA are Shopify-only markets */}
-            {marketCountry === "NG" && (
-              <Button onClick={() => navigate("/shop/post")} className="gap-2 bg-primary hover:bg-primary/90">
-                <Plus className="h-4 w-4" />
-                Post an Ad
-              </Button>
-            )}
             <CartSheet />
           </div>
         </div>
