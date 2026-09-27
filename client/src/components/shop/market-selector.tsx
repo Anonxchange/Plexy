@@ -1,5 +1,11 @@
-import { useState, useEffect } from 'react';
-import { setMarket, getCurrentMarket, availableCountries } from '@/lib/market-manager';
+import { useEffect, useState } from "react";
+import {
+  initializeMarketCountry,
+  detectAndSetMarketCountry,
+  getMarketConfig,
+  setMarketCountry,
+  SUPPORTED_MARKETS,
+} from "@/lib/market-manager";
 import {
   Select,
   SelectContent,
@@ -9,29 +15,52 @@ import {
 } from "@/components/ui/select";
 
 export function MarketSelector() {
-  const [market, setCurrentMarket] = useState(getCurrentMarket());
+  const [country, setCountry] = useState(initializeMarketCountry);
 
-  const handleChange = (countryCode: string) => {
-    const config = setMarket(countryCode);
-    setCurrentMarket(config);
-    // Optionally refetch products
+  useEffect(() => {
+    let cancelled = false;
+
+    detectAndSetMarketCountry().then((detected) => {
+      if (!cancelled && detected) {
+        setCountry(detected);
+        // Prices/currency/listings depend on market — refetch by reloading.
+        window.location.reload();
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function handleChange(nextCountry: string) {
+    setMarketCountry(nextCountry);
+    setCountry(nextCountry);
     window.location.reload();
-  };
+  }
+
+  const current = getMarketConfig(country);
 
   return (
-    <div className="flex items-center gap-2">
-      <Select defaultValue={getCurrentMarket()} onValueChange={handleChange}>
-        <SelectTrigger className="w-48">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {availableCountries.map(country => (
-            <SelectItem key={country.code} value={country.code}>
-              {country.code} - {country.region}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
+    <Select value={country} onValueChange={handleChange}>
+      <SelectTrigger className="w-[110px] gap-1.5" aria-label="Select market">
+        <SelectValue>
+          <span className="flex items-center gap-1.5">
+            <span aria-hidden>{current?.flag}</span>
+            <span>{current?.code ?? country}</span>
+          </span>
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {SUPPORTED_MARKETS.map((m) => (
+          <SelectItem key={m.code} value={m.code}>
+            <span className="flex items-center gap-2">
+              <span aria-hidden>{m.flag}</span>
+              <span>{m.code} — {m.region}</span>
+            </span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
