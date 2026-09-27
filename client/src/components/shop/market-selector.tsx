@@ -52,6 +52,9 @@ export function MarketSelector() {
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
+        <div className="px-2 py-1.5 text-xs font-semibold uppercase tracking-widest text-primary">
+          Shopping in
+        </div>
         {SUPPORTED_MARKETS.map((m) => (
           <SelectItem key={m.code} value={m.code}>
             <span className="flex items-center gap-2">
