@@ -6,6 +6,7 @@ import {
   setMarketCountry,
   SUPPORTED_MARKETS,
 } from "@/lib/market-manager";
+import { shopifyService } from "@/lib/shopify-service";
 import {
   Select,
   SelectContent,
@@ -13,6 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
+
+const CART_ID_KEY = "shopify_cart_id";
 
 export function MarketSelector() {
   const [country, setCountry] = useState(initializeMarketCountry);
@@ -33,7 +37,33 @@ export function MarketSelector() {
     };
   }, []);
 
-  function handleChange(nextCountry: string) {
+  async function handleChange(nextCountry: string) {
+    if (nextCountry === country) return;
+
+    const cartId = window.localStorage.getItem(CART_ID_KEY);
+
+    // Product prices are localized by @inContext(country:), while an existing
+    // Shopify cart keeps its own buyer identity. Update that identity before
+    // reloading so checkout uses the same market as the product listing.
+    if (cartId) {
+      try {
+        const result = await shopifyService.updateCartBuyerIdentity(cartId, nextCountry);
+        if (!result.success) {
+          throw new Error("Shopify rejected the cart market update");
+        }
+
+        if (result.checkoutUrl) {
+          window.localStorage.setItem("shopify_checkout_url", result.checkoutUrl);
+        }
+      } catch (error) {
+        console.error("Failed to update Shopify cart market:", error);
+        toast.error("Could not switch shopping market", {
+          description: "Your cart was not changed. Please try again.",
+        });
+        return;
+      }
+    }
+
     setMarketCountry(nextCountry);
     setCountry(nextCountry);
     window.location.reload();
