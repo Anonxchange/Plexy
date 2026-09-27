@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, Search, X } from "lucide-react";
+import { Check, Search, X } from "@/lib/icons";
 import {
   initializeMarketCountry,
   detectAndSetMarketCountry,
