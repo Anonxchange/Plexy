@@ -12,6 +12,37 @@ import { toast } from "sonner";
 
 const CART_ID_KEY = "shopify_cart_id";
 
+// Real flag images instead of Unicode emoji — some Android/older devices
+// render flag emoji as a blank box or a two-letter "tofu" glyph. Self-hosted
+// from public/flags/ (see scripts/copy-flags.mjs — sourced from the MIT
+// licensed "flag-icons" package) so no external image-src is needed in CSP.
+// Falls back to the plain code if a file is ever missing.
+function FlagImage({ code, className }: { code: string; className?: string }) {
+  const [errored, setErrored] = useState(false);
+
+  if (errored) {
+    return (
+      <span
+        aria-hidden
+        className={`${className ?? ""} inline-flex items-center justify-center bg-muted text-[8px] font-bold text-muted-foreground`}
+      >
+        {code}
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={`/flags/${code.toLowerCase()}.svg`}
+      alt=""
+      aria-hidden
+      loading="lazy"
+      className={className}
+      onError={() => setErrored(true)}
+    />
+  );
+}
+
 export function MarketSelector() {
   const [country, setCountry] = useState(initializeMarketCountry);
   const [open, setOpen] = useState(false);
@@ -23,8 +54,8 @@ export function MarketSelector() {
     detectAndSetMarketCountry().then((detected) => {
       if (!cancelled && detected) {
         setCountry(detected);
-        // Prices/currency/listings depend on market — refetch by reloading.
-        window.location.reload();
+        // No reload — pages listening via useMarketChangeListener refetch
+        // in place. setMarketCountry() already broadcasts the change.
       }
     });
 
@@ -66,7 +97,8 @@ export function MarketSelector() {
     setMarketCountry(nextCountry);
     setCountry(nextCountry);
     closeSheet();
-    window.location.reload();
+    // No reload — setMarketCountry() already broadcast the change; pages
+    // listening via useMarketChangeListener refetch their own data in place.
   }
 
   const current = getMarketConfig(country);
@@ -90,7 +122,7 @@ export function MarketSelector() {
         aria-label="Select market"
         className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted/50 transition-colors"
       >
-        <span aria-hidden>{current?.flag}</span>
+        <FlagImage code={current?.code ?? country} className="h-3.5 w-5 rounded-[2px] object-cover shrink-0" />
         <span>{current?.code ?? country}</span>
       </button>
 
@@ -150,7 +182,7 @@ export function MarketSelector() {
                     className="w-full flex items-center justify-between gap-3 px-3 py-3 rounded-lg hover:bg-muted/50 transition-colors text-left"
                   >
                     <span className="flex items-center gap-2 text-sm">
-                      <span aria-hidden>{m.flag}</span>
+                      <FlagImage code={m.code} className="h-3.5 w-5 rounded-[2px] object-cover shrink-0" />
                       <span className="font-semibold">{m.code}</span>
                       <span className="text-muted-foreground">— {m.region}</span>
                     </span>
