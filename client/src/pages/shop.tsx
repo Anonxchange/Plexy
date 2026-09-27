@@ -27,7 +27,7 @@ import {
 import { useLocation } from "wouter";
 import { getSupabase } from "@/lib/supabase";
 import { shopifyService, getMarketCountry } from "@/lib/shopify-service";
-import { MarketSelector } from "@/components/market-selector";
+import { MarketSelector } from "@/components/shop/market-selector";
 import { ShopSkeleton } from "@/components/shop/ShopSkeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShopPageSkeleton } from "@/components/page-skeleton";
