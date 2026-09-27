@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, X } from "lucide-react";
+import { Check, Search, X } from "lucide-react";
 import {
   initializeMarketCountry,
   detectAndSetMarketCountry,
@@ -15,6 +15,7 @@ const CART_ID_KEY = "shopify_cart_id";
 export function MarketSelector() {
   const [country, setCountry] = useState(initializeMarketCountry);
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -34,7 +35,7 @@ export function MarketSelector() {
 
   async function handleChange(nextCountry: string) {
     if (nextCountry === country) {
-      setOpen(false);
+      closeSheet();
       return;
     }
 
@@ -64,11 +65,22 @@ export function MarketSelector() {
 
     setMarketCountry(nextCountry);
     setCountry(nextCountry);
-    setOpen(false);
+    closeSheet();
     window.location.reload();
   }
 
   const current = getMarketConfig(country);
+
+  const filteredMarkets = SUPPORTED_MARKETS.filter((m) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return m.code.toLowerCase().includes(q) || m.region.toLowerCase().includes(q);
+  });
+
+  function closeSheet() {
+    setOpen(false);
+    setSearch("");
+  }
 
   return (
     <>
@@ -85,7 +97,7 @@ export function MarketSelector() {
       {open && (
         <div
           className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/50"
-          onClick={() => setOpen(false)}
+          onClick={closeSheet}
         >
           <div
             role="dialog"
@@ -100,7 +112,7 @@ export function MarketSelector() {
               </h2>
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={closeSheet}
                 aria-label="Close"
                 className="text-muted-foreground hover:text-foreground p-1"
               >
@@ -108,8 +120,27 @@ export function MarketSelector() {
               </button>
             </div>
 
+            <div className="px-4 pb-2 shrink-0">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <input
+                  type="text"
+                  autoFocus
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search countries…"
+                  className="w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-border bg-muted/30 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+            </div>
+
             <div className="overflow-y-auto px-2 pb-2 flex-1">
-              {SUPPORTED_MARKETS.map((m) => {
+              {filteredMarkets.length === 0 && (
+                <p className="text-center text-sm text-muted-foreground py-6">
+                  No countries match "{search}"
+                </p>
+              )}
+              {filteredMarkets.map((m) => {
                 const isSelected = m.code === country;
                 return (
                   <button
