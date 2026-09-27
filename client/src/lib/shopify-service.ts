@@ -127,11 +127,13 @@ export const CART_CREATE_MUTATION = 'cartCreate';
 export const CART_LINES_ADD_MUTATION = 'cartLinesAdd';
 export const CART_LINES_UPDATE_MUTATION = 'cartLinesUpdate';
 export const CART_LINES_REMOVE_MUTATION = 'cartLinesRemove';
+export const CART_BUYER_IDENTITY_UPDATE_MUTATION = 'cartBuyerIdentityUpdate';
 
 // Selected market/country (ISO 3166-1 alpha-2), used with the edge function's
 // @inContext(country:) support so product/collection/cart queries resolve
-// against the right market. Falls back to Shopify's own IP-based detection
-// on the server when nothing has been explicitly selected yet.
+// against the right market. The market manager supplies an app-level
+// geo-detected country before reloading the storefront; Shopify's edge
+// function does not infer a country from the request IP.
 const MARKET_COUNTRY_STORAGE_KEY = 'pexly_market_country';
 
 export function getMarketCountry(): string | undefined {
@@ -303,8 +305,20 @@ export const shopifyService = {
   },
 
   async createCart(item: { variantId: string; quantity: number }) {
+    const country = getMarketCountry();
+    const input: Record<string, unknown> = {
+      lines: [{ quantity: item.quantity, merchandiseId: item.variantId }],
+    };
+
+    // Shopify applies market-specific price adjustments to a cart through its
+    // buyer identity. Product queries use @inContext(country:), but cartCreate
+    // needs the country on CartInput so checkout starts in the selected market.
+    if (country) {
+      input.buyerIdentity = { countryCode: country };
+    }
+
     const data = await storefrontApiRequest(CART_CREATE_MUTATION, {
-      input: { lines: [{ quantity: item.quantity, merchandiseId: item.variantId }] },
+      input,
     });
 
     if (data?.data?.cartCreate?.userErrors?.length > 0) {
@@ -324,6 +338,30 @@ export const shopifyService = {
       cartId: cart.id, 
       checkoutUrl: formatCheckoutUrl(cart.checkoutUrl), 
       lineId: lineId || cart.id // Fallback to cart ID if line ID is missing
+    };
+  },
+
+  async updateCartBuyerIdentity(cartId: string, countryCode: string) {
+    const normalizedCountry = countryCode.trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(normalizedCountry)) {
+      return { success: false };
+    }
+
+    const data = await storefrontApiRequest(CART_BUYER_IDENTITY_UPDATE_MUTATION, {
+      cartId,
+      buyerIdentity: { countryCode: normalizedCountry },
+    });
+
+    const userErrors = data?.data?.cartBuyerIdentityUpdate?.userErrors || [];
+    if (userErrors.length > 0) {
+      devLog.error('Cart market update failed:', userErrors);
+      return { success: false };
+    }
+
+    const cart = data?.data?.cartBuyerIdentityUpdate?.cart;
+    return {
+      success: Boolean(cart?.id),
+      checkoutUrl: cart?.checkoutUrl ? formatCheckoutUrl(cart.checkoutUrl) : undefined,
     };
   },
 

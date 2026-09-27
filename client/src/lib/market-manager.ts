@@ -9,12 +9,60 @@ export interface MarketCountry {
   flag: string;
 }
 
-export const SUPPORTED_MARKETS: MarketCountry[] = [
-  { code: "NG", region: "Nigeria", flag: "🇳🇬" },
-  { code: "GB", region: "United Kingdom", flag: "🇬🇧" },
-  { code: "US", region: "United States", flag: "🇺🇸" },
-  { code: "CA", region: "Canada", flag: "🇨🇦" },
-];
+// Shopify's CountryCode input uses ISO 3166-1 alpha-2 country codes. Keep the
+// complete list here so a visitor is not silently changed to US just because
+// their country was missing from the old four-country market selector.
+const SHOPIFY_COUNTRY_CODES = `
+  AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ
+  BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ
+  CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ
+  DE DJ DK DM DO DZ
+  EC EE EG EH ER ES ET
+  FI FJ FK FM FO FR
+  GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY
+  HK HM HN HR HT HU
+  ID IE IL IM IN IO IQ IR IS IT
+  JE JM JO JP
+  KE KG KH KI KM KN KP KR KW KY KZ
+  LA LB LC LI LK LR LS LT LU LV LY
+  MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ
+  NA NC NE NF NG NI NL NO NP NR NU NZ
+  OM
+  PA PE PF PG PH PK PL PM PN PR PS PT PW PY
+  QA
+  RE RO RS RU RW
+  SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ
+  TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ
+  UA UG UM US UY UZ
+  VA VC VE VG VI VN VU
+  WF WS
+  YE YT
+  ZA ZM ZW
+`.trim().split(/\s+/);
+
+function countryCodeToFlag(code: string): string {
+  return code.replace(/[A-Z]/g, (letter) =>
+    String.fromCodePoint(letter.charCodeAt(0) + 127397)
+  );
+}
+
+function countryCodeToName(code: string): string {
+  try {
+    const DisplayNames = (Intl as any).DisplayNames;
+    if (DisplayNames) {
+      return new DisplayNames(["en"], { type: "region" }).of(code) || code;
+    }
+  } catch {
+    // Older browsers can still use the country code and flag.
+  }
+  return code;
+}
+
+export const SUPPORTED_MARKETS: MarketCountry[] = SHOPIFY_COUNTRY_CODES.map((code) => ({
+  code,
+  region: countryCodeToName(code),
+  flag: countryCodeToFlag(code),
+}));
 
 const SUPPORTED_CODES = new Set(SUPPORTED_MARKETS.map((m) => m.code));
 
@@ -39,7 +87,8 @@ export function initializeMarketCountry(): string {
  * something (so callers know whether a reload/refetch is needed).
  */
 export async function detectAndSetMarketCountry(): Promise<string | null> {
-  if (getMarketCountry()) return null;
+  const saved = getMarketCountry();
+  if (saved && isSupportedCountry(saved)) return null;
 
   const detected = (await getCountryCode()).toUpperCase();
   const resolved = isSupportedCountry(detected) ? detected : "US";
