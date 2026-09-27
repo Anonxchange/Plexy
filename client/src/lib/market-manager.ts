@@ -5,9 +5,6 @@ import { getMarketCountry, setMarketCountry, MARKET_CHANGED_EVENT } from "@/lib/
 export interface MarketCountry {
   code: string;
   region: string;
-  // Unicode flag emoji — rendered as text, so it is never blocked by a
-  // CSP img-src policy the way a remote flag-icon image/CDN would be.
-  flag: string;
 }
 
 // Shopify's CountryCode input uses ISO 3166-1 alpha-2 country codes. Keep the
@@ -41,12 +38,6 @@ const SHOPIFY_COUNTRY_CODES = `
   ZA ZM ZW
 `.trim().split(/\s+/);
 
-function countryCodeToFlag(code: string): string {
-  return code.replace(/[A-Z]/g, (letter) =>
-    String.fromCodePoint(letter.charCodeAt(0) + 127397)
-  );
-}
-
 function countryCodeToName(code: string): string {
   try {
     const DisplayNames = (Intl as any).DisplayNames;
@@ -62,7 +53,6 @@ function countryCodeToName(code: string): string {
 export const SUPPORTED_MARKETS: MarketCountry[] = SHOPIFY_COUNTRY_CODES.map((code) => ({
   code,
   region: countryCodeToName(code),
-  flag: countryCodeToFlag(code),
 }));
 
 const SUPPORTED_CODES = new Set(SUPPORTED_MARKETS.map((m) => m.code));
