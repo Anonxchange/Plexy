@@ -128,11 +128,40 @@ export const CART_LINES_ADD_MUTATION = 'cartLinesAdd';
 export const CART_LINES_UPDATE_MUTATION = 'cartLinesUpdate';
 export const CART_LINES_REMOVE_MUTATION = 'cartLinesRemove';
 
+// Selected market/country (ISO 3166-1 alpha-2), used with the edge function's
+// @inContext(country:) support so product/collection/cart queries resolve
+// against the right market. Falls back to Shopify's own IP-based detection
+// on the server when nothing has been explicitly selected yet.
+const MARKET_COUNTRY_STORAGE_KEY = 'pexly_market_country';
+
+export function getMarketCountry(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  try {
+    const stored = window.localStorage.getItem(MARKET_COUNTRY_STORAGE_KEY);
+    return stored && /^[A-Z]{2}$/.test(stored) ? stored : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function setMarketCountry(countryCode: string) {
+  if (typeof window === 'undefined') return;
+  const normalized = countryCode.trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(normalized)) return;
+  try {
+    window.localStorage.setItem(MARKET_COUNTRY_STORAGE_KEY, normalized);
+  } catch {
+    // localStorage unavailable (e.g. private browsing) — silently no-op,
+    // requests just fall back to IP-based market detection.
+  }
+}
+
 export async function storefrontApiRequest(queryName: string, variables: Record<string, unknown> = {}) {
   try {
     const supabase = await getSupabase();
+    const requestVariables = { country: getMarketCountry(), ...variables };
     const { data, error } = await supabase.functions.invoke('shopify-storefront', {
-      body: { queryName, variables }
+      body: { queryName, variables: requestVariables }
     });
 
     if (error) {
