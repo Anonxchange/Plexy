@@ -1,5 +1,6 @@
+import { useEffect } from "react";
 import { getCountryCode } from "@/lib/geo";
-import { getMarketCountry, setMarketCountry } from "@/lib/shopify-service";
+import { getMarketCountry, setMarketCountry, MARKET_CHANGED_EVENT } from "@/lib/shopify-service";
 
 export interface MarketCountry {
   code: string;
@@ -97,4 +98,20 @@ export async function detectAndSetMarketCountry(): Promise<string | null> {
 }
 
 // Re-exported so components only ever need to import from one place.
-export { getMarketCountry, setMarketCountry };
+export { getMarketCountry, setMarketCountry, MARKET_CHANGED_EVENT };
+
+/**
+ * Lets a page/component refetch its own data when the market changes,
+ * instead of the whole app doing a hard window.location.reload(). Usage:
+ *   useMarketChangeListener(() => fetchShopifyProducts());
+ */
+export function useMarketChangeListener(onChange: (countryCode: string) => void) {
+  useEffect(() => {
+    function handler(e: Event) {
+      const detail = (e as CustomEvent<{ countryCode: string }>).detail;
+      onChange(detail.countryCode);
+    }
+    window.addEventListener(MARKET_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(MARKET_CHANGED_EVENT, handler);
+  }, [onChange]);
+}
