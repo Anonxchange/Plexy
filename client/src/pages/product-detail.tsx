@@ -198,6 +198,69 @@ const descriptionParseOptions = {
   },
 };
 
+/** Collapses tall content to a fixed height with a transparent fade at the
+ *  bottom and a "View All" / "View Less" button (AliExpress style). The
+ *  button only appears when the content actually overflows. */
+function FadeCollapse({
+  children,
+  collapsedHeight = 224,
+}: {
+  children: ReactNode;
+  collapsedHeight?: number;
+}) {
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [overflowing, setOverflowing] = useState(false);
+
+  useEffect(() => {
+    const el = innerRef.current;
+    if (!el) return;
+    const measure = () => setOverflowing(el.scrollHeight > collapsedHeight + 24);
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [collapsedHeight, children]);
+
+  const collapsed = overflowing && !expanded;
+
+  return (
+    <div>
+      <div
+        className="relative overflow-hidden transition-[max-height] duration-300"
+        style={{ maxHeight: collapsed ? collapsedHeight : undefined }}
+      >
+        <div ref={innerRef}>{children}</div>
+        {collapsed && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background via-background/80 to-transparent"
+          />
+        )}
+        {collapsed && (
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            className="absolute inset-x-0 bottom-0 py-2 text-center text-sm font-semibold text-primary"
+          >
+            View All
+          </button>
+        )}
+      </div>
+      {overflowing && expanded && (
+        <button
+          type="button"
+          onClick={() => setExpanded(false)}
+          className="mt-2 w-full py-2 text-center text-sm font-semibold text-primary"
+        >
+          View Less
+        </button>
+      )}
+    </div>
+  );
+}
+
 function InfoSection({
   title,
   open,
@@ -246,12 +309,13 @@ function ProductInfoSections({ html }: { html?: string }) {
       {hasDescription && (
         <InfoSection title="Description" open={descOpen} onToggle={() => setDescOpen((v) => !v)}>
           <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-headings:text-foreground prose-strong:text-foreground overflow-x-auto [&_*]:!max-w-full [&_*]:!box-border [&_p]:!whitespace-normal [&_div]:!whitespace-normal [&_p]:!my-3">
-            {parse(descriptionHtml, descriptionParseOptions)}
+            <FadeCollapse>{parse(descriptionHtml, descriptionParseOptions)}</FadeCollapse>
           </div>
         </InfoSection>
       )}
       {hasSpecs && (
         <InfoSection title="Specifications" open={specsOpen} onToggle={() => setSpecsOpen((v) => !v)}>
+          <FadeCollapse collapsedHeight={288}>
           <dl>
             {specs.map((row, i) => (
               <div key={`${row.label}-${i}`} className="py-3 border-b border-border/60 last:border-b-0">
@@ -260,6 +324,7 @@ function ProductInfoSections({ html }: { html?: string }) {
               </div>
             ))}
           </dl>
+          </FadeCollapse>
         </InfoSection>
       )}
     </div>
