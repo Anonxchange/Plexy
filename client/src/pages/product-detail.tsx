@@ -203,11 +203,15 @@ const descriptionParseOptions = {
  *  button only appears when the content actually overflows. */
 function FadeCollapse({
   children,
-  collapsedHeight = 224,
+  tall = false,
 }: {
   children: ReactNode;
-  collapsedHeight?: number;
+  tall?: boolean;
 }) {
+  // Static Tailwind classes only (no inline style attributes) so this works
+  // under a strict style-src CSP. max-h-56 = 224px, max-h-72 = 288px.
+  const collapsedHeight = tall ? 288 : 224;
+  const collapsedClass = tall ? "max-h-72" : "max-h-56";
   const innerRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(false);
   const [overflowing, setOverflowing] = useState(false);
@@ -228,8 +232,7 @@ function FadeCollapse({
   return (
     <div>
       <div
-        className="relative overflow-hidden transition-[max-height] duration-300"
-        style={{ maxHeight: collapsed ? collapsedHeight : undefined }}
+        className={`relative overflow-hidden ${collapsed ? collapsedClass : ""}`}
       >
         <div ref={innerRef}>{children}</div>
         {collapsed && (
@@ -242,7 +245,7 @@ function FadeCollapse({
           <button
             type="button"
             onClick={() => setExpanded(true)}
-            className="absolute inset-x-0 bottom-0 py-2 text-center text-sm font-semibold text-primary"
+            className="absolute inset-x-0 bottom-0 py-2 text-center text-sm font-semibold text-blue-600 dark:text-blue-400"
           >
             View All
           </button>
@@ -252,7 +255,7 @@ function FadeCollapse({
         <button
           type="button"
           onClick={() => setExpanded(false)}
-          className="mt-2 w-full py-2 text-center text-sm font-semibold text-primary"
+          className="mt-2 w-full py-2 text-center text-sm font-semibold text-blue-600 dark:text-blue-400"
         >
           View Less
         </button>
@@ -295,9 +298,8 @@ function ProductInfoSections({ html }: { html?: string }) {
   const hasDescription = useMemo(() => htmlToText(descriptionHtml).length > 0, [descriptionHtml]);
   const hasSpecs = specs.length > 0;
 
-  // Like Shop: Specifications open, Description collapsed — but if there are
-  // no specs, the description opens by default so nothing important is hidden.
-  const [descOpen, setDescOpen] = useState(!hasSpecs);
+  // Both sections are open by default; long content is trimmed by FadeCollapse.
+  const [descOpen, setDescOpen] = useState(true);
   const [specsOpen, setSpecsOpen] = useState(true);
 
   if (!hasDescription && !hasSpecs) {
@@ -315,7 +317,7 @@ function ProductInfoSections({ html }: { html?: string }) {
       )}
       {hasSpecs && (
         <InfoSection title="Specifications" open={specsOpen} onToggle={() => setSpecsOpen((v) => !v)}>
-          <FadeCollapse collapsedHeight={288}>
+          <FadeCollapse tall>
           <dl>
             {specs.map((row, i) => (
               <div key={`${row.label}-${i}`} className="py-3 border-b border-border/60 last:border-b-0">
