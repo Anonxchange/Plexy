@@ -405,6 +405,15 @@ function parseMedia(p: any): MediaItem[] | undefined {
   return items.length > 0 ? items : undefined;
 }
 
+// Gallery order: Shopify-hosted videos first, then external (YouTube/Vimeo), then images.
+// Array.sort is stable, so Shopify's own order is kept within each group.
+const mediaRank = (m: MediaItem) => (m.type === 'video' ? 0 : m.type === 'external' ? 1 : 2);
+
+// Source order inside one <video>: mp4 first (plays everywhere), then HLS (.m3u8,
+// Safari/mobile only), then anything else (e.g. the original .mov upload).
+const sourceRank = (s: { mimeType: string }) =>
+  s.mimeType === 'video/mp4' ? 0 : /mpegurl/i.test(s.mimeType) ? 1 : 2;
+
 const DEFAULT_SHIPPING_INFO: ShippingInfo = {
   shipTo: "Worldwide",
   shipsFrom: "China",
@@ -636,6 +645,11 @@ export function ProductDetail() {
       shopifyDataRef.current = null;
     };
   }, [id]);
+
+  // Gallery index 0 is now usually a video — always start there for each product.
+  useEffect(() => {
+    setSelectedImage(0);
+  }, [product?.id]);
 
   // Record view in shop history for authenticated users
   useEffect(() => {
@@ -996,9 +1010,11 @@ export function ProductDetail() {
         {!isLoading && product && <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-8 lg:gap-12">
           {/* Left: Media (images + video) */}
           {(() => {
-            const mediaItems: MediaItem[] = product.media && product.media.length > 0
-              ? product.media
-              : product.images.map(url => ({ type: 'image' as const, url }));
+            const mediaItems: MediaItem[] = (
+              product.media && product.media.length > 0
+                ? [...product.media]
+                : product.images.map(url => ({ type: 'image' as const, url }))
+            ).sort((a, b) => mediaRank(a) - mediaRank(b));
             const selected = mediaItems[selectedImage] ?? mediaItems[0];
 
             return (
@@ -1011,19 +1027,22 @@ export function ProductDetail() {
                   ) : selected?.type === 'video' ? (
                     <video
                       key={selectedImage}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain bg-black"
                       controls
-                      autoPlay={false}
                       playsInline
+                      preload="metadata"
                       poster={selected.previewUrl}
-                      onError={(e) => {
-                        const err = (e.currentTarget as HTMLVideoElement).error;
-                        devLog?.("Video failed to load", { code: err?.code, message: err?.message, sources: selected.sources });
-                      }}
                     >
-                      {selected.sources.map((s, i) => (
-                        <source key={i} src={s.url} type={s.mimeType} />
-                      ))}
+                      {[...selected.sources]
+                        .sort((a, b) => sourceRank(a) - sourceRank(b))
+                        .map((s, i) => (
+                          <source
+                            key={i}
+                            src={s.url}
+                            type={s.mimeType}
+                            onError={() => console.error('Video source failed', s.url, s.mimeType)}
+                          />
+                        ))}
                       Your browser doesn't support embedded videos.
                     </video>
                   ) : selected?.type === 'external' ? (
