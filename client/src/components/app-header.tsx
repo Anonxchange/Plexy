@@ -59,7 +59,17 @@ const AppHeaderCore = memo(function AppHeaderCore({ onOpenSidebar, onPreloadSide
     const currentPath = window.location.pathname;
     const segments = currentPath.split("/").filter(Boolean);
     const withoutBase = segments.slice(1).join("/");
-    window.location.href = `/${code}${withoutBase ? `/${withoutBase}` : ""}`;
+    const isSafeRedirectUrl = (url: string) => {
+      if (!url) { return false; }
+      try {
+        const parsed = new URL(String(url).replace(/[\t\n\r]/g, ""), window.location.origin);
+        return parsed.origin === window.location.origin && (parsed.protocol === "http:" || parsed.protocol === "https:");
+      } catch (e) { return false; }
+    };
+    const target = `/${code}${withoutBase ? `/${withoutBase}` : ""}`;
+    if (isSafeRedirectUrl(target)) {
+      window.location.href = target;
+    }
   };
 
   const handleSymbolSelect = (sym: string, category: string) => {
