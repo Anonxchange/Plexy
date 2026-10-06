@@ -1,7 +1,5 @@
 import { supabase } from "@/lib/supabase";
 import * as secp from "@noble/secp256k1";
-import { keccak_256 } from "@noble/hashes/sha3";
-import { bytesToHex } from "@noble/hashes/utils";
 import { mnemonicToSeed } from "@scure/bip39";
 import { HDKey } from "@scure/bip32";
 
@@ -184,9 +182,23 @@ async function spotFetch(path: string, params: Record<string, string> = {}) {
   return res.json();
 }
 
+function buildValidatedUrl(baseUrl: string, path: string, qs: string): string {
+  try {
+    if (path.includes('../') || /%2e%2e/i.test(path) || !/^\/[A-Za-z0-9_\/-]*$/.test(path)) {
+      throw new Error('Invalid path');
+    }
+    const url = new URL(baseUrl);
+    url.pathname = path;
+    if (qs) url.search = qs;
+    return url.href;
+  } catch {
+    throw new Error('Invalid URL');
+  }
+}
+
 async function futuresFetch(path: string, params: Record<string, string> = {}) {
   const qs = new URLSearchParams(params).toString();
-  const url = `${FUTURES_BASE}${path}${qs ? '?' + qs : ''}`;
+  const url = buildValidatedUrl(FUTURES_BASE, path, qs);
   assertAsterOrigin(url);
   const res = await fetch(url);
   if (!res.ok) throw new Error(`AsterDEX futures API ${res.status}`);
@@ -544,7 +556,7 @@ export async function asterCreateApiKey(
 function deriveEvmAddress(privateKey: Uint8Array): string {
   const pubKey = secp.getPublicKey(privateKey, false); // uncompressed 65 bytes
   const addressBytes = keccak_256(pubKey.slice(1)).slice(-20);
-  const hexAddr = Array.from(addressBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  const hexAddr = Array.from(addressBytes).map((b: number) => b.toString(16).padStart(2, '0')).join('');
   // EIP-55 checksum
   const hash = keccak_256(new TextEncoder().encode(hexAddr));
   const checksum = hexAddr.split('').map((c, i) =>
