@@ -152,6 +152,14 @@ function SubItem({ label, href, badge, onClick, active, external }: SubItemProps
   );
 }
 
+function isSafeRedirectUrl(url: string) {
+  if (!url) { return false; }
+  try {
+    var parsed = new URL(String(url).replace(/[\t\n\r]/g, ''), window.location.origin);
+    return parsed.origin === window.location.origin && (parsed.protocol === 'http:' || parsed.protocol === 'https:');
+  } catch (e) { return false; }
+}
+
 export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const [location, navigate] = useLocation();
   const { user } = useAuth();
@@ -168,7 +176,12 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     const withoutBase = currentPath.startsWith(base)
       ? currentPath.slice(base.length) || "/"
       : currentPath;
-    window.location.href = `/${code}${withoutBase}`;
+    const newUrl = `/${code}${withoutBase}`;
+    if (isSafeRedirectUrl(newUrl)) {
+      window.location.href = newUrl;
+    } else {
+      window.location.href = '/';
+    }
   };
 
   const currentLang = LANGUAGES.find(l => l.code === i18n.language) || LANGUAGES[0];
