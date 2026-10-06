@@ -145,8 +145,23 @@ export function useInitiateOrder() {
 }
 
 /** Redirect the browser to Korapay's hosted checkout. */
+const ALLOWED_HOSTS: string[] = []; // ACTION REQUIRED: Add your allowed hosts before merging
+
+function isSafeExternalUrl(url: string, allowedHosts: string[]) {
+  if (!url) return false;
+  try {
+    const parsed = new URL(String(url).replace(/[\t\n\r]/g, ""));
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+    return allowedHosts.some(function (h) {
+      return parsed.hostname === h || parsed.hostname.endsWith("." + h);
+    });
+  } catch (e) {
+    return false;
+  }
+}
+
 export function goToCheckout(res: InitiateResponse) {
-  if (!res.checkout_url) throw new Error("Payment could not be started. Please try again.");
+  if (!res.checkout_url || !isSafeExternalUrl(res.checkout_url, ALLOWED_HOSTS)) throw new Error("Payment could not be started. Please try again.");
   window.location.href = res.checkout_url;
 }
 
