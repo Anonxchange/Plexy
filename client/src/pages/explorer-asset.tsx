@@ -147,12 +147,32 @@ interface ChartPoint {
   price: number;
 }
 
+function buildValidatedChartUrl(
+  baseUrl: string,
+  coingeckoId: string,
+  vsCurrency: string,
+  days: string
+): string {
+  try {
+    const url = new URL(baseUrl);
+    if (!/^[A-Za-z0-9_-]+$/.test(coingeckoId)) {
+      throw new Error("Invalid parameter");
+    }
+    url.pathname = `/api/v3/coins/${coingeckoId}/market_chart`;
+    url.searchParams.set("vs_currency", vsCurrency);
+    url.searchParams.set("days", days);
+    return url.href;
+  } catch {
+    throw new Error("Invalid URL");
+  }
+}
+
 function useCoinChart(coingeckoId: string, days: number) {
   return useQuery<ChartPoint[]>({
     queryKey: ["coin-chart", coingeckoId, days],
     queryFn: async () => {
       const res = await fetch(
-        `https://api.coingecko.com/api/v3/coins/${coingeckoId}/market_chart?vs_currency=usd&days=${days}`
+        buildValidatedChartUrl("https://api.coingecko.com/api/v3/coins/", coingeckoId, "usd", String(days))
       );
       if (!res.ok) throw new Error("Failed to fetch chart data");
       const json = await res.json();
@@ -504,7 +524,7 @@ const Index = () => {
                       borderRadius: "8px",
                       boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
                     }}
-                    formatter={(value: number) => [`$${value.toLocaleString()}`, "Price"]}
+                    formatter={(value: number | string) => [`$${Number(value).toLocaleString()}`, "Price"]}
                   />
                   <Area type="monotone" dataKey="price" stroke="hsl(33, 93%, 54%)" strokeWidth={2} fill="url(#colorPrice)" />
                 </AreaChart>
