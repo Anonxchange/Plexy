@@ -182,9 +182,14 @@ async function spotFetch(path: string, params: Record<string, string> = {}) {
   return res.json();
 }
 
-function buildValidatedUrl(baseUrl: string, path: string, qs: string): string {
+export function buildValidatedUrl(baseUrl: string, path: string, qs: string): string {
   try {
-    if (path.includes('../') || /%2e%2e/i.test(path) || !/^\/[A-Za-z0-9_\/-]*$/.test(path)) {
+    const validators: { [key: string]: (p: string) => boolean } = {
+      parentDirLiteral: (p) => p.includes('../'),
+      parentDirEncoded: (p) => /%2e%2e/i.test(p),
+      invalidChars: (p) => !/^\/[^A-Za-z0-9_\/-]*$/.test(p),
+    };
+    if (Object.values(validators).some((validator) => validator(path))) {
       throw new Error('Invalid path');
     }
     const url = new URL(baseUrl);
