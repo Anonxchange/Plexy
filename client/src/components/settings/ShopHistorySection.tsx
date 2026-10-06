@@ -471,7 +471,7 @@ export function ShopHistorySection() {
                   {orders.slice(0, 3).map((order) => (
                     <button
                       key={order.id}
-                      onClick={() => window.open(order.checkoutUrl, "_blank", "noopener,noreferrer")}
+                      onClick={() => { if (isSafeExternalUrl(order.checkoutUrl, ALLOWED_HOSTS)) { window.open(order.checkoutUrl, "_blank", "noopener,noreferrer"); } }}
                       className="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-border/60 hover:bg-muted/40 transition-colors text-left"
                     >
                       <div className="min-w-0">
@@ -492,3 +492,17 @@ export function ShopHistorySection() {
     </div>
   );
 }
+
+const ALLOWED_HOSTS: string[] = []; // ACTION REQUIRED: Add your allowed hosts before merging
+
+function isSafeExternalUrl(url: string | undefined | null, allowedHosts: string[]): boolean {
+  if (!url) return false;
+  try {
+    const parsed = new URL(String(url).replace(/[\t\n\r]/g, ""));
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+    return allowedHosts.some((h) => parsed.hostname === h || parsed.hostname.endsWith("." + h));
+  } catch (e) {
+    return false;
+  }
+}
+
