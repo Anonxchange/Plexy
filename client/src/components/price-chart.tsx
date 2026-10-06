@@ -8,9 +8,28 @@ interface ChartPoint {
   ethereum: number;
 }
 
+function buildValidatedUrl(
+  baseUrl: string,
+  coinId: string,
+  days: string
+): string {
+  try {
+    const url = new URL(baseUrl);
+    if (!/^[A-Za-z0-9_-]+$/.test(coinId)) {
+      throw new Error('Invalid parameter');
+    }
+    url.pathname = `/api/v3/coins/${coinId}/market_chart`;
+    url.searchParams.set('vs_currency', 'usd');
+    url.searchParams.set('days', days);
+    return url.href;
+  } catch {
+    throw new Error('Invalid URL');
+  }
+}
+
 async function fetchCoinChart(coinId: string, days: number): Promise<[number, number][]> {
   const res = await fetch(
-    `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${days}`
+    buildValidatedUrl("https://api.coingecko.com", coinId, String(days))
   );
   if (!res.ok) throw new Error(`Failed to fetch chart for ${coinId}`);
   const json = await res.json();
@@ -121,7 +140,7 @@ export const PriceChart = () => {
               />
               <ReferenceLine y={0} stroke="hsl(var(--border))" strokeDasharray="3 3" />
               <Tooltip
-                formatter={(value: number) => [`${value > 0 ? "+" : ""}${value.toFixed(2)}%`]}
+                formatter={(value: number) => `${value > 0 ? "+" : ""}${value.toFixed(2)}%`}
                 contentStyle={{ fontSize: 12 }}
               />
               <Line type="monotone" dataKey="bitcoin" stroke="#f59e0b" strokeWidth={2} dot={false} />
