@@ -100,7 +100,7 @@
     "@unhead/react": "^3.3.1",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
-    "dompurify": "^3.4.13",
+    "dompurify": "^3.4.16",
     "get-nonce": "^1.0.1",
     "html-react-parser": "^6.1.5",
     "i18next": "^26.3.6",
