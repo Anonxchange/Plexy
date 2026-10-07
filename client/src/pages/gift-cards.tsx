@@ -432,7 +432,7 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
           <Plus className="h-3 w-3 text-muted-foreground" />
         </span>
       </button>
-      <div className="overflow-hidden transition-all duration-300" style={{ maxHeight: open ? "300px" : "0px" }}>
+      <div className={cn("overflow-hidden transition-all duration-300", open ? "max-h-[300px]" : "max-h-0")}>
         <p className="text-muted-foreground text-sm leading-relaxed pb-4">{answer}</p>
       </div>
     </div>
@@ -750,7 +750,7 @@ export function GiftCards() {
         )}
 
         {/* ── Shop on the Go ── */}
-        <section className="my-10 rounded-2xl overflow-hidden" style={{ background: "hsl(168 40% 18%)" }}>
+        <section className="my-10 rounded-2xl overflow-hidden bg-[hsl(168_40%_18%)]">
           <div className="py-10 px-12 text-center">
             <h2 className="text-3xl font-black text-white uppercase tracking-tight mb-3">
               Shop on the Go
@@ -815,21 +815,21 @@ export function GiftCards() {
           {/* Product tiles row — shoes, gamepad, groceries, crypto grid */}
           <div className="flex gap-2.5 pb-1">
             {/* Shoes */}
-            <div className="flex-shrink-0 w-[76px] h-[76px] rounded-2xl flex items-center justify-center overflow-hidden" style={{ background: "#F0C93A" }}>
+            <div className="flex-shrink-0 w-[76px] h-[76px] rounded-2xl flex items-center justify-center overflow-hidden bg-[#F0C93A]">
               <img src="/hero/shoes_nobg.png" alt="Shoes" loading="lazy" className="w-[90%] h-[90%] object-contain drop-shadow-md" />
             </div>
             {/* Gamepad */}
-            <div className="flex-shrink-0 w-[76px] h-[76px] rounded-2xl flex items-center justify-center overflow-hidden" style={{ background: "#1B4B3A" }}>
+            <div className="flex-shrink-0 w-[76px] h-[76px] rounded-2xl flex items-center justify-center overflow-hidden bg-[#1B4B3A]">
               <img src="/hero/gamepad_nobg.png" alt="Gamepad" loading="lazy" className="w-[90%] h-[90%] object-contain drop-shadow-md" />
             </div>
             {/* Groceries */}
-            <div className="flex-shrink-0 w-[76px] h-[76px] rounded-2xl flex items-center justify-center overflow-hidden" style={{ background: "#C0392B" }}>
+            <div className="flex-shrink-0 w-[76px] h-[76px] rounded-2xl flex items-center justify-center overflow-hidden bg-[#C0392B]">
               <img src="/hero/groceries_nobg.png" alt="Groceries" loading="lazy" className="w-[90%] h-[90%] object-contain drop-shadow-md" />
             </div>
             {/* Crypto symbols — 2×2 grid of real logos */}
             <div className="flex-shrink-0 w-[76px] h-[76px] rounded-2xl bg-card border border-border overflow-hidden grid grid-cols-2 grid-rows-2 place-items-center gap-0 p-2">
               {["/logos/bitcoin-btc-logo.svg","/logos/ethereum-eth-logo.svg","/logos/solana-sol-logo.svg","/logos/tether-usdt-logo.svg"].map((src,i) => (
-                <div key={i} style={{width:26,height:26,backgroundImage:`url(${src})`,backgroundSize:"contain",backgroundRepeat:"no-repeat",backgroundPosition:"center"}} />
+                <img key={i} src={src} alt="" loading="lazy" className="w-[26px] h-[26px] object-contain" />
               ))}
             </div>
           </div>
@@ -1043,7 +1043,7 @@ export function GiftCards() {
           )}
 
           {/* Shop on the Go */}
-          <section className="mx-4 mb-8 rounded-2xl overflow-hidden" style={{ background: "hsl(168 40% 18%)" }}>
+          <section className="mx-4 mb-8 rounded-2xl overflow-hidden bg-[hsl(168_40%_18%)]">
             <div className="p-7 text-center">
               <h2 className="text-3xl font-black text-white uppercase tracking-tight mb-3">
                 Shop on the Go
