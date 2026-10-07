@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "wouter";
 import { ArrowDown } from '@/lib/icons';
 import { useTranslation } from "react-i18next";
+import { trustedStyle } from "@/lib/trusted-styles";
 
 const BRANDS = [
   { name: "Netflix",      logo: "/logos/brands/netflix.svg"      },
@@ -41,7 +42,7 @@ function NotifCard({ logo, logoBg, title, subtitle, amount, amountColor }: Notif
           src={logo}
           alt=""
           className="w-6 h-6 object-contain"
-          style={{ filter: "brightness(0) invert(1)" }}
+          style={{ filter: trustedStyle("brightness(0) invert(1)") }}
         />
       </div>
       <div className="flex-1 min-w-0">
@@ -71,7 +72,7 @@ export function HeroSection() {
           style={{
             top: "-80px", left: "-80px",
             width: "520px", height: "520px",
-            background: "radial-gradient(circle, rgba(180,242,46,0.10) 0%, transparent 70%)",
+            background: trustedStyle("radial-gradient(circle, rgba(180,242,46,0.10) 0%, transparent 70%)"),
           }}
         />
         <div
@@ -79,7 +80,7 @@ export function HeroSection() {
           style={{
             bottom: "-60px", left: "30%",
             width: "360px", height: "360px",
-            background: "radial-gradient(circle, rgba(180,242,46,0.05) 0%, transparent 70%)",
+            background: trustedStyle("radial-gradient(circle, rgba(180,242,46,0.05) 0%, transparent 70%)"),
           }}
         />
       </div>
@@ -90,9 +91,9 @@ export function HeroSection() {
       <div
         className="md:hidden absolute pointer-events-none"
         style={{
-          top: "5%", left: "50%", transform: "translateX(-50%)",
+          top: "5%", left: "50%", transform: trustedStyle("translateX(-50%)"),
           width: "60%", height: "40%",
-          background: "radial-gradient(ellipse at center, rgba(180,242,46,0.07) 0%, transparent 70%)",
+          background: trustedStyle("radial-gradient(ellipse at center, rgba(180,242,46,0.07) 0%, transparent 70%)"),
         }}
       />
 
@@ -130,7 +131,7 @@ export function HeroSection() {
           <span
             className="block"
             style={{
-              background: "linear-gradient(90deg, #B4F22E 10%, #78d900 100%)",
+              background: trustedStyle("linear-gradient(90deg, #B4F22E 10%, #78d900 100%)"),
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",
@@ -149,7 +150,7 @@ export function HeroSection() {
         <Link href="/signup">
           <button
             className="inline-flex items-center gap-2.5 font-black uppercase tracking-wide text-black rounded-full px-9 py-4 text-sm transition-all hover:scale-[1.03] active:scale-[0.97] mb-10 md:mb-6"
-            style={{ background: "#B4F22E", boxShadow: "0 4px 36px rgba(180,242,46,0.42)" }}
+            style={{ background: "#B4F22E", boxShadow: trustedStyle("0 4px 36px rgba(180,242,46,0.42)") }}
           >
             {t('hero.cta')}
             <ArrowDown className="w-4 h-4" strokeWidth={3} aria-hidden="true" />
@@ -187,7 +188,7 @@ export function HeroSection() {
           className="absolute top-0 left-0 right-0 z-10 pointer-events-none"
           style={{
             height: "80px",
-            background: "linear-gradient(to bottom, hsl(var(--background)), transparent)",
+            background: trustedStyle("linear-gradient(to bottom, hsl(var(--background)), transparent)"),
           }}
         />
 
@@ -214,11 +215,11 @@ export function HeroSection() {
 
         <div
           className="absolute inset-y-0 left-0 z-10 pointer-events-none w-16"
-          style={{ background: "linear-gradient(to right, hsl(var(--background)), transparent)" }}
+          style={{ background: trustedStyle("linear-gradient(to right, hsl(var(--background)), transparent)") }}
         />
         <div
           className="absolute inset-y-0 right-0 z-10 pointer-events-none w-16"
-          style={{ background: "linear-gradient(to left, hsl(var(--background)), transparent)" }}
+          style={{ background: trustedStyle("linear-gradient(to left, hsl(var(--background)), transparent)") }}
         />
 
         <div className="absolute z-20 hidden sm:block" style={{ bottom: "20%", left: "5%" }}>
@@ -252,21 +253,21 @@ export function HeroSection() {
           className="absolute inset-y-0 left-0 z-10 pointer-events-none"
           style={{
             width: "140px",
-            background: "linear-gradient(to right, hsl(var(--background)), transparent)",
+            background: trustedStyle("linear-gradient(to right, hsl(var(--background)), transparent)"),
           }}
         />
         <div
           className="absolute top-0 left-0 right-0 z-10 pointer-events-none"
           style={{
             height: "80px",
-            background: "linear-gradient(to bottom, hsl(var(--background)), transparent)",
+            background: trustedStyle("linear-gradient(to bottom, hsl(var(--background)), transparent)"),
           }}
         />
         <div
           className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none"
           style={{
             height: "80px",
-            background: "linear-gradient(to top, hsl(var(--background)), transparent)",
+            background: trustedStyle("linear-gradient(to top, hsl(var(--background)), transparent)"),
           }}
         />
 
