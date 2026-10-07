@@ -414,6 +414,120 @@ const mediaRank = (m: MediaItem) => (m.type === 'video' ? 0 : m.type === 'extern
 const sourceRank = (s: { mimeType: string }) =>
   s.mimeType === 'video/mp4' ? 0 : /mpegurl/i.test(s.mimeType) ? 1 : 2;
 
+// ---------------------------------------------------------------------------
+// TEMP DIAGNOSTIC — remove ShopifyVideo's overlay (or this whole block) once videos work.
+// Collects CSP blocks from the moment this module loads, so a block that happens
+// before the video mounts is still caught.
+// ---------------------------------------------------------------------------
+const cspBlocks: string[] = [];
+if (typeof document !== "undefined") {
+  try {
+    document.addEventListener("securitypolicyviolation", (e) => {
+      cspBlocks.push(`${e.effectiveDirective} blocked ${e.blockedURI}`);
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
+function ShopifyVideo({
+  sources,
+  poster,
+}: {
+  sources: { url: string; mimeType: string }[];
+  poster?: string;
+}) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [lines, setLines] = useState<string[]>([]);
+  const [status, setStatus] = useState("starting…");
+
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+
+    const add = (m: string) => setLines((l) => [...l.slice(-9), m]);
+    const refresh = () =>
+      setStatus(
+        `net:${v.networkState} ready:${v.readyState} dur:${
+          Number.isFinite(v.duration) ? v.duration.toFixed(1) : "?"
+        } err:${v.error?.code ?? "-"}`
+      );
+
+    // What does this browser say it can play?
+    try {
+      add(
+        "canPlay: " +
+          sources.map((s) => `${s.mimeType.split("/")[1]}=${v.canPlayType(s.mimeType) || "NO"}`).join(" | ")
+      );
+    } catch {
+      /* ignore */
+    }
+
+    const names = ["loadstart", "loadedmetadata", "canplay", "playing", "waiting", "stalled", "abort", "emptied", "error"];
+    const handler = (e: Event) => {
+      try {
+        const t = e.target as HTMLElement;
+        if (e.type === "error") {
+          if (t.tagName === "SOURCE") {
+            add(`SOURCE ERROR ${(t as HTMLSourceElement).type}: ${(t as HTMLSourceElement).src}`);
+          } else {
+            add(`VIDEO ERROR code=${v.error?.code} ${v.error?.message || ""}`);
+          }
+        } else {
+          add(e.type);
+        }
+        refresh();
+      } catch {
+        /* ignore */
+      }
+    };
+    // capture=true so we also see 'error' events from the <source> children
+    names.forEach((n) => v.addEventListener(n, handler, true));
+    refresh();
+    const tick = window.setInterval(() => {
+      refresh();
+      if (cspBlocks.length) setLines((l) => (l.includes("CSP: " + cspBlocks.join(" ; ")) ? l : [...l.slice(-9), "CSP: " + cspBlocks.join(" ; ")]));
+    }, 1500);
+
+    return () => {
+      names.forEach((n) => v.removeEventListener(n, handler, true));
+      window.clearInterval(tick);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <>
+      <video
+        ref={ref}
+        className="w-full h-full object-contain bg-black"
+        controls
+        playsInline
+        preload="metadata"
+        poster={poster}
+      >
+        {sources.map((s, i) => (
+          <source key={i} src={s.url} type={s.mimeType} />
+        ))}
+        Your browser doesn't support embedded videos.
+      </video>
+      <div className="absolute top-0 left-0 right-0 bg-black/80 text-white text-[10px] leading-tight p-2 max-h-40 overflow-auto font-mono">
+        <div className="text-yellow-300 mb-1">VIDEO DEBUG · {status}</div>
+        {lines.map((l, i) => (
+          <div key={i} className="break-all">{l}</div>
+        ))}
+        {sources.map((s, i) => (
+          <div key={"u" + i} className="break-all">
+            <a href={s.url} target="_blank" rel="noreferrer" className="underline text-sky-300">
+              open {s.mimeType.split("/")[1]} file
+            </a>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
 const DEFAULT_SHIPPING_INFO: ShippingInfo = {
   shipTo: "Worldwide",
   shipsFrom: "China",
@@ -1025,26 +1139,11 @@ export function ProductDetail() {
                       <Package className="h-16 w-16 text-muted-foreground" />
                     </div>
                   ) : selected?.type === 'video' ? (
-                    <video
+                    <ShopifyVideo
                       key={selectedImage}
-                      className="w-full h-full object-contain bg-black"
-                      controls
-                      playsInline
-                      preload="metadata"
                       poster={selected.previewUrl}
-                    >
-                      {[...selected.sources]
-                        .sort((a, b) => sourceRank(a) - sourceRank(b))
-                        .map((s, i) => (
-                          <source
-                            key={i}
-                            src={s.url}
-                            type={s.mimeType}
-                            onError={() => console.error('Video source failed', s.url, s.mimeType)}
-                          />
-                        ))}
-                      Your browser doesn't support embedded videos.
-                    </video>
+                      sources={[...selected.sources].sort((a, b) => sourceRank(a) - sourceRank(b))}
+                    />
                   ) : selected?.type === 'external' ? (
                     <iframe
                       key={selectedImage}
