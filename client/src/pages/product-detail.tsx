@@ -414,6 +414,21 @@ const mediaRank = (m: MediaItem) => (m.type === 'video' ? 0 : m.type === 'extern
 const sourceRank = (s: { mimeType: string }) =>
   s.mimeType === 'video/mp4' ? 0 : /mpegurl/i.test(s.mimeType) ? 1 : 2;
 
+// Star-rating fill widths as complete class names (no inline style="" needed, so it
+// works under style-src-attr 'none'). 41 steps of 2.5% -> rating precision ~0.06.
+const STAR_FILL_WIDTH = [
+  "w-0", "w-[2.5%]", "w-[5%]", "w-[7.5%]", "w-[10%]", "w-[12.5%]", "w-[15%]", "w-[17.5%]",
+  "w-[20%]", "w-[22.5%]", "w-[25%]", "w-[27.5%]", "w-[30%]", "w-[32.5%]", "w-[35%]", "w-[37.5%]",
+  "w-[40%]", "w-[42.5%]", "w-[45%]", "w-[47.5%]", "w-[50%]", "w-[52.5%]", "w-[55%]", "w-[57.5%]",
+  "w-[60%]", "w-[62.5%]", "w-[65%]", "w-[67.5%]", "w-[70%]", "w-[72.5%]", "w-[75%]", "w-[77.5%]",
+  "w-[80%]", "w-[82.5%]", "w-[85%]", "w-[87.5%]", "w-[90%]", "w-[92.5%]", "w-[95%]", "w-[97.5%]",
+  "w-full",
+];
+const starFillWidth = (rating: number) => {
+  const r = Number.isFinite(rating) ? Math.min(5, Math.max(0, rating)) : 0;
+  return STAR_FILL_WIDTH[Math.round((r / 5) * 40)];
+};
+
 const DEFAULT_SHIPPING_INFO: ShippingInfo = {
   shipTo: "Worldwide",
   shipsFrom: "China",
@@ -607,7 +622,7 @@ export function ProductDetail() {
         {/* Flush stack — zero gap between images, same on every breakpoint */}
         <div className="-mx-4 sm:mx-0 overflow-hidden rounded-none sm:rounded-2xl mt-5">
           {showcaseImages.map((url, idx) => (
-            <div key={idx} className="w-full block" style={{ lineHeight: 0 }}>
+            <div key={idx} className="w-full block leading-[0]">
               <img
                 src={url}
                 alt={`${product?.title} – detail ${idx + 1}`}
@@ -1190,7 +1205,7 @@ export function ProductDetail() {
               <h1 className="text-2xl md:text-3xl font-bold">{product.title}</h1>
 
               <div className="flex items-center gap-2">
-                <div className="relative inline-flex" style={{ lineHeight: 0 }}>
+                <div className="relative inline-flex leading-[0]">
                   {/* Track: five outlined stars in a soft neutral tone */}
                   <div className="flex items-center gap-0.5">
                     {[0, 1, 2, 3, 4].map((i) => (
@@ -1201,8 +1216,7 @@ export function ProductDetail() {
                       rating percentage so partial ratings render as a
                       partial last star — no extra assets, pure CSS width. */}
                   <div
-                    className="absolute inset-0 flex items-center gap-0.5 overflow-hidden"
-                    style={{ width: `${(displayRating / 5) * 100}%` }}
+                    className={`absolute inset-0 flex items-center gap-0.5 overflow-hidden ${starFillWidth(displayRating)}`}
                   >
                     {[0, 1, 2, 3, 4].map((i) => (
                       <Star
