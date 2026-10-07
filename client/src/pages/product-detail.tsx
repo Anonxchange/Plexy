@@ -423,7 +423,10 @@ const cspBlocks: string[] = [];
 if (typeof document !== "undefined") {
   try {
     document.addEventListener("securitypolicyviolation", (e) => {
-      cspBlocks.push(`${e.effectiveDirective} blocked ${e.blockedURI}`);
+      // style-src-attr is intentional noise (inline style="" is blocked on purpose); skip it
+      if (e.effectiveDirective === "style-src-attr") return;
+      const m = `${e.effectiveDirective} blocked ${e.blockedURI}`;
+      if (!cspBlocks.includes(m)) cspBlocks.push(m);
     });
   } catch {
     /* ignore */
