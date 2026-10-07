@@ -455,6 +455,8 @@ export function ProductDetail() {
   const [product, setProduct] = useState<Listing | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
+  // TEMP DIAGNOSTIC: shows video load failures on screen (remove once videos work)
+  const [videoDebug, setVideoDebug] = useState<{ url: string; note: string }[]>([]);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState("counterfeit");
   const [reportDetails, setReportDetails] = useState("");
@@ -650,6 +652,10 @@ export function ProductDetail() {
   useEffect(() => {
     setSelectedImage(0);
   }, [product?.id]);
+
+  useEffect(() => {
+    setVideoDebug([]);
+  }, [product?.id, selectedImage]);
 
   // Record view in shop history for authenticated users
   useEffect(() => {
@@ -1032,6 +1038,11 @@ export function ProductDetail() {
                       playsInline
                       preload="metadata"
                       poster={selected.previewUrl}
+                      onError={(e) => {
+                        const err = e.currentTarget.error;
+                        console.error('Video element error', err?.code, err?.message);
+                        setVideoDebug(d => [...d, { url: e.currentTarget.currentSrc || '(no source chosen)', note: `video error code ${err?.code ?? '?'} ${err?.message ?? ''}` }]);
+                      }}
                     >
                       {[...selected.sources]
                         .sort((a, b) => sourceRank(a) - sourceRank(b))
@@ -1040,7 +1051,10 @@ export function ProductDetail() {
                             key={i}
                             src={s.url}
                             type={s.mimeType}
-                            onError={() => console.error('Video source failed', s.url, s.mimeType)}
+                            onError={() => {
+                              console.error('Video source failed', s.url, s.mimeType);
+                              setVideoDebug(d => [...d, { url: s.url, note: `source failed (${s.mimeType})` }]);
+                            }}
                           />
                         ))}
                       Your browser doesn't support embedded videos.
@@ -1063,6 +1077,16 @@ export function ProductDetail() {
                   <Button variant="ghost" size="icon" className="absolute top-3 right-3 bg-background/80 backdrop-blur-sm">
                     <Share2 className="h-4 w-4" />
                   </Button>
+                  {selected?.type === 'video' && videoDebug.length > 0 && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-red-900/90 text-white text-[10px] leading-tight p-2 max-h-32 overflow-auto">
+                      {videoDebug.map((d, i) => (
+                        <div key={i} className="mb-1 break-all">
+                          {d.note}:{' '}
+                          <a href={d.url} target="_blank" rel="noreferrer" className="underline">{d.url}</a>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {mediaItems.length > 1 && (
