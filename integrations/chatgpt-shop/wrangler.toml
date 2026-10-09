@@ -11,4 +11,4 @@ CACHE_TTL_SECONDS = "60"
 # Configure an optional MCP_ACCESS_TOKEN with:
 #   npx wrangler secret put MCP_ACCESS_TOKEN
 # Keep SUPABASE_PUBLISHABLE_KEY in Worker secrets rather than committing it:
-#   npx wrangler secret put SUPABASE_ANON_KEY
+#   npx wrangler secret put SUPABASE_PUBLISHABLE_KEY
