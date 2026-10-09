@@ -1,0 +1,14 @@
+name = "pexly-chatgpt-shop"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+[vars]
+SUPABASE_URL = "https://hvpeycnedmzrjshmvgri.supabase.co"
+PEXLY_BASE_URL = "https://pexly.app"
+CACHE_TTL_SECONDS = "60"
+
+# Configure an optional MCP_ACCESS_TOKEN with:
+#   npx wrangler secret put MCP_ACCESS_TOKEN
+# Keep SUPABASE_PUBLISHABLE_KEY in Worker secrets rather than committing it:
+#   npx wrangler secret put SUPABASE_PUBLISHABLE_KEY
