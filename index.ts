@@ -160,10 +160,15 @@ function normalizeProduct(raw: unknown) {
   const images = asRecord(p.images);
   const imageEdges = Array.isArray(images.edges) ? images.edges : [];
   const firstImage = asRecord(asRecord(imageEdges[0]).node);
+  const imageArrayFirst = Array.isArray(p.images) ? asRecord(p.images[0]) : {};
   const image =
     (typeof p.image === "string" ? p.image : undefined) ||
     (typeof imageObj.url === "string" ? imageObj.url : undefined) ||
-    (typeof firstImage.url === "string" ? firstImage.url : undefined);
+    (typeof imageObj.src === "string" ? imageObj.src : undefined) ||
+    (typeof firstImage.url === "string" ? firstImage.url : undefined) ||
+    (typeof firstImage.src === "string" ? firstImage.src : undefined) ||
+    (typeof imageArrayFirst.url === "string" ? imageArrayFirst.url : undefined) ||
+    (typeof imageArrayFirst.src === "string" ? imageArrayFirst.src : undefined);
   const price =
     (typeof directPrice.amount === "string" || typeof directPrice.amount === "number"
       ? directPrice.amount
@@ -194,6 +199,8 @@ function normalizeProduct(raw: unknown) {
       : typeof p.descriptionHtml === "string"
       ? p.descriptionHtml.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
       : undefined,
+    productType: typeof p.productType === "string" ? p.productType : undefined,
+    tags: Array.isArray(p.tags) ? p.tags.filter((tag): tag is string => typeof tag === "string") : [],
     price,
     currency,
     availableForSale: typeof p.availableForSale === "boolean"
@@ -204,6 +211,22 @@ function normalizeProduct(raw: unknown) {
     image,
     url: productUrl,
   };
+}
+
+function categoryIntent(query: string): "shirts" | "shoes" | "trousers" | null {
+  const q = query.toLowerCase().replace(/[^a-z0-9\s-]/g, " ").replace(/\s+/g, " ").trim();
+  if (/\b(t-?shirts?|tees?|polo shirts?|button[- ]?down shirts?|blouses?)\b/.test(q)) return "shirts";
+  if (/\b(shoes?|sneakers?|trainers?|boots?|sandals?|slippers?|footwear)\b/.test(q)) return "shoes";
+  if (/\b(trousers?|pants?|jeans?|joggers?|leggings?|shorts?|chinos?)\b/.test(q)) return "trousers";
+  return null;
+}
+
+function matchesCategory(product: ReturnType<typeof normalizeProduct>, category: "shirts" | "shoes" | "trousers"): boolean {
+  const title = product.title.toLowerCase();
+  const metadata = [product.productType || "", ...product.tags].join(" ").toLowerCase();
+  if (category === "shirts") return /\b(t-?shirts?|tees?|polo shirts?|button[- ]?down shirts?|blouses?)\b/.test(title + " " + metadata);
+  if (category === "shoes") return /\b(shoes?|sneakers?|trainers?|boots?|sandals?|slippers?|footwear)\b/.test(title + " " + metadata);
+  return /\b(trousers?|pants?|jeans?|joggers?|leggings?|shorts?|chinos?)\b/.test(title + " " + metadata);
 }
 
 const TOOLS = [
@@ -249,13 +272,27 @@ async function callTool(name: string, args: Record<string, unknown>) {
       first: limit,
       limit,
     });
-    const products = unwrapProducts(upstream).map(normalizeProduct).slice(0, limit);
+    const normalized = unwrapProducts(upstream).map(normalizeProduct);
+    const category = categoryIntent(query);
+    const relevant = category ? normalized.filter((product) => matchesCategory(product, category)) : normalized;
+    const terms = query.toLowerCase().split(/[^a-z0-9]+/).filter((term) => term.length > 2);
+    const products = relevant
+      .map((product, index) => ({
+        product,
+        index,
+        score: terms.reduce((score, term) => score + (product.title.toLowerCase().includes(term) ? 3 : 0), 0),
+      }))
+      .sort((a, b) => b.score - a.score || a.index - b.index)
+      .slice(0, limit)
+      .map((item) => item.product);
     return {
       query,
       count: products.length,
       products,
       note: products.length
         ? undefined
+        : category
+        ? `No matching ${category} were found in the returned catalogue results. Try a more specific search or verify the Shopify search query.`
         : "No products were returned. Verify the getProducts queryName and variables contract in shopify-storefront.",
     };
   }
