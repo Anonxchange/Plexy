@@ -13,13 +13,13 @@ The service calls the existing Supabase `shopify-storefront` Edge Function using
 
 Prerequisites: Node.js and a Cloudflare account with Workers enabled.
 
-From this directory:
+From the repository root, deploy this Worker with its own configuration:
 
 ```sh
-npm create cloudflare@latest -- --existing-script
+npx wrangler deploy --config integrations/chatgpt-shop/wrangler.toml
 ```
 
-Alternatively install Wrangler in a local working copy and deploy this directory using your normal Cloudflare workflow. Keep this Worker separate from the production `pexly.app/*` proxy.
+If Wrangler is not installed, `npx` will offer to download/run it. Keep this Worker separate from the production `pexly.app/*` proxy. The first deploy will return a separate `*.workers.dev` URL; do not attach it to the production website route.
 
 Set the Supabase public/anon key as a Worker secret (do not commit it):
 
