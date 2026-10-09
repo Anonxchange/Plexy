@@ -20,6 +20,7 @@ const GlobalNotificationListener = lazy(() =>
 );
 import { AppHeader } from "@/components/app-header";
 import { AppFooter } from "@/components/app-footer";
+import { PexlyShopAssistant } from "@/components/pexly-shop-assistant";
 import { PageNavigation } from "@/components/page-navigation";
 const CookieConsent = lazy(() => import("@/components/cookie-consent").then(m => ({ default: m.CookieConsent })));
 const WalletSetupDialog = lazy(() => import("@/components/wallet/WalletSetupDialog").then(m => ({ default: m.WalletSetupDialog })));
@@ -364,6 +365,7 @@ function AppContent() {
         <AppRoutes />
       </main>
       {!hideAppFooter && <AppFooter />}
+      {(location === "/shop" || location.startsWith("/shop/")) && <PexlyShopAssistant />}
 
       {user && !isGoogleSignInSettling && (
         <Suspense fallback={null}>
