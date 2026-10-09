@@ -221,7 +221,9 @@ async function searchProducts(args: Record<string, unknown>, env: Env) {
     });
     const edges = data?.products?.edges;
     const products = Array.isArray(edges)
-      ? edges.map((edge: any) => mapProduct(edge, env)).filter(Boolean)
+      ? edges
+        .map((edge: any) => mapProduct(edge, env))
+        .filter((product: any) => product && product.available !== false)
       : [];
     return { query, count: products.length, products };
   });
