@@ -1,6 +1,6 @@
 type Env = {
   SUPABASE_URL: string;
-  SUPABASE_ANON_KEY: string;
+  SUPABASE_PUBLISHABLE_KEY: string;
   PEXLY_BASE_URL?: string;
   CACHE_TTL_SECONDS?: string;
   MCP_ACCESS_TOKEN?: string;
@@ -164,8 +164,8 @@ async function fetchStorefront(
     method: "POST",
     headers: {
       "content-type": "application/json",
-      apikey: env.SUPABASE_ANON_KEY,
-      authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
+      apikey: env.SUPABASE_PUBLISHABLE_KEY,
+      authorization: `Bearer ${env.SUPABASE_PUBLISHABLE_KEY}`,
     },
     body: JSON.stringify({ queryName, variables }),
     signal: AbortSignal.timeout(8000),
@@ -270,7 +270,7 @@ export default {
       return json({ error: "Use POST for MCP JSON-RPC requests." }, 405, { allow: "POST" });
     }
 
-    if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    if (!env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY) {
       return json({ error: "Catalog service is not configured." }, 503);
     }
 
