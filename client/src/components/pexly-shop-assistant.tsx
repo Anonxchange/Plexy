@@ -1,4 +1,5 @@
-import { FormEvent, useState } from "react";
+import { useState } from "react";
+import type { FormEvent } from "react";
 import { MessageCircle, X, Search, Loader2, ShoppingBag, ExternalLink } from "lucide-react";
 
 const MCP_URL = "https://hvpeycnedmzrjshmvgri.supabase.co/functions/v1/pexly-shop-mcp";
@@ -105,7 +106,7 @@ export function PexlyShopAssistant() {
   return (
     <div className="fixed bottom-5 right-4 z-[70] sm:right-6" aria-live="polite">
       {open && (
-        <section className="mb-3 flex w-[min( calc(100vw-2rem), 25rem)] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border bg-background text-foreground shadow-2xl sm:w-96" aria-label="Pexly Shop product assistant">
+        <section className="mb-3 flex w-[min(25rem,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border bg-background text-foreground shadow-2xl sm:w-96" aria-label="Pexly Shop product assistant">
           <header className="flex items-center justify-between gap-3 border-b bg-muted/40 px-4 py-3">
             <div className="flex items-center gap-2">
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-lime-300 text-black"><ShoppingBag size={19} /></span>
