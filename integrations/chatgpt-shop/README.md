@@ -21,10 +21,10 @@ npx wrangler deploy --config integrations/chatgpt-shop/wrangler.toml
 
 If Wrangler is not installed, `npx` will offer to download/run it. Keep this Worker separate from the production `pexly.app/*` proxy. The first deploy will return a separate `*.workers.dev` URL; do not attach it to the production website route.
 
-Set the Supabase public/anon key as a Worker secret (do not commit it):
+Set your Supabase publishable key as a Worker secret (do not commit it):
 
 ```sh
-npx wrangler secret put SUPABASE_ANON_KEY
+npx wrangler secret put SUPABASE_PUBLISHABLE_KEY
 ```
 
 Optional: protect the endpoint with a bearer token. If configured, ChatGPT must send that token as an Authorization header.
