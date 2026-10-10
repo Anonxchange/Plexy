@@ -1032,6 +1032,11 @@ export function ProductDetail() {
             ).sort((a, b) => mediaRank(a) - mediaRank(b));
             const selected = mediaItems[selectedImage] ?? mediaItems[0];
 
+            // First real photo = cover for the video(s), instead of Shopify's auto-generated frame
+            const coverImage =
+              mediaItems.find((m): m is Extract<MediaItem, { type: 'image' }> => m.type === 'image')?.url
+              ?? product.images[0];
+
             return (
               <div className="space-y-4">
                 <div className="relative -mx-4 sm:mx-0 aspect-square rounded-none sm:rounded-xl overflow-hidden bg-muted">
@@ -1042,11 +1047,11 @@ export function ProductDetail() {
                   ) : selected?.type === 'video' ? (
                     <video
                       key={selectedImage}
-                      className="w-full h-full object-contain bg-black"
+                      className="w-full h-full object-contain bg-white"
                       controls
                       playsInline
                       preload="metadata"
-                      poster={selected.previewUrl}
+                      poster={coverImage ?? selected.previewUrl}
                     >
                       {[...selected.sources]
                         .sort((a, b) => sourceRank(a) - sourceRank(b))
@@ -1084,7 +1089,7 @@ export function ProductDetail() {
                   <div className="flex gap-2 overflow-x-auto pb-2">
                     {mediaItems.map((item, idx) => {
                       const thumbSrc = item.type === 'image' ? item.url
-                        : item.type === 'video' ? item.previewUrl
+                        : item.type === 'video' ? (coverImage ?? item.previewUrl)
                         : item.type === 'external' ? item.previewUrl
                         : undefined;
                       return (
