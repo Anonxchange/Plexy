@@ -1049,6 +1049,10 @@ export function ProductDetail() {
                       key={selectedImage}
                       className="w-full h-full object-contain bg-white"
                       controls
+                      controlsList="nodownload noplaybackrate"
+                      disablePictureInPicture
+                      disableRemotePlayback
+                      onContextMenu={(e) => e.preventDefault()}
                       playsInline
                       preload="metadata"
                       poster={coverImage ?? selected.previewUrl}
