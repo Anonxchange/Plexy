@@ -469,6 +469,69 @@ function normalizeImgUrl(u?: string | null): string {
   return u ? u.split('?')[0] : '';
 }
 
+/** Color name -> STATIC Tailwind class. Full literal class strings only (no
+ *  string-building) so Tailwind generates them at build time. No inline
+ *  style attributes or injected CSS anywhere, so this is safe under a strict CSP. */
+const COLOR_SWATCH_CLASS: Record<string, string> = {
+  black: 'bg-[#111111]',
+  white: 'bg-[#ffffff]',
+  gray: 'bg-[#9ca3af]',
+  grey: 'bg-[#9ca3af]',
+  'dark gray': 'bg-[#4b5563]',
+  'dark grey': 'bg-[#4b5563]',
+  'light gray': 'bg-[#d1d5db]',
+  'light grey': 'bg-[#d1d5db]',
+  silver: 'bg-[#c0c0c0]',
+  red: 'bg-[#dc2626]',
+  wine: 'bg-[#7f1d1d]',
+  'wine red': 'bg-[#7f1d1d]',
+  burgundy: 'bg-[#7f1d1d]',
+  maroon: 'bg-[#7f1d1d]',
+  pink: 'bg-[#f9a8d4]',
+  'hot pink': 'bg-[#ec4899]',
+  rose: 'bg-[#fb7185]',
+  'rose red': 'bg-[#e11d48]',
+  orange: 'bg-[#f97316]',
+  yellow: 'bg-[#facc15]',
+  gold: 'bg-[#d4af37]',
+  golden: 'bg-[#d4af37]',
+  beige: 'bg-[#e8dcc4]',
+  cream: 'bg-[#fff8e1]',
+  ivory: 'bg-[#fffff0]',
+  apricot: 'bg-[#fbceb1]',
+  khaki: 'bg-[#c3b091]',
+  camel: 'bg-[#c19a6b]',
+  brown: 'bg-[#78350f]',
+  coffee: 'bg-[#4b2e1e]',
+  green: 'bg-[#16a34a]',
+  'army green': 'bg-[#4b5320]',
+  'dark green': 'bg-[#14532d]',
+  'light green': 'bg-[#86efac]',
+  mint: 'bg-[#a7f3d0]',
+  teal: 'bg-[#0d9488]',
+  cyan: 'bg-[#06b6d4]',
+  turquoise: 'bg-[#40e0d0]',
+  blue: 'bg-[#2563eb]',
+  navy: 'bg-[#1e3a8a]',
+  'navy blue': 'bg-[#1e3a8a]',
+  'dark blue': 'bg-[#1e3a8a]',
+  'light blue': 'bg-[#93c5fd]',
+  'sky blue': 'bg-[#7dd3fc]',
+  purple: 'bg-[#7c3aed]',
+  violet: 'bg-[#8b5cf6]',
+  lavender: 'bg-[#c4b5fd]',
+};
+
+/** Returns a swatch class for a plain color name, or null if we can't be sure
+ *  (multi-color names like "Black/White", or names we don't recognise). */
+function getColorSwatchClass(name: string): string | null {
+  const key = name.trim().toLowerCase().replace(/\s+/g, ' ');
+  if (!key || /[\/&+,]/.test(key)) return null; // two-tone: show text instead of guessing
+  if (COLOR_SWATCH_CLASS[key]) return COLOR_SWATCH_CLASS[key];
+  const hit = key.split(' ').find((w) => COLOR_SWATCH_CLASS[w]);
+  return hit ? COLOR_SWATCH_CLASS[hit] : null;
+}
+
 /** Options that should render as image swatches and drive the gallery. */
 function isColorOptionName(name: string): boolean {
   return /colou?r|couleur/i.test(name);
@@ -1339,6 +1402,17 @@ export function ProductDetail() {
                   {productOptions.map((opt) => {
                     const isSizeOption = opt.name.toLowerCase().includes('size') || opt.name.toLowerCase() === 'taille';
                     const isColorOption = isColorOptionName(opt.name);
+                    // image swatches if every value has a variant photo, else colored
+                    // dots if every value is a recognised color, else plain text buttons
+                    const swatchImages = isColorOption ? opt.values.map((v) => getOptionValueImage(opt.name, v)) : [];
+                    const swatchClasses = isColorOption ? opt.values.map((v) => getColorSwatchClass(v)) : [];
+                    const colorMode: 'image' | 'dot' | 'text' = !isColorOption
+                      ? 'text'
+                      : swatchImages.every(Boolean)
+                        ? 'image'
+                        : swatchClasses.every(Boolean)
+                          ? 'dot'
+                          : 'text';
                     return (
                       <div key={opt.name} className="space-y-2">
                         <div className="flex items-center justify-between">
@@ -1353,12 +1427,10 @@ export function ProductDetail() {
                           )}
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          {opt.values.map((val) => {
+                          {opt.values.map((val, i) => {
                             const active = selectedOptions[opt.name] === val;
-                            const swatchImg = isColorOption ? getOptionValueImage(opt.name, val) : null;
 
-                            // Color with a variant photo → image swatch
-                            if (swatchImg) {
+                            if (colorMode === 'image') {
                               return (
                                 <button
                                   key={val}
@@ -1373,12 +1445,29 @@ export function ProductDetail() {
                                       : 'border-border/40 hover:border-primary/50'
                                   }`}
                                 >
-                                  <img src={swatchImg} alt={val} loading="lazy" className="h-full w-full object-cover" />
+                                  <img src={swatchImages[i] as string} alt={val} loading="lazy" className="h-full w-full object-cover" />
                                 </button>
                               );
                             }
 
-                            // Size and everything else (and colors without a photo) → text button
+                            if (colorMode === 'dot') {
+                              return (
+                                <button
+                                  key={val}
+                                  type="button"
+                                  onClick={() => handleSelectOption(opt.name, val)}
+                                  aria-label={`${opt.name}: ${val}`}
+                                  aria-pressed={active}
+                                  title={val}
+                                  className={`h-9 w-9 rounded-full border transition-all flex-shrink-0 ${swatchClasses[i]} ${
+                                    active
+                                      ? 'border-foreground ring-2 ring-foreground ring-offset-2 ring-offset-background'
+                                      : 'border-border hover:ring-2 hover:ring-primary/40 hover:ring-offset-2 hover:ring-offset-background'
+                                  }`}
+                                />
+                              );
+                            }
+
                             return (
                               <button
                                 key={val}
