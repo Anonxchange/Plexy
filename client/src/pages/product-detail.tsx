@@ -464,6 +464,16 @@ function buildShippingInfo(productData: any, fallback?: Partial<ShippingInfo>): 
   };
 }
 
+/** Shopify CDN urls for the same photo can differ only by ?v= / size params. */
+function normalizeImgUrl(u?: string | null): string {
+  return u ? u.split('?')[0] : '';
+}
+
+/** Options that should render as image swatches and drive the gallery. */
+function isColorOptionName(name: string): boolean {
+  return /colou?r|couleur/i.test(name);
+}
+
 export function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
@@ -709,6 +719,66 @@ export function ProductDetail() {
 
     return match?.node || null;
   }, [selectedOptions, productOptions]);
+
+  // Gallery items (video first, then photos). Lifted out of the JSX so the
+  // option handlers can find a variant's photo by gallery index. Variant
+  // photos that are missing from the gallery are appended, so picking a
+  // color can always jump to its image.
+  const galleryItems = useMemo<MediaItem[]>(() => {
+    if (!product) return [];
+    const base: MediaItem[] = (
+      product.media && product.media.length > 0
+        ? [...product.media]
+        : product.images.map(url => ({ type: 'image' as const, url }))
+    ).sort((a, b) => mediaRank(a) - mediaRank(b));
+
+    const seen = new Set(
+      base
+        .filter((m): m is Extract<MediaItem, { type: 'image' }> => m.type === 'image')
+        .map(m => normalizeImgUrl(m.url))
+    );
+    const variants = shopifyDataRef.current?.variants?.edges || [];
+    for (const edge of variants) {
+      const url: string | undefined = edge?.node?.image?.url;
+      const key = normalizeImgUrl(url);
+      if (url && !seen.has(key)) {
+        seen.add(key);
+        base.push({ type: 'image', url });
+      }
+    }
+    return base;
+  }, [product, productOptions]);
+
+  // Photo that represents one option value (e.g. Color = "Navy"), for swatches.
+  const getOptionValueImage = (optName: string, val: string): string | null => {
+    const variants = shopifyDataRef.current?.variants?.edges || [];
+    const match = variants.find(
+      (e: any) =>
+        e?.node?.image?.url &&
+        (e.node.selectedOptions || []).some((o: any) => o.name === optName && o.value === val)
+    );
+    return match?.node?.image?.url ?? null;
+  };
+
+  // Select an option. Choosing a color also jumps the gallery to that
+  // color's photo. Other options (size, etc.) never move the gallery.
+  const handleSelectOption = (optName: string, val: string) => {
+    const next = { ...selectedOptions, [optName]: val };
+    setSelectedOptions(next);
+    if (!isColorOptionName(optName)) return;
+
+    const variants = shopifyDataRef.current?.variants?.edges || [];
+    const exact = variants.find((e: any) =>
+      (e?.node?.selectedOptions || []).every((o: any) => next[o.name] === o.value)
+    );
+    const imgUrl: string | null = exact?.node?.image?.url ?? getOptionValueImage(optName, val);
+    if (!imgUrl) return;
+
+    const idx = galleryItems.findIndex(
+      m => m.type === 'image' && normalizeImgUrl(m.url) === normalizeImgUrl(imgUrl)
+    );
+    if (idx >= 0) setSelectedImage(idx);
+  };
 
   // Resolve cjVid safely: variant metafield → product-level fallback → variant SKU.
   // Never passes an empty string to the shipping estimator.
@@ -1025,11 +1095,7 @@ export function ProductDetail() {
         {!isLoading && product && <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-8 lg:gap-12">
           {/* Left: Media (images + video) */}
           {(() => {
-            const mediaItems: MediaItem[] = (
-              product.media && product.media.length > 0
-                ? [...product.media]
-                : product.images.map(url => ({ type: 'image' as const, url }))
-            ).sort((a, b) => mediaRank(a) - mediaRank(b));
+            const mediaItems: MediaItem[] = galleryItems;
             const selected = mediaItems[selectedImage] ?? mediaItems[0];
 
             // First real photo = cover for the video(s), instead of Shopify's auto-generated frame
@@ -1272,28 +1338,63 @@ export function ProductDetail() {
                 <div className="space-y-4">
                   {productOptions.map((opt) => {
                     const isSizeOption = opt.name.toLowerCase().includes('size') || opt.name.toLowerCase() === 'taille';
+                    const isColorOption = isColorOptionName(opt.name);
                     return (
                       <div key={opt.name} className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <p className="text-sm font-semibold">{opt.name}</p>
+                          <p className="text-sm font-semibold">
+                            {opt.name}
+                            {isColorOption && selectedOptions[opt.name] && (
+                              <span className="font-normal text-muted-foreground">: {selectedOptions[opt.name]}</span>
+                            )}
+                          </p>
                           {isSizeOption && (
                             <span className="text-xs text-muted-foreground cursor-pointer hover:underline">Size Guide</span>
                           )}
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          {opt.values.map((val) => (
-                            <button
-                              key={val}
-                              onClick={() => setSelectedOptions(prev => ({ ...prev, [opt.name]: val }))}
-                              className={`h-10 min-w-[3rem] px-3 rounded-lg text-sm font-bold border-2 transition-all ${
-                                selectedOptions[opt.name] === val
-                                  ? 'bg-foreground text-background border-foreground shadow-md'
-                                  : 'bg-background text-foreground border-border/40 hover:border-primary/50'
-                              }`}
-                            >
-                              {val}
-                            </button>
-                          ))}
+                          {opt.values.map((val) => {
+                            const active = selectedOptions[opt.name] === val;
+                            const swatchImg = isColorOption ? getOptionValueImage(opt.name, val) : null;
+
+                            // Color with a variant photo → image swatch
+                            if (swatchImg) {
+                              return (
+                                <button
+                                  key={val}
+                                  type="button"
+                                  onClick={() => handleSelectOption(opt.name, val)}
+                                  aria-label={`${opt.name}: ${val}`}
+                                  aria-pressed={active}
+                                  title={val}
+                                  className={`h-12 w-12 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${
+                                    active
+                                      ? 'border-foreground ring-2 ring-foreground/20'
+                                      : 'border-border/40 hover:border-primary/50'
+                                  }`}
+                                >
+                                  <img src={swatchImg} alt={val} loading="lazy" className="h-full w-full object-cover" />
+                                </button>
+                              );
+                            }
+
+                            // Size and everything else (and colors without a photo) → text button
+                            return (
+                              <button
+                                key={val}
+                                type="button"
+                                onClick={() => handleSelectOption(opt.name, val)}
+                                aria-pressed={active}
+                                className={`h-10 min-w-[3rem] px-3 rounded-lg text-sm font-bold border-2 transition-all ${
+                                  active
+                                    ? 'bg-foreground text-background border-foreground shadow-md'
+                                    : 'bg-background text-foreground border-border/40 hover:border-primary/50'
+                                }`}
+                              >
+                                {val}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     );
