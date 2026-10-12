@@ -40,30 +40,44 @@ import { devLog } from "@/lib/dev-logger";
 const ShopItemCard = lazy(() => import("@/components/shop/ShopItemCard").then(m => ({ default: m.ShopItemCard })));
 
 // ── Mobile-only shop banner carousel ─────────────────────────────────────────
+// Images are shown in full (object-contain, never cropped). Container is 16:9.
 const BANNER_SLIDES = [
-  {
-    id: 'home',
-    src: '/assets/banners/mobile/banner-home.webp',
-    alt: 'Make Your Home Smarter — Tchot Home Essentials',
-  },
   {
     id: 'fashion',
     src: '/assets/banners/mobile/banner-fashion.webp',
     alt: 'Style That Speaks — Tchot Fashion',
+    w: 1280,
+    h: 720,
+    eyebrow: 'New Season',
+    title: 'Style That\nSpeaks',
+    sub: 'Fresh looks for every mood',
+    btn: { background: '#0a0a0a', color: '#ffffff' },
+  },
+  {
+    id: 'home',
+    src: '/assets/banners/mobile/banner-home.webp',
+    alt: 'Make Your Home Smarter — Tchot Home Essentials',
+    w: 1080,
+    h: 540,
+    eyebrow: 'Home Essentials',
+    title: 'Make Your\nHome Smarter',
+    sub: 'Appliances you will love',
+    btn: { background: 'linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%)', color: '#fde047' },
   },
   {
     id: 'tech',
     src: '/assets/banners/mobile/banner-tech.webp',
     alt: 'Power Up Your Everyday — Tchot Tech',
-  },
-  {
-    id: 'power',
-    src: '/assets/banners/mobile/banner-power.webp',
-    alt: 'Power Anywhere. Live Without Limits — Tchot Portable Power',
+    w: 1080,
+    h: 607,
+    eyebrow: 'Tchot Tech',
+    title: 'Power Up Your\nEveryday',
+    sub: 'Gadgets, audio & more',
+    btn: { background: '#a3e635', color: '#0a0a0a' },
   },
 ] as const;
 
-function ShopBanner() {
+function ShopBanner({ onShopNow }: { onShopNow: () => void }) {
   const [idx, setIdx] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const touchStartX = useRef<number | null>(null);
@@ -86,7 +100,7 @@ function ShopBanner() {
       role="region"
       aria-label="Promotional banners"
       className="relative overflow-hidden mb-2 select-none"
-      style={{ aspectRatio: '16 / 7' }}
+      style={{ aspectRatio: '16 / 9', containerType: 'inline-size' }}
       onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
       onTouchEnd={e => {
         if (touchStartX.current === null) return;
@@ -98,22 +112,78 @@ function ShopBanner() {
       }}
     >
       {/* Slides — crossfade */}
-      {BANNER_SLIDES.map((slide, i) => (
-        <img
-          key={slide.id}
-          src={slide.src}
-          alt={slide.alt}
-          width={800}
-          height={350}
-          fetchPriority={i === 0 ? 'high' : 'low'}
-          decoding="async"
-          className="absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-500"
-          style={{ opacity: i === idx ? 1 : 0, pointerEvents: 'none' }}
-        />
-      ))}
+      {BANNER_SLIDES.map((slide, i) => {
+        const active = i === idx;
+        return (
+          <div
+            key={slide.id}
+            aria-hidden={!active}
+            className="absolute inset-0 transition-opacity duration-500"
+            style={{ opacity: active ? 1 : 0, pointerEvents: active ? 'auto' : 'none' }}
+          >
+            {/* Soft blurred backdrop so any letterbox space blends in seamlessly */}
+            <img
+              src={slide.src}
+              alt=""
+              aria-hidden
+              decoding="async"
+              className="absolute inset-0 w-full h-full object-cover scale-110"
+              style={{ filter: 'blur(14px)' }}
+            />
+            {/* Full, uncropped image */}
+            <img
+              src={slide.src}
+              alt={slide.alt}
+              width={slide.w}
+              height={slide.h}
+              fetchPriority={i === 0 ? 'high' : 'low'}
+              loading={i === 0 ? 'eager' : 'lazy'}
+              decoding="async"
+              className="absolute inset-0 w-full h-full object-contain object-center"
+            />
+
+            {/* Text + CTA (sits on the empty left side of each image) */}
+            <div
+              className="absolute z-10 flex flex-col items-start"
+              style={{ left: '6cqw', top: '50%', transform: 'translateY(-50%)', width: '46cqw', gap: '1.4cqw' }}
+            >
+              <span
+                className="font-semibold uppercase"
+                style={{ fontSize: '2.6cqw', letterSpacing: '0.14em', color: 'rgba(10,10,10,0.6)' }}
+              >
+                {slide.eyebrow}
+              </span>
+              <h2
+                className="font-extrabold whitespace-pre-line"
+                style={{ fontSize: '5.6cqw', lineHeight: 1.05, color: '#0a0a0a', letterSpacing: '-0.02em' }}
+              >
+                {slide.title}
+              </h2>
+              <p style={{ fontSize: '3.1cqw', lineHeight: 1.25, color: 'rgba(10,10,10,0.72)' }}>
+                {slide.sub}
+              </p>
+              <button
+                type="button"
+                tabIndex={active ? 0 : -1}
+                onClick={e => { e.stopPropagation(); onShopNow(); }}
+                className="rounded-full font-bold shadow-md active:scale-95 transition-transform"
+                style={{
+                  marginTop: '1cqw',
+                  padding: '1.9cqw 5cqw',
+                  fontSize: '3.2cqw',
+                  lineHeight: 1,
+                  ...slide.btn,
+                }}
+              >
+                Shop now
+              </button>
+            </div>
+          </div>
+        );
+      })}
 
       {/* Slide dots */}
-      <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
         {BANNER_SLIDES.map((s, i) => (
           <button
             key={s.id}
@@ -123,7 +193,7 @@ function ShopBanner() {
             style={{
               width: i === idx ? 18 : 6,
               height: 6,
-              background: i === idx ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.38)',
+              background: i === idx ? 'rgba(10,10,10,0.8)' : 'rgba(10,10,10,0.25)',
             }}
           />
         ))}
@@ -754,7 +824,7 @@ export function Shop() {
 
         {/* Banner carousel — mobile only, sits at the very top before the header */}
         <div className="md:hidden -mx-4">
-          <ShopBanner />
+          <ShopBanner onShopNow={() => productsRef.current?.scrollIntoView({ behavior: "smooth" })} />
         </div>
 
         {/* Header — mobile only now; desktop uses the hero banner instead */}
