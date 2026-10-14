@@ -109,7 +109,7 @@ export const Dashboard = () => {
               />
             </Suspense>
 
-            <div className="px-4 md:px-0 mt-6 animate-fade-in" style={{ animationDelay: "0.1s" }}>
+            <div className="px-4 md:px-0 mt-6 animate-fade-in [animation-delay:0.1s]">
               <div className="grid grid-cols-4 gap-3">
                 {actions.map((action) => (
                   <button
@@ -123,14 +123,7 @@ export const Dashboard = () => {
                     }}
                     className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-all active:scale-95 group"
                   >
-                    <div 
-                      className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all group-hover:scale-105"
-                      style={{
-                        background: `linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05))`,
-                        backdropFilter: "blur(10px)",
-                        border: "1px solid rgba(255, 255, 255, 0.2)",
-                      }}
-                    >
+                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all group-hover:scale-105 bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-[10px] border border-white/20">
                       {action.type === "more" ? (
                         <MoreHorizontal className="h-7 w-7 text-muted-foreground" />
                       ) : (
@@ -147,7 +140,7 @@ export const Dashboard = () => {
               </div>
             </div>
 
-            <div className="mt-6 animate-fade-in md:hidden" style={{ animationDelay: "0.2s" }}>
+            <div className="mt-6 animate-fade-in md:hidden [animation-delay:0.2s]">
               <Suspense fallback={<MarketsSectionSkeleton />}>
                 <MarketsSection className="px-4" />
               </Suspense>
@@ -155,7 +148,7 @@ export const Dashboard = () => {
 
             <div className="h-3 bg-muted mt-6 md:hidden"></div>
 
-            <div className="px-4 md:px-0 py-6 animate-fade-in" style={{ animationDelay: "0.25s" }}>
+            <div className="px-4 md:px-0 py-6 animate-fade-in [animation-delay:0.25s]">
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-xl font-bold text-foreground">My Rewards</h2>
                 <button className="flex items-center gap-1 px-4 py-2 bg-muted rounded-full text-sm font-medium text-foreground hover:bg-muted/80 transition-colors">
@@ -190,7 +183,7 @@ export const Dashboard = () => {
           </div>
 
           <div className="hidden lg:block lg:col-span-5 xl:col-span-4">
-            <div className="bg-card rounded-2xl border border-border p-5 sticky top-6 animate-fade-in" style={{ animationDelay: "0.2s" }}>
+            <div className="bg-card rounded-2xl border border-border p-5 sticky top-6 animate-fade-in [animation-delay:0.2s]">
               <Suspense fallback={<MarketsSectionSkeleton />}>
                 <MarketsSection />
               </Suspense>

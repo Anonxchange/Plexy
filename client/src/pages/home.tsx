@@ -28,12 +28,9 @@ const StillHaveQuestions = lazy(() =>
 /**
  * 🔥 Skeleton Loader (used everywhere)
  */
-function SectionSkeleton({ height = 400 }: { height?: number }) {
+function SectionSkeleton({ minHeightClass = "min-h-[400px]" }: { minHeightClass?: string }) {
   return (
-    <div
-      style={{ minHeight: height }}
-      className="w-full animate-pulse px-6 py-8 space-y-4"
-    >
+    <div className={`w-full animate-pulse px-6 py-8 space-y-4 ${minHeightClass}`}>
       <div className="h-6 bg-gray-200 rounded w-1/3" />
       <div className="h-4 bg-gray-200 rounded w-2/3" />
       <div className="h-40 bg-gray-200 rounded w-full" />
@@ -43,17 +40,17 @@ function SectionSkeleton({ height = 400 }: { height?: number }) {
 
 /**
  * LazyMount — mounts only when near viewport.
- * minHeight is kept on the container at all times so layout shifts are
+ * The min-height class is kept on the container at all times so layout shifts are
  * prevented both before and during the transition from skeleton to content.
  * Once the real content has rendered and committed, the constraint is lifted.
  */
 function LazyMount({
   children,
-  height = 500,
+  minHeightClass = "min-h-[500px]",
   fallback,
 }: {
   children: React.ReactNode;
-  height?: number;
+  minHeightClass?: string;
   fallback?: React.ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -88,13 +85,13 @@ function LazyMount({
   }, [mounted]);
 
   return (
-    <div ref={ref} style={settled ? undefined : { minHeight: height }}>
+    <div ref={ref} className={settled ? undefined : minHeightClass}>
       {mounted ? (
-        <Suspense fallback={fallback ?? <SectionSkeleton height={height} />}>
+        <Suspense fallback={fallback ?? <SectionSkeleton minHeightClass={minHeightClass} />}>
           {children}
         </Suspense>
       ) : (
-        <SectionSkeleton height={height} />
+        <SectionSkeleton minHeightClass={minHeightClass} />
       )}
     </div>
   );
@@ -110,32 +107,32 @@ export default function Home() {
       <HeroSection />
 
       {/* Smooth skeleton instead of blank */}
-      <Suspense fallback={<SectionSkeleton height={80} />}>
+      <Suspense fallback={<SectionSkeleton minHeightClass="min-h-[80px]" />}>
         <PartnerCarousel />
       </Suspense>
 
       {/* Lazy sections with skeletons */}
-      <LazyMount height={600}>
+      <LazyMount minHeightClass="min-h-[600px]">
         <HowItWorks />
       </LazyMount>
 
-      <LazyMount height={500}>
+      <LazyMount minHeightClass="min-h-[500px]">
         <FeatureCarousel />
       </LazyMount>
 
-      <LazyMount height={500}>
+      <LazyMount minHeightClass="min-h-[500px]">
         <PaymentMethods />
       </LazyMount>
 
       <TrustStats />
 
       <div className="pb-16">
-        <LazyMount height={600}>
+        <LazyMount minHeightClass="min-h-[600px]">
           <Testimonials />
         </LazyMount>
       </div>
 
-      <LazyMount height={300}>
+      <LazyMount minHeightClass="min-h-[300px]">
         <StillHaveQuestions />
       </LazyMount>
 
