@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, type ReactNode } from "react";
 import { useLocation } from "wouter";
 import { ChevronDown, ArrowRight, Search, Smartphone, ShoppingCart, Gift, Star, Shield, Mail, UserCheck, ChevronUp, Share2, Heart, Plus } from '@/lib/icons';
 import { cn } from "@/lib/utils";
@@ -30,20 +30,7 @@ const ProviderCard = ({
       onClick={onClick}
     >
       <div className="relative bg-card rounded-3xl aspect-[4/3] flex items-center justify-center transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lg overflow-hidden border border-border p-4">
-        {safeLogo ? (
-          <img
-            src={safeLogo}
-            alt={name}
-            className="w-full h-full object-contain"
-            onError={(e) => {
-              (e.currentTarget as HTMLImageElement).style.display = "none";
-              (e.currentTarget.nextSibling as HTMLElement).style.display = "flex";
-            }}
-          />
-        ) : null}
-        <div className={`w-full h-full items-center justify-center ${safeLogo ? "hidden" : "flex"}`}>
-          <Smartphone className="w-12 h-12 text-muted-foreground" />
-        </div>
+        <LogoWithFallback src={safeLogo} alt={name} fallback={<Smartphone className="w-12 h-12 text-muted-foreground" />} />
       </div>
       <div className="mt-3 px-1">
         <h3 className="font-semibold text-foreground truncate text-sm">{name}</h3>
@@ -52,6 +39,50 @@ const ProviderCard = ({
     </div>
   );
 };
+
+// Literal class names so Tailwind can generate them. Items past the 12th share the last delay.
+const STAGGER_DELAY_CLASSES = [
+  "[animation-delay:0s]",
+  "[animation-delay:0.04s]",
+  "[animation-delay:0.08s]",
+  "[animation-delay:0.12s]",
+  "[animation-delay:0.16s]",
+  "[animation-delay:0.2s]",
+  "[animation-delay:0.24s]",
+  "[animation-delay:0.28s]",
+  "[animation-delay:0.32s]",
+  "[animation-delay:0.36s]",
+  "[animation-delay:0.4s]",
+  "[animation-delay:0.44s]",
+] as const;
+
+// Swaps to a fallback icon in React state when the image fails (no DOM style changes).
+function LogoWithFallback({
+  src,
+  alt,
+  fallback,
+  crossOrigin,
+}: {
+  src?: string | null;
+  alt: string;
+  fallback: ReactNode;
+  crossOrigin?: "anonymous" | "use-credentials";
+}) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => { setFailed(false); }, [src]);
+  if (!src || failed) {
+    return <div className="w-full h-full flex items-center justify-center">{fallback}</div>;
+  }
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className="w-full h-full object-contain"
+      crossOrigin={crossOrigin}
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 // ── Crypto payment icons (using real coin logos from local registry) ──
 const CRYPTO_ICONS = [
@@ -201,7 +232,7 @@ function TopupFaqItem({ question, answer }: { question: string; answer: string }
           <Plus className="h-3 w-3 text-muted-foreground" />
         </span>
       </button>
-      <div className="overflow-hidden transition-all duration-300" style={{ maxHeight: open ? "300px" : "0px" }}>
+      <div className={cn("overflow-hidden transition-all duration-300", open ? "max-h-[300px]" : "max-h-0")}>
         <p className="text-muted-foreground text-sm leading-relaxed pb-4">{answer}</p>
       </div>
     </div>
@@ -324,20 +355,7 @@ const TopupDetailView = ({
           </button>
         </div>
         <div className="w-28 h-28 bg-card rounded-2xl border border-border flex items-center justify-center p-3 shadow-sm overflow-hidden">
-          {proxiedOperatorLogo ? (
-            <img
-              src={proxiedOperatorLogo}
-              alt={selectedOperator.name}
-              className="w-full h-full object-contain"
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display = "none";
-                (e.currentTarget.nextSibling as HTMLElement)!.style.display = "flex";
-              }}
-            />
-          ) : null}
-          <div className={`w-full h-full items-center justify-center ${selectedOperator.logoUrls?.[0] ? "hidden" : "flex"}`}>
-            <Smartphone className="w-12 h-12 text-muted-foreground" />
-          </div>
+          <LogoWithFallback src={proxiedOperatorLogo} alt={selectedOperator.name} fallback={<Smartphone className="w-12 h-12 text-muted-foreground" />} />
         </div>
       </div>
 
@@ -606,16 +624,17 @@ const Index = () => {
       {/* ── Hero + Search (hidden on detail/topup view) ── */}
       {view !== "topup" && (
         <>
-          <section className="relative bg-primary pt-8 pb-16 px-4">
-            <div className="absolute inset-0 overflow-hidden opacity-10 pointer-events-none">
-              <div className="absolute top-0 left-1/4 w-96 h-96 bg-white rounded-full blur-3xl" />
-              <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-white rounded-full blur-2xl" />
+          <section className="relative pt-8 pb-16 px-4 rounded-b-[2.5rem] md:rounded-b-[3.5rem] bg-[linear-gradient(135deg,#0a0a0a_0%,#0f1208_50%,#0a1400_100%)]">
+            <div className="absolute inset-0 overflow-hidden rounded-b-[2.5rem] md:rounded-b-[3.5rem] pointer-events-none">
+              <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-[#B4F22E]/10 blur-3xl -translate-y-1/2 translate-x-1/4" />
+              <div className="absolute bottom-0 left-1/4 w-80 h-80 rounded-full bg-[#B4F22E]/6 blur-3xl" />
+              <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
             </div>
             <div className="relative max-w-2xl mx-auto text-center">
-              <h1 className="text-3xl md:text-4xl font-bold text-primary-foreground leading-tight mb-3">
+              <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight mb-3">
                 Mobile Top-Up with Crypto
               </h1>
-              <p className="text-primary-foreground/70 text-base mb-6">
+              <p className="text-white/55 text-base mb-6">
                 Refill any prepaid phone in 140+ countries using Bitcoin, USDT, and more.
               </p>
             </div>
@@ -754,7 +773,7 @@ const Index = () => {
                     </div>
                   ))
                 ) : filteredOperators?.map((operator: any, index: number) => (
-                  <div key={operator.operatorId} className="animate-fade-in" style={{ animationDelay: `${index * 0.04}s` }}>
+                  <div key={operator.operatorId} className={`animate-fade-in ${STAGGER_DELAY_CLASSES[Math.min(index, STAGGER_DELAY_CLASSES.length - 1)]}`}>
                     <ProviderCard
                       name={operator.name}
                       logo={operator.logoUrls?.[0]}

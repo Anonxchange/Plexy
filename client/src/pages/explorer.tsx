@@ -111,7 +111,7 @@ const PriceTicker = ({ coins }: { coins: LiveCoinData[] }) => {
   if (coins.length === 0) return null;
   const items = [...coins, ...coins, ...coins];
   return (
-    <div className="w-full overflow-hidden border-b border-border bg-card/60 backdrop-blur-sm py-3" style={{ contain: 'layout' }}>
+    <div className="w-full overflow-hidden border-b border-border bg-card/60 backdrop-blur-sm py-3 [contain:layout]">
       <div className="flex ticker-scroll">
         {items.map((item, index) => (
           <div key={`${item.symbol}-${index}`} className="flex items-center gap-3 px-5 border-r border-border/30 whitespace-nowrap">
@@ -179,7 +179,7 @@ const SearchBar = ({ onSearchResults }: { onSearchResults: (results: any) => voi
   };
 
   return (
-    <section className="relative overflow-hidden rounded-b-[2.5rem] md:rounded-b-[3.5rem]" style={{ background: "linear-gradient(135deg, #0a0a0a 0%, #0f1208 50%, #0a1400 100%)" }}>
+    <section className="relative overflow-hidden rounded-b-[2.5rem] md:rounded-b-[3.5rem] bg-[linear-gradient(135deg,#0a0a0a_0%,#0f1208_50%,#0a1400_100%)]">
       {/* Ambient glows */}
       <div className="pointer-events-none absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-[#B4F22E]/10 blur-3xl -translate-y-1/2 translate-x-1/4" />
       <div className="pointer-events-none absolute bottom-0 left-1/4 w-80 h-80 rounded-full bg-[#B4F22E]/6 blur-3xl" />
@@ -490,7 +490,7 @@ const HashrateChart = ({ distribution }: { distribution: PoolEntry[] }) => (
           <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-4">
             {distribution.map((item) => (
               <div key={item.name} className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                <svg className="w-2 h-2 flex-shrink-0" viewBox="0 0 8 8" aria-hidden="true"><circle cx="4" cy="4" r="4" fill={item.color} /></svg>
                 <span className="text-xs text-muted-foreground">{item.name} <span className="font-medium text-foreground">{item.value}%</span></span>
               </div>
             ))}
