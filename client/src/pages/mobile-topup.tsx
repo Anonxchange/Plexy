@@ -624,8 +624,8 @@ const Index = () => {
       {/* ── Hero + Search (hidden on detail/topup view) ── */}
       {view !== "topup" && (
         <>
-          <section className="relative pt-8 pb-16 px-4 rounded-b-[2.5rem] md:rounded-b-[3.5rem] bg-[linear-gradient(135deg,#0a0a0a_0%,#0f1208_50%,#0a1400_100%)]">
-            <div className="absolute inset-0 overflow-hidden rounded-b-[2.5rem] md:rounded-b-[3.5rem] pointer-events-none">
+          <section className="relative pt-8 pb-16 px-4 bg-[linear-gradient(135deg,#0a0a0a_0%,#0f1208_50%,#0a1400_100%)]">
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
               <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-[#B4F22E]/10 blur-3xl -translate-y-1/2 translate-x-1/4" />
               <div className="absolute bottom-0 left-1/4 w-80 h-80 rounded-full bg-[#B4F22E]/6 blur-3xl" />
               <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
