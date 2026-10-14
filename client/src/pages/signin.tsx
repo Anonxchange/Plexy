@@ -910,7 +910,7 @@ export function SignIn() {
         <div className="px-6 pt-12 lg:pt-20 max-w-md mx-auto lg:flex lg:flex-col lg:justify-center w-full">
         {showPhoneVerification ? (
           <div className={`rounded-2xl p-6 ${isDark ? 'bg-card border border-card-border' : 'bg-gray-50 border border-gray-200'}`}>
-            <h2 className={`text-2xl mb-2 ${isDark ? 'text-white' : 'text-black'}`} style={{ fontWeight: 200 }}>
+            <h2 className={`text-2xl mb-2 ${isDark ? 'text-white' : 'text-black'} font-extralight`}>
               Phone Verification
             </h2>
             <p className={`text-sm mb-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -943,7 +943,7 @@ export function SignIn() {
           </div>
         ) : !show2FAInput ? (
           <>
-            <h1 className={`text-4xl mb-8 ${isDark ? 'text-white' : 'text-black'}`} style={{ fontWeight: 200, letterSpacing: '-0.01em' }}>
+            <h1 className={`text-4xl mb-8 ${isDark ? 'text-white' : 'text-black'} font-extralight tracking-[-0.01em]`}>
               {displayedText}
               <span className="animate-pulse">|</span>
             </h1>
@@ -1149,7 +1149,6 @@ export function SignIn() {
                   (!!import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken && !captchaError)
                 }
                 className="w-full bg-lime-400 hover:bg-lime-500 text-black font-medium py-4 rounded-full text-lg transition-colors disabled:opacity-50" 
-                style={{ fontWeight: 500 }}
               >
                 {loading
                   ? "Signing in..."
@@ -1196,7 +1195,7 @@ export function SignIn() {
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-lime-400/10 mb-4">
                 <ShieldCheck className="h-8 w-8 text-lime-400" />
               </div>
-              <h1 className={`text-3xl mb-3 ${isDark ? 'text-white' : 'text-black'}`} style={{ fontWeight: 200, letterSpacing: '-0.01em' }}>
+              <h1 className={`text-3xl mb-3 ${isDark ? 'text-white' : 'text-black'} font-extralight tracking-[-0.01em]`}>
                 Two-Factor Authentication
               </h1>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -1231,7 +1230,6 @@ export function SignIn() {
               type="submit"
               disabled={loading || twoFactorCode.length < 6}
               className="w-full bg-lime-400 hover:bg-lime-500 text-black font-medium py-4 rounded-full text-lg transition-colors disabled:opacity-50 mb-4" 
-              style={{ fontWeight: 500 }}
             >
               {loading ? "Verifying..." : "Verify & Sign In"}
             </button>

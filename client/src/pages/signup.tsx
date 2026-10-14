@@ -45,6 +45,9 @@ function isCommonPassword(password: string): boolean {
   return COMMON_PASSWORDS.includes(password.toLowerCase());
 }
 
+// Score is always a multiple of 20 (5 requirements), so map it to literal width classes.
+const STRENGTH_WIDTH_CLASSES = ["w-0", "w-1/5", "w-2/5", "w-3/5", "w-4/5", "w-full"] as const;
+
 function validatePassword(password: string): { isValid: boolean; score: number; requirements: PasswordRequirement[] } {
   const requirements: PasswordRequirement[] = [
     { label: "At least 8 characters", regex: /.{8,}/, met: false },
@@ -783,7 +786,7 @@ export function SignUp() {
         <div className="px-6 pt-8 lg:pt-20 max-w-md mx-auto pb-12 lg:flex lg:flex-col lg:justify-center w-full">
         {step === "email_verify" ? (
           <div className="rounded-2xl p-6 bg-card border border-border">
-            <h2 className="text-2xl mb-2 text-foreground" style={{ fontWeight: 200 }}>
+            <h2 className="text-2xl mb-2 text-foreground font-extralight">
               Verify Your Email
             </h2>
             <p className="text-sm mb-6 text-muted-foreground">
@@ -847,7 +850,7 @@ export function SignUp() {
           </div>
         ) : step === "details" ? (
           <>
-            <h1 className="text-4xl mb-8 text-foreground" style={{ fontWeight: 200, letterSpacing: '-0.01em' }}>
+            <h1 className="text-4xl mb-8 text-foreground font-extralight tracking-[-0.01em]">
               Create your account
             </h1>
 
@@ -1021,11 +1024,12 @@ export function SignUp() {
                         <div className="w-full h-1.5 rounded-full mb-3 overflow-hidden bg-muted-foreground/20">
                           <div
                             className={`h-full rounded-full transition-all duration-300 ${
+                              STRENGTH_WIDTH_CLASSES[Math.min(5, Math.round(passwordValidation.score / 20))]
+                            } ${
                               passwordValidation.score >= 100 ? 'bg-green-500' :
                               passwordValidation.score >= 60  ? 'bg-yellow-400' :
                               'bg-red-400'
                             }`}
-                            style={{ width: `${passwordValidation.score}%` }}
                           />
                         </div>
                         <p className="text-xs font-medium mb-2 text-foreground">
@@ -1127,7 +1131,6 @@ export function SignUp() {
                 type="submit"
                 disabled={loading || (!!import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken && !captchaError)}
                 className="w-full bg-lime-400 hover:bg-lime-500 text-black font-medium py-4 rounded-full text-lg transition-colors disabled:opacity-50" 
-                style={{ fontWeight: 500 }}
               >
                 {loading ? "Creating account..." : "Create account"}
               </button>
@@ -1143,7 +1146,7 @@ export function SignUp() {
           </>
         ) : (
           <div className="rounded-2xl p-6 bg-card border border-border">
-            <h2 className="text-2xl mb-2 text-foreground" style={{ fontWeight: 200 }}>
+            <h2 className="text-2xl mb-2 text-foreground font-extralight">
               Phone Verification
             </h2>
             <p className="text-sm mb-6 text-muted-foreground">

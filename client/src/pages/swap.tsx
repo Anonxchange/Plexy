@@ -523,12 +523,6 @@ export function Swap() {
 
         {/* ── HERO ── */}
         <section className="relative overflow-hidden">
-          {/* Subtle radial glow */}
-          <div className="pointer-events-none absolute inset-0">
-            <div className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full bg-primary/8 blur-[120px]" />
-            <div className="absolute top-1/2 -left-32 w-[400px] h-[400px] rounded-full bg-primary/5 blur-[100px]" />
-          </div>
-
           <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-12 lg:pt-14 lg:pb-16">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-14 items-center">
 
@@ -1013,17 +1007,17 @@ export function Swap() {
         </section>
 
         {/* ── CTA BANNER ── */}
-        <section className="py-10 lg:py-12 bg-primary">
+        <section className="py-10 lg:py-12 bg-muted/50">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
-            <h2 className="text-3xl md:text-5xl font-black text-black leading-tight">
+            <h2 className="text-3xl md:text-5xl font-black text-foreground leading-tight">
               Ready to swap smarter?
             </h2>
-            <p className="text-black/70 text-lg font-medium max-w-xl mx-auto">
+            <p className="text-muted-foreground text-lg font-medium max-w-xl mx-auto">
               Join 14 million users already trading on Pexly. No hidden fees, no custody risk — just fast, fair swaps.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
               <Button
-                className="h-13 px-10 text-base font-black bg-black text-white hover:bg-black/85 rounded-xl shadow-lg active:scale-[0.98] transition-all"
+                className="h-13 px-10 text-base font-black bg-foreground text-background hover:bg-foreground/85 rounded-xl shadow-lg active:scale-[0.98] transition-all"
                 onClick={() => setLocation("/signup")}
               >
                 Create free account
@@ -1031,7 +1025,7 @@ export function Swap() {
               </Button>
               <Button
                 variant="ghost"
-                className="h-13 px-6 text-base font-bold text-black/80 hover:text-black hover:bg-black/10 rounded-xl"
+                className="h-13 px-6 text-base font-bold text-foreground/80 hover:text-foreground hover:bg-foreground/10 rounded-xl"
                 onClick={() => setLocation("/signin")}
               >
                 Already have an account? Sign in

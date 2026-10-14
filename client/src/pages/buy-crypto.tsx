@@ -494,14 +494,14 @@ const FAQS = [
 
 
 const PAYMENT_METHODS = [
-  { label: "Visa",         Icon: SiVisa,            color: "#1a1f71" },
-  { label: "Apple Pay",    Icon: SiApplepay,        color: "#000000" },
-  { label: "Google Pay",   Icon: SiGooglepay,       color: "#4285f4" },
-  { label: "Mastercard",   Icon: SiMastercard,      color: "#eb001b" },
-  { label: "PayPal",       Icon: SiPaypal,          color: "#003087" },
-  { label: "Amex",         Icon: SiAmericanexpress, color: "#007bc1" },
-  { label: "SEPA",         Icon: SiSepa,            color: "#0052b4" },
-  { label: "Crypto",       Icon: SiBitcoin,         color: "#f7931a" },
+  { label: "Visa",         Icon: SiVisa,            colorClass: "text-[#1a1f71]" },
+  { label: "Apple Pay",    Icon: SiApplepay,        colorClass: "text-[#000000]" },
+  { label: "Google Pay",   Icon: SiGooglepay,       colorClass: "text-[#4285f4]" },
+  { label: "Mastercard",   Icon: SiMastercard,      colorClass: "text-[#eb001b]" },
+  { label: "PayPal",       Icon: SiPaypal,          colorClass: "text-[#003087]" },
+  { label: "Amex",         Icon: SiAmericanexpress, colorClass: "text-[#007bc1]" },
+  { label: "SEPA",         Icon: SiSepa,            colorClass: "text-[#0052b4]" },
+  { label: "Crypto",       Icon: SiBitcoin,         colorClass: "text-[#f7931a]" },
 ];
 
 function PaymentMethodsCarousel() {
@@ -510,19 +510,12 @@ function PaymentMethodsCarousel() {
     <section className="py-8">
       <p className="text-center text-foreground font-bold text-xl mb-6">Payment Methods</p>
       <div
-        className="overflow-hidden border-y border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900/50 py-5"
-        style={{ contain: "content" }}
+        className="overflow-hidden border-y border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900/50 py-5 [contain:content]"
       >
         <div
-          className="animate-scroll [will-change:transform]"
-          style={{
-            display: "flex",
-            gap: "4rem",
-            alignItems: "center",
-            width: "max-content",
-            maskImage: "linear-gradient(to right, transparent, white 10%, white 90%, transparent)",
-            WebkitMaskImage: "linear-gradient(to right, transparent, white 10%, white 90%, transparent)",
-          }}
+          className="animate-scroll will-change-transform flex items-center gap-16 w-max
+            [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]
+            [-webkit-mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]"
         >
           {track.map((m, i) => (
             <div
@@ -530,7 +523,7 @@ function PaymentMethodsCarousel() {
               className="flex items-center gap-2 whitespace-nowrap opacity-80 hover:opacity-100 transition-opacity"
               aria-hidden={i >= PAYMENT_METHODS.length ? true : undefined}
             >
-              <m.Icon style={{ color: m.color }} className="w-7 h-7 flex-shrink-0" />
+              <m.Icon className={`w-7 h-7 flex-shrink-0 ${m.colorClass}`} />
               <span className="font-bold text-zinc-800 dark:text-zinc-200 text-base tracking-tight">
                 {m.label}
               </span>
@@ -622,8 +615,7 @@ function HowItWorksCarousel({ cryptoName }: { cryptoName: string }) {
         <div
           ref={scrollRef}
           onScroll={onScroll}
-          className="flex overflow-x-auto snap-x snap-mandatory pb-4"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          className="flex overflow-x-auto snap-x snap-mandatory pb-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
         >
           {HOW_TO_STEPS.map((step, i) => (
             <div key={i} className="snap-start flex-shrink-0 w-full px-5 pt-4">
@@ -1181,10 +1173,6 @@ const BuyCryptoPage = () => {
       {!user ? (
       <section className="relative overflow-hidden bg-background pt-8 pb-10 px-4 lg:px-8">
 
-        {/* Glow blobs */}
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/6 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-primary/3 rounded-full blur-3xl pointer-events-none" />
-
         <div className="relative max-w-7xl mx-auto">
 
           {/* Main grid: text left, widget right */}
@@ -1390,16 +1378,9 @@ const BuyCryptoPage = () => {
       {/* ── GET THE APP ── */}
       <section className="pb-10 px-5 lg:px-0">
         <div
-          className="relative overflow-hidden rounded-3xl lg:rounded-3xl px-6 lg:px-24 py-12 lg:py-56"
-          style={{
-            backgroundImage: "url('/IMG_4637.webp')",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
+          className="relative overflow-hidden rounded-3xl lg:rounded-3xl px-6 lg:px-24 py-12 lg:py-56 bg-[url('/IMG_4637.webp')] bg-cover bg-center"
         >
           <div className="absolute inset-0 bg-black/65" />
-          <div className="absolute top-0 right-0 w-[40rem] h-[40rem] bg-primary/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-primary/6 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative max-w-6xl mx-auto lg:flex lg:items-center lg:justify-between lg:gap-16">
             <div className="lg:max-w-xl mb-8 lg:mb-0">
@@ -1582,7 +1563,6 @@ const BuyCryptoPage = () => {
       {!user && (
       <section className="px-5 pb-10 lg:pb-14 max-w-6xl mx-auto">
         <div className="relative overflow-hidden bg-card border border-border rounded-3xl px-6 lg:px-12 py-10 lg:py-14">
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
           <div className="relative lg:flex lg:items-center lg:justify-between lg:gap-12">
             <div className="mb-6 lg:mb-0">
               <h2 className="text-3xl lg:text-4xl xl:text-5xl font-bold text-foreground mb-3">Need help buying {cryptoName}?</h2>
