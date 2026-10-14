@@ -12,17 +12,11 @@ const partners = [
 
 export function PartnerCarousel() {
   return (
-    <div className="bg-zinc-100 dark:bg-zinc-900/50 py-4 overflow-hidden border-y border-zinc-200 dark:border-zinc-800 backdrop-blur-sm" style={{ contain: "content" }}>
+    <div className="bg-zinc-100 dark:bg-zinc-900/50 py-4 overflow-hidden border-y border-zinc-200 dark:border-zinc-800 backdrop-blur-sm [contain:content]">
       <div
-        className="animate-scroll [will-change:transform]"
-        style={{
-          display: "flex",
-          gap: "4rem",
-          alignItems: "center",
-          width: "max-content",
-          maskImage: "linear-gradient(to right, transparent, white 10%, white 90%, transparent)",
-          WebkitMaskImage: "linear-gradient(to right, transparent, white 10%, white 90%, transparent)",
-        }}
+        className="animate-scroll will-change-transform flex items-center gap-16 w-max
+          [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]
+          [-webkit-mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]"
       >
         {[...partners, ...partners].map((partner, index) => (
           <div
