@@ -75,6 +75,19 @@ const BANNER_SLIDES = [
     sub: 'Gadgets, audio & more',
     btn: { background: '#a3e635', color: '#0a0a0a' },
   },
+  {
+    id: 'furniture',
+    src: '/assets/banners/mobile/banner-furniture.webp',
+    alt: 'Comfort Meets Style — Tchot Furniture',
+    w: 1080,
+    h: 540,
+    eyebrow: 'Furniture & Decor',
+    title: 'Comfort Meets\nStyle',
+    sub: 'Pieces for every room',
+    btn: { background: '#facc15', color: '#4c1d95' },
+    // text sits on the plain wall, clear of the plant (left) and coffee table (bottom)
+    pos: { left: '13cqw', top: '40%', width: '40cqw' },
+  },
 ] as const;
 
 function ShopBanner({ onShopNow }: { onShopNow: () => void }) {
@@ -145,7 +158,7 @@ function ShopBanner({ onShopNow }: { onShopNow: () => void }) {
             {/* Text + CTA (sits on the empty left side of each image) */}
             <div
               className="absolute z-10 flex flex-col items-start"
-              style={{ left: '6cqw', top: '50%', transform: 'translateY(-50%)', width: '46cqw', gap: '1.4cqw' }}
+              style={{ left: '6cqw', top: '50%', width: '46cqw', ...('pos' in slide ? slide.pos : {}), transform: 'translateY(-50%)', gap: '1.4cqw' }}
             >
               <span
                 className="font-semibold uppercase"
