@@ -994,14 +994,14 @@ export function Shop() {
             <button
               key={node.fullPath}
               onClick={() => openCategoryModal(node.fullPath)}
-              className={`flex-shrink-0 inline-flex items-center gap-2 pl-4 pr-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+              className={`flex-shrink-0 inline-flex items-center gap-2 pl-3 pr-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                 selectedCategory === node.fullPath || selectedCategory.startsWith(node.fullPath + CAT_SEPARATOR)
                   ? "bg-foreground text-background border-foreground"
                   : "bg-background text-foreground border-border hover:border-primary/50"
               }`}
             >
-              {node.name}
               <CategoryIcon name={node.name} className="h-7 w-7 -my-1" />
+              {node.name}
             </button>
           ))}
         </div>
@@ -1046,9 +1046,8 @@ export function Shop() {
                       }`}
                     >
                       <span className="flex items-center gap-1.5 text-left leading-snug">
-                        <ChevronRight className="h-3 w-3 flex-shrink-0 opacity-50" />
+                        <CategoryIcon name={node.name} className="h-8 w-8 -my-1.5" />
                         {node.name}
-                        <CategoryIcon name={node.name} className="h-8 w-8 ml-1 -my-1.5" />
                       </span>
                     </button>
                   );
