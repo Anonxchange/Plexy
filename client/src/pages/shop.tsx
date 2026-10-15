@@ -220,24 +220,14 @@ const SHOPIFY_DISPLAY_PAGE_SIZE = 60;
 const CAT_SEPARATOR = " > ";
 
 // ── Category icons ──────────────────────────────────────────────────────────
-// Self-hosted files in /public/category-icons/<slug>.webp (same-origin, so
-// img-src 'self' already covers them — no CSP change needed).
-const CATEGORY_ICON_SLUGS = new Set([
-  "automobiles-motorcycles",
-  "bags-shoes",
-  "computer-office",
-  "consumer-electronics",
-  "health-beauty-hair",
-  "home-improvement",
-  "home-garden-furniture",
-  "jewelry-watches",
-  "mens-clothing",
-  "pet-supplies",
-  "phones-accessories",
-  "sports-outdoors",
-  "toys-kids-babies",
-  "womens-clothing",
-]);
+// Files live in src/assets/category-icons/<slug>.webp and are bundled by Vite,
+// so the URL is generated at build time (hashed, served from the same origin).
+// No hand-written "/category-icons/..." path, no base-path or rewrite issues,
+// and img-src 'self' already covers them — no CSP change needed.
+const CATEGORY_ICON_URLS = import.meta.glob<string>(
+  "/src/assets/category-icons/*.webp",
+  { eager: true, query: "?url", import: "default" },
+);
 
 function categorySlug(name: string): string {
   return name
@@ -249,11 +239,11 @@ function categorySlug(name: string): string {
 
 function CategoryIcon({ name, className = "h-5 w-5" }: { name: string; className?: string }) {
   const [failed, setFailed] = useState(false);
-  const slug = categorySlug(name);
-  if (failed || !CATEGORY_ICON_SLUGS.has(slug)) return null;
+  const src = CATEGORY_ICON_URLS[`/src/assets/category-icons/${categorySlug(name)}.webp`];
+  if (failed || !src) return null;
   return (
     <img
-      src={`/category-icons/${slug}.webp`}
+      src={src}
       alt=""
       aria-hidden="true"
       width={24}
