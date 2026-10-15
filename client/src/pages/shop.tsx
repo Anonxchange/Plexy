@@ -219,6 +219,54 @@ const SHOPIFY_DISPLAY_PAGE_SIZE = 60;
 
 const CAT_SEPARATOR = " > ";
 
+// ── Category icons ──────────────────────────────────────────────────────────
+// Self-hosted files in /public/category-icons/<slug>.webp (same-origin, so
+// img-src 'self' already covers them — no CSP change needed).
+const CATEGORY_ICON_SLUGS = new Set([
+  "automobiles-motorcycles",
+  "bags-shoes",
+  "computer-office",
+  "consumer-electronics",
+  "health-beauty-hair",
+  "home-improvement",
+  "home-garden-furniture",
+  "jewelry-watches",
+  "mens-clothing",
+  "pet-supplies",
+  "phones-accessories",
+  "sports-outdoors",
+  "toys-kids-babies",
+  "womens-clothing",
+]);
+
+function categorySlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[\u2019'`]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function CategoryIcon({ name, className = "h-5 w-5" }: { name: string; className?: string }) {
+  const [failed, setFailed] = useState(false);
+  const slug = categorySlug(name);
+  if (failed || !CATEGORY_ICON_SLUGS.has(slug)) return null;
+  return (
+    <img
+      src={`/category-icons/${slug}.webp`}
+      alt=""
+      aria-hidden="true"
+      width={24}
+      height={24}
+      loading="lazy"
+      decoding="async"
+      draggable={false}
+      onError={() => setFailed(true)}
+      className={`flex-shrink-0 object-contain ${className}`}
+    />
+  );
+}
+
 const SHOP_CACHE_KEY = "pexly_shop_cache";
 const SHOP_CACHE_TTL = 5 * 60 * 1000;
 
@@ -956,13 +1004,14 @@ export function Shop() {
             <button
               key={node.fullPath}
               onClick={() => openCategoryModal(node.fullPath)}
-              className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+              className={`flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                 selectedCategory === node.fullPath || selectedCategory.startsWith(node.fullPath + CAT_SEPARATOR)
                   ? "bg-foreground text-background border-foreground"
                   : "bg-background text-foreground border-border hover:border-primary/50"
               }`}
             >
               {node.name}
+              <CategoryIcon name={node.name} className="h-4 w-4" />
             </button>
           ))}
         </div>
@@ -1010,6 +1059,7 @@ export function Shop() {
                         <ChevronRight className="h-3 w-3 flex-shrink-0 opacity-50" />
                         {node.name}
                       </span>
+                      <CategoryIcon name={node.name} className="h-5 w-5 ml-2" />
                     </button>
                   );
                 })}
