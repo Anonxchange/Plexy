@@ -994,14 +994,14 @@ export function Shop() {
             <button
               key={node.fullPath}
               onClick={() => openCategoryModal(node.fullPath)}
-              className={`flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+              className={`flex-shrink-0 inline-flex items-center gap-2 pl-4 pr-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                 selectedCategory === node.fullPath || selectedCategory.startsWith(node.fullPath + CAT_SEPARATOR)
                   ? "bg-foreground text-background border-foreground"
                   : "bg-background text-foreground border-border hover:border-primary/50"
               }`}
             >
               {node.name}
-              <CategoryIcon name={node.name} className="h-4 w-4" />
+              <CategoryIcon name={node.name} className="h-7 w-7 -my-1" />
             </button>
           ))}
         </div>
@@ -1010,7 +1010,7 @@ export function Shop() {
         <div ref={productsRef} className="flex gap-6">
 
           {/* Desktop sidebar — L1 only, clicking opens category modal */}
-          <aside className="hidden lg:flex flex-col w-52 flex-shrink-0">
+          <aside className="hidden lg:flex flex-col w-60 flex-shrink-0">
             <div className="sticky top-6">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3 px-2">
                 Categories
@@ -1048,8 +1048,8 @@ export function Shop() {
                       <span className="flex items-center gap-1.5 text-left leading-snug">
                         <ChevronRight className="h-3 w-3 flex-shrink-0 opacity-50" />
                         {node.name}
+                        <CategoryIcon name={node.name} className="h-8 w-8 ml-1 -my-1.5" />
                       </span>
-                      <CategoryIcon name={node.name} className="h-5 w-5 ml-2" />
                     </button>
                   );
                 })}
