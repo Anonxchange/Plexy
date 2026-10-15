@@ -1093,9 +1093,6 @@ export function Shop() {
                     <Button variant="outline" size="lg" onClick={() => setVisibleCount(v => v + SHOPIFY_DISPLAY_PAGE_SIZE)} className="min-w-[200px]">
                       Load More Products
                     </Button>
-                    <p className="text-xs text-muted-foreground">
-                      Showing {visibleProducts.length} of {filteredProducts.length} products
-                    </p>
                   </div>
                 )}
               </>
