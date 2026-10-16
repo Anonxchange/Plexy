@@ -309,14 +309,36 @@ function stableHash(str: string): number {
 }
 
 /**
- * Pick `count` products for a section using a stable sort derived from product IDs,
- * so the selection never changes between renders for the same product pool.
- * `offset` skips the first N products so different sections don't overlap.
+ * Products you always want at the top of "Trending Now", in this order.
+ * Use the Shopify product handle (the last part of /shop/product/<handle>).
+ * Leave empty to rely on the daily rotation alone.
  */
-function pickStableProducts(pool: Listing[], count: number, offset = 0): Listing[] {
+const TRENDING_PINNED_HANDLES: string[] = [];
+
+/**
+ * Trending picks that change once a day. Pinned products come first, then
+ * products that have ratings/reviews, then the rest — each group shuffled by a
+ * hash of (product id + today's date), so the order is the same for everyone
+ * on a given day and different tomorrow.
+ */
+function pickDailyTrending(pool: Listing[], count: number, pinnedHandles: string[]): Listing[] {
   if (pool.length === 0) return [];
-  const sorted = [...pool].sort((a, b) => stableHash(a.id + "section") - stableHash(b.id + "section"));
-  return sorted.slice(offset, offset + count);
+  const day = new Date().toISOString().slice(0, 10);
+
+  const pinned: Listing[] = [];
+  for (const handle of pinnedHandles) {
+    const match = pool.find(p => p.handle === handle);
+    if (match && !pinned.includes(match)) pinned.push(match);
+  }
+
+  const rest = pool.filter(p => !pinned.includes(p));
+  const byDay = (a: Listing, b: Listing) =>
+    stableHash(a.id + day) - stableHash(b.id + day);
+  const hasSocialProof = (p: Listing) => (p.reviewCount ?? 0) > 0 || (p.rating ?? 0) > 0;
+  const rated = rest.filter(hasSocialProof).sort(byDay);
+  const unrated = rest.filter(p => !hasSocialProof(p)).sort(byDay);
+
+  return [...pinned, ...rated, ...unrated].slice(0, count);
 }
 
 interface Listing {
@@ -496,13 +518,6 @@ function TrendingNowSection({
                         -{disc}%
                       </div>
                     )}
-                    <div className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full">
-                      🔥{" "}
-                      {product.soldCount && product.soldCount >= 1000
-                        ? `${(product.soldCount / 1000).toFixed(0)}K`
-                        : product.soldCount}
-                      + sold
-                    </div>
                   </div>
                   <p className="text-sm font-medium line-clamp-2 leading-tight text-foreground group-hover:text-primary transition-colors">
                     {product.title}
@@ -783,16 +798,13 @@ export function Shop() {
   const currentListings = activeTab === "marketplace" ? listings : shopifyProducts;
 
   // ── Trending Now + Flash Deals — stable random picks from the Shopify pool ──
-  // Trending products — deterministic per pool change, excluded from main grid.
+  // Trending products — hand-picked first, then a daily rotation; excluded from main grid.
   const { trendingProducts, sectionIds } = useMemo(() => {
     const pool = shopifyProducts.filter(p => p.images[0]);
     if (pool.length === 0) return { trendingProducts: [], sectionIds: new Set<string>() };
 
     const trendingCount = Math.min(12, Math.floor(pool.length * 0.15) || 6);
-    const rawTrending = pickStableProducts(pool, trendingCount, 0).map(p => ({
-      ...p,
-      soldCount: 500 + (stableHash(p.id + "sold") % 9500),
-    }));
+    const rawTrending = pickDailyTrending(pool, trendingCount, TRENDING_PINNED_HANDLES);
 
     const ids = new Set<string>(rawTrending.map(p => p.id));
     return { trendingProducts: rawTrending, sectionIds: ids };
