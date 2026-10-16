@@ -237,6 +237,10 @@ function categorySlug(name: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+function hasCategoryIcon(name: string): boolean {
+  return Boolean(CATEGORY_ICON_URLS[`/src/assets/category-icons/${categorySlug(name)}.webp`]);
+}
+
 function CategoryIcon({ name, className = "h-5 w-5" }: { name: string; className?: string }) {
   const [failed, setFailed] = useState(false);
   const src = CATEGORY_ICON_URLS[`/src/assets/category-icons/${categorySlug(name)}.webp`];
@@ -379,6 +383,10 @@ function buildCategoryTree(categories: string[]): CategoryNode[] {
 
 
 // ── Trending Now ──────────────────────────────────────────────────────────────
+function formatSold(n: number): string {
+  return n >= 1000 ? `${Math.floor(n / 1000)}K+ sold` : `${n}+ sold`;
+}
+
 function TrendingNowSection({
   products,
   onViewDetails,
@@ -399,8 +407,80 @@ function TrendingNowSection({
           </span>
         </div>
       </div>
-      {/* Horizontal scroll on every breakpoint — mobile, tablet, and desktop */}
-      <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+      {/* Mobile: static featured layout — one large #1 card, two smaller cards */}
+      <div className="md:hidden">
+        {trending.length === 0 ? (
+          <div className="space-y-2.5">
+            <div className="h-32 rounded-2xl bg-muted animate-pulse" />
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="h-52 rounded-2xl bg-muted animate-pulse" />
+              <div className="h-52 rounded-2xl bg-muted animate-pulse" />
+            </div>
+          </div>
+        ) : (
+          <>
+            {trending.slice(0, 1).map((product) => (
+              <div
+                key={product.id}
+                onClick={() => onViewDetails(product)}
+                className="mb-2.5 flex cursor-pointer gap-3 rounded-2xl border bg-card p-2.5 active:scale-[0.99] transition-transform"
+              >
+                <div className="h-28 w-28 flex-shrink-0 overflow-hidden rounded-xl bg-muted">
+                  {product.images[0] ? (
+                    <img src={product.images[0]} alt={product.title} className="h-full w-full object-cover" loading="lazy" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <Package className="h-8 w-8 text-muted-foreground/30" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col justify-between">
+                  <div>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium">
+                      🔥 #1{product.soldCount ? ` · ${formatSold(product.soldCount)}` : ""}
+                    </span>
+                    <p className="mt-2 line-clamp-2 text-sm font-medium leading-snug">{product.title}</p>
+                  </div>
+                  <span className="text-base font-bold">
+                    {product.currency} {product.price.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            ))}
+            <div className="grid grid-cols-2 gap-2.5">
+              {trending.slice(1, 3).map((product, i) => (
+                <div
+                  key={product.id}
+                  onClick={() => onViewDetails(product)}
+                  className="cursor-pointer overflow-hidden rounded-2xl border bg-card active:scale-[0.99] transition-transform"
+                >
+                  <div className="aspect-[4/3] w-full overflow-hidden bg-muted">
+                    {product.images[0] ? (
+                      <img src={product.images[0]} alt={product.title} className="h-full w-full object-cover" loading="lazy" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <Package className="h-8 w-8 text-muted-foreground/30" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-2.5">
+                    <span className="mb-1.5 inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium">
+                      #{i + 2}{product.soldCount ? ` · ${formatSold(product.soldCount)}` : ""}
+                    </span>
+                    <p className="line-clamp-2 min-h-[2.4rem] text-[13px] font-medium leading-snug">{product.title}</p>
+                    <p className="mt-1 text-sm font-bold">
+                      {product.currency} {product.price.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Tablet and desktop: horizontal scroll */}
+      <div className="hidden md:flex gap-4 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
         {trending.length === 0
           ? Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="flex-shrink-0 w-44">
@@ -870,15 +950,15 @@ export function Shop() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <main className="flex-1 container mx-auto px-4 pt-0 pb-6 lg:pt-6 max-w-7xl">
+      <main className="flex-1 container mx-auto px-4 pt-0 pb-6 lg:pt-6 max-w-7xl flex flex-col">
 
         {/* Banner carousel — mobile only, sits at the very top before the header */}
-        <div className="md:hidden -mx-4">
+        <div className="md:hidden -mx-4 order-1">
           <ShopBanner onShopNow={() => productsRef.current?.scrollIntoView({ behavior: "smooth" })} />
         </div>
 
         {/* Header — mobile only now; desktop uses the hero banner instead */}
-        <div className="flex items-center justify-between mb-4 md:hidden">
+        <div className="flex items-center justify-between mb-4 md:hidden order-2">
           <div>
             <h1 className="text-3xl font-bold">Shop</h1>
             <p className="text-sm text-muted-foreground mt-0.5">Discover amazing products for every need</p>
@@ -890,17 +970,21 @@ export function Shop() {
         </div>
 
         {/* Desktop hero banner */}
-        <ShopHero onShopNow={() => productsRef.current?.scrollIntoView({ behavior: "smooth" })} />
+        <div className="order-3">
+          <ShopHero onShopNow={() => productsRef.current?.scrollIntoView({ behavior: "smooth" })} />
+        </div>
 
         {/* Trending Now — shown on every breakpoint, mobile through desktop */}
-        <TrendingNowSection
-          products={activeTab === "marketplace" ? listings.slice(0, 12) : trendingProducts}
-          onViewDetails={handleViewDetails}
-        />
+        <div className="order-5 md:order-4">
+          <TrendingNowSection
+            products={activeTab === "marketplace" ? listings.slice(0, 12) : trendingProducts}
+            onViewDetails={handleViewDetails}
+          />
+        </div>
 
 
         {/* Search + Sort + Tabs row */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <div className="flex flex-col sm:flex-row gap-3 mb-5 order-3 md:order-5">
           <div className="flex gap-2 flex-1">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -908,14 +992,14 @@ export function Shop() {
                 placeholder="Search products..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="pl-9"
+                className="pl-10 h-11 rounded-full sm:h-10 sm:rounded-md sm:pl-9"
               />
             </div>
             {/* Shuffle icon — mobile only */}
             <Button
               variant="outline"
               size="icon"
-              className="sm:hidden flex-shrink-0"
+              className="sm:hidden flex-shrink-0 h-11 w-11 rounded-full"
               onClick={() => { setSortBy("shuffled"); setShuffleSeed(s => s + 1); }}
               aria-label="Shuffle products"
             >
@@ -924,7 +1008,7 @@ export function Shop() {
             {/* Filter icon — mobile only, replaces the long sort dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="sm:hidden flex-shrink-0" aria-label="Sort options">
+                <Button variant="outline" size="icon" className="sm:hidden flex-shrink-0 h-11 w-11 rounded-full" aria-label="Sort options">
                   <SlidersHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -978,36 +1062,40 @@ export function Shop() {
           </Tabs>
         </div>
 
-        {/* Mobile: horizontal category pills — L1 only, clicking opens modal */}
-        <div className="lg:hidden mb-4 flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-          <button
-            onClick={() => { setSelectedCategory("All"); setExpandedCategories(new Set()); }}
-            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-              selectedCategory === "All"
-                ? "bg-foreground text-background border-foreground"
-                : "bg-background text-foreground border-border hover:border-primary/50"
-            }`}
-          >
-            All
-          </button>
-          {categoryTree.map(node => (
-            <button
-              key={node.fullPath}
-              onClick={() => openCategoryModal(node.fullPath)}
-              className={`flex-shrink-0 inline-flex items-center gap-2 pl-3 pr-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                selectedCategory === node.fullPath || selectedCategory.startsWith(node.fullPath + CAT_SEPARATOR)
-                  ? "bg-foreground text-background border-foreground"
-                  : "bg-background text-foreground border-border hover:border-primary/50"
-              }`}
-            >
-              <CategoryIcon name={node.name} className="h-7 w-7 -my-1" />
-              {node.name}
-            </button>
-          ))}
+        {/* Mobile: icon tiles — L1 only, tapping opens the category modal */}
+        <div className="lg:hidden order-4 md:order-6 mb-6">
+          <h2 className="text-lg font-bold mb-3">Shop by category</h2>
+          <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 scrollbar-hide">
+            {categoryTree.map(node => {
+              const active = selectedCategory === node.fullPath || selectedCategory.startsWith(node.fullPath + CAT_SEPARATOR);
+              return (
+                <button
+                  key={node.fullPath}
+                  onClick={() => openCategoryModal(node.fullPath)}
+                  className="flex w-[80px] flex-shrink-0 flex-col items-center gap-1.5 text-center"
+                >
+                  <span
+                    className={`flex h-[72px] w-[72px] items-center justify-center rounded-2xl bg-muted/60 transition-all ${
+                      active ? "ring-2 ring-foreground" : ""
+                    }`}
+                  >
+                    {hasCategoryIcon(node.name) ? (
+                      <CategoryIcon name={node.name} className="h-16 w-16" />
+                    ) : (
+                      <Package className="h-7 w-7 text-muted-foreground" />
+                    )}
+                  </span>
+                  <span className={`line-clamp-2 text-xs leading-tight ${active ? "font-semibold" : ""}`}>
+                    {node.name}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Main content: sidebar + grid */}
-        <div ref={productsRef} className="flex gap-6">
+        <div ref={productsRef} className="flex gap-6 order-7">
 
           {/* Desktop sidebar — L1 only, clicking opens category modal */}
           <aside className="hidden lg:flex flex-col w-60 flex-shrink-0">
@@ -1058,6 +1146,12 @@ export function Shop() {
 
           {/* Product area */}
           <div className="flex-1 min-w-0">
+            {selectedCategory === "All" && (
+              <div className="mb-3 flex items-baseline justify-between">
+                <h2 className="text-lg font-bold">More to love</h2>
+                <span className="text-xs text-muted-foreground">Fresh finds every day</span>
+              </div>
+            )}
             {/* Active filter breadcrumb */}
             {selectedCategory !== "All" && (
               <div className="flex items-center gap-2 mb-4">
