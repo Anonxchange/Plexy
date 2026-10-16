@@ -383,10 +383,6 @@ function buildCategoryTree(categories: string[]): CategoryNode[] {
 
 
 // ── Trending Now ──────────────────────────────────────────────────────────────
-function formatSold(n: number): string {
-  return n >= 1000 ? `${Math.floor(n / 1000)}K+ sold` : `${n}+ sold`;
-}
-
 function TrendingNowSection({
   products,
   onViewDetails,
@@ -407,76 +403,50 @@ function TrendingNowSection({
           </span>
         </div>
       </div>
-      {/* Mobile: static featured layout — one large #1 card, two smaller cards */}
-      <div className="md:hidden">
-        {trending.length === 0 ? (
-          <div className="space-y-2.5">
-            <div className="h-32 rounded-2xl bg-muted animate-pulse" />
-            <div className="grid grid-cols-2 gap-2.5">
-              <div className="h-52 rounded-2xl bg-muted animate-pulse" />
-              <div className="h-52 rounded-2xl bg-muted animate-pulse" />
-            </div>
-          </div>
-        ) : (
-          <>
-            {trending.slice(0, 1).map((product) => (
+      {/* Mobile: numbered top list — rank number beside a tall product card */}
+      <div className="md:hidden -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
+        {trending.length === 0
+          ? Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="w-[176px] flex-shrink-0">
+                <div className="ml-[52px] h-[156px] w-[124px] animate-pulse rounded-2xl bg-muted" />
+              </div>
+            ))
+          : trending.slice(0, 10).map((product, i) => (
               <div
                 key={product.id}
                 onClick={() => onViewDetails(product)}
-                className="mb-2.5 flex cursor-pointer gap-3 rounded-2xl border bg-card p-2.5 active:scale-[0.99] transition-transform"
+                className="flex w-[176px] flex-shrink-0 cursor-pointer items-end"
               >
-                <div className="h-28 w-28 flex-shrink-0 overflow-hidden rounded-xl bg-muted">
-                  {product.images[0] ? (
-                    <img src={product.images[0]} alt={product.title} className="h-full w-full object-cover" loading="lazy" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center">
-                      <Package className="h-8 w-8 text-muted-foreground/30" />
-                    </div>
-                  )}
-                </div>
-                <div className="flex min-w-0 flex-1 flex-col justify-between">
-                  <div>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium">
-                      🔥 #1{product.soldCount ? ` · ${formatSold(product.soldCount)}` : ""}
-                    </span>
-                    <p className="mt-2 line-clamp-2 text-sm font-medium leading-snug">{product.title}</p>
-                  </div>
-                  <span className="text-base font-bold">
-                    {product.currency} {product.price.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-            ))}
-            <div className="grid grid-cols-2 gap-2.5">
-              {trending.slice(1, 3).map((product, i) => (
-                <div
-                  key={product.id}
-                  onClick={() => onViewDetails(product)}
-                  className="cursor-pointer overflow-hidden rounded-2xl border bg-card active:scale-[0.99] transition-transform"
+                <span
+                  aria-hidden="true"
+                  className={`relative z-0 -mr-3 select-none font-medium leading-[0.8] tracking-[-0.08em] text-muted-foreground/25 ${
+                    i >= 9 ? "text-[60px]" : "text-[76px]"
+                  }`}
                 >
-                  <div className="aspect-[4/3] w-full overflow-hidden bg-muted">
+                  {i + 1}
+                </span>
+                <div className="relative z-10 w-[124px] flex-shrink-0">
+                  <div className="h-[156px] w-[124px] overflow-hidden rounded-2xl border bg-muted">
                     {product.images[0] ? (
-                      <img src={product.images[0]} alt={product.title} className="h-full w-full object-cover" loading="lazy" />
+                      <img
+                        src={product.images[0]}
+                        alt={product.title}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center">
                         <Package className="h-8 w-8 text-muted-foreground/30" />
                       </div>
                     )}
                   </div>
-                  <div className="p-2.5">
-                    <span className="mb-1.5 inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium">
-                      #{i + 2}{product.soldCount ? ` · ${formatSold(product.soldCount)}` : ""}
-                    </span>
-                    <p className="line-clamp-2 min-h-[2.4rem] text-[13px] font-medium leading-snug">{product.title}</p>
-                    <p className="mt-1 text-sm font-bold">
-                      {product.currency} {product.price.toLocaleString()}
-                    </p>
-                  </div>
+                  <p className="mt-1.5 line-clamp-2 text-xs leading-tight">{product.title}</p>
+                  <p className="text-[13px] font-bold">
+                    {product.currency} {product.price.toLocaleString()}
+                  </p>
                 </div>
-              ))}
-            </div>
-          </>
-        )}
+              </div>
+            ))}
       </div>
 
       {/* Tablet and desktop: horizontal scroll */}
@@ -951,6 +921,7 @@ export function Shop() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <main className="flex-1 container mx-auto px-4 pt-0 pb-6 lg:pt-6 max-w-7xl flex flex-col">
+        <h1 className="sr-only sm:hidden">Shop</h1>
 
         {/* Banner carousel — mobile only, sits at the very top before the header */}
         <div className="md:hidden -mx-4 order-1">
@@ -958,7 +929,7 @@ export function Shop() {
         </div>
 
         {/* Header — mobile only now; desktop uses the hero banner instead */}
-        <div className="flex items-center justify-between mb-4 md:hidden order-2">
+        <div className="hidden sm:flex items-center justify-between mb-4 md:hidden order-2">
           <div>
             <h1 className="text-3xl font-bold">Shop</h1>
             <p className="text-sm text-muted-foreground mt-0.5">Discover amazing products for every need</p>
@@ -985,7 +956,7 @@ export function Shop() {
 
         {/* Search + Sort + Tabs row */}
         <div className="flex flex-col sm:flex-row gap-3 mb-5 order-3 md:order-5">
-          <div className="flex gap-2 flex-1">
+          <div className="flex items-center gap-2 flex-1">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -995,38 +966,11 @@ export function Shop() {
                 className="pl-10 h-11 rounded-full sm:h-10 sm:rounded-md sm:pl-9"
               />
             </div>
-            {/* Shuffle icon — mobile only */}
-            <Button
-              variant="outline"
-              size="icon"
-              className="sm:hidden flex-shrink-0 h-11 w-11 rounded-full"
-              onClick={() => { setSortBy("shuffled"); setShuffleSeed(s => s + 1); }}
-              aria-label="Shuffle products"
-            >
-              <Shuffle className="h-4 w-4" />
-            </Button>
-            {/* Filter icon — mobile only, replaces the long sort dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="sm:hidden flex-shrink-0 h-11 w-11 rounded-full" aria-label="Sort options">
-                  <SlidersHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => setSortBy("newest")} className="gap-2">
-                  {sortBy === "newest" && <Check className="h-3.5 w-3.5" />}
-                  <span className={sortBy !== "newest" ? "pl-5" : ""}>Newest</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setSortBy("price-low")} className="gap-2">
-                  {sortBy === "price-low" && <Check className="h-3.5 w-3.5" />}
-                  <span className={sortBy !== "price-low" ? "pl-5" : ""}>Price: Low to High</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setSortBy("price-high")} className="gap-2">
-                  {sortBy === "price-high" && <Check className="h-3.5 w-3.5" />}
-                  <span className={sortBy !== "price-high" ? "pl-5" : ""}>Price: High to Low</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Phones only: country + cart sit on the search row */}
+            <div className="flex items-center gap-1 sm:hidden">
+              <MarketSelector />
+              <CartSheet />
+            </div>
           </div>
           {/* Sort select — desktop only */}
           <Select value={sortBy} onValueChange={setSortBy}>
@@ -1039,27 +983,63 @@ export function Shop() {
               <SelectItem value="price-high">Price: High to Low</SelectItem>
             </SelectContent>
           </Select>
-          <Tabs
-            value={activeTab}
-            onValueChange={(value) => {
-              if (value === "marketplace") {
-                window.location.href = "https://www.pexly.app/gift-cards";
-                return;
-              }
-              setActiveTab(value);
-            }}
-          >
-            <TabsList>
-              <TabsTrigger value="shopify" className="gap-1.5">
-                <Store className="h-3.5 w-3.5" />
-                Store
-              </TabsTrigger>
-              <TabsTrigger value="marketplace" className="gap-1.5">
-                <Package className="h-3.5 w-3.5" />
-                Gift Marketplace
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="flex items-center justify-between gap-2">
+            <Tabs
+              value={activeTab}
+              onValueChange={(value) => {
+                if (value === "marketplace") {
+                  window.location.href = "https://www.pexly.app/gift-cards";
+                  return;
+                }
+                setActiveTab(value);
+              }}
+            >
+              <TabsList>
+                <TabsTrigger value="shopify" className="gap-1.5">
+                  <Store className="h-3.5 w-3.5" />
+                  Store
+                </TabsTrigger>
+                <TabsTrigger value="marketplace" className="gap-1.5">
+                  <Package className="h-3.5 w-3.5" />
+                  <span className="sm:hidden">Gifts</span>
+                  <span className="hidden sm:inline">Gift Marketplace</span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            {/* Phones only: shuffle + filter sit beside the tabs */}
+            <div className="flex items-center gap-2 sm:hidden">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 flex-shrink-0 rounded-full"
+                onClick={() => { setSortBy("shuffled"); setShuffleSeed(s => s + 1); }}
+                aria-label="Shuffle products"
+              >
+                <Shuffle className="h-4 w-4" />
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-10 w-10 flex-shrink-0 rounded-full" aria-label="Sort options">
+                    <SlidersHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => setSortBy("newest")} className="gap-2">
+                    {sortBy === "newest" && <Check className="h-3.5 w-3.5" />}
+                    <span className={sortBy !== "newest" ? "pl-5" : ""}>Newest</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setSortBy("price-low")} className="gap-2">
+                    {sortBy === "price-low" && <Check className="h-3.5 w-3.5" />}
+                    <span className={sortBy !== "price-low" ? "pl-5" : ""}>Price: Low to High</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setSortBy("price-high")} className="gap-2">
+                    {sortBy === "price-high" && <Check className="h-3.5 w-3.5" />}
+                    <span className={sortBy !== "price-high" ? "pl-5" : ""}>Price: High to Low</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
         </div>
 
         {/* Mobile: icon tiles — L1 only, tapping opens the category modal */}
