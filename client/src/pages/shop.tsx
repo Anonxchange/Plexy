@@ -216,6 +216,10 @@ function ShopBanner({ onShopNow }: { onShopNow: () => void }) {
 
 const SHOPIFY_FETCH_SIZE = 250;
 const SHOPIFY_DISPLAY_PAGE_SIZE = 60;
+// On phones the next batch loads automatically while scrolling, for this many
+// batches. After that a "Load More Products" button takes over, so the footer
+// stays reachable and the page doesn't grow without limit.
+const MOBILE_AUTO_LOAD_BATCHES = 3;
 
 const CAT_SEPARATOR = " > ";
 
@@ -851,6 +855,27 @@ export function Shop() {
 
   const visibleProducts = activeTab === "shopify" ? filteredProducts.slice(0, visibleCount) : filteredProducts;
   const hasMoreToShow = activeTab === "shopify" && visibleCount < filteredProducts.length;
+  const autoLoadPending =
+    hasMoreToShow && visibleCount < SHOPIFY_DISPLAY_PAGE_SIZE * MOBILE_AUTO_LOAD_BATCHES;
+
+  // Phones only: load the next batch just before the list end scrolls into view.
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!autoLoadPending) return;
+    const el = loadMoreSentinelRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    if (!window.matchMedia("(max-width: 767px)").matches) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setVisibleCount((v) => v + SHOPIFY_DISPLAY_PAGE_SIZE);
+        }
+      },
+      { rootMargin: "600px 0px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [autoLoadPending, visibleCount]);
 
   const productCountByCategory = useMemo(() => {
     const counts: Record<string, number> = { All: currentListings.length };
@@ -1202,11 +1227,26 @@ export function Shop() {
                 </div>
 
                 {hasMoreToShow && (
-                  <div className="mt-10 flex flex-col items-center gap-2 pb-10">
-                    <Button variant="outline" size="lg" onClick={() => setVisibleCount(v => v + SHOPIFY_DISPLAY_PAGE_SIZE)} className="min-w-[200px]">
-                      Load More Products
-                    </Button>
-                  </div>
+                  <>
+                    {/* Phones: auto-load sentinel + spinner for the first few batches */}
+                    {autoLoadPending && (
+                      <div
+                        ref={loadMoreSentinelRef}
+                        role="status"
+                        aria-live="polite"
+                        className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground md:hidden"
+                      >
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-foreground" />
+                        Loading more products
+                      </div>
+                    )}
+                    {/* Button: always on tablet/desktop, and on phones once auto-loading is done */}
+                    <div className={`mt-10 flex-col items-center gap-2 pb-10 ${autoLoadPending ? "hidden md:flex" : "flex"}`}>
+                      <Button variant="outline" size="lg" onClick={() => setVisibleCount(v => v + SHOPIFY_DISPLAY_PAGE_SIZE)} className="min-w-[200px]">
+                        Load More Products
+                      </Button>
+                    </div>
+                  </>
                 )}
               </>
             )}
