@@ -40,7 +40,7 @@ export function FeatureCarousel() {
               {t("feature.subtitle")}
             </p>
 
-            <button className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 py-3 rounded-full text-base transition-all shadow-md active:scale-95">
+            <button className="rounded-none border border-gray-300 bg-gray-200 px-8 py-3 text-base font-semibold tracking-wide text-gray-900 transition-colors hover:bg-gray-300 active:bg-gray-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700">
               {t("feature.cta")}
             </button>
           </div>
