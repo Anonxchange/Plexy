@@ -4,8 +4,8 @@ export function FeatureCarousel() {
   const { t } = useTranslation();
   return (
     <section className="w-full py-12 lg:py-20 bg-background overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 items-center gap-8 md:gap-10 lg:gap-16">
+      <div className="max-w-7xl mx-auto px-4 lg:px-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 items-center gap-10 lg:gap-16">
 
           {/* LEFT: floating tiles with the checkout card centered on top */}
           <div className="relative mx-auto w-full max-w-[640px] aspect-[800/768]">
@@ -29,14 +29,14 @@ export function FeatureCarousel() {
           </div>
 
           {/* RIGHT: text */}
-          <div className="text-left space-y-4 md:space-y-5 lg:space-y-6 lg:pl-8">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-foreground leading-tight">
+          <div className="text-left space-y-6 lg:pl-8">
+            <h2 className="text-3xl lg:text-5xl font-bold tracking-tight text-foreground leading-tight">
               {t("feature.title_line1")} <br />
               <span className="text-green-800 dark:text-primary">{t("feature.title_line2")}</span> <br />
               {t("feature.title_line3")}
             </h2>
 
-            <p className="text-base lg:text-lg text-muted-foreground leading-relaxed max-w-lg">
+            <p className="text-lg text-muted-foreground leading-relaxed max-w-lg">
               {t("feature.subtitle")}
             </p>
 
