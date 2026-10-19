@@ -10,7 +10,7 @@ export function FeatureCarousel() {
           {/* LEFT: floating tiles with the checkout card centered on top */}
           <div className="relative mx-auto w-full max-w-[640px] aspect-[800/768]">
             <img
-              src="/feature-tiles.png"
+              src="/assets/feature-tiles.png"
               alt=""
               aria-hidden="true"
               width="800"
@@ -19,7 +19,7 @@ export function FeatureCarousel() {
               className="absolute inset-0 h-full w-full object-contain"
             />
             <img
-              src="/feature-checkout.png"
+              src="/assets/feature-checkout.png"
               alt={t("feature.title_line1")}
               width="800"
               height="638"
