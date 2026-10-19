@@ -26,9 +26,6 @@ export function FeatureCarousel() {
               loading="lazy"
               className="absolute left-[18%] top-[21%] w-[66%] h-auto rounded-xl shadow-2xl ring-1 ring-black/5"
             />
-            <div className="absolute right-[6%] top-[66%] rounded-lg bg-primary px-5 py-3 text-sm font-bold text-primary-foreground shadow-lg sm:text-base">
-              {t("feature.badge")}
-            </div>
           </div>
 
           {/* RIGHT: text */}
