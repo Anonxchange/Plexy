@@ -10,7 +10,7 @@ export function FeatureCarousel() {
           {/* LEFT: floating tiles with the checkout card centered on top */}
           <div className="relative mx-auto w-full max-w-[640px] aspect-[800/768]">
             <img
-              src="/assets/feature-tiles.png"
+              src="/feature-tiles.png"
               alt=""
               aria-hidden="true"
               width="800"
@@ -19,7 +19,7 @@ export function FeatureCarousel() {
               className="absolute inset-0 h-full w-full object-contain"
             />
             <img
-              src="/assets/feature-checkout.png"
+              src="/feature-checkout.png"
               alt={t("feature.title_line1")}
               width="800"
               height="638"
@@ -40,7 +40,7 @@ export function FeatureCarousel() {
               {t("feature.subtitle")}
             </p>
 
-            <button className="rounded-none border border-gray-300 bg-gray-200 px-8 py-3 text-base font-semibold tracking-wide text-gray-900 transition-colors hover:bg-gray-300 active:bg-gray-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700">
+            <button className="bg-gray-200 px-10 py-3 text-base font-semibold tracking-wide text-gray-900 transition-colors [clip-path:polygon(14px_0,100%_0,calc(100%_-_14px)_100%,0_100%)] hover:bg-gray-300 active:bg-gray-400 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700">
               {t("feature.cta")}
             </button>
           </div>
