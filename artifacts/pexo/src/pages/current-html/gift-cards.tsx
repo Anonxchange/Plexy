@@ -1,4 +1,154 @@
+"use client";
+import { useEffect, useRef, useState } from "react";
 import { CurrentMarketingPage } from "@/components/marketing/current-marketing-page";
+
+const HERO_CARDS = [
+  { n: "Steam", f: "$20", usd: 20, img: "/marketing-media/gift-cards/steam.jpeg" },
+  { n: "Netflix", f: "$30", usd: 30, img: "/marketing-media/gift-cards/netflix.jpg" },
+  { n: "Xbox", f: "$100", usd: 100, img: "/marketing-media/gift-cards/xbox.jpeg" },
+  { n: "Razer Gold", f: "$100", usd: 100, img: "/marketing-media/gift-cards/razer.png" },
+  { n: "Starbucks", f: "$25", usd: 25, img: "/marketing-media/gift-cards/starbucks.jpeg" },
+];
+// Sample rates for the preview only. Replace with your live price feed.
+const HERO_COINS = [
+  { s: "USDT", r: 1, d: 2 },
+  { s: "USDC", r: 1, d: 2 },
+  { s: "BTC", r: 98000, d: 6 },
+  { s: "ETH", r: 3400, d: 4 },
+  { s: "SOL", r: 165, d: 3 },
+];
+
+const HERO_CSS = `
+.pxg .ph-hero{--ph-bg:#fff;--ph-ink:#091e1c;--ph-mute:#52625f;--ph-line:#e3ebe9;--ph-lime:#d9f99d;--ph-chip:#f3f7f6;background:var(--ph-bg);color:var(--ph-ink);padding:56px 20px 56px;text-align:center;overflow:hidden}
+.pxg .ph-hero .ph-wrap{max-width:1100px;margin:0 auto}
+.pxg .ph-hero h1{font-size:clamp(42px,8.4vw,92px);line-height:.98;letter-spacing:-.045em;font-weight:800;margin:0;color:var(--ph-ink)}
+.pxg .ph-hero .ph-sub{max-width:520px;margin:18px auto 0;color:var(--ph-mute);font-size:clamp(16px,2vw,19px);line-height:1.5}
+.pxg .ph-hero .ph-pay{margin:30px auto 0;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+.pxg .ph-hero .ph-pay>span{font-weight:600;color:var(--ph-mute);font-size:15px}
+.pxg .ph-hero .ph-chips{display:flex;gap:6px;padding:5px;background:var(--ph-chip);border-radius:999px;border:1px solid var(--ph-line)}
+.pxg .ph-hero .ph-chip{font:700 14px/1 inherit;font-family:inherit;border:0;background:transparent;color:var(--ph-ink);height:38px;padding:0 15px;border-radius:999px;cursor:pointer;transition:background .2s,color .2s;width:auto;margin:0}
+.pxg .ph-hero .ph-chip[aria-pressed="true"]{background:var(--ph-ink);color:#fff}
+.pxg .ph-hero .ph-chip:focus-visible,.pxg .ph-hero .ph-cta:focus-visible,.pxg .ph-hero .ph-dots button:focus-visible,.pxg .ph-hero .ph-stage:focus-visible{outline:3px solid #5b8cff;outline-offset:2px}
+.pxg .ph-hero .ph-stage{--w:min(250px,58vw);--step:calc(var(--w)*.64);position:relative;height:calc(var(--w)*1.5 + 36px);margin:34px auto 0;perspective:1100px;touch-action:pan-y;user-select:none}
+.pxg .ph-hero .ph-card{position:absolute;left:50%;top:18px;width:var(--w);aspect-ratio:2/3;margin-left:calc(var(--w)/-2);border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 18px 40px rgba(9,30,28,.22);cursor:pointer;transform:translateX(calc(var(--d)*var(--step))) rotateY(calc(var(--d)*-14deg)) scale(calc(1 - var(--a)*.12));opacity:calc(1 - var(--a)*.22);z-index:calc(10 - var(--a));transition:transform .55s cubic-bezier(.2,.8,.2,1),opacity .55s}
+.pxg .ph-hero .ph-card img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;max-width:none}
+.pxg .ph-hero .ph-card.sbux img{transform:scale(1.08)}
+.pxg .ph-hero .ph-quote{margin:8px auto 0;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 20px;background:var(--ph-lime);color:#091e1c;border-radius:999px;font-weight:600;width:min(340px,88vw)}
+.pxg .ph-hero .ph-quote b{font-size:19px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.pxg .ph-hero .ph-quote em{font-style:normal;font-size:15px}
+.pxg .ph-hero .ph-dots{display:flex;gap:7px;justify-content:center;margin-top:16px}
+.pxg .ph-hero .ph-dots button{width:8px;height:8px;min-width:0;border-radius:99px;border:0;padding:0;background:var(--ph-line);cursor:pointer;transition:width .3s,background .3s}
+.pxg .ph-hero .ph-dots button[aria-current="true"]{width:24px;background:var(--ph-ink)}
+.pxg .ph-hero .ph-btns{display:flex;gap:12px;justify-content:center;margin-top:28px}
+.pxg .ph-hero .ph-cta{display:inline-flex;align-items:center;justify-content:center;height:52px;padding:0 28px;border-radius:999px;font-weight:700;font-size:16px;text-decoration:none;border:1.5px solid var(--ph-ink);white-space:nowrap}
+.pxg .ph-hero .ph-cta.solid{background:var(--ph-ink);color:#fff}
+.pxg .ph-hero .ph-cta.ghost{background:transparent;color:var(--ph-ink)}
+@media(max-width:560px){.pxg .ph-hero{padding:36px 16px 40px}.pxg .ph-hero .ph-btns{padding:0 4px}.pxg .ph-hero .ph-cta{flex:1;padding:0 10px;font-size:15px}.pxg .ph-hero .ph-chip{padding:0 11px;font-size:13px}}
+@media(prefers-reduced-motion:reduce){.pxg .ph-hero .ph-card,.pxg .ph-hero .ph-chip,.pxg .ph-hero .ph-dots button{transition:none}}
+`;
+
+function HeroCarousel() {
+  const [cur, setCur] = useState(0);
+  const [coin, setCoin] = useState(0);
+  const [auto, setAuto] = useState(true);
+  const startX = useRef<number | null>(null);
+  const N = HERO_CARDS.length;
+
+  useEffect(() => {
+    if (!auto) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const t = setInterval(() => setCur((c) => (c + 1) % N), 3200);
+    return () => clearInterval(t);
+  }, [auto, N]);
+
+  const go = (i: number) => {
+    setAuto(false);
+    setCur(((i % N) + N) % N);
+  };
+  const c = HERO_CARDS[cur];
+  const k = HERO_COINS[coin];
+
+  return (
+    <section className={"ph-hero"}>
+      <style>{HERO_CSS}</style>
+      <div className={"ph-wrap"}>
+        <h1>
+          {"Gift cards,"}
+          <br />
+          {"paid in crypto."}
+        </h1>
+        <p className={"ph-sub"}>
+          {"Pick the coin you hold and every price switches to it. Your code arrives by email."}
+        </p>
+        <div className={"ph-pay"} role={"group"} aria-label={"Choose a coin"}>
+          <span>{"Pay with"}</span>
+          <div className={"ph-chips"}>
+            {HERO_COINS.map((x, i) => (
+              <button key={x.s} type={"button"} className={"ph-chip"} aria-pressed={i === coin} onClick={() => setCoin(i)}>
+                {x.s}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div
+          className={"ph-stage"}
+          tabIndex={0}
+          aria-roledescription={"carousel"}
+          aria-label={"Gift cards"}
+          onPointerDown={(e) => {
+            startX.current = e.clientX;
+          }}
+          onPointerUp={(e) => {
+            if (startX.current === null) return;
+            const dx = e.clientX - startX.current;
+            startX.current = null;
+            if (Math.abs(dx) > 40) go(cur + (dx < 0 ? 1 : -1));
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowRight") go(cur + 1);
+            if (e.key === "ArrowLeft") go(cur - 1);
+          }}
+        >
+          {HERO_CARDS.map((x, i) => {
+            let d = i - cur;
+            if (d > N / 2) d -= N;
+            if (d < -N / 2) d += N;
+            const a = Math.abs(d);
+            return (
+              <div
+                key={x.n}
+                className={"ph-card" + (x.n === "Starbucks" ? " sbux" : "")}
+                role={"group"}
+                aria-label={x.n + " " + x.f + " gift card"}
+                style={{ "--d": d, "--a": a, display: a > 2 ? "none" : undefined } as React.CSSProperties}
+                onClick={() => go(i)}
+              >
+                <img src={x.img} alt={""} draggable={false} />
+              </div>
+            );
+          })}
+        </div>
+        <div className={"ph-quote"} aria-live={"polite"}>
+          <em>{c.n + " " + c.f}</em>
+          <b>{(c.usd / k.r).toFixed(k.d) + " " + k.s}</b>
+        </div>
+        <div className={"ph-dots"}>
+          {HERO_CARDS.map((x, i) => (
+            <button key={x.n} type={"button"} aria-label={"Show " + x.n} aria-current={i === cur} onClick={() => go(i)} />
+          ))}
+        </div>
+        <div className={"ph-btns"}>
+          <a className={"ph-cta solid"} href={"#g-bar"}>
+            {"Browse cards"}
+          </a>
+          <a className={"ph-cta ghost"} href={"#g-after"}>
+            {"How it works"}
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export function GiftCardsExport() {
   return (
@@ -114,110 +264,7 @@ export function GiftCardsExport() {
       </header>
       <main id={"top"}>
         <div className={"pxg"}>
-          <section className={"ph-hero"}>
-            <style>{`
-              .ph-hero{background:#fff;color:#091e1c;padding:72px 0 0;overflow:hidden;position:relative}
-              .ph-hero .ph-in{max-width:1100px;margin:0 auto;padding:0 20px;text-align:center}
-              .ph-hero h1{font-size:clamp(44px,8vw,96px);line-height:.98;letter-spacing:-.04em;font-weight:800;margin:0 0 22px;color:#091e1c}
-              .ph-hero .ph-sub{font-size:clamp(16px,2vw,21px);line-height:1.5;color:#4b5b59;max-width:620px;margin:0 auto 30px}
-              .ph-hero .ph-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-              .ph-hero .ph-b{display:inline-flex;align-items:center;justify-content:center;height:52px;padding:0 28px;border-radius:999px;font-weight:600;font-size:16px;text-decoration:none;border:1.5px solid #091e1c;transition:transform .15s}
-              .ph-hero .ph-b:hover{transform:translateY(-2px)}
-              .ph-hero .ph-b.solid{background:#091e1c;color:#fff}
-              .ph-hero .ph-b.ghost{background:#fff;color:#091e1c}
-              .ph-stage{position:relative;max-width:1180px;margin:56px auto 0;padding:0 16px}
-              .ph-fan{display:flex;justify-content:center;align-items:flex-start;height:400px;overflow:hidden;padding-top:40px}
-              .ph-card{flex:0 0 auto;width:210px;margin-left:-34px;border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 14px 34px rgba(9,30,28,.18);transition:transform .25s}
-              .ph-card:first-child{margin-left:0}
-              .ph-card img{display:block;width:100%;height:auto}
-              .ph-card:nth-child(1){transform:rotate(-8deg) translateY(18px)}
-              .ph-card:nth-child(2){transform:rotate(-5deg) translateY(4px)}
-              .ph-card:nth-child(3){transform:rotate(-2deg) translateY(-8px);z-index:2}
-              .ph-card:nth-child(4){transform:rotate(1.5deg) translateY(-4px);z-index:3}
-              .ph-card:nth-child(5){transform:rotate(4deg) translateY(6px);z-index:2}
-              .ph-card:nth-child(6){transform:rotate(7deg) translateY(16px)}
-              .ph-card:hover{transform:translateY(-14px) rotate(0);z-index:9}
-              .ph-tag{position:absolute;z-index:10;padding:9px 16px;border-radius:12px;font-weight:700;font-size:15px;box-shadow:0 6px 16px rgba(9,30,28,.15)}
-              .ph-tag.a{top:6px;left:6%;background:#d9f99d;color:#091e1c}
-              .ph-tag.b{top:20px;right:8%;background:#091e1c;color:#fff}
-              .ph-hero .ph-m{display:none}
-              .ph-tag:after{content:"";position:absolute;bottom:-6px;width:12px;height:12px;background:inherit;transform:rotate(45deg);border-radius:2px}
-              .ph-tag.a:after{left:22px}
-              .ph-tag.b:after{right:22px}
-              @media(max-width:767px){
-                .ph-hero{padding:40px 0 0 !important}
-                .ph-hero .ph-d{display:none !important}
-                .ph-hero .ph-m{display:block !important;padding-top:6px}
-                .ph-hero h1{margin-bottom:0 !important}
-                .ph-stage{width:100%;margin:22px 0 0 !important;padding:0 !important}
-                .ph-hero .ph-sub{margin:10px auto 22px !important;padding:0 8px}
-                .ph-hero .ph-btns{flex-wrap:nowrap !important;gap:10px;padding-bottom:40px}
-                .ph-hero .ph-b{flex:1 1 0 !important;min-width:0;white-space:nowrap !important;padding:0 12px !important;height:50px !important;font-size:15px !important}
-                .ph-fan{height:auto !important;overflow:hidden;justify-content:center !important;gap:0;padding:46px 0 18px 0 !important}
-                .ph-card:nth-child(2),.ph-card:nth-child(4){display:none !important}
-                .ph-card,.ph-card:nth-child(n){width:40vw !important;max-width:230px;aspect-ratio:2/3;margin-left:-23vw !important;border-radius:12px}
-                .ph-card img{width:100%;height:100%;object-fit:cover}
-                .ph-card:first-child{margin-left:0 !important}
-                .ph-card:nth-child(1){transform:rotate(-7deg) translateY(14px);z-index:1}
-                .ph-card:nth-child(3){transform:rotate(-2.5deg) translateY(0);z-index:2}
-                .ph-card:nth-child(5){transform:rotate(2.5deg) translateY(0);z-index:3}
-                .ph-card:nth-child(6){transform:rotate(7deg) translateY(14px);z-index:4}
-                .ph-tag{padding:6px 12px;font-size:12.5px;border-radius:10px}
-                .ph-tag.a{top:14px;left:9vw}
-                .ph-tag.b{top:14px;right:9vw}
-              }
-            `}</style>
-            <div className={"ph-in"}>
-              <h1>
-                {"Gift cards,"}
-                <br />
-                {"paid in crypto."}
-              </h1>
-              <div className={"ph-d"}>
-                <p className={"ph-sub"}>
-                  {"Steam, Netflix, Xbox, Apple and more. Pay with the coin you hold and your code arrives by email."}
-                </p>
-                <div className={"ph-btns"}>
-                  <a className={"ph-b solid"} href={"#g-bar"}>
-                    {"Browse cards"}
-                  </a>
-                  <a className={"ph-b ghost"} href={"#g-after"}>
-                    {"How it works"}
-                  </a>
-                </div>
-              </div>
-            </div>
-            <div className={"ph-stage"}>
-              <span className={"ph-tag a"}>
-                {"Paid in USDT"}
-              </span>
-              <span className={"ph-tag b"}>
-                {"Code in minutes"}
-              </span>
-              <div className={"ph-fan"}>
-                <div className={"ph-card"}><img src={"/marketing-media/gift-cards/razer.png"} alt={"Razer Gold gift card"} /></div>
-                <div className={"ph-card"}><img src={"/marketing-media/gift-cards/starbucks.jpeg"} alt={"Starbucks gift card"} /></div>
-                <div className={"ph-card"}><img src={"/marketing-media/gift-cards/steam.jpeg"} alt={"Steam gift card"} /></div>
-                <div className={"ph-card"}><img src={"/marketing-media/gift-cards/apple.jpg"} alt={"Apple gift card"} /></div>
-                <div className={"ph-card"}><img src={"/marketing-media/gift-cards/netflix.jpg"} alt={"Netflix gift card"} /></div>
-                <div className={"ph-card"}><img src={"/marketing-media/gift-cards/xbox.jpeg"} alt={"Xbox gift card"} /></div>
-              </div>
-              <div id={"g-deck"} hidden></div>
-            </div>
-            <div className={"ph-in ph-m"}>
-              <p className={"ph-sub"}>
-                {"Steam, Netflix, Xbox, Apple and more. Pay with the coin you hold and your code arrives by email."}
-              </p>
-              <div className={"ph-btns"}>
-                <a className={"ph-b solid"} href={"#g-bar"}>
-                  {"Browse cards"}
-                </a>
-                <a className={"ph-b ghost"} href={"#g-after"}>
-                  {"How it works"}
-                </a>
-              </div>
-            </div>
-          </section>
+          <HeroCarousel />
           <div className={"g-bar"} id={"g-bar"}>
             <div className={"g-w"}>
               <div className={"g-coins"}></div>
