@@ -28,10 +28,10 @@ const reactDocumentEntry: Plugin = {
       response.setHeader("Content-Type", "text/html; charset=utf-8");
       response.setHeader("Cache-Control", "no-cache");
       const document = createEntryDocument({
-          basePath,
-          development: true,
-          entryFile: "src/main.tsx",
-        });
+        basePath,
+        development: true,
+        entryFile: "src/main.tsx",
+      });
       void server
         .transformIndexHtml(pathname, document)
         .then((transformedDocument) => response.end(transformedDocument))
@@ -61,17 +61,26 @@ const reactDocumentEntry: Plugin = {
     const viteMetadata = (entry as typeof entry & {
       viteMetadata?: { importedCss?: Set<string> };
     }).viteMetadata;
+
+    const documentHtml = createEntryDocument({
+      basePath,
+      development: false,
+      entryFile: entry.fileName,
+      cssFiles: [...(viteMetadata?.importedCss ?? [])],
+    });
+
+    // 1. Emit index.html for Vercel static hosting
+    this.emitFile({
+      type: "asset",
+      fileName: "index.html",
+      source: documentHtml,
+    });
+
+    // 2. Keep runtime-entry.json for server runtime compatibility
     this.emitFile({
       type: "asset",
       fileName: "runtime-entry.json",
-      source: JSON.stringify({
-        html: createEntryDocument({
-          basePath,
-          development: false,
-          entryFile: entry.fileName,
-          cssFiles: [...(viteMetadata?.importedCss ?? [])],
-        }),
-      }),
+      source: JSON.stringify({ html: documentHtml }),
     });
   },
 };
@@ -94,12 +103,6 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
-    host: "0.0.0.0",
-    allowedHosts: true,
     fs: { strict: true },
-  },
-  preview: {
-    host: "0.0.0.0",
-    allowedHosts: true,
   },
 });
