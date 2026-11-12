@@ -1,1 +1,0 @@
-var e=`/assets/svg-image-1%2020-CM6thGNZ.svg`;export{e as t};
