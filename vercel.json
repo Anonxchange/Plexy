@@ -1,4 +1,23 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "cleanUrls": true,
+  "images": {
+    "sizes": [256, 384, 600, 1000, 1200, 1920],
+    "remotePatterns": [
+      {
+        "protocol": "https",
+        "hostname": "hvpeycnedmzrjshmvgri.supabase.co",
+        "pathname": "/storage/v1/object/public/**"
+      },
+      {
+        "protocol": "https",
+        "hostname": "www.pexly.app",
+        "pathname": "/**"
+      }
+    ],
+    "formats": ["image/avif", "image/webp"],
+    "minimumCacheTTL": 31536000
+  },
   "redirects": [
     {
       "source": "/(.*)",
@@ -23,13 +42,22 @@
       "destination": "https://hvpeycnedmzrjshmvgri.supabase.co/functions/v1/sitemap-products"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!.*\\.(?:ico|png|jpe?g|gif|svg|webp|avif|css|js|json|xml|txt|woff2?|ttf|eot)$).*)",
       "destination": "/index.html"
     }
   ],
   "headers": [
     {
       "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(.*\\.(?:ico|png|jpe?g|gif|svg|webp|avif))",
       "headers": [
         {
           "key": "Cache-Control",
