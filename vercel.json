@@ -1,5 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "outputDirectory": "artifacts/pexo/dist/public",
   "cleanUrls": true,
   "images": {
     "sizes": [256, 384, 600, 1000, 1200, 1920],
