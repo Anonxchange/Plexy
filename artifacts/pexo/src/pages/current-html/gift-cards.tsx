@@ -140,25 +140,31 @@ export function GiftCardsExport() {
               .ph-tag{position:absolute;z-index:10;padding:9px 16px;border-radius:12px;font-weight:700;font-size:15px;box-shadow:0 6px 16px rgba(9,30,28,.15)}
               .ph-tag.a{top:6px;left:6%;background:#d9f99d;color:#091e1c}
               .ph-tag.b{top:20px;right:8%;background:#091e1c;color:#fff}
+              .ph-hero .ph-m{display:none}
+              .ph-tag:after{content:"";position:absolute;bottom:-6px;width:12px;height:12px;background:inherit;transform:rotate(45deg);border-radius:2px}
+              .ph-tag.a:after{left:22px}
+              .ph-tag.b:after{right:22px}
               @media(max-width:767px){
-                .ph-hero{padding-top:44px;display:flex;flex-direction:column;align-items:center}
-                .ph-hero .ph-in{display:contents}
-                .ph-hero h1{order:1;padding:0 20px;margin-bottom:0}
-                .ph-stage{order:2;width:100%;margin:28px 0 0;padding:0}
-                .ph-hero .ph-sub{order:3;padding:0 24px;margin:22px auto 24px}
-                .ph-hero .ph-btns{order:4;padding:0 20px 44px;width:100%}
-                .ph-hero .ph-b{flex:1 1 140px;max-width:200px}
-                .ph-fan{height:auto;overflow:hidden;justify-content:center;align-items:flex-start;gap:0;padding:56px 0 24px 6vw}
-                .ph-card:nth-child(2){display:none}
-                .ph-card,.ph-card:nth-child(n){width:44vw;max-width:260px;margin-left:-31vw;border-radius:12px;scroll-snap-align:none}
-                .ph-card:first-child{margin-left:0}
+                .ph-hero{padding:40px 0 0 !important}
+                .ph-hero .ph-d{display:none !important}
+                .ph-hero .ph-m{display:block !important;padding-top:6px}
+                .ph-hero h1{margin-bottom:0 !important}
+                .ph-stage{width:100%;margin:22px 0 0 !important;padding:0 !important}
+                .ph-hero .ph-sub{margin:10px auto 22px !important;padding:0 8px}
+                .ph-hero .ph-btns{flex-wrap:nowrap !important;gap:10px;padding-bottom:40px}
+                .ph-hero .ph-b{flex:1 1 0 !important;min-width:0;white-space:nowrap !important;padding:0 12px !important;height:50px !important;font-size:15px !important}
+                .ph-fan{height:auto !important;overflow:hidden;justify-content:center !important;gap:0;padding:46px 0 18px 0 !important}
+                .ph-card:nth-child(2){display:none !important}
+                .ph-card,.ph-card:nth-child(n){width:42vw !important;max-width:240px;margin-left:-29vw !important;border-radius:12px}
+                .ph-card:first-child{margin-left:0 !important}
                 .ph-card:nth-child(1){transform:rotate(-7deg) translateY(14px);z-index:1}
                 .ph-card:nth-child(3){transform:rotate(-3deg) translateY(2px);z-index:2}
                 .ph-card:nth-child(4){transform:rotate(0deg) translateY(-8px);z-index:3}
                 .ph-card:nth-child(5){transform:rotate(3deg) translateY(2px);z-index:4}
                 .ph-card:nth-child(6){transform:rotate(7deg) translateY(14px);z-index:5}
-                .ph-tag.a{top:8px;left:5vw}
-                .ph-tag.b{top:8px;right:5vw}
+                .ph-tag{padding:6px 12px;font-size:12.5px;border-radius:10px}
+                .ph-tag.a{top:14px;left:9vw}
+                .ph-tag.b{top:14px;right:9vw}
               }
             `}</style>
             <div className={"ph-in"}>
@@ -167,16 +173,18 @@ export function GiftCardsExport() {
                 <br />
                 {"paid in crypto."}
               </h1>
-              <p className={"ph-sub"}>
-                {"Steam, Netflix, Xbox, Apple and more. Pay with the coin you hold and your code arrives by email."}
-              </p>
-              <div className={"ph-btns"}>
-                <a className={"ph-b solid"} href={"#g-bar"}>
-                  {"Browse cards"}
-                </a>
-                <a className={"ph-b ghost"} href={"#g-after"}>
-                  {"How it works"}
-                </a>
+              <div className={"ph-d"}>
+                <p className={"ph-sub"}>
+                  {"Steam, Netflix, Xbox, Apple and more. Pay with the coin you hold and your code arrives by email."}
+                </p>
+                <div className={"ph-btns"}>
+                  <a className={"ph-b solid"} href={"#g-bar"}>
+                    {"Browse cards"}
+                  </a>
+                  <a className={"ph-b ghost"} href={"#g-after"}>
+                    {"How it works"}
+                  </a>
+                </div>
               </div>
             </div>
             <div className={"ph-stage"}>
@@ -195,6 +203,19 @@ export function GiftCardsExport() {
                 <div className={"ph-card"}><img src={"/marketing-media/gift-cards/xbox.jpeg"} alt={"Xbox gift card"} /></div>
               </div>
               <div id={"g-deck"} hidden></div>
+            </div>
+            <div className={"ph-in ph-m"}>
+              <p className={"ph-sub"}>
+                {"Steam, Netflix, Xbox, Apple and more. Pay with the coin you hold and your code arrives by email."}
+              </p>
+              <div className={"ph-btns"}>
+                <a className={"ph-b solid"} href={"#g-bar"}>
+                  {"Browse cards"}
+                </a>
+                <a className={"ph-b ghost"} href={"#g-after"}>
+                  {"How it works"}
+                </a>
+              </div>
             </div>
           </section>
           <div className={"g-bar"} id={"g-bar"}>
