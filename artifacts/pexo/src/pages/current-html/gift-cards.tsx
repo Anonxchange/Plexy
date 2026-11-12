@@ -9,6 +9,14 @@ const HERO_CARDS = [
   { n: "Razer Gold", f: "$100", usd: 100, img: "/marketing-media/gift-cards/razer.png" },
   { n: "Starbucks", f: "$25", usd: 25, img: "/marketing-media/gift-cards/starbucks.jpeg" },
 ];
+const WIDE_CARDS = [
+  { n: "Razer Gold $100", img: "/marketing-media/gift-cards/razer.png", r: -9, y: 44, z: 1 },
+  { n: "Starbucks $25", img: "/marketing-media/gift-cards/starbucks.jpeg", r: -5, y: 16, z: 2, cls: " sbux" },
+  { n: "Steam $20", img: "/marketing-media/gift-cards/steam.jpeg", r: -2, y: -4, z: 4 },
+  { n: "Apple $50", img: "/marketing-media/gift-cards/apple-card.jpg", r: 1.5, y: 2, z: 5 },
+  { n: "Netflix $30", img: "/marketing-media/gift-cards/netflix.jpg", r: 4.5, y: 20, z: 3 },
+  { n: "Xbox $100", img: "/marketing-media/gift-cards/xbox.jpeg", r: 8, y: 46, z: 1 },
+];
 // Sample rates for the preview only. Replace with your live price feed.
 const HERO_COINS = [
   { s: "USDT", r: 1, d: 2 },
@@ -44,6 +52,31 @@ const HERO_CSS = `
 .pxg .ph-hero .ph-cta.solid{background:var(--ph-ink);color:#fff}
 .pxg .ph-hero .ph-cta.ghost{background:transparent;color:var(--ph-ink)}
 @media(max-width:560px){.pxg .ph-hero{padding:36px 16px 40px}.pxg .ph-hero .ph-btns{padding:0 4px}.pxg .ph-hero .ph-cta{flex:1;padding:0 10px;font-size:15px}.pxg .ph-hero .ph-chip{padding:0 11px;font-size:13px}}
+
+.pxg .ph-wide{display:none}
+@media(min-width:768px){
+.pxg .ph-mob{display:none}
+.pxg .ph-wide{display:block;padding:64px 20px 0;--ph-glow:rgba(190,242,100,.38)}
+.pxg .ph-wide h1{font-size:clamp(56px,8.2vw,104px);line-height:.97}
+.pxg .ph-wide .ph-sub{max-width:620px;font-size:clamp(17px,2vw,21px)}
+.pxg .ph-wide .ph-btns{margin-top:30px}
+.pxg .ph-wide .ph-cta{height:54px;padding:0 30px}
+.pxg .ph-wide .pw-wrap{position:relative;max-width:1240px;margin:0 auto}
+.pxg .ph-wide .pw-fan{--w:clamp(150px,17.5vw,236px);position:relative;display:flex;justify-content:center;align-items:flex-start;margin:64px auto 0;padding-top:46px;height:calc(var(--w)*1.12 + 46px);overflow:hidden}
+.pxg .ph-wide .pw-fan:before{content:"";position:absolute;left:50%;bottom:-160px;width:min(1000px,130vw);height:360px;transform:translateX(-50%);background:radial-gradient(closest-side,var(--ph-glow),transparent);pointer-events:none}
+.pxg .ph-wide .pw-item{position:relative;flex:0 0 auto;width:var(--w);margin-left:calc(var(--w)*-.1);transform:translateY(var(--y)) rotate(var(--r));transition:transform .35s cubic-bezier(.2,.8,.2,1);z-index:var(--z);cursor:pointer}
+.pxg .ph-wide .pw-item:first-child{margin-left:0}
+.pxg .ph-wide .pw-item:hover{transform:translateY(calc(var(--y) - 24px)) rotate(0) scale(1.05);z-index:30}
+.pxg .ph-wide .pw-face{aspect-ratio:2/3;border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 16px 36px rgba(9,30,28,.22)}
+.pxg .ph-wide .pw-face img{width:100%;height:100%;object-fit:cover;display:block;max-width:none}
+.pxg .ph-wide .pw-item.sbux img{transform:scale(1.08)}
+.pxg .ph-wide .pw-tag{position:absolute;z-index:40;padding:9px 16px;border-radius:12px;font-weight:700;font-size:14px;box-shadow:0 8px 20px rgba(9,30,28,.16)}
+.pxg .ph-wide .pw-tag:after{content:"";position:absolute;bottom:-6px;width:12px;height:12px;background:inherit;transform:rotate(45deg);border-radius:2px}
+.pxg .ph-wide .pw-tag.a{top:0;left:6%;background:#d9f99d;color:#091e1c}
+.pxg .ph-wide .pw-tag.a:after{left:24px}
+.pxg .ph-wide .pw-tag.b{top:10px;right:6%;background:#091e1c;color:#fff}
+.pxg .ph-wide .pw-tag.b:after{right:24px}
+}
 @media(prefers-reduced-motion:reduce){.pxg .ph-hero .ph-card,.pxg .ph-hero .ph-chip,.pxg .ph-hero .ph-dots button{transition:none}}
 `;
 
@@ -69,7 +102,8 @@ function HeroCarousel() {
   const k = HERO_COINS[coin];
 
   return (
-    <section className={"ph-hero"}>
+    <>
+    <section className={"ph-hero ph-mob"}>
       <style>{HERO_CSS}</style>
       <div className={"ph-wrap"}>
         <h1>
@@ -147,6 +181,40 @@ function HeroCarousel() {
         </div>
       </div>
     </section>
+    <section className={"ph-hero ph-wide"}>
+      <div className={"ph-wrap"}>
+        <h1>
+          {"Gift cards,"}
+          <br />
+          {"paid in crypto."}
+        </h1>
+        <p className={"ph-sub"}>
+          {"Steam, Netflix, Xbox, Apple and more. Pay with the coin you hold and your code arrives by email."}
+        </p>
+        <div className={"ph-btns"}>
+          <a className={"ph-cta solid"} href={"#g-bar"}>
+            {"Browse cards"}
+          </a>
+          <a className={"ph-cta ghost"} href={"#g-after"}>
+            {"How it works"}
+          </a>
+        </div>
+      </div>
+      <div className={"pw-wrap"}>
+        <span className={"pw-tag a"}>{"Paid in USDT"}</span>
+        <span className={"pw-tag b"}>{"Code in minutes"}</span>
+        <div className={"pw-fan"}>
+          {WIDE_CARDS.map((x) => (
+            <div key={x.n} className={"pw-item" + (x.cls || "")} style={{ "--r": x.r + "deg", "--y": x.y + "px", "--z": x.z } as React.CSSProperties}>
+              <div className={"pw-face"}>
+                <img src={x.img} alt={x.n + " gift card"} draggable={false} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+    </>
   );
 }
 
