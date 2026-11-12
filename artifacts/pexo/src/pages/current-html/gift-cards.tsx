@@ -154,14 +154,14 @@ export function GiftCardsExport() {
                 .ph-hero .ph-btns{flex-wrap:nowrap !important;gap:10px;padding-bottom:40px}
                 .ph-hero .ph-b{flex:1 1 0 !important;min-width:0;white-space:nowrap !important;padding:0 12px !important;height:50px !important;font-size:15px !important}
                 .ph-fan{height:auto !important;overflow:hidden;justify-content:center !important;gap:0;padding:46px 0 18px 0 !important}
-                .ph-card:nth-child(2){display:none !important}
-                .ph-card,.ph-card:nth-child(n){width:42vw !important;max-width:240px;margin-left:-29vw !important;border-radius:12px}
+                .ph-card:nth-child(2),.ph-card:nth-child(4){display:none !important}
+                .ph-card,.ph-card:nth-child(n){width:40vw !important;max-width:230px;aspect-ratio:2/3;margin-left:-23vw !important;border-radius:12px}
+                .ph-card img{width:100%;height:100%;object-fit:cover}
                 .ph-card:first-child{margin-left:0 !important}
                 .ph-card:nth-child(1){transform:rotate(-7deg) translateY(14px);z-index:1}
-                .ph-card:nth-child(3){transform:rotate(-3deg) translateY(2px);z-index:2}
-                .ph-card:nth-child(4){transform:rotate(0deg) translateY(-8px);z-index:3}
-                .ph-card:nth-child(5){transform:rotate(3deg) translateY(2px);z-index:4}
-                .ph-card:nth-child(6){transform:rotate(7deg) translateY(14px);z-index:5}
+                .ph-card:nth-child(3){transform:rotate(-2.5deg) translateY(0);z-index:2}
+                .ph-card:nth-child(5){transform:rotate(2.5deg) translateY(0);z-index:3}
+                .ph-card:nth-child(6){transform:rotate(7deg) translateY(14px);z-index:4}
                 .ph-tag{padding:6px 12px;font-size:12.5px;border-radius:10px}
                 .ph-tag.a{top:14px;left:9vw}
                 .ph-tag.b{top:14px;right:9vw}
