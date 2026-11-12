@@ -141,15 +141,24 @@ export function GiftCardsExport() {
               .ph-tag.a{top:6px;left:6%;background:#d9f99d;color:#091e1c}
               .ph-tag.b{top:20px;right:8%;background:#091e1c;color:#fff}
               @media(max-width:767px){
-                .ph-hero{padding-top:44px}
-                .ph-stage{margin-top:36px;padding:0}
-                .ph-fan{height:auto;overflow-x:auto;overflow-y:hidden;justify-content:flex-start;gap:14px;padding:44px 20px 28px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-                .ph-fan::-webkit-scrollbar{display:none}
-                .ph-card,.ph-card:nth-child(n){width:68vw;max-width:300px;margin:0;transform:none;scroll-snap-align:center}
-                .ph-card:hover{transform:none}
-                .ph-tag.a{top:4px;left:20px}
-                .ph-tag.b{top:4px;right:20px}
-                .ph-hero .ph-b{flex:1 1 140px}
+                .ph-hero{padding-top:44px;display:flex;flex-direction:column;align-items:center}
+                .ph-hero .ph-in{display:contents}
+                .ph-hero h1{order:1;padding:0 20px;margin-bottom:0}
+                .ph-stage{order:2;width:100%;margin:28px 0 0;padding:0}
+                .ph-hero .ph-sub{order:3;padding:0 24px;margin:22px auto 24px}
+                .ph-hero .ph-btns{order:4;padding:0 20px 44px;width:100%}
+                .ph-hero .ph-b{flex:1 1 140px;max-width:200px}
+                .ph-fan{height:auto;overflow:hidden;justify-content:center;align-items:flex-start;gap:0;padding:56px 0 24px 6vw}
+                .ph-card:nth-child(2){display:none}
+                .ph-card,.ph-card:nth-child(n){width:44vw;max-width:260px;margin-left:-31vw;border-radius:12px;scroll-snap-align:none}
+                .ph-card:first-child{margin-left:0}
+                .ph-card:nth-child(1){transform:rotate(-7deg) translateY(14px);z-index:1}
+                .ph-card:nth-child(3){transform:rotate(-3deg) translateY(2px);z-index:2}
+                .ph-card:nth-child(4){transform:rotate(0deg) translateY(-8px);z-index:3}
+                .ph-card:nth-child(5){transform:rotate(3deg) translateY(2px);z-index:4}
+                .ph-card:nth-child(6){transform:rotate(7deg) translateY(14px);z-index:5}
+                .ph-tag.a{top:8px;left:5vw}
+                .ph-tag.b{top:8px;right:5vw}
               }
             `}</style>
             <div className={"ph-in"}>
