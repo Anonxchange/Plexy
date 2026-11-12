@@ -114,79 +114,89 @@ export function GiftCardsExport() {
       </header>
       <main id={"top"}>
         <div className={"pxg"}>
-          <section className={"g-hero"}>
-            <div className={"g-w"}>
-              <div>
-                <h1>
-                  {"Pick a card."}
-                  <br />
-                  {"Pay with any coin."}
-                </h1>
-                <p>
-                  {"Steam, Netflix, Amazon and more. Choose the coin you hold and every price on the page switches to it. The code arrives by email."}
-                </p>
-                <a className={"g-cta"} href={"#g-bar"}>
+          <section className={"ph-hero"}>
+            <style>{`
+              .ph-hero{background:#fff;color:#091e1c;padding:72px 0 0;overflow:hidden;position:relative}
+              .ph-hero .ph-in{max-width:1100px;margin:0 auto;padding:0 20px;text-align:center}
+              .ph-hero h1{font-size:clamp(44px,8vw,96px);line-height:.98;letter-spacing:-.04em;font-weight:800;margin:0 0 22px;color:#091e1c}
+              .ph-hero .ph-sub{font-size:clamp(16px,2vw,21px);line-height:1.5;color:#4b5b59;max-width:620px;margin:0 auto 30px}
+              .ph-hero .ph-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+              .ph-hero .ph-b{display:inline-flex;align-items:center;justify-content:center;height:52px;padding:0 28px;border-radius:999px;font-weight:600;font-size:16px;text-decoration:none;border:1.5px solid #091e1c;transition:transform .15s}
+              .ph-hero .ph-b:hover{transform:translateY(-2px)}
+              .ph-hero .ph-b.solid{background:#091e1c;color:#fff}
+              .ph-hero .ph-b.ghost{background:#fff;color:#091e1c}
+              .ph-stage{position:relative;max-width:1180px;margin:56px auto 0;padding:0 16px}
+              .ph-fan{display:flex;justify-content:center;align-items:flex-start;height:400px;overflow:hidden;padding-top:40px}
+              .ph-card{flex:0 0 auto;width:210px;margin-left:-34px;border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 14px 34px rgba(9,30,28,.18);transition:transform .25s}
+              .ph-card:first-child{margin-left:0}
+              .ph-card img{display:block;width:100%;height:auto}
+              .ph-card:nth-child(1){transform:rotate(-8deg) translateY(18px)}
+              .ph-card:nth-child(2){transform:rotate(-5deg) translateY(4px)}
+              .ph-card:nth-child(3){transform:rotate(-2deg) translateY(-8px);z-index:2}
+              .ph-card:nth-child(4){transform:rotate(1.5deg) translateY(-4px);z-index:3}
+              .ph-card:nth-child(5){transform:rotate(4deg) translateY(6px);z-index:2}
+              .ph-card:nth-child(6){transform:rotate(7deg) translateY(16px)}
+              .ph-card:hover{transform:translateY(-14px) rotate(0);z-index:9}
+              .ph-tag{position:absolute;z-index:10;padding:9px 16px;border-radius:12px;font-weight:700;font-size:15px;box-shadow:0 6px 16px rgba(9,30,28,.15)}
+              .ph-tag.a{top:6px;left:6%;background:#d9f99d;color:#091e1c}
+              .ph-tag.b{top:20px;right:8%;background:#091e1c;color:#fff}
+              @media(max-width:767px){
+                .ph-hero{padding-top:44px}
+                .ph-stage{margin-top:36px;padding:0}
+                .ph-fan{height:auto;overflow-x:auto;overflow-y:hidden;justify-content:flex-start;gap:14px;padding:44px 20px 28px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+                .ph-fan::-webkit-scrollbar{display:none}
+                .ph-card,.ph-card:nth-child(n){width:68vw;max-width:300px;margin:0;transform:none;scroll-snap-align:center}
+                .ph-card:hover{transform:none}
+                .ph-tag.a{top:4px;left:20px}
+                .ph-tag.b{top:4px;right:20px}
+                .ph-hero .ph-b{flex:1 1 140px}
+              }
+            `}</style>
+            <div className={"ph-in"}>
+              <h1>
+                {"Gift cards,"}
+                <br />
+                {"paid in crypto."}
+              </h1>
+              <p className={"ph-sub"}>
+                {"Steam, Netflix, Xbox, Apple and more. Pay with the coin you hold and your code arrives by email."}
+              </p>
+              <div className={"ph-btns"}>
+                <a className={"ph-b solid"} href={"#g-bar"}>
                   {"Browse cards"}
                 </a>
+                <a className={"ph-b ghost"} href={"#g-after"}>
+                  {"How it works"}
+                </a>
               </div>
-              <div className={"g-hv"}>
-                <div className={"g-ph"}>
-                  <img src={"/marketing-media/media-d9e7636fc944d27d.avif"} alt={""} />
-                </div>
-                <div className={"g-deck"} id={"g-deck"}></div>
+            </div>
+            <div className={"ph-stage"}>
+              <span className={"ph-tag a"}>
+                {"Paid in USDT"}
+              </span>
+              <span className={"ph-tag b"}>
+                {"Code in minutes"}
+              </span>
+              <div className={"ph-fan"}>
+                <div className={"ph-card"}><img src={"/marketing-media/gift-cards/razer.png"} alt={"Razer Gold gift card"} /></div>
+                <div className={"ph-card"}><img src={"/marketing-media/gift-cards/starbucks.jpeg"} alt={"Starbucks gift card"} /></div>
+                <div className={"ph-card"}><img src={"/marketing-media/gift-cards/steam.jpeg"} alt={"Steam gift card"} /></div>
+                <div className={"ph-card"}><img src={"/marketing-media/gift-cards/apple.jpg"} alt={"Apple gift card"} /></div>
+                <div className={"ph-card"}><img src={"/marketing-media/gift-cards/netflix.jpg"} alt={"Netflix gift card"} /></div>
+                <div className={"ph-card"}><img src={"/marketing-media/gift-cards/xbox.jpeg"} alt={"Xbox gift card"} /></div>
               </div>
+              <div id={"g-deck"} hidden></div>
             </div>
           </section>
           <div className={"g-bar"} id={"g-bar"}>
             <div className={"g-w"}>
               <div className={"g-coins"}></div>
-              <div className={"g-tools"}>
-                <div className={"g-search"}>
-                  <input id={"g-q"} type={"search"} placeholder={"Brand or phone number"} aria-label={"Search"} />
-                  <button id={"g-go"} type={"button"} aria-label={"Search"}>
-                    <svg viewBox={"0 0 24 24"}>
-                      <circle cx={"11"} cy={"11"} r={"7"}></circle>
-                      <path d={"M20 20l-4-4"}></path>
-                    </svg>
-                  </button>
-                </div>
-                <select className={"g-sel"} id={"g-country"} aria-label={"Country"}>
-                  <option value={"NG"}>
-                    {"🇳🇬 NG"}
-                  </option>
-                  <option value={"GH"}>
-                    {"🇬🇭 GH"}
-                  </option>
-                  <option value={"KE"}>
-                    {"🇰🇪 KE"}
-                  </option>
-                  <option value={"ZA"}>
-                    {"🇿🇦 ZA"}
-                  </option>
-                  <option value={"GB"}>
-                    {"🇬🇧 GB"}
-                  </option>
-                  <option value={"US"}>
-                    {"🇺🇸 US"}
-                  </option>
-                </select>
-                <button className={"g-cart"} type={"button"} aria-label={"Cart"}>
-                  <svg viewBox={"0 0 24 24"}>
-                    <path d={"M2 3h3l2.5 12h11L21 7H6"}></path>
-                    <circle cx={"9"} cy={"20"} r={"1.4"}></circle>
-                    <circle cx={"18"} cy={"20"} r={"1.4"}></circle>
-                  </svg>
-                  <i>
-                    {"0"}
-                  </i>
-                </button>
-              </div>
             </div>
           </div>
           <div className={"g-main"}>
             <div className={"g-w"}>
               <div id={"g-shelf"}></div>
-              <div className={"g-after"}>
+              <div className={"g-after"} id={"g-after"}>
                 <div>
                   <h2>
                     {"What happens after you pay"}
