@@ -18,3 +18,8 @@ declare module "lottie-web" {
   const lottie: { loadAnimation: typeof loadAnimation };
   export default lottie;
 }
+
+declare module "lottie-web/build/player/lottie_light.js" {
+  const lottie: typeof import("lottie-web").default;
+  export default lottie;
+}
