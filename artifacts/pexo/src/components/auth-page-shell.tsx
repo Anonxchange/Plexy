@@ -20,6 +20,7 @@ interface AuthPageShellProps {
   providerActionsDisabled?: boolean;
   providerLoading?: AuthProvider | null;
   securityChallenge?: ReactNode;
+  securityChallengeAfterMethods?: boolean;
   isDark?: boolean;
   onThemeToggle?: () => void;
 }
@@ -89,6 +90,7 @@ export function AuthPageShell({
   providerActionsDisabled = false,
   providerLoading = null,
   securityChallenge,
+  securityChallengeAfterMethods = false,
 }: AuthPageShellProps) {
   const isSignIn = mode === "signin";
   const emailLabel = emailActionLabel ?? (isSignIn ? "Sign In With email" : "Sign Up With email");
@@ -110,7 +112,7 @@ export function AuthPageShell({
                   </div>
                 )}
 
-                {securityChallenge && (
+                {securityChallenge && !securityChallengeAfterMethods && (
                   <div className="auth-security-challenge">{securityChallenge}</div>
                 )}
 
@@ -178,6 +180,14 @@ export function AuthPageShell({
                     )}
                   </div>
                 )}
+
+                {securityChallenge &&
+                  securityChallengeAfterMethods &&
+                  stage === "methods" && (
+                    <div className="auth-security-challenge auth-security-challenge-after-methods">
+                      {securityChallenge}
+                    </div>
+                  )}
 
                 {stage === "methods" && providerError && (
                   <p className="auth-provider-error" role="alert">{providerError}</p>
