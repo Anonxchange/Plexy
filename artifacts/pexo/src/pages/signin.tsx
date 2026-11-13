@@ -47,7 +47,6 @@ export function SignIn() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [magicLinkSending, setMagicLinkSending] = useState(false);
   const [googleRedirecting, setGoogleRedirecting] = useState(false);
   const [walletConnecting, setWalletConnecting] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
@@ -395,51 +394,6 @@ export function SignIn() {
     };
   }, [user, session, pauseSessionForTOTP, signOut, navigateSafely, toast]);
 
-  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputValue.trim());
-
-  const handleMagicLinkSignIn = async () => {
-    if (!isValidEmail || magicLinkSending || loading) return;
-    if (import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken) {
-      toast({
-        title: "Security check required",
-        description: "Complete the CAPTCHA before requesting an email sign-in link.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setMagicLinkSending(true);
-    try {
-      const sb = await getSupabase();
-      const callbackUrl = new URL(window.location.pathname, window.location.origin);
-      callbackUrl.searchParams.set("oauth", "magiclink");
-      callbackUrl.searchParams.set("intent", "signin");
-      const { error } = await sb.auth.signInWithOtp({
-        email: inputValue.trim().toLowerCase(),
-        options: {
-          emailRedirectTo: callbackUrl.toString(),
-          shouldCreateUser: false,
-          captchaToken: captchaToken ?? undefined,
-        },
-      });
-      if (error) throw error;
-    } catch {
-      // Keep the same response for existing and unknown addresses.
-    } finally {
-      setMagicLinkSending(false);
-      if (import.meta.env.VITE_TURNSTILE_SITE_KEY) {
-        setCaptchaToken(null);
-        setCaptchaError(null);
-        setCaptchaKey((key) => key + 1);
-      }
-    }
-
-    toast({
-      title: "Check your email",
-      description: "If a Pexly account exists for that address, a sign-in link will arrive shortly.",
-    });
-  };
-
   const handleGoogleSignIn = async () => {
     if (googleRedirectingRef.current) return;
 
@@ -534,6 +488,8 @@ export function SignIn() {
     }
   };
 
+
+  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputValue.trim());
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -909,6 +865,7 @@ export function SignIn() {
       }
       providerLoading={googleRedirecting ? "google" : walletConnecting ? "wallet" : null}
       securityChallenge={!emailFormOpen ? turnstileChallenge : undefined}
+      securityChallengeAfterMethods
       isDark={isDark}
       onThemeToggle={() => setTheme(isDark ? "light" : "dark")}
     >
@@ -1013,25 +970,6 @@ export function SignIn() {
                   : isLockedOut
                     ? `Locked — retry in ${cooldownLeft}s`
                     : "Sign in"}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleMagicLinkSignIn}
-                disabled={
-                  !supabaseReady ||
-                  !isValidEmail ||
-                  magicLinkSending ||
-                  loading ||
-                  (!!import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken)
-                }
-                className={`w-full flex items-center justify-center py-3 rounded-full text-sm font-medium transition-colors mt-3 disabled:opacity-40 disabled:cursor-not-allowed ${
-                  isDark
-                    ? 'border border-gray-700 text-gray-300 hover:enabled:bg-gray-800'
-                    : 'border border-gray-200 text-gray-700 hover:enabled:bg-gray-50'
-                }`}
-              >
-                {magicLinkSending ? "Sending sign-in link..." : "Email me a sign-in link"}
               </button>
 
               {/* Passkey Sign In — visible whenever device supports passkeys.
