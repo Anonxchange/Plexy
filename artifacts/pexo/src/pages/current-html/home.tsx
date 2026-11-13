@@ -262,85 +262,13 @@ export function PexlyHomepage() {
                     </div>
                     <div data-w-id={"17926322-9a6a-d809-077f-cb7c98f2f319"} className={"invest-banner-left"}>
                       <div className={"invest-left-banner-block"}>
-                        <div className={"px-art"} style={{"--w": "min(70cqw,56cqh)"} as any}>
-                          <div className={"px-phone"} style={{"--dy": "24%"} as any}>
-                            <div className={"px-notch"}></div>
-                            <div className={"px-screen"}>
-                              <div className={"ph-h"}>
-                                <b>
-                                  {"pexly"}
-                                </b>
-                                <span className={"ph-w"}>
-                                  {"0x7a…93f2"}
-                                </span>
-                              </div>
-                              <div className={"srch"}>
-                                {"Search gift cards, top ups, products"}
-                              </div>
-                              <div className={"chips"}>
-                                <span className={"on"}>
-                                  {"Gift Cards"}
-                                </span>
-                                <span className={""}>
-                                  {"Top Up"}
-                                </span>
-                                <span className={""}>
-                                  {"Products"}
-                                </span>
-                              </div>
-                              <div className={"grid2"}>
-                                <div className={"tile"} style={{"background": "#7c5cff"} as any}>
-                                  <b>
-                                    {"Shopping"}
-                                  </b>
-                                  <small>
-                                    {"from $10"}
-                                  </small>
-                                </div>
-                                <div className={"tile"} style={{"background": "#ff6b6b"} as any}>
-                                  <b>
-                                    {"Streaming"}
-                                  </b>
-                                  <small>
-                                    {"from $15"}
-                                  </small>
-                                </div>
-                                <div className={"tile"} style={{"background": "#1fa37a"} as any}>
-                                  <b>
-                                    {"Gaming"}
-                                  </b>
-                                  <small>
-                                    {"from $20"}
-                                  </small>
-                                </div>
-                                <div className={"tile"} style={{"background": "#2f80ed"} as any}>
-                                  <b>
-                                    {"Travel"}
-                                  </b>
-                                  <small>
-                                    {"from $25"}
-                                  </small>
-                                </div>
-                              </div>
-                              <div className={"rw"}>
-                                <span className={"ic"} style={{"background": "#091e1c"} as any}>
-                                  {"↻"}
-                                </span>
-                                <div className={"t"}>
-                                  <b>
-                                    {"Mobile Top Up"}
-                                  </b>
-                                  <small>
-                                    {"Airtime and data"}
-                                  </small>
-                                </div>
-                                <div className={"p"}>
-                                  {"Instant"}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
+                        <img
+                          src={"/assets/crypto-wallet-shop-no-bg.png"}
+                          alt={"Crypto wallet screen showing the Shop option and token balances"}
+                          loading={"lazy"}
+                          className={"invest-left-banner-image"}
+                          style={{"width": "100%", "height": "100%", "objectFit": "contain"} as any}
+                        />
                       </div>
                     </div>
                   </div>
@@ -1160,64 +1088,13 @@ export function PexlyHomepage() {
               <div className={"esim-activation-content-wrap"}>
                 <div className={"esim-activation-right"}>
                   <div data-w-id={"0e745624-d154-5168-b82a-2e30c6250a07"} className={"esim-activation-right-img-block"}>
-                    <div className={"px-art"} style={{"background": "linear-gradient(160deg,#8dfdba,#3aa9ff)"} as any}>
-                      <div className={"px-phone"} style={{"--dy": "0%"} as any}>
-                        <div className={"px-notch"}></div>
-                        <div className={"px-screen"}>
-                          <div className={"ph-h"}>
-                            <b>
-                              {"pexly"}
-                            </b>
-                            <span className={"ph-w"}>
-                              {"0x7a…93f2"}
-                            </span>
-                          </div>
-                          <div className={"ph-t"}>
-                            {"Mobile Top Up"}
-                          </div>
-                          <div className={"fld"}>
-                            <small>
-                              {"Country"}
-                            </small>
-                            <b>
-                              {"Select country"}
-                            </b>
-                          </div>
-                          <div className={"fld"}>
-                            <small>
-                              {"Phone number"}
-                            </small>
-                            <b>
-                              {"+234 801 234 5678"}
-                            </b>
-                          </div>
-                          <div className={"chips"}>
-                            <span className={""}>
-                              {"$5"}
-                            </span>
-                            <span className={"on"}>
-                              {"$10"}
-                            </span>
-                            <span className={""}>
-                              {"$20"}
-                            </span>
-                            <span className={""}>
-                              {"$50"}
-                            </span>
-                          </div>
-                          <div className={"fld"}>
-                            <small>
-                              {"Pay with"}
-                            </small>
-                            <b>
-                              {"USDT · 10.02"}
-                            </b>
-                          </div>
-                          <div className={"btn"}>
-                            {"Top up now"}
-                          </div>
-                        </div>
-                      </div>
+                    <div className={"px-art"} style={{"background": "#d9d2c6"} as any}>
+                      <img
+                        src={"/assets/marketplace-shopping-together.png"}
+                        alt={"Two people browsing a marketplace together on a phone"}
+                        loading={"lazy"}
+                        style={{"width": "100%", "height": "100%", "objectFit": "cover"} as any}
+                      />
                     </div>
                   </div>
                 </div>
