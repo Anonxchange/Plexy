@@ -1280,6 +1280,10 @@
   margin: 0 0 1.25rem;
 }
 
+.webflow-auth-shell .auth-security-challenge-after-methods {
+  margin-top: 1rem;
+}
+
 .webflow-auth-shell .auth-method-block {
   display: flex;
   width: 100%;
