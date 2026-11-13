@@ -1,664 +1,592 @@
-.pexly-auth-page {
-  --auth-ink: #14211d;
-  --auth-muted: #737d77;
-  --auth-line: #e4e9e2;
-  --auth-lime: #c8f36a;
-  --auth-paper: #fbfcf8;
-  min-height: 100dvh;
-  color: var(--auth-ink);
-  background:
-    radial-gradient(ellipse at 50% 38%, rgba(221, 242, 194, 0.22), transparent 42%),
-    var(--auth-paper);
-  font-family: "Plus Jakarta Sans", sans-serif;
+#pxnav.px-nav-with-tools {
+  z-index: 40;
 }
 
-.pexly-auth-page-dark {
-  --auth-ink: #f3f7f2;
-  --auth-muted: #aab6ad;
-  --auth-line: rgba(222, 234, 222, 0.14);
-  --auth-paper: #111a15;
-  background:
-    radial-gradient(ellipse at 50% 38%, rgba(64, 91, 52, 0.2), transparent 42%),
-    var(--auth-paper);
+.export-page.app-header-scope .px-nav.home-hero-header:not(.scrolled) {
+  background: transparent;
+  border-bottom: 0;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
-.pexly-auth-header {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  min-height: 76px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 clamp(20px, 5.2vw, 78px);
-  border-bottom: 1px solid rgba(35, 57, 42, 0.08);
-  background: rgba(255, 255, 255, 0.92);
+.export-page.current-source-page-home .section-h-v3-hero {
+  margin-top: -58px;
+  padding-top: calc(9rem + 58px) !important;
 }
 
-.pexly-auth-page-dark .pexly-auth-header {
-  border-bottom-color: rgba(235, 246, 235, 0.1);
-  background: rgba(15, 24, 19, 0.94);
+.export-page.app-header-scope .px-nav.home-hero-header.scrolled {
+  background: rgba(247, 250, 241, 0.94);
+  border-bottom: 1px solid rgba(9, 30, 28, 0.08);
+  box-shadow: 0 1px 0 rgba(9, 30, 28, 0.08);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
 }
 
-.pexly-auth-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  color: inherit;
-  text-decoration: none;
+@media (max-width: 991px) {
+  .export-page.current-source-page-home .section-h-v3-hero {
+    margin-top: -44px;
+    padding-top: calc(6rem + 44px) !important;
+  }
 }
 
-.pexly-auth-brand-icon {
-  display: grid;
-  width: 31px;
-  height: 31px;
-  place-items: center;
-  border-radius: 9px;
-  background: var(--auth-lime);
-  color: var(--auth-ink);
-}
-
-.pexly-auth-brand-glyph {
-  width: 19px;
-  height: 19px;
-}
-
-.pexly-auth-brand-name {
-  font-size: 21px;
-  font-weight: 800;
-  letter-spacing: -0.075em;
-}
-
-.pexly-auth-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-}
-
-.pexly-auth-route-nav {
+.px-tools {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--auth-muted);
-  font-size: 12px;
-  font-weight: 500;
+  margin-right: 12px;
 }
 
-.pexly-auth-page-dark .pexly-auth-route-nav {
-  color: var(--auth-muted);
-}
-
-.pexly-auth-route-nav a {
-  color: var(--auth-ink);
-  font-weight: 700;
-  text-decoration: none;
-  text-underline-offset: 4px;
-}
-
-.pexly-auth-route-nav a:hover {
-  text-decoration: underline;
-}
-
-.pexly-auth-page-dark .pexly-auth-route-nav a {
-  color: var(--auth-ink);
-}
-
-.pexly-auth-theme-toggle {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border: 1px solid var(--auth-line);
-  border-radius: 999px;
+.px-tool-search,
+.px-tool-cart {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
   background: transparent;
-  color: var(--auth-ink);
+  color: #091e1c;
+  font: 600 14px/1 "Plus Jakarta Sans", system-ui, sans-serif;
   cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease;
 }
 
-.pexly-auth-theme-toggle:hover {
-  background: rgba(120, 150, 105, 0.12);
+.px-tool-search {
+  padding: 0 12px;
 }
 
-.pexly-auth-main {
-  display: flex;
-  min-height: calc(100dvh - 76px);
-  justify-content: center;
-  padding: clamp(42px, 8vh, 88px) 20px 72px;
+.px-tool-cart {
+  position: relative;
+  width: 40px;
+  padding: 0;
 }
 
-.pexly-auth-panel {
-  width: min(100%, 426px);
-  align-self: flex-start;
-  padding: 0 0 24px;
-  animation: pexly-auth-enter 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+.px-tool-search svg,
+.px-tool-cart svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.8;
 }
 
-.pexly-auth-heading {
-  margin-bottom: 30px;
-  text-align: center;
+.px-tool-search:hover,
+.px-tool-cart:hover {
+  border-color: #091e1c;
+  background: #d8ff85;
 }
 
-.pexly-auth-eyebrow {
-  display: inline-block;
-  margin-bottom: 14px;
-  color: #71836b;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.17em;
-}
-
-.pexly-auth-heading h1 {
-  margin: 0;
-  color: var(--auth-ink);
-  font-size: clamp(29px, 6vw, 35px);
-  font-weight: 700;
-  letter-spacing: -0.06em;
-  line-height: 1.12;
-}
-
-.pexly-auth-page-dark .pexly-auth-heading h1 {
-  color: var(--auth-ink);
-}
-
-.pexly-auth-heading p {
-  max-width: 350px;
-  margin: 12px auto 0;
-  color: var(--auth-muted);
-  font-size: 13px;
-  line-height: 1.65;
-}
-
-.pexly-auth-page-dark .pexly-auth-heading p {
-  color: var(--auth-muted);
-}
-
-.pexly-auth-security-challenge {
-  display: flex;
-  justify-content: center;
-  margin: 0 0 20px;
-}
-
-.pexly-auth-providers {
+.px-tool-cart-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
   display: grid;
+  min-width: 17px;
+  height: 17px;
+  place-items: center;
+  padding: 0 4px;
+  border: 1px solid #f7faf1;
+  border-radius: 999px;
+  background: #091e1c;
+  color: #d8ff85;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.px-search-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 5%;
+  width: min(520px, calc(100vw - 32px));
+  padding: 10px;
+  border: 1px solid rgba(9, 30, 28, 0.1);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 18px 50px rgba(9, 30, 28, 0.18);
+}
+
+.px-search-form {
+  display: flex;
+  align-items: center;
   gap: 10px;
 }
 
-.pexly-auth-provider {
-  position: relative;
-  display: flex;
-  width: 100%;
-  min-height: 51px;
+.px-search-form > svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  color: #6d756d;
+}
+
+.px-search-form input {
+  min-width: 0;
+  min-height: 42px;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #091e1c;
+  font: 500 14px/1.4 "Plus Jakarta Sans", system-ui, sans-serif;
+}
+
+.px-search-submit {
+  min-height: 38px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 9px;
+  background: #091e1c;
+  color: #fff;
+  font: 700 13px/1 "Plus Jakarta Sans", system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.px-search-submit:hover {
+  background: #d8ff85;
+  color: #091e1c;
+}
+
+.px-country-trigger,
+.px-profile-link {
+  display: inline-flex;
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
   align-items: center;
   justify-content: center;
-  gap: 11px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 11px;
+  background: transparent;
+  color: #091e1c;
   cursor: pointer;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease;
+  text-decoration: none;
+  transition: background-color 160ms ease, border-color 160ms ease;
 }
 
-.pexly-auth-provider:hover {
-  transform: translateY(-1px);
+.px-profile-link-mobile {
+  display: none;
 }
 
-.pexly-auth-provider:disabled {
-  cursor: wait;
-  opacity: 0.55;
-  transform: none;
+.px-country-trigger:hover,
+.px-profile-link:hover {
+  border-color: #091e1c;
+  background: #d8ff85;
 }
 
-.pexly-auth-provider:active {
-  transform: translateY(0);
+.export-page.app-header-scope .px-nav .px-tools .px-tool-search:not(:hover),
+.export-page.app-header-scope .px-nav .px-tools .px-tool-cart:not(:hover),
+.export-page.app-header-scope .px-nav .px-tools .px-profile-link:not(:hover),
+.export-page.app-header-scope .px-nav .px-country-trigger:not(:hover) {
+  border-color: transparent !important;
+  background: transparent !important;
 }
 
-.pexly-auth-provider-lime {
-  border-color: #bde55e;
-  background: var(--auth-lime);
-  color: #172116;
+.px-country-flag {
+  display: block;
+  font-size: 23px;
+  line-height: 1;
 }
 
-.pexly-auth-provider-lime:hover {
-  background: #bce957;
-}
-
-.pexly-auth-provider-dark {
-  background: #18221e;
-  color: #f8fbf5;
-}
-
-.pexly-auth-provider-dark:hover {
-  background: #26332d;
-}
-
-.pexly-auth-page-dark .pexly-auth-provider-dark {
-  border-color: rgba(235, 246, 235, 0.14);
-  background: #26332d;
-}
-
-.pexly-auth-page-dark .pexly-auth-provider-dark:hover {
-  background: #33463b;
-}
-
-.pexly-auth-provider-mark {
+.px-profile-link svg {
   width: 19px;
   height: 19px;
-  flex: 0 0 auto;
 }
 
-.pexly-auth-wallet-mark {
-  width: 21px;
-  height: 21px;
+.px-country-popover {
+  z-index: 10000;
+  display: flex;
+  width: min(360px, calc(100vw - 24px));
+  max-height: min(620px, calc(100dvh - 92px));
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+  padding: 14px;
+  border: 1px solid rgba(9, 30, 28, 0.1);
+  border-radius: 16px;
+  background: #fff;
+  color: #091e1c;
+  box-shadow: 0 18px 50px rgba(9, 30, 28, 0.18);
 }
 
-.pexly-auth-provider-error {
-  margin: 12px 0 0;
-  color: #a43a31;
+.px-country-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.px-country-heading strong {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.px-country-heading span {
+  color: #6d756d;
   font-size: 12px;
-  line-height: 1.5;
+}
+
+.px-country-store-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 11px;
+  background: #f0f4ed;
+}
+
+.px-country-store-tabs button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #44514a;
+  font: 600 13px/1 "Plus Jakarta Sans", system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.px-country-store-tabs button.active {
+  background: #fff;
+  color: #091e1c;
+  box-shadow: 0 1px 4px rgba(9, 30, 28, 0.12);
+}
+
+.px-country-list-section {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.px-country-search {
+  width: 100%;
+  min-height: 40px;
+  box-sizing: border-box;
+  padding: 0 11px;
+  border: 1px solid #dce3db;
+  border-radius: 9px;
+  outline: none;
+  background: #fff;
+  color: #091e1c;
+  font: 500 13px/1.3 "Plus Jakarta Sans", system-ui, sans-serif;
+}
+
+.px-country-search:focus {
+  border-color: #709d36;
+  box-shadow: 0 0 0 3px rgba(216, 255, 133, 0.45);
+}
+
+.px-country-options {
+  min-height: 70px;
+  max-height: 310px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.px-country-option {
+  display: flex;
+  width: 100%;
+  min-height: 42px;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #091e1c;
+  text-align: left;
+  cursor: pointer;
+}
+
+.px-country-option:hover,
+.px-country-option[aria-selected="true"] {
+  background: #f0f7e4;
+}
+
+.px-country-option-flag {
+  width: 25px;
+  flex: 0 0 25px;
+  font-size: 19px;
+  line-height: 1;
   text-align: center;
 }
 
-.pexly-auth-page-dark .pexly-auth-provider-error {
-  color: #ff9b91;
-}
-
-.pexly-auth-divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 24px 0;
-  color: #8b938d;
-  font-size: 10px;
-  font-weight: 600;
+.px-country-option-name {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.pexly-auth-divider span:first-child,
-.pexly-auth-divider span:last-child {
-  height: 1px;
-  flex: 1;
-  background: var(--auth-line);
+.px-country-option-code {
+  color: #778078;
+  font-size: 11px;
+  letter-spacing: 0.04em;
 }
 
-.pexly-auth-page-dark .pexly-auth-divider {
-  color: var(--auth-muted);
+.px-country-option svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: #426b1d;
 }
 
-.pexly-auth-form {
-  min-width: 0;
-}
-
-.pexly-auth-form > * {
-  max-width: 100%;
-}
-
-.pexly-auth-page :focus-visible {
-  outline: 3px solid #759f39;
-  outline-offset: 3px;
-}
-
-@keyframes pexly-auth-enter {
-  from {
-    opacity: 0;
-    transform: translateY(9px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@media (max-width: 520px) {
-  .pexly-auth-header {
-    min-height: 66px;
-    padding: 0 18px;
-  }
-
-  .pexly-auth-route-nav {
-    gap: 6px;
-    font-size: 11px;
-  }
-
-  .pexly-auth-main {
-    min-height: calc(100dvh - 66px);
-    padding: 42px 22px 56px;
-  }
-
-  .pexly-auth-heading {
-    margin-bottom: 25px;
-  }
-
-  .pexly-auth-provider {
-    min-height: 50px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .pexly-auth-panel {
-    animation: none;
-  }
-
-  .pexly-auth-provider {
-    transition: none;
-  }
-}
-
-/*
- * The auth route reuses the classes from the exported Webflow page. The
- * original rules are embedded in the static HTML export, so mirror the small
- * auth-specific subset here for the React sign-in and sign-up routes.
- */
-.webflow-auth-shell {
-  --auth-ink: var(--_color---typography--cyan, #0c1111);
-  --auth-muted: var(--_color---typography--dark-gray, #464646);
-  --auth-paper: var(--_color---base--white, #fff);
-  min-height: 100dvh;
-  color: var(--auth-ink);
-  background: var(--auth-paper);
-  font-family: "Plus Jakarta Sans", sans-serif;
-}
-
-.webflow-auth-shell .main {
-  display: flex;
-  min-height: calc(100dvh - 72px);
-}
-
-.webflow-auth-shell .section-auth {
-  box-sizing: border-box;
-  display: flex;
-  flex: 1;
-  min-height: calc(100dvh - 72px);
-  height: auto;
-  align-items: center;
-  justify-content: center;
-  padding: clamp(88px, 11vh, 120px) 5% clamp(40px, 7vh, 72px);
-}
-
-.webflow-auth-shell .padding-global {
-  width: 100%;
-  padding-right: 5%;
-  padding-left: 5%;
-}
-
-.webflow-auth-shell .auth-container {
-  width: 100%;
-  max-width: 26.5rem;
-  margin: 0 auto;
-}
-
-.webflow-auth-shell .h2-heading {
+.px-country-empty {
   margin: 0;
-  color: var(--auth-ink);
-  font-size: var(--_size---heading--h2, clamp(1.5rem, 2.25vw + 1rem, 3rem));
-  font-weight: 700;
-  line-height: var(--_size---line-height--h2, 1.15);
-  letter-spacing: -0.045em;
-}
-
-.webflow-auth-shell .auth-title-block {
+  padding: 14px 8px;
+  color: #6d756d;
+  font-size: 13px;
   text-align: center;
 }
 
-.webflow-auth-shell .auth-description-block {
-  margin: 1.25rem 0 2rem;
-  text-align: center;
-}
-
-.webflow-auth-shell .p-md.dark-gray {
-  margin: 0;
-  color: var(--auth-muted);
-  font-size: 0.9375rem;
-  line-height: 1.65;
-}
-
-.webflow-auth-shell .auth-security-challenge {
-  display: flex;
-  justify-content: center;
-  margin: 0 0 1.25rem;
-}
-
-.webflow-auth-shell .auth-method-block {
-  display: flex;
-  width: 100%;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.webflow-auth-shell .auth-form {
-  display: flex;
-  width: 100%;
-  flex-direction: column;
-}
-
-.webflow-auth-shell .auth-field-group {
-  width: 100%;
-  margin-bottom: 1.25rem;
-}
-
-.webflow-auth-shell .auth-field-label {
+.px-country-empty button {
   display: block;
-  margin-bottom: 0.5rem;
-  color: var(--auth-muted);
-  font-size: 0.875rem;
-  font-weight: 500;
-  line-height: 1.4;
+  margin: 7px auto 0;
+  border: 0;
+  background: transparent;
+  color: #426b1d;
+  font: 700 13px/1.2 "Plus Jakarta Sans", system-ui, sans-serif;
+  cursor: pointer;
 }
 
-.webflow-auth-shell .auth-text-field,
-.webflow-auth-shell .auth-select-field {
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 3.5rem;
-  padding: 0.875rem 1rem;
-  border: 1px solid rgba(9, 30, 28, 0.18);
-  border-radius: 0.75rem;
-  background: var(--auth-paper);
-  color: var(--auth-ink);
-  font: 500 1rem/1.4 "Plus Jakarta Sans", system-ui, sans-serif;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
-}
-
-.webflow-auth-shell .auth-text-field {
-  display: block;
-}
-
-.webflow-auth-shell .auth-select-field {
+.px-language-control {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+  padding-top: 11px;
+  border-top: 1px solid #e6ebe4;
 }
 
-.webflow-auth-shell .auth-text-field::placeholder {
-  color: #858d87;
-  opacity: 1;
+.px-language-control label {
+  color: #526057;
+  font-size: 13px;
+  font-weight: 600;
 }
 
-.webflow-auth-shell .auth-text-field:focus,
-.webflow-auth-shell .auth-select-field:focus {
-  border-color: #091e1c;
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(9, 30, 28, 0.08);
+.px-language-control select {
+  min-width: 148px;
+  min-height: 38px;
+  padding: 0 30px 0 10px;
+  border: 1px solid #dce3db;
+  border-radius: 8px;
+  background: #fff;
+  color: #091e1c;
+  font: 500 13px/1 "Plus Jakarta Sans", system-ui, sans-serif;
 }
 
-.webflow-auth-shell .auth-password-field {
-  padding-right: 3.25rem;
+.px-menu-search,
+.px-mobile-search-form {
+  display: none;
 }
 
-.webflow-auth-shell .auth-code-field {
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.18em;
-}
-
-.webflow-auth-shell .auth-submit-button {
-  box-sizing: border-box;
-  display: flex;
-  width: 100%;
-  min-height: 3.5rem;
-  align-items: center;
-  justify-content: center;
-  padding: 0.875rem 1.5rem;
-  border: 1px solid #0a0a0a;
-  border-radius: 0.75rem;
-  background: #0a0a0a;
-  color: #fff;
-  font: 700 1rem/1.4 "Plus Jakarta Sans", system-ui, sans-serif;
-  cursor: pointer;
-  transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
-}
-
-.webflow-auth-shell .auth-submit-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  border-color: #1d3029;
-  background: #1d3029;
-}
-
-.webflow-auth-shell .auth-submit-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
-html.dark .webflow-auth-shell .auth-text-field,
-html.dark .webflow-auth-shell .auth-select-field {
-  border-color: rgba(235, 246, 235, 0.2);
-}
-
-html.dark .webflow-auth-shell .auth-text-field:focus,
-html.dark .webflow-auth-shell .auth-select-field:focus {
-  border-color: #d8ff85;
-  box-shadow: 0 0 0 3px rgba(216, 255, 133, 0.12);
-}
-
-.webflow-auth-shell .auth-button {
-  box-sizing: border-box;
-  display: flex;
-  width: 100%;
-  min-height: 3.5rem;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  padding: 0.875rem 1.25rem;
-  border: 1px solid transparent;
-  border-radius: var(--_size---radius--0-75rem, 0.75rem);
-  background: var(--_color---button--btn-secondary, #d8ff85);
-  color: #0c1111;
-  font: inherit;
-  cursor: pointer;
-  transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
-}
-
-.webflow-auth-shell .auth-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  background-color: #c9f06d;
-}
-
-.webflow-auth-shell .auth-button:where(.w-variant-d756eb77-40c1-963c-307d-7fe3300d641b) {
-  border-color: #0a0a0a;
-  background: var(--_color---background--black, #0a0a0a);
-  color: #fff;
-}
-
-.webflow-auth-shell .auth-button:where(.w-variant-d756eb77-40c1-963c-307d-7fe3300d641b) > * {
-  color: #fff;
-}
-
-.webflow-auth-shell .auth-button:where(.w-variant-80454ff6-0e3c-af76-c14e-8050a4ceda86) {
-  border-color: rgba(12, 17, 17, 0.22);
-  background: transparent;
-  color: var(--auth-ink);
-}
-
-.webflow-auth-shell .auth-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.62;
-}
-
-.webflow-auth-shell .auth-btn-icon-block {
-  display: grid;
-  width: 1.5rem;
-  min-width: 1.5rem;
-  height: 1.5rem;
-  place-items: center;
-}
-
-.webflow-auth-shell .auth-btn-icon,
-.webflow-auth-shell .pexly-auth-provider-mark {
-  display: block;
-  width: 1.25rem;
-  height: 1.25rem;
-}
-
-.webflow-auth-shell .auth-switch-prompt {
-  margin: 1.5rem 0 0;
-  color: var(--auth-muted);
-  font-size: 0.875rem;
-  line-height: 1.5;
-  text-align: center;
-}
-
-.webflow-auth-shell .auth-switch-prompt a,
-.webflow-auth-shell .auth-back-link {
-  color: var(--auth-ink);
-  font-weight: 700;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.webflow-auth-shell .auth-back-link {
-  align-self: center;
-  border: 0;
-  background: transparent;
-  font: inherit;
-  cursor: pointer;
-}
-
-.webflow-auth-shell .auth-provider-error {
-  margin: 0;
-  color: #a43a31;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  text-align: center;
-}
-
-.webflow-auth-shell :focus-visible {
-  outline: 3px solid #759f39;
-  outline-offset: 3px;
-}
-
-html.dark .webflow-auth-shell {
-  --auth-ink: #f3f7f2;
-  --auth-muted: #aab6ad;
-  --auth-paper: #111a15;
-}
-
-html.dark .webflow-auth-shell .auth-button:where(.w-variant-80454ff6-0e3c-af76-c14e-8050a4ceda86) {
-  border-color: rgba(235, 246, 235, 0.2);
-}
-
-@media (max-width: 520px) {
-  .webflow-auth-shell .section-auth {
-    padding: 82px 0 40px;
+@media (max-width: 1100px) {
+  #pxnav.px-nav-with-tools .px-tools {
+    margin-left: auto;
+    margin-right: 8px;
   }
 
-  .webflow-auth-shell .padding-global {
-    padding-right: 1.125rem;
-    padding-left: 1.125rem;
+  #pxnav.px-nav-with-tools .px-burger {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 767px) {
+  .px-tools {
+    gap: 6px;
+    margin-right: 8px;
   }
 
-  .webflow-auth-shell .auth-description-block {
-    margin-top: 1rem;
-    margin-bottom: 1.5rem;
+  .px-nav-in {
+    gap: 7px !important;
+  }
+
+  .px-nav-in > .px-burger {
+    order: 0;
+    margin: 0 !important;
+    flex: 0 0 36px;
+  }
+
+  .px-nav-in > .px-logo {
+    order: 1;
+    margin: 0 !important;
+    flex: 0 0 auto;
+    font-size: 23px;
+  }
+
+  .px-nav-in > .px-menu {
+    order: 2;
+  }
+
+  .px-nav-in > .px-country-trigger,
+  .px-nav-in > [data-slot="popover-trigger"] {
+    order: 3;
+    margin-left: auto;
+    flex: 0 0 38px;
+  }
+
+  .px-nav-in > .px-tools {
+    order: 4;
+    gap: 6px;
+    margin: 0 !important;
+    flex: 0 0 auto;
+  }
+
+  .px-country-trigger {
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+  }
+
+  .px-country-flag {
+    font-size: 23px;
+  }
+
+  .px-tool-search {
+    display: none;
+  }
+
+  .px-tool-search {
+    width: 38px;
+    padding: 0;
+  }
+
+  .px-tool-search span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    clip-path: inset(50%);
+  }
+
+  .px-tool-cart {
+    width: 38px;
+    min-height: 38px;
+  }
+
+  .px-search-panel {
+    display: none !important;
+  }
+
+  .px-menu-search {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 0;
+    border: 0;
+    background: transparent;
+    color: #091e1c;
+    font: 600 15px/1.2 "Plus Jakarta Sans", system-ui, sans-serif;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .px-menu-search svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .px-mobile-search-form {
+    display: flex;
+    min-height: 42px;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 7px 5px 10px;
+    border: 1px solid rgba(9, 30, 28, 0.14);
+    border-radius: 10px;
+    background: #fff;
+  }
+
+  .px-mobile-search-form > svg {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    color: #647067;
+  }
+
+  .px-mobile-search-form input {
+    min-width: 0;
+    min-height: 36px;
+    flex: 1;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #091e1c;
+    font: 500 13px/1.3 "Plus Jakarta Sans", system-ui, sans-serif;
+  }
+
+  .px-mobile-search-form .px-search-submit {
+    min-height: 34px;
+    padding: 0 11px;
+    flex: 0 0 auto;
+  }
+
+  .px-profile-link {
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+  }
+
+  .px-profile-link-desktop {
+    display: none;
+  }
+
+  .px-profile-link-mobile {
+    display: inline-flex;
+  }
+
+  .px-country-popover {
+    max-height: min(560px, calc(100dvh - 72px));
+  }
+
+  .px-country-options {
+    max-height: min(270px, 38dvh);
+  }
+}
+
+@media (max-width: 380px) {
+  .px-nav-in {
+    gap: 5px !important;
+    padding-right: 10px !important;
+    padding-left: 10px !important;
+  }
+
+  .px-nav-in > .px-logo {
+    font-size: 20px;
+    gap: 5px;
+  }
+
+  .px-nav-in > .px-logo .px-logo-mark {
+    width: 24px;
+    height: 24px;
+    font-size: 14px;
+  }
+
+  .px-nav-in > .px-burger,
+  .px-nav-in > .px-country-trigger,
+  .px-nav-in .px-tools .px-profile-link,
+  .px-nav-in .px-tool-cart {
+    width: 35px;
+    min-width: 35px;
+    height: 35px;
+    min-height: 35px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .webflow-auth-shell .auth-button {
+  .px-tool-search,
+  .px-tool-cart,
+  .px-country-trigger,
+  .px-profile-link {
     transition: none;
   }
+}
 
-  .webflow-auth-shell .auth-button:hover:not(:disabled) {
-    transform: none;
+@media (max-width: 1100px) {
+  #pxnav.px-nav-with-tools .px-tools .px-tool-search {
+    display: none !important;
   }
 }
