@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link, useLocation } from "wouter";
 import { PexlyLogo } from "@/components/pexly-logo";
 import { useAuth } from "@/lib/auth-context";
+import { useEvmWallet } from "@/lib/evm-wallet-provider";
 import { Check, Search, ShoppingCart, User } from "@/lib/icons";
 import { CartSheet } from "@/components/shop/CartSheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -73,6 +74,7 @@ function flagForCountry(countryCode?: string) {
 export function AppHeader() {
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
+  const wallet = useEvmWallet();
   const routePath = normalizeRoute(location);
   const isHomePage = routePath === "/";
   const isGiftCardsPage = routePath.startsWith("/gift-cards");
@@ -448,8 +450,18 @@ export function AppHeader() {
               </button>
             )}
           />
+          {wallet.isConnected && (
+            <Link
+              className="px-profile-link px-profile-link-desktop"
+              href={walletHref}
+              aria-label={user ? "Your account and wallet" : "Sign in to your account"}
+              title={user ? "Your account and wallet" : "Sign in"}
+            >
+              <User aria-hidden="true" />
+            </Link>
+          )}
           <Link
-            className="px-profile-link"
+            className="px-profile-link px-profile-link-mobile"
             href={walletHref}
             aria-label={user ? "Your account and wallet" : "Sign in to your account"}
             title={user ? "Your account and wallet" : "Sign in"}
