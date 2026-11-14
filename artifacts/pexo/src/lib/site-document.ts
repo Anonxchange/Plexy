@@ -130,6 +130,7 @@ export function createEntryDocument({
     <meta name="twitter:image" content="${escapeAttribute(siteMetadata.image)}" />
     <meta name="twitter:image:alt" content="${escapeAttribute(siteMetadata.imageAlt)}" />
     <link rel="icon" type="image/webp" href="${escapeAttribute(assetUrl("favicon.webp"))}" />
+    <link rel="preload" href="${escapeAttribute(assetUrl("assets/fonts/plus-jakarta-sans-52d04440.woff2"))}" as="font" type="font/woff2" crossorigin />
     <script id="pexly-site-structured-data" type="application/ld+json">${structuredData}</script>
     ${stylesheets}
     ${viteClient}
