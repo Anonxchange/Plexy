@@ -29,20 +29,15 @@ const HERO_COINS = [
 const HERO_CSS = `
 .pxg .ph-hero{--ph-bg:#fff;--ph-ink:#091e1c;--ph-mute:#52625f;--ph-line:#e3ebe9;--ph-lime:#d9f99d;--ph-chip:#f3f7f6;background:var(--ph-bg);color:var(--ph-ink);padding:40px 20px 36px;text-align:center;overflow:hidden}
 .pxg .ph-hero .ph-wrap{max-width:1100px;margin:0 auto}
-.pxg .ph-hero h1{font-size:clamp(42px,8.4vw,92px);line-height:.98;letter-spacing:-.045em;font-weight:800;margin:0;color:var(--ph-ink)}
+.export-page .pxg .ph-hero h1{font-size:clamp(42px,8.4vw,92px);line-height:.98;letter-spacing:-.045em;font-weight:800;margin:0;color:var(--ph-ink)}
 .pxg .ph-hero .ph-sub{max-width:520px;margin:14px auto 0;color:var(--ph-mute);font-size:clamp(16px,2vw,19px);line-height:1.5}
-.pxg .ph-hero .ph-pay{margin:30px auto 0;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
-.pxg .ph-hero .ph-pay>span{font-weight:600;color:var(--ph-mute);font-size:15px}
-.pxg .ph-hero .ph-chips{display:flex;gap:6px;padding:5px;background:var(--ph-chip);border-radius:999px;border:1px solid var(--ph-line)}
-.pxg .ph-hero .ph-chip{font:700 14px/1 inherit;font-family:inherit;border:0;background:transparent;color:var(--ph-ink);height:38px;padding:0 15px;border-radius:999px;cursor:pointer;transition:background .2s,color .2s;width:auto;margin:0}
-.pxg .ph-hero .ph-chip[aria-pressed="true"]{background:var(--ph-ink);color:#fff}
-.pxg .ph-hero .ph-chip:focus-visible,.pxg .ph-hero .ph-cta:focus-visible,.pxg .ph-hero .ph-dots button:focus-visible,.pxg .ph-hero .ph-stage:focus-visible{outline:3px solid #5b8cff;outline-offset:2px}
+.pxg .ph-hero .ph-cta:focus-visible,.pxg .ph-hero .ph-stage:focus-visible{outline:3px solid #5b8cff;outline-offset:2px}
 .pxg .ph-hero .ph-search{display:flex;align-items:center;gap:8px;width:min(520px,100%);height:58px;margin:20px auto 0;padding:0 6px 0 22px;background:#f3f7f6;border:1.5px solid #dbe5e3;border-radius:999px;text-align:left}
 .pxg .ph-hero .ph-search:focus-within{border-color:#091e1c}
-.pxg .ph-hero .ph-search input{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;font:500 17px/1 inherit;font-family:inherit;color:#091e1c;padding:0;margin:0;box-shadow:none;-webkit-appearance:none;appearance:none}
+.pxg .ph-hero .ph-search input{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;font-family:inherit;font-weight:500;font-size:17px;line-height:1;color:#091e1c;padding:0;margin:0;box-shadow:none;-webkit-appearance:none;appearance:none}
 .pxg .ph-hero .ph-search input::placeholder{color:#7b8a87;opacity:1}
 .pxg .ph-hero .ph-search input::-webkit-search-cancel-button{display:none}
-.pxg .ph-hero .ph-search button{flex:0 0 auto;display:grid;place-items:center;width:48px;height:48px;min-width:0;padding:0;margin:0;border:0;border-radius:50%;background:#bef264;cursor:pointer;transition:transform .15s}
+.pxg .ph-hero .ph-search button{flex:0 0 auto;display:grid;place-items:center;width:48px;height:48px;min-width:0;padding:0;margin:0;border:0;border-radius:50%;background:#bef264;cursor:pointer;transition:transform .15s;-webkit-appearance:none;appearance:none}
 .pxg .ph-hero .ph-search button:active{transform:scale(.94)}
 .pxg .ph-hero .ph-search button:focus-visible{outline:3px solid #5b8cff;outline-offset:2px}
 .pxg .ph-hero .ph-search svg{width:22px;height:22px;fill:none;stroke:#091e1c;stroke-width:2.4;stroke-linecap:round}
@@ -53,20 +48,17 @@ const HERO_CSS = `
 .pxg .ph-hero .ph-quote{margin:4px auto 0;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 20px;background:var(--ph-lime);color:#091e1c;border-radius:999px;font-weight:600;width:min(340px,88vw)}
 .pxg .ph-hero .ph-quote b{font-size:19px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .pxg .ph-hero .ph-quote em{font-style:normal;font-size:15px}
-.pxg .ph-hero .ph-dots{display:flex;gap:7px;justify-content:center;margin-top:16px}
-.pxg .ph-hero .ph-dots button{width:8px;height:8px;min-width:0;border-radius:99px;border:0;padding:0;background:var(--ph-line);cursor:pointer;transition:width .3s,background .3s}
-.pxg .ph-hero .ph-dots button[aria-current="true"]{width:24px;background:var(--ph-ink)}
 .pxg .ph-hero .ph-btns{display:flex;gap:12px;justify-content:center;margin-top:18px}
 .pxg .ph-hero .ph-cta{display:inline-flex;align-items:center;justify-content:center;height:52px;padding:0 28px;border-radius:999px;font-weight:700;font-size:16px;text-decoration:none;border:1.5px solid var(--ph-ink);white-space:nowrap}
 .pxg .ph-hero .ph-cta.solid{background:var(--ph-ink);color:#fff}
 .pxg .ph-hero .ph-cta.ghost{background:transparent;color:var(--ph-ink)}
-@media(max-width:560px){.pxg .ph-hero{padding:28px 16px 28px}.pxg .ph-hero .ph-btns{padding:0 4px}.pxg .ph-hero .ph-cta{flex:1;padding:0 10px;font-size:15px}.pxg .ph-hero .ph-chip{padding:0 11px;font-size:13px}}
+@media(max-width:560px){.pxg .ph-hero{padding:28px 16px 28px}.pxg .ph-hero .ph-btns{padding:0 4px}.pxg .ph-hero .ph-cta{flex:1;padding:0 10px;font-size:15px}}
 
 .pxg .ph-wide{display:none}
 @media(min-width:768px){
 .pxg .ph-mob{display:none}
 .pxg .ph-wide{display:block;padding:64px 20px 0;--ph-glow:rgba(190,242,100,.38)}
-.pxg .ph-wide h1{font-size:clamp(56px,8.2vw,104px);line-height:.97}
+.export-page .pxg .ph-wide h1{font-size:clamp(56px,8.2vw,104px);line-height:.97}
 .pxg .ph-wide .ph-sub{max-width:620px;font-size:clamp(17px,2vw,21px)}
 .pxg .ph-wide .ph-btns{margin-top:30px}
 .pxg .ph-wide .ph-cta{height:54px;padding:0 30px}
@@ -86,7 +78,7 @@ const HERO_CSS = `
 .pxg .ph-wide .pw-tag.b{top:10px;right:6%;background:#091e1c;color:#fff}
 .pxg .ph-wide .pw-tag.b:after{right:24px}
 }
-@media(prefers-reduced-motion:reduce){.pxg .ph-hero .ph-card,.pxg .ph-hero .ph-chip,.pxg .ph-hero .ph-dots button{transition:none}}
+@media(prefers-reduced-motion:reduce){.pxg .ph-hero .ph-card,.pxg .ph-wide .pw-item{transition:none}}
 `;
 
 function heroSearchGo(fromEnter: boolean) {
