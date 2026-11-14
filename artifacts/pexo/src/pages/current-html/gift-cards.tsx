@@ -10,7 +10,7 @@ const HERO_CARDS = [
   { n: "Starbucks", f: "$25", usd: 25, img: "/marketing-media/gift-cards/starbucks.jpeg" },
 ];
 const WIDE_CARDS = [
-  { n: "Razer Gold $100", img: "/marketing-media/gift-cards/razer.png", r: -9, y: 44, z: 1 },
+  { n: "Razer Gold $100", img: "/marketing-media/gift-cards/razer.avif", r: -9, y: 44, z: 1 },
   { n: "Starbucks $25", img: "/marketing-media/gift-cards/starbucks.jpeg", r: -5, y: 16, z: 2, cls: " sbux" },
   { n: "Steam $20", img: "/marketing-media/gift-cards/steam.jpeg", r: -2, y: -4, z: 4 },
   { n: "Apple $50", img: "/marketing-media/gift-cards/apple-card.jpg", r: 1.5, y: 2, z: 5 },
