@@ -1,6 +1,8 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { CurrentMarketingPage } from "@/components/marketing/current-marketing-page";
+import { useGiftCardCountries, useGiftCardProducts, type ReloadlyProduct } from "@/hooks/use-reloadly";
+import { useAirtimeOperators, type AirtimeOperator } from "@/hooks/use-airtime-operators";
 
 const HERO_CARDS = [
   { n: "Steam", f: "$20", usd: 20, img: "/marketing-media/gift-cards/steam.jpeg" },
@@ -81,11 +83,421 @@ const HERO_CSS = `
 @media(prefers-reduced-motion:reduce){.pxg .ph-hero .ph-card,.pxg .ph-wide .pw-item{transition:none}}
 `;
 
-function heroSearchGo(fromEnter: boolean) {
-  // The page script bound to #g-q / #g-go does the filtering; we only bring results into view.
-  const run = () => document.getElementById("g-shelf")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  if (fromEnter) (document.getElementById("g-go") as HTMLButtonElement | null)?.click();
-  setTimeout(run, 120);
+// ---------------------------------------------------------------------------
+// Gift card shelves, fed by the existing Reloadly edge functions
+// ---------------------------------------------------------------------------
+const PRODUCT_PATH = (id: number) => "/gift-cards/" + id; // change to your product route
+const TOPUP_PATH = "/mobile-top-up"; // change to your top-up route
+
+type ShelfTile = { id: number; name: string; img: string; range: string; href: string };
+type ShelfBanner = { bg: string; text: string; img?: string };
+
+let searchQuery = "";
+const searchSubs = new Set<() => void>();
+function setSearchQuery(q: string) {
+  searchQuery = q;
+  searchSubs.forEach((f) => f());
+}
+function useSearchQuery() {
+  return useSyncExternalStore(
+    (cb) => {
+      searchSubs.add(cb);
+      return () => {
+        searchSubs.delete(cb);
+      };
+    },
+    () => searchQuery,
+    () => "",
+  );
+}
+
+// Country the shelves show cards for: the visitor's choice, else a guess from
+// the device time zone, else the browser language region.
+const COUNTRY_KEY = "px-country";
+let countryValue: string | null | undefined = undefined;
+const countrySubs = new Set<() => void>();
+function readSavedCountry(): string | null {
+  try {
+    const saved = window.localStorage.getItem(COUNTRY_KEY);
+    return saved && /^[A-Za-z]{2}$/.test(saved) ? saved.toUpperCase() : null;
+  } catch {
+    return null;
+  }
+}
+function setCountry(c: string, remember: boolean) {
+  countryValue = c.toUpperCase();
+  if (remember) {
+    try {
+      window.localStorage.setItem(COUNTRY_KEY, countryValue);
+    } catch {
+      /* ignore */
+    }
+  }
+  countrySubs.forEach((f) => f());
+}
+function useCountry(): string | null {
+  return useSyncExternalStore(
+    (cb) => {
+      countrySubs.add(cb);
+      return () => {
+        countrySubs.delete(cb);
+      };
+    },
+    () => {
+      if (countryValue === undefined) countryValue = readSavedCountry();
+      return countryValue;
+    },
+    () => null,
+  );
+}
+// Time zone -> country for the main markets. Used only to pick a starting country;
+// visitors can change it with the "Cards for" picker.
+const TZ_COUNTRY: Record<string, string> = {
+  "Africa/Lagos": "NG", "Africa/Accra": "GH", "Africa/Nairobi": "KE", "Africa/Johannesburg": "ZA", "Africa/Cairo": "EG",
+  "Africa/Casablanca": "MA", "Africa/Algiers": "DZ", "Africa/Tunis": "TN", "Africa/Addis_Ababa": "ET", "Africa/Dar_es_Salaam": "TZ",
+  "Africa/Kampala": "UG", "Africa/Abidjan": "CI", "Africa/Dakar": "SN", "Africa/Kinshasa": "CD", "Africa/Luanda": "AO",
+  "Europe/London": "GB", "Europe/Dublin": "IE", "Europe/Paris": "FR", "Europe/Berlin": "DE", "Europe/Madrid": "ES", "Europe/Rome": "IT",
+  "Europe/Lisbon": "PT", "Europe/Amsterdam": "NL", "Europe/Brussels": "BE", "Europe/Vienna": "AT", "Europe/Zurich": "CH",
+  "Europe/Stockholm": "SE", "Europe/Oslo": "NO", "Europe/Copenhagen": "DK", "Europe/Helsinki": "FI", "Europe/Warsaw": "PL",
+  "Europe/Prague": "CZ", "Europe/Athens": "GR", "Europe/Istanbul": "TR", "Europe/Kyiv": "UA", "Europe/Kiev": "UA", "Europe/Moscow": "RU",
+  "Asia/Dubai": "AE", "Asia/Riyadh": "SA", "Asia/Kolkata": "IN", "Asia/Calcutta": "IN", "Asia/Karachi": "PK", "Asia/Dhaka": "BD",
+  "Asia/Jakarta": "ID", "Asia/Manila": "PH", "Asia/Bangkok": "TH", "Asia/Ho_Chi_Minh": "VN", "Asia/Saigon": "VN", "Asia/Kuala_Lumpur": "MY",
+  "Asia/Singapore": "SG", "Asia/Shanghai": "CN", "Asia/Hong_Kong": "HK", "Asia/Tokyo": "JP", "Asia/Seoul": "KR", "Asia/Tehran": "IR",
+  "Asia/Jerusalem": "IL", "Asia/Qatar": "QA", "Asia/Kuwait": "KW", "Asia/Colombo": "LK", "Asia/Kathmandu": "NP",
+  "America/New_York": "US", "America/Chicago": "US", "America/Denver": "US", "America/Los_Angeles": "US", "America/Phoenix": "US",
+  "America/Toronto": "CA", "America/Vancouver": "CA", "America/Mexico_City": "MX", "America/Bogota": "CO", "America/Lima": "PE",
+  "America/Santiago": "CL", "America/Argentina/Buenos_Aires": "AR", "America/Sao_Paulo": "BR", "America/Caracas": "VE",
+  "Australia/Sydney": "AU", "Australia/Melbourne": "AU", "Australia/Perth": "AU", "Pacific/Auckland": "NZ",
+};
+function guessCountry(): string {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz && TZ_COUNTRY[tz]) return TZ_COUNTRY[tz];
+  } catch {
+    /* ignore */
+  }
+  const m = (navigator.language || "").match(/-([A-Za-z]{2})$/);
+  return m ? m[1].toUpperCase() : "US";
+}
+
+function fmtNum(n: number) {
+  return n >= 1000 ? Math.round(n).toLocaleString("en-US") : String(Math.round(n * 100) / 100);
+}
+function rangeText(min: number | null | undefined, max: number | null | undefined, cur?: string) {
+  const a = min ?? max;
+  const b = max ?? min;
+  if (a == null || b == null) return "";
+  return (a === b ? fmtNum(a) : fmtNum(a) + " – " + fmtNum(b)) + (cur ? " " + cur : "");
+}
+
+function giftTile(p: ReloadlyProduct): ShelfTile {
+  const fixed = (p.fixedRecipientDenominations || []).filter((n) => Number.isFinite(n));
+  const min = fixed.length ? Math.min(...fixed) : p.minRecipientDenomination;
+  const max = fixed.length ? Math.max(...fixed) : p.maxRecipientDenomination;
+  return {
+    id: p.productId,
+    name: p.productName,
+    img: p.logoUrls?.[0] || "",
+    range: rangeText(min, max, p.recipientCurrencyCode),
+    href: PRODUCT_PATH(p.productId),
+  };
+}
+
+function airTile(o: AirtimeOperator): ShelfTile {
+  const useLocal = !!o.supportsLocalAmounts && (o.localMinAmount != null || (o.localFixedAmounts || []).length > 0);
+  const fixed = (useLocal ? o.localFixedAmounts : o.fixedAmounts) || [];
+  let min: number | null | undefined;
+  let max: number | null | undefined;
+  if (o.denominationType === "FIXED" && fixed.length) {
+    min = Math.min(...fixed);
+    max = Math.max(...fixed);
+  } else {
+    min = useLocal ? o.localMinAmount : o.minAmount;
+    max = useLocal ? o.localMaxAmount : o.maxAmount;
+  }
+  const logos = o.logoUrls || [];
+  return {
+    id: o.operatorId ?? o.id ?? 0,
+    name: o.name,
+    img: logos[logos.length - 1] || "",
+    range: rangeText(min, max, useLocal ? o.destinationCurrencyCode : o.senderCurrencyCode),
+    href: TOPUP_PATH,
+  };
+}
+
+const PREFERRED = ["amazon", "apple", "google play", "steam", "netflix", "spotify", "xbox", "playstation", "uber", "airbnb", "starbucks", "roblox", "razer", "target", "walmart"];
+function preferredRank(p: ReloadlyProduct) {
+  const hay = (p.brand?.brandName || p.productName || "").toLowerCase();
+  const i = PREFERRED.findIndex((b) => hay.includes(b));
+  return i < 0 ? 99 : i;
+}
+
+function sectionOf(p: ReloadlyProduct): string | null {
+  const brandAndName = ((p.brand?.brandName || "") + " " + p.productName).toLowerCase();
+  const catAndBrand = ((p.category?.name || "") + " " + (p.brand?.brandName || "")).toLowerCase();
+  if (/visa|mastercard|prepaid|virtual card|debit card/.test(brandAndName)) return "payment";
+  if (/gam|xbox|playstation|steam|roblox|nintendo|razer|fortnite|pubg|riot/.test(catAndBrand)) return "gaming";
+  if (/entertain|music|stream|movie|netflix|spotify|app store|itunes|google play/.test(catAndBrand)) return "entertainment";
+  if (/travel|hotel|flight|airline|transport|uber|airbnb|rental/.test(catAndBrand)) return "travel";
+  if (/shop|retail|fashion|electron|home|beauty|market|amazon|walmart|target/.test(catAndBrand)) return "shopping";
+  return null;
+}
+
+function uniqueByBrand(list: ReloadlyProduct[]) {
+  const seen = new Set<string>();
+  return list.filter((p) => {
+    const k = String(p.brand?.brandId ?? p.productName);
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+// Put your own banner photos in /public and set `img` to use them.
+const SHELF_META: Record<string, { title: string; tab: string; banner?: ShelfBanner; one?: boolean }> = {
+  popular: { title: "8,000+ products in 180+ countries", tab: "Popular" },
+  airtime: { title: "Mobile top up", tab: "Top Up", one: true, banner: { bg: "#0b6e4f", text: "Airtime in seconds" } },
+  payment: { title: "Payment cards", tab: "Payment Cards" },
+  gaming: { title: "Gaming", tab: "Gaming", banner: { bg: "#1b2a6b", text: "Level up with crypto" } },
+  entertainment: { title: "Entertainment", tab: "Entertainment", banner: { bg: "#3b1f5c", text: "Press play" } },
+  shopping: { title: "Shopping", tab: "Shopping", banner: { bg: "#8a2f4d", text: "Treat yourself" } },
+  travel: { title: "For your travel needs", tab: "Travel", banner: { bg: "#0e6f8a", text: "Go somewhere" } },
+};
+const TOP_ORDER = ["popular", "airtime", "gaming", "travel", "shopping", "entertainment"];
+const TAB_ORDER = ["popular", "airtime", "payment", "gaming", "entertainment", "shopping", "travel"];
+
+const SHELF_CSS = `
+.pxg .gs{--gs-ink:#091e1c;--gs-mute:#52625f;--gs-line:#e3ebe9;--gs-field:#f3f7f6;color:var(--gs-ink)}
+.pxg .gs .gs-w{max-width:1320px;margin:0 auto;padding:0 16px}
+.pxg .gs .gs-cty{display:flex;align-items:center;gap:10px;padding:14px 0 6px;font-size:14px;font-weight:600;color:var(--gs-mute)}
+.pxg .gs .gs-cty select{font-family:inherit;font-weight:700;font-size:14px;color:var(--gs-ink);background:var(--gs-field);border:1.5px solid var(--gs-line);border-radius:999px;padding:8px 14px;max-width:70vw;cursor:pointer}
+.pxg .gs .gs-cty select:focus-visible{outline:3px solid #5b8cff;outline-offset:2px}
+.pxg .gs .gs-tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--gs-line);padding:0}
+.pxg .gs .gs-tabs::-webkit-scrollbar{display:none}
+.pxg .gs .gs-tab{flex:0 0 auto;border:0;background:transparent;font-family:inherit;font-weight:600;font-size:14px;line-height:1;color:var(--gs-mute);padding:12px 14px;cursor:pointer;border-bottom:3px solid transparent;margin:0;border-radius:0}
+.pxg .gs .gs-tab[aria-pressed="true"]{color:var(--gs-ink);border-bottom-color:var(--gs-ink)}
+.pxg .gs .gs-sec{padding-top:34px;scroll-margin-top:16px}
+.pxg .gs .gs-sh{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.pxg .gs .gs-sh h2{margin:0;font-size:clamp(22px,3.4vw,30px);letter-spacing:-.03em;font-weight:800;color:var(--gs-ink)}
+.pxg .gs .gs-sh a,.pxg .gs .gs-sh button{font-family:inherit;font-size:14px;font-weight:600;color:var(--gs-mute);background:none;border:0;padding:0;cursor:pointer;text-decoration:none}
+.pxg .gs .gs-shd{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:14px;align-items:start}
+.pxg .gs .gs-shd .gs-sh{flex-direction:column;align-items:flex-start;gap:6px;padding-top:6px}
+.pxg .gs .gs-shd .gs-sh h2{font-size:clamp(20px,5.4vw,28px)}
+.pxg .gs .gs-ban{height:104px;border-radius:14px;display:flex;flex-direction:column;justify-content:flex-end;padding:14px 16px;color:#fff;font-weight:800;font-size:clamp(20px,5vw,26px);line-height:1.05;letter-spacing:-.03em;overflow:hidden;position:relative;background-size:cover;background-position:center}
+.pxg .gs .gs-ban svg{position:absolute;left:0;top:0;width:100%;height:60%;opacity:.3}
+.pxg .gs .gs-ban span{position:relative}
+.pxg .gs .gs-grid{display:grid;grid-auto-flow:column;grid-template-rows:repeat(2,auto);grid-auto-columns:min(53vw,236px);gap:20px 14px;margin:14px -16px 0;padding:0 16px 6px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-left:16px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.pxg .gs .gs-grid::-webkit-scrollbar{display:none}
+.pxg .gs .gs-grid.one{grid-template-rows:auto}
+.pxg .gs .gs-tile{display:block;text-decoration:none;color:inherit;scroll-snap-align:start}
+.pxg .gs .gs-art{position:relative;aspect-ratio:1.586;border-radius:14px;overflow:hidden;display:grid;place-items:center;border:1px solid var(--gs-line);background:#fff;transition:transform .2s}
+.pxg .gs .gs-tile:hover .gs-art{transform:translateY(-4px)}
+.pxg .gs .gs-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;max-width:none}
+.pxg .gs .gs-fb{padding:10px;text-align:center;font-weight:800;font-size:15px;color:#45524f}
+.pxg .gs .gs-tn{margin-top:9px;font-weight:700;font-size:14px;line-height:1.25;color:var(--gs-ink)}
+.pxg .gs .gs-ts{margin-top:2px;font-size:12.5px;color:var(--gs-mute);font-variant-numeric:tabular-nums}
+.pxg .gs .gs-sk{aspect-ratio:1.586;border-radius:14px;background:linear-gradient(90deg,#eef2f1,#f7f9f8,#eef2f1);background-size:200% 100%;animation:gs-pulse 1.2s linear infinite}
+@keyframes gs-pulse{to{background-position:-200% 0}}
+.pxg .gs .gs-msg{margin:24px 0;color:var(--gs-mute);font-size:15px}
+.pxg .gs .gs-msg button{font-family:inherit;font-weight:700;color:var(--gs-ink);background:none;border:0;text-decoration:underline;cursor:pointer;padding:0}
+@media(min-width:700px){.pxg .gs .gs-grid{grid-auto-columns:246px;gap:20px 14px;margin:14px 0 0;padding:0 0 6px}.pxg .gs .gs-ban{height:190px}.pxg .gs .gs-shd{grid-template-columns:minmax(0,1fr) minmax(0,3fr)}}
+@media(min-width:1000px){.pxg .gs .gs-grid{grid-auto-columns:calc((100% - 56px)/5)}.pxg .gs .gs-shd{grid-template-columns:calc((100% - 56px)/5) minmax(0,1fr)}.pxg .gs .gs-ban{height:240px}}
+@media(max-width:699px){
+.pxg .gs .gs-shd{display:block;position:relative}
+.pxg .gs .gs-shd .gs-ban{height:158px;border-radius:16px;padding:0;margin:0 -10px}
+.pxg .gs .gs-shd .gs-ban svg{height:100%}
+.pxg .gs .gs-shd .gs-ban span{display:none}
+.pxg .gs .gs-shd .gs-ban:after{content:"";position:absolute;left:0;right:0;bottom:0;height:60%;background:linear-gradient(to top,rgba(0,0,0,.45),transparent)}
+.pxg .gs .gs-shd .gs-sh{position:absolute;z-index:3;left:6px;right:4px;bottom:14px;padding:0;flex-direction:row;justify-content:space-between;align-items:flex-end;gap:10px}
+.pxg .gs .gs-shd .gs-sh h2{color:#fff;font-size:26px;line-height:1}
+.pxg .gs .gs-shd .gs-sh a{background:#fff;color:#091e1c;padding:8px 13px;border-radius:99px;font-size:13px;font-weight:700;flex:0 0 auto}
+}
+`;
+
+function ShelfTileView({ t }: { t: ShelfTile }) {
+  return (
+    <a className={"gs-tile"} href={t.href}>
+      <div className={"gs-art"}>
+        <span className={"gs-fb"}>{t.name}</span>
+        {t.img ? (
+          <img
+            src={t.img}
+            alt={""}
+            loading={"lazy"}
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
+          />
+        ) : null}
+      </div>
+      <div className={"gs-tn"}>{t.name}</div>
+      {t.range ? <div className={"gs-ts"}>{t.range}</div> : null}
+    </a>
+  );
+}
+
+function ShelfSectionView({ id, tiles, loading }: { id: string; tiles: ShelfTile[]; loading?: boolean }) {
+  const meta = SHELF_META[id];
+  const head = (
+    <div className={"gs-sh"}>
+      <h2>{meta.title}</h2>
+      <a href={"/gift-cards"}>{"See all"}</a>
+    </div>
+  );
+  return (
+    <section className={"gs-sec"} id={"gs-s-" + id}>
+      {meta.banner ? (
+        <div className={"gs-shd"}>
+          {head}
+          <div
+            className={"gs-ban"}
+            style={meta.banner.img ? { backgroundImage: "url(" + meta.banner.img + ")" } : { background: meta.banner.bg }}
+          >
+            {meta.banner.img ? null : (
+              <svg viewBox={"0 0 120 70"} preserveAspectRatio={"xMidYMid slice"} aria-hidden={"true"}>
+                <circle cx={"40"} cy={"30"} r={"34"} fill={"#fff"}></circle>
+                <circle cx={"92"} cy={"22"} r={"22"} fill={"#fff"}></circle>
+              </svg>
+            )}
+            <span>{meta.banner.text}</span>
+          </div>
+        </div>
+      ) : (
+        head
+      )}
+      <div className={"gs-grid" + (meta.one ? " one" : "")}>
+        {loading
+          ? Array.from({ length: 10 }).map((_, i) => <div key={i} className={"gs-sk"}></div>)
+          : tiles.map((t) => <ShelfTileView key={id + "-" + t.id} t={t} />)}
+      </div>
+    </section>
+  );
+}
+
+function GiftShelf({ part }: { part: "top" | "bottom" }) {
+  const country = useCountry();
+  const countries = useGiftCardCountries({ enabled: part === "top" });
+
+  useEffect(() => {
+    if (part === "top" && !country && countryValue == null) setCountry(guessCountry(), false);
+  }, [part, country]);
+
+  const list = useGiftCardProducts({ countryCode: country ?? undefined, size: 200, page: 1, staleTime: 1000 * 60 * 10, enabled: !!country });
+  const found = useGiftCardProducts({ countryCode: country ?? undefined, productName: q, size: 24, page: 1, enabled: !!q && !!country, staleTime: 1000 * 60 * 10 });
+  const air = useAirtimeOperators(country ?? undefined, part === "top");
+
+  const sections = useMemo(() => {
+    const all = (list.data?.content ?? []).filter((p) => p.status !== "INACTIVE");
+    const by: Record<string, ReloadlyProduct[]> = { gaming: [], entertainment: [], shopping: [], travel: [], payment: [] };
+    all.forEach((p) => {
+      const k = sectionOf(p);
+      if (k) by[k].push(p);
+    });
+    const out: Record<string, ShelfTile[]> = {};
+    Object.keys(by).forEach((k) => {
+      out[k] = uniqueByBrand(by[k]).slice(0, 10).map(giftTile);
+    });
+    out.popular = uniqueByBrand(all.filter((p) => p.logoUrls?.length))
+      .sort((a, b) => preferredRank(a) - preferredRank(b))
+      .slice(0, 10)
+      .map(giftTile);
+    out.airtime = (air.data ?? []).slice(0, 8).map(airTile);
+    return out;
+  }, [list.data, air.data]);
+
+  const goTab = (id: string) => {
+    setActiveTab(id);
+    document.getElementById("gs-s-" + id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  if (part === "bottom") {
+    if (q || !(sections.payment || []).length) return null;
+    return (
+      <div className={"gs"}>
+        <style>{SHELF_CSS}</style>
+        <div className={"gs-w"}>
+          <ShelfSectionView id={"payment"} tiles={sections.payment} />
+        </div>
+      </div>
+    );
+  }
+
+  const visibleTabs = TAB_ORDER.filter((id) => (sections[id] || []).length > 0 || (list.isLoading && id === "popular"));
+  const resultTiles = (found.data?.content ?? []).map(giftTile);
+
+  return (
+    <div className={"gs"} id={"gs-top"}>
+      <style>{SHELF_CSS}</style>
+      <div className={"gs-w"}>
+        <label className={"gs-cty"}>
+          <span>{"Cards for"}</span>
+          <select value={country ?? ""} onChange={(e) => setCountry(e.target.value, true)} aria-label={"Country"}>
+            {country && !(countries.data ?? []).some((c) => c.isoName === country) ? <option value={country}>{country}</option> : null}
+            {(countries.data ?? []).map((c) => (
+              <option key={c.isoName} value={c.isoName}>
+                {c.flag + " " + c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {q ? null : (
+        <div className={"gs-w"}>
+          <div className={"gs-tabs"} role={"tablist"}>
+            {visibleTabs.map((id) => (
+              <button key={id} type={"button"} className={"gs-tab"} aria-pressed={activeTab === id} onClick={() => goTab(id)}>
+                {SHELF_META[id].tab}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      <div className={"gs-w"}>
+        {q ? (
+          <section className={"gs-sec"}>
+            <div className={"gs-sh"}>
+              <h2>{"Results for “" + q + "”"}</h2>
+              <button type={"button"} onClick={() => setSearchQuery("")}>
+                {"Clear search"}
+              </button>
+            </div>
+            {found.isLoading ? (
+              <div className={"gs-grid"}>
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} className={"gs-sk"}></div>
+                ))}
+              </div>
+            ) : resultTiles.length ? (
+              <div className={"gs-grid"}>
+                {resultTiles.map((t) => (
+                  <ShelfTileView key={"r-" + t.id} t={t} />
+                ))}
+              </div>
+            ) : (
+              <p className={"gs-msg"}>{"No gift cards found. Try another name."}</p>
+            )}
+          </section>
+        ) : list.isError ? (
+          <p className={"gs-msg"}>
+            {"Cards couldn’t be loaded right now. "}
+            <button type={"button"} onClick={() => list.refetch()}>
+              {"Try again"}
+            </button>
+          </p>
+        ) : (
+          TOP_ORDER.filter((id) => (sections[id] || []).length > 0 || (list.isLoading && id === "popular")).map((id) => (
+            <ShelfSectionView key={id} id={id} tiles={sections[id] || []} loading={list.isLoading && id === "popular"} />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function heroSearchGo() {
+  const el = document.getElementById("gs-q") as HTMLInputElement | null;
+  setSearchQuery((el?.value || "").trim());
+  setTimeout(() => document.getElementById("gs-top")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
 }
 
 function HeroCarousel() {
@@ -123,17 +535,17 @@ function HeroCarousel() {
         </p>
         <div className={"ph-search"}>
           <input
-            id={"g-q"}
+            id={"gs-q"}
             type={"search"}
             placeholder={"2000+ gift cards worldwide"}
             aria-label={"Search gift cards"}
             autoComplete={"off"}
             enterKeyHint={"search"}
             onKeyDown={(e) => {
-              if (e.key === "Enter") heroSearchGo(true);
+              if (e.key === "Enter") heroSearchGo();
             }}
           />
-          <button id={"g-go"} type={"button"} aria-label={"Search"} onClick={() => heroSearchGo(false)}>
+          <button id={"gs-go"} type={"button"} aria-label={"Search"} onClick={() => heroSearchGo()}>
             <svg viewBox={"0 0 24 24"} aria-hidden={"true"}>
               <circle cx={"11"} cy={"11"} r={"7"}></circle>
               <path d={"M20 20l-4-4"}></path>
@@ -183,7 +595,7 @@ function HeroCarousel() {
           <b>{(c.usd / k.r).toFixed(k.d) + " " + k.s}</b>
         </div>
         <div className={"ph-btns"}>
-          <a className={"ph-cta solid"} href={"#g-bar"}>
+          <a className={"ph-cta solid"} href={"#gs-top"}>
             {"Browse cards"}
           </a>
           <a className={"ph-cta ghost"} href={"#g-after"}>
@@ -203,7 +615,7 @@ function HeroCarousel() {
           {"Steam, Netflix, Xbox, Apple and more. Pay with the coin you hold and your code arrives by email."}
         </p>
         <div className={"ph-btns"}>
-          <a className={"ph-cta solid"} href={"#g-bar"}>
+          <a className={"ph-cta solid"} href={"#gs-top"}>
             {"Browse cards"}
           </a>
           <a className={"ph-cta ghost"} href={"#g-after"}>
@@ -344,14 +756,13 @@ export function GiftCardsExport() {
       <main id={"top"}>
         <div className={"pxg"}>
           <HeroCarousel />
-          <div className={"g-bar"} id={"g-bar"}>
-            <div className={"g-w"}>
-              <div className={"g-coins"}></div>
-            </div>
+          <GiftShelf part={"top"} />
+          <div id={"g-bar"} hidden>
+            <div className={"g-coins"}></div>
           </div>
           <div className={"g-main"}>
             <div className={"g-w"}>
-              <div id={"g-shelf"}></div>
+              <div id={"g-shelf"} hidden></div>
               <div className={"g-after"} id={"g-after"}>
                 <div>
                   <h2>
@@ -409,9 +820,10 @@ export function GiftCardsExport() {
                   </small>
                 </div>
               </div>
-              <div id={"g-more"}></div>
+              <div id={"g-more"} hidden></div>
             </div>
           </div>
+          <GiftShelf part={"bottom"} />
           <section className={"sp-sec"}>
             <div className={"padding-global"}>
               <div className={"container-large"}>
