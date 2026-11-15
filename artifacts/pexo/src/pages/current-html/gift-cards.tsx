@@ -376,6 +376,8 @@ function ShelfSectionView({ id, tiles, loading }: { id: string; tiles: ShelfTile
 
 function GiftShelf({ part }: { part: "top" | "bottom" }) {
   const country = useCountry();
+  const q = useSearchQuery();
+  const [activeTab, setActiveTab] = useState("popular");
   const countries = useGiftCardCountries({ enabled: part === "top" });
 
   useEffect(() => {
