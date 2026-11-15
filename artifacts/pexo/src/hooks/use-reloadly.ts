@@ -59,12 +59,15 @@ export function useGiftCardProducts(params: {
   productName?: string;
   categoryId?: number;
   enabled?: boolean;
+  /** Optional cache time in ms (the page shelves pass 10 minutes). */
+  staleTime?: number;
 }) {
-  const { enabled = true, ...requestParams } = params;
+  const { enabled = true, staleTime, ...requestParams } = params;
 
   return useQuery<ProductsResponse>({
     queryKey: ["gift-card-products", requestParams],
     enabled,
+    ...(staleTime !== undefined ? { staleTime, refetchOnWindowFocus: false } : {}),
     queryFn: async () => {
       const url = new URL(`${FUNCTIONS_BASE}/reloadly-products`);
       url.searchParams.set("page", String(requestParams.page || 1));
