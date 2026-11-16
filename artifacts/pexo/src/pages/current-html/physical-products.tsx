@@ -1,6 +1,166 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link } from "wouter";
 import { CurrentMarketingPage } from "@/components/marketing/current-marketing-page";
+import {
+  shopifyService,
+  formatPrice,
+  MARKET_CHANGED_EVENT,
+  type ShopifyProduct,
+} from "@/lib/shopify-service";
+
+// Products are fetched 60 at a time; the button loads the next 60. No total count is shown anywhere.
+const PAGE_SIZE = 60;
+
+const SHOP_GRID_CSS = `
+.sp-all-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 14px;margin-top:22px}
+@media(min-width:700px){.sp-all-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:26px 18px}}
+@media(min-width:1000px){.sp-all-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(min-width:1280px){.sp-all-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.sp-all-grid .sp-card{width:auto;min-width:0;flex:none;max-width:none}
+.sp-all-grid .sp-card a.sp-card-link{display:block;color:inherit;text-decoration:none}
+.sp-all-grid .sp-img.sp-real{position:relative;overflow:hidden;aspect-ratio:1/1;background:#f3f7f6}
+.sp-all-grid .sp-img.sp-real img.sp-real-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.sp-all-grid .sp-card h3{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sp-skel{aspect-ratio:1/1;border-radius:18px;background:linear-gradient(90deg,#eef2f1,#f7f9f8,#eef2f1);background-size:200% 100%;animation:sp-pulse 1.2s linear infinite}
+@keyframes sp-pulse{to{background-position:-200% 0}}
+.sp-more-wrap{display:flex;justify-content:center;margin-top:34px}
+.sp-more{display:inline-flex;align-items:center;justify-content:center;min-width:200px;height:54px;padding:0 30px;border:1.5px solid #091e1c;border-radius:999px;background:#fff;color:#091e1c;font-family:inherit;font-weight:700;font-size:17px;cursor:pointer}
+.sp-more:hover{background:#bef264}
+.sp-more[disabled]{opacity:.6;cursor:default}
+.sp-note{margin:30px 0;text-align:center;color:#52625f;font-size:15px}
+.sp-note button{text-decoration:underline;background:none;border:0;color:inherit;cursor:pointer;font:inherit}
+.sp-filter-pill{display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:8px 8px 8px 16px;border:1.5px solid #e3ebe9;border-radius:999px;font-weight:700;font-size:15px;color:#091e1c;background:#fff}
+.sp-filter-pill button{width:28px;height:28px;border:0;border-radius:50%;background:#f3f7f6;color:#091e1c;cursor:pointer;font-size:16px;line-height:1}
+`;
+
+function ShopAllProducts({ category, onClearCategory }: { category: string; onClearCategory: () => void }) {
+  const [products, setProducts] = useState<ShopifyProduct[]>([]);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const requestId = useRef(0);
+
+  const loadFirst = useCallback(async () => {
+    const id = ++requestId.current;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await shopifyService.getProducts(PAGE_SIZE, undefined, category || undefined);
+      if (id !== requestId.current) return;
+      setProducts(res.products as ShopifyProduct[]);
+      setHasMore(Boolean(res.pageInfo?.hasNextPage));
+      setCursor(res.pageInfo?.endCursor ?? null);
+    } catch (e: any) {
+      if (id !== requestId.current) return;
+      setProducts([]);
+      setHasMore(false);
+      setError(e?.message || "Could not load products");
+    } finally {
+      if (id === requestId.current) setLoading(false);
+    }
+  }, [category]);
+
+  useEffect(() => { loadFirst(); }, [loadFirst]);
+
+  // Reload when the visitor switches market/country so prices stay correct.
+  useEffect(() => {
+    const onMarket = () => { loadFirst(); };
+    window.addEventListener(MARKET_CHANGED_EVENT, onMarket);
+    return () => window.removeEventListener(MARKET_CHANGED_EVENT, onMarket);
+  }, [loadFirst]);
+
+  const loadMore = async () => {
+    if (!hasMore || !cursor || loadingMore) return;
+    const id = requestId.current;
+    setLoadingMore(true);
+    try {
+      const res = await shopifyService.getProducts(PAGE_SIZE, cursor, category || undefined);
+      if (id !== requestId.current) return;
+      const next = res.products as ShopifyProduct[];
+      setProducts((prev) => {
+        const seen = new Set(prev.map((p) => p.node.id));
+        return [...prev, ...next.filter((p) => !seen.has(p.node.id))];
+      });
+      setHasMore(Boolean(res.pageInfo?.hasNextPage));
+      setCursor(res.pageInfo?.endCursor ?? null);
+    } catch (e: any) {
+      setError(e?.message || "Could not load more products");
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  return (
+    <section id={"all-products"} className={"sp-sec"}>
+      <style>{SHOP_GRID_CSS}</style>
+      <div className={"padding-global"}>
+        <div className={"container-large"}>
+          <div className={"sp-head"}>
+            <div>
+              <h2 className={"sp-h"}>{category ? category : "All products"}</h2>
+              <p className={"sp-sub"}>{"Real products from verified sellers, paid in crypto."}</p>
+              {category ? (
+                <div className={"sp-filter-pill"}>
+                  <span>{category}</span>
+                  <button type={"button"} aria-label={"Clear filter"} onClick={onClearCategory}>{"×"}</button>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className={"sp-all-grid"}>
+            {loading
+              ? Array.from({ length: 10 }).map((_, i) => <div key={i} className={"sp-skel"}></div>)
+              : products.map(({ node }) => {
+                const img = node.images?.edges?.[0]?.node;
+                const price = node.priceRange?.minVariantPrice;
+                const href = `/shop/product/${node.handle}`;
+                return (
+                  <article key={node.id} className={"sp-card"}>
+                    <Link href={href} className={"sp-card-link"}>
+                      <div className={"sp-img sp-real"}>
+                        {img?.url ? (
+                          <img className={"sp-real-img"} src={img.url} alt={img.altText || node.title} loading={"lazy"} />
+                        ) : null}
+                        <span className={"sp-plus"} aria-hidden={"true"}>{"+"}</span>
+                      </div>
+                      <h3>{node.title}</h3>
+                      <p className={"sp-price"}>
+                        <b>{price ? formatPrice(price.amount, price.currencyCode) : ""}</b>
+                      </p>
+                    </Link>
+                  </article>
+                );
+              })}
+          </div>
+
+          {error ? (
+            <p className={"sp-note"}>
+              {error + " "}
+              <button type={"button"} onClick={() => (products.length ? loadMore() : loadFirst())}>{"Try again"}</button>
+            </p>
+          ) : !loading && products.length === 0 ? (
+            <p className={"sp-note"}>{category ? "No products found in this category yet." : "No products available right now."}</p>
+          ) : null}
+
+          {!loading && hasMore ? (
+            <div className={"sp-more-wrap"}>
+              <button type={"button"} className={"sp-more"} onClick={loadMore} disabled={loadingMore}>
+                {loadingMore ? "Loading…" : "Load more"}
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 
 export function PhysicalProductsExport() {
+  const [category, setCategory] = useState("");
   return (
     <CurrentMarketingPage page="physical-products">
     <div className={"page-wrapper"}>
@@ -127,7 +287,7 @@ export function PhysicalProductsExport() {
                     </p>
                   </div>
                   <div data-w-id={"0f339b4c-3cc1-73c1-73d5-37ae38bef528"} className={"v3-hero-btn-wrap"}>
-                    <a href={"#categories"} className={"btn-primary w-button"}>
+                    <a href={"#all-products"} className={"btn-primary w-button"}>
                       {"Browse Products"}
                     </a>
                   </div>
@@ -183,12 +343,12 @@ export function PhysicalProductsExport() {
                 <h2 className={"sp-h"}>
                   {"Shop by category"}
                 </h2>
-                <a className={"sp-all"} href={"#"}>
+                <a className={"sp-all"} href={"#all-products"} onClick={() => setCategory("")}>
                   {"View all"}
                 </a>
               </div>
               <div className={"sp-row sp-cats"}>
-                <a className={"sp-cat"} href={"#"}>
+                <a className={"sp-cat"} href={"#all-products"} onClick={() => setCategory("Electronics")}>
                   <div className={"t"} style={{"background": "linear-gradient(135deg,#3b1055,#c026d3)"} as any}>
                     <svg viewBox={"0 0 24 24"} width={"64"} height={"64"} fill={"none"} stroke={"#fff"} strokeWidth={"1.2"} strokeLinecap={"round"} strokeLinejoin={"round"}>
                       <rect x={"5"} y={"6"} width={"14"} height={"10"} rx={"1.5"}></rect>
@@ -199,7 +359,7 @@ export function PhysicalProductsExport() {
                     {"Electronics"}
                   </div>
                 </a>
-                <a className={"sp-cat"} href={"#"}>
+                <a className={"sp-cat"} href={"#all-products"} onClick={() => setCategory("Fashion")}>
                   <div className={"t"} style={{"background": "linear-gradient(135deg,#9f1239,#fb7185)"} as any}>
                     <svg viewBox={"0 0 24 24"} width={"64"} height={"64"} fill={"none"} stroke={"#fff"} strokeWidth={"1.2"} strokeLinecap={"round"} strokeLinejoin={"round"}>
                       <path d={"M8 4l-5 3 2 4 3-1v10h8V10l3 1 2-4-5-3a4 4 0 01-8 0z"}></path>
@@ -209,7 +369,7 @@ export function PhysicalProductsExport() {
                     {"Fashion"}
                   </div>
                 </a>
-                <a className={"sp-cat"} href={"#"}>
+                <a className={"sp-cat"} href={"#all-products"} onClick={() => setCategory("Home & Living")}>
                   <div className={"t"} style={{"background": "linear-gradient(135deg,#0a0a0a,#3f3f46)"} as any}>
                     <svg viewBox={"0 0 24 24"} width={"64"} height={"64"} fill={"none"} stroke={"#fff"} strokeWidth={"1.2"} strokeLinecap={"round"} strokeLinejoin={"round"}>
                       <path d={"M3 11l9-8 9 8M5 10v10h14V10"}></path>
@@ -219,7 +379,7 @@ export function PhysicalProductsExport() {
                     {"Home & Living"}
                   </div>
                 </a>
-                <a className={"sp-cat"} href={"#"}>
+                <a className={"sp-cat"} href={"#all-products"} onClick={() => setCategory("Gaming & Gear")}>
                   <div className={"t"} style={{"background": "linear-gradient(135deg,#2e1065,#a78bfa)"} as any}>
                     <svg viewBox={"0 0 24 24"} width={"64"} height={"64"} fill={"none"} stroke={"#fff"} strokeWidth={"1.2"} strokeLinecap={"round"} strokeLinejoin={"round"}>
                       <rect x={"2"} y={"8"} width={"20"} height={"10"} rx={"5"}></rect>
@@ -232,7 +392,7 @@ export function PhysicalProductsExport() {
                     {"Gaming & Gear"}
                   </div>
                 </a>
-                <a className={"sp-cat"} href={"#"}>
+                <a className={"sp-cat"} href={"#all-products"} onClick={() => setCategory("Accessories")}>
                   <div className={"t"} style={{"background": "linear-gradient(135deg,#1e3a8a,#38bdf8)"} as any}>
                     <svg viewBox={"0 0 24 24"} width={"64"} height={"64"} fill={"none"} stroke={"#fff"} strokeWidth={"1.2"} strokeLinecap={"round"} strokeLinejoin={"round"}>
                       <rect x={"7"} y={"6"} width={"10"} height={"12"} rx={"3"}></rect>
@@ -243,7 +403,7 @@ export function PhysicalProductsExport() {
                     {"Accessories"}
                   </div>
                 </a>
-                <a className={"sp-cat"} href={"#"}>
+                <a className={"sp-cat"} href={"#all-products"} onClick={() => setCategory("Beauty")}>
                   <div className={"t"} style={{"background": "linear-gradient(135deg,#9a3412,#fdba74)"} as any}>
                     <svg viewBox={"0 0 24 24"} width={"64"} height={"64"} fill={"none"} stroke={"#fff"} strokeWidth={"1.2"} strokeLinecap={"round"} strokeLinejoin={"round"}>
                       <path d={"M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"}></path>
@@ -257,372 +417,7 @@ export function PhysicalProductsExport() {
             </div>
           </div>
         </section>
-        <section id={"hot"} className={"sp-sec"}>
-          <div className={"padding-global"}>
-            <div className={"container-large"}>
-              <div className={"sp-head"}>
-                <div>
-                  <h2 className={"sp-h"}>
-                    {"Hot right now"}
-                  </h2>
-                  <p className={"sp-sub"}>
-                    {"A fresh mix of products, picked at random each visit."}
-                  </p>
-                </div>
-                <a className={"sp-all"} href={"#"} id={"hotshuffle"}>
-                  {"Shuffle"}
-                </a>
-              </div>
-              <div className={"sp-row"} id={"hotrow"}>
-                <article className={"sp-card"} data-tags={"popular new fast under50"}>
-                  <div className={"sp-img"}>
-                    <span className={"sp-badge"}>
-                      <svg viewBox={"0 0 24 24"} width={"16"} height={"16"} fill={"#e8590c"}>
-                        <path d={"M12 2c1 3-1 4.5-2.5 6.5C8 10.5 7 12 7 14.5A5 5 0 0017 14.5c0-2-1-3.5-2-4.5.2 1.5-.3 2.5-1.2 3 .5-3-.3-6.5-1.8-11z"}></path>
-                      </svg>
-                      {"HOT"}
-                    </span>
-                    <div className={"sp-pr"} style={{"background": "#e8e1ff"} as any}>
-                      <svg viewBox={"0 0 24 24"} width={"92"} height={"92"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                        <path d={"M4 15v-3a8 8 0 0116 0v3"}></path>
-                        <rect x={"3"} y={"14"} width={"4"} height={"6"} rx={"1.5"}></rect>
-                        <rect x={"17"} y={"14"} width={"4"} height={"6"} rx={"1.5"}></rect>
-                      </svg>
-                    </div>
-                    <a className={"sp-plus"} href={"#"} aria-label={"Add"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"Wireless Earbuds"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <b>
-                      {"$39.00"}
-                    </b>
-                  </p>
-                </article>
-                <article className={"sp-card"} data-tags={"popular fast"}>
-                  <div className={"sp-img"}>
-                    <span className={"sp-badge"}>
-                      <svg viewBox={"0 0 24 24"} width={"16"} height={"16"} fill={"#e8590c"}>
-                        <path d={"M12 2c1 3-1 4.5-2.5 6.5C8 10.5 7 12 7 14.5A5 5 0 0017 14.5c0-2-1-3.5-2-4.5.2 1.5-.3 2.5-1.2 3 .5-3-.3-6.5-1.8-11z"}></path>
-                      </svg>
-                      {"HOT"}
-                    </span>
-                    <div className={"sp-pr"} style={{"background": "#e3f9dc"} as any}>
-                      <svg viewBox={"0 0 24 24"} width={"92"} height={"92"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                        <rect x={"7"} y={"6"} width={"10"} height={"12"} rx={"3"}></rect>
-                        <path d={"M9 6l1-3h4l1 3M9 18l1 3h4l1-3"}></path>
-                      </svg>
-                    </div>
-                    <a className={"sp-plus"} href={"#"} aria-label={"Add"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"Smart Watch"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <s>
-                      {"$99"}
-                    </s>
-                    <b>
-                      {"$89.00"}
-                    </b>
-                  </p>
-                </article>
-                <article className={"sp-card"} data-tags={"popular under100 fast"}>
-                  <div className={"sp-img"}>
-                    <span className={"sp-badge"}>
-                      <svg viewBox={"0 0 24 24"} width={"16"} height={"16"} fill={"#e8590c"}>
-                        <path d={"M12 2c1 3-1 4.5-2.5 6.5C8 10.5 7 12 7 14.5A5 5 0 0017 14.5c0-2-1-3.5-2-4.5.2 1.5-.3 2.5-1.2 3 .5-3-.3-6.5-1.8-11z"}></path>
-                      </svg>
-                      {"HOT"}
-                    </span>
-                    <div className={"sp-pr"} style={{"background": "#ffe9d6"} as any}>
-                      <svg viewBox={"0 0 24 24"} width={"92"} height={"92"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                        <path d={"M3 16c0-2 2-3 4-3l3-4 3 3 5 1c2 0 3 1 3 3v2H3z"}></path>
-                      </svg>
-                    </div>
-                    <a className={"sp-plus"} href={"#"} aria-label={"Add"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"Everyday Sneakers"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <b>
-                      {"$64.00"}
-                    </b>
-                  </p>
-                </article>
-                <article className={"sp-card"} data-tags={"under50 new"}>
-                  <div className={"sp-img"}>
-                    <span className={"sp-badge"}>
-                      <svg viewBox={"0 0 24 24"} width={"16"} height={"16"} fill={"#e8590c"}>
-                        <path d={"M12 2c1 3-1 4.5-2.5 6.5C8 10.5 7 12 7 14.5A5 5 0 0017 14.5c0-2-1-3.5-2-4.5.2 1.5-.3 2.5-1.2 3 .5-3-.3-6.5-1.8-11z"}></path>
-                      </svg>
-                      {"HOT"}
-                    </span>
-                    <div className={"sp-pr"} style={{"background": "#fff3c9"} as any}>
-                      <svg viewBox={"0 0 24 24"} width={"92"} height={"92"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                        <path d={"M8 3h8l3 9H5l3-9zM12 12v7M8 21h8"}></path>
-                      </svg>
-                    </div>
-                    <a className={"sp-plus"} href={"#"} aria-label={"Add"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"Desk Lamp"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <b>
-                      {"$27.00"}
-                    </b>
-                  </p>
-                </article>
-                <article className={"sp-card"} data-tags={"under50 popular"}>
-                  <div className={"sp-img"}>
-                    <span className={"sp-badge"}>
-                      <svg viewBox={"0 0 24 24"} width={"16"} height={"16"} fill={"#e8590c"}>
-                        <path d={"M12 2c1 3-1 4.5-2.5 6.5C8 10.5 7 12 7 14.5A5 5 0 0017 14.5c0-2-1-3.5-2-4.5.2 1.5-.3 2.5-1.2 3 .5-3-.3-6.5-1.8-11z"}></path>
-                      </svg>
-                      {"HOT"}
-                    </span>
-                    <div className={"sp-pr"} style={{"background": "#dbeafe"} as any}>
-                      <svg viewBox={"0 0 24 24"} width={"92"} height={"92"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                        <path d={"M6 8h12l1 12H5L6 8zM9 8a3 3 0 016 0"}></path>
-                      </svg>
-                    </div>
-                    <a className={"sp-plus"} href={"#"} aria-label={"Add"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"City Backpack"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <s>
-                      {"$55"}
-                    </s>
-                    <b>
-                      {"$45.00"}
-                    </b>
-                  </p>
-                </article>
-              </div>
-            </div>
-          </div>
-        </section>
-        <section id={"top-picks"} className={"sp-sec"}>
-          <div className={"padding-global"}>
-            <div className={"container-large"}>
-              <div className={"sp-head"}>
-                <div>
-                  <h2 className={"sp-h"}>
-                    {"Our top picks"}
-                  </h2>
-                  <p className={"sp-sub"}>
-                    {"Real products from verified sellers, paid in crypto."}
-                  </p>
-                </div>
-                <a className={"sp-all"} href={"#"}>
-                  {"View all"}
-                </a>
-              </div>
-              <div className={"sp-chips"} data-row={"sprow"}>
-                <button className={"on"} data-f={"all"}>
-                  {"All"}
-                </button>
-                <button data-f={"popular"}>
-                  {"Popular"}
-                </button>
-                <button data-f={"fast"}>
-                  {"Fast shipping"}
-                </button>
-                <button data-f={"under50"}>
-                  {"Under $50"}
-                </button>
-                <button data-f={"new"}>
-                  {"New"}
-                </button>
-              </div>
-              <div className={"sp-row"} id={"sprow"}>
-                <article className={"sp-card"} data-tags={"popular new fast under50"}>
-                  <div className={"sp-img"}>
-                    <span className={"sp-badge"}>
-                      <svg viewBox={"0 0 24 24"} width={"16"} height={"16"} fill={"#14924f"}>
-                        <path d={"M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 14l.9 2.6L22.5 18l-2.6.9L19 21.5l-.9-2.6L15.5 18l2.6-.9z"}></path>
-                      </svg>
-                      {"NEW"}
-                    </span>
-                    <div className={"sp-pr"} style={{"background": "#e8e1ff"} as any}>
-                      <svg viewBox={"0 0 24 24"} width={"92"} height={"92"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                        <path d={"M4 15v-3a8 8 0 0116 0v3"}></path>
-                        <rect x={"3"} y={"14"} width={"4"} height={"6"} rx={"1.5"}></rect>
-                        <rect x={"17"} y={"14"} width={"4"} height={"6"} rx={"1.5"}></rect>
-                      </svg>
-                    </div>
-                    <a className={"sp-plus"} href={"#"} aria-label={"Add"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"Wireless Earbuds"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <b>
-                      {"$39.00"}
-                    </b>
-                  </p>
-                </article>
-                <article className={"sp-card"} data-tags={"popular fast"}>
-                  <div className={"sp-img"}>
-                    <span className={"sp-badge"}>
-                      <svg viewBox={"0 0 24 24"} width={"16"} height={"16"} fill={"#14924f"}>
-                        <path d={"M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 14l.9 2.6L22.5 18l-2.6.9L19 21.5l-.9-2.6L15.5 18l2.6-.9z"}></path>
-                      </svg>
-                      {"SAVE 10%"}
-                    </span>
-                    <div className={"sp-pr"} style={{"background": "#e3f9dc"} as any}>
-                      <svg viewBox={"0 0 24 24"} width={"92"} height={"92"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                        <rect x={"7"} y={"6"} width={"10"} height={"12"} rx={"3"}></rect>
-                        <path d={"M9 6l1-3h4l1 3M9 18l1 3h4l1-3"}></path>
-                      </svg>
-                    </div>
-                    <a className={"sp-plus"} href={"#"} aria-label={"Add"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"Smart Watch"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <s>
-                      {"$99"}
-                    </s>
-                    <b>
-                      {"$89.00"}
-                    </b>
-                  </p>
-                </article>
-                <article className={"sp-card"} data-tags={"popular under100 fast"}>
-                  <div className={"sp-img"}>
-                    <span className={"sp-badge"}>
-                      <svg viewBox={"0 0 24 24"} width={"16"} height={"16"} fill={"#14924f"}>
-                        <path d={"M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 14l.9 2.6L22.5 18l-2.6.9L19 21.5l-.9-2.6L15.5 18l2.6-.9z"}></path>
-                      </svg>
-                      {"POPULAR"}
-                    </span>
-                    <div className={"sp-pr"} style={{"background": "#ffe9d6"} as any}>
-                      <svg viewBox={"0 0 24 24"} width={"92"} height={"92"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                        <path d={"M3 16c0-2 2-3 4-3l3-4 3 3 5 1c2 0 3 1 3 3v2H3z"}></path>
-                      </svg>
-                    </div>
-                    <a className={"sp-plus"} href={"#"} aria-label={"Add"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"Everyday Sneakers"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <b>
-                      {"$64.00"}
-                    </b>
-                  </p>
-                </article>
-                <article className={"sp-card"} data-tags={"under50 new"}>
-                  <div className={"sp-img"}>
-                    <span className={"sp-badge"}>
-                      <svg viewBox={"0 0 24 24"} width={"16"} height={"16"} fill={"#14924f"}>
-                        <path d={"M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 14l.9 2.6L22.5 18l-2.6.9L19 21.5l-.9-2.6L15.5 18l2.6-.9z"}></path>
-                      </svg>
-                      {"UNDER $50"}
-                    </span>
-                    <div className={"sp-pr"} style={{"background": "#fff3c9"} as any}>
-                      <svg viewBox={"0 0 24 24"} width={"92"} height={"92"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                        <path d={"M8 3h8l3 9H5l3-9zM12 12v7M8 21h8"}></path>
-                      </svg>
-                    </div>
-                    <a className={"sp-plus"} href={"#"} aria-label={"Add"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"Desk Lamp"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <b>
-                      {"$27.00"}
-                    </b>
-                  </p>
-                </article>
-                <article className={"sp-card"} data-tags={"under50 popular"}>
-                  <div className={"sp-img"}>
-                    <span className={"sp-badge"}>
-                      <svg viewBox={"0 0 24 24"} width={"16"} height={"16"} fill={"#14924f"}>
-                        <path d={"M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 14l.9 2.6L22.5 18l-2.6.9L19 21.5l-.9-2.6L15.5 18l2.6-.9z"}></path>
-                      </svg>
-                      {"SAVE 18%"}
-                    </span>
-                    <div className={"sp-pr"} style={{"background": "#dbeafe"} as any}>
-                      <svg viewBox={"0 0 24 24"} width={"92"} height={"92"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                        <path d={"M6 8h12l1 12H5L6 8zM9 8a3 3 0 016 0"}></path>
-                      </svg>
-                    </div>
-                    <a className={"sp-plus"} href={"#"} aria-label={"Add"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"City Backpack"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <s>
-                      {"$55"}
-                    </s>
-                    <b>
-                      {"$45.00"}
-                    </b>
-                  </p>
-                </article>
-                <article className={"sp-card"} data-tags={"new fast"}>
-                  <div className={"sp-img"}>
-                    <span className={"sp-badge"}>
-                      <svg viewBox={"0 0 24 24"} width={"16"} height={"16"} fill={"#14924f"}>
-                        <path d={"M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 14l.9 2.6L22.5 18l-2.6.9L19 21.5l-.9-2.6L15.5 18l2.6-.9z"}></path>
-                      </svg>
-                      {"NEW"}
-                    </span>
-                    <div className={"sp-pr"} style={{"background": "#fce7f3"} as any}>
-                      <svg viewBox={"0 0 24 24"} width={"92"} height={"92"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                        <rect x={"2"} y={"8"} width={"20"} height={"10"} rx={"5"}></rect>
-                        <path d={"M7 11v4M5 13h4"}></path>
-                        <circle cx={"16"} cy={"12"} r={"1"}></circle>
-                        <circle cx={"18.5"} cy={"14.5"} r={"1"}></circle>
-                      </svg>
-                    </div>
-                    <a className={"sp-plus"} href={"#"} aria-label={"Add"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"Wireless Controller"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <b>
-                      {"$59.00"}
-                    </b>
-                  </p>
-                </article>
-              </div>
-            </div>
-          </div>
-        </section>
+        <ShopAllProducts category={category} onClearCategory={() => setCategory("")} />
         <section id={"giftcards"} className={"sp-sec"}>
           <div className={"padding-global"}>
             <div className={"container-large"}>
@@ -897,224 +692,6 @@ export function PhysicalProductsExport() {
                     {"See how it works"}
                   </a>
                 </div>
-              </div>
-            </div>
-          </div>
-        </section>
-        <section className={"sp-sec"}>
-          <div className={"padding-global"}>
-            <div className={"container-large"}>
-              <div className={"sp-head"}>
-                <h2 className={"sp-h"}>
-                  {"Everyday finds under $25"}
-                </h2>
-                <a className={"sp-all"} href={"#"}>
-                  {"View all"}
-                </a>
-              </div>
-              <div className={"sp-row"}>
-                <article className={"sp-card"} data-tags={""}>
-                  <div className={"sp-img"}>
-                    <span className={"sp-badge"}>
-                      <svg viewBox={"0 0 24 24"} width={"16"} height={"16"} fill={"#14924f"}>
-                        <path d={"M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 14l.9 2.6L22.5 18l-2.6.9L19 21.5l-.9-2.6L15.5 18l2.6-.9z"}></path>
-                      </svg>
-                      {"FAST SHIPPING"}
-                    </span>
-                    <div className={"sp-pr"} style={{"background": "#e3f9dc"} as any}>
-                      <svg viewBox={"0 0 24 24"} width={"92"} height={"92"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                        <rect x={"7"} y={"2"} width={"10"} height={"20"} rx={"2.5"}></rect>
-                        <path d={"M11 18h2"}></path>
-                      </svg>
-                    </div>
-                    <a className={"sp-plus"} href={"#"} aria-label={"Add"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"Phone Stand"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <b>
-                      {"$12.00"}
-                    </b>
-                  </p>
-                </article>
-                <article className={"sp-card"} data-tags={""}>
-                  <div className={"sp-img"}>
-                    <span className={"sp-badge"}>
-                      <svg viewBox={"0 0 24 24"} width={"16"} height={"16"} fill={"#14924f"}>
-                        <path d={"M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 14l.9 2.6L22.5 18l-2.6.9L19 21.5l-.9-2.6L15.5 18l2.6-.9z"}></path>
-                      </svg>
-                      {"FAST SHIPPING"}
-                    </span>
-                    <div className={"sp-pr"} style={{"background": "#e8e1ff"} as any}>
-                      <svg viewBox={"0 0 24 24"} width={"92"} height={"92"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                        <path d={"M3 7l9-4 9 4-9 4-9-4zM3 7v10l9 4 9-4V7M12 11v10"}></path>
-                      </svg>
-                    </div>
-                    <a className={"sp-plus"} href={"#"} aria-label={"Add"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"Cable Organizer"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <b>
-                      {"$9.00"}
-                    </b>
-                  </p>
-                </article>
-                <article className={"sp-card"} data-tags={""}>
-                  <div className={"sp-img"}>
-                    <span className={"sp-badge"}>
-                      <svg viewBox={"0 0 24 24"} width={"16"} height={"16"} fill={"#14924f"}>
-                        <path d={"M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 14l.9 2.6L22.5 18l-2.6.9L19 21.5l-.9-2.6L15.5 18l2.6-.9z"}></path>
-                      </svg>
-                      {"SAVE 25%"}
-                    </span>
-                    <div className={"sp-pr"} style={{"background": "#ffe9d6"} as any}>
-                      <svg viewBox={"0 0 24 24"} width={"92"} height={"92"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                        <path d={"M6 8h12l1 12H5L6 8zM9 8a3 3 0 016 0"}></path>
-                      </svg>
-                    </div>
-                    <a className={"sp-plus"} href={"#"} aria-label={"Add"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"Canvas Tote"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <s>
-                      {"$24"}
-                    </s>
-                    <b>
-                      {"$18.00"}
-                    </b>
-                  </p>
-                </article>
-                <article className={"sp-card"} data-tags={""}>
-                  <div className={"sp-img"}>
-                    <span className={"sp-badge"}>
-                      <svg viewBox={"0 0 24 24"} width={"16"} height={"16"} fill={"#14924f"}>
-                        <path d={"M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 14l.9 2.6L22.5 18l-2.6.9L19 21.5l-.9-2.6L15.5 18l2.6-.9z"}></path>
-                      </svg>
-                      {"NEW"}
-                    </span>
-                    <div className={"sp-pr"} style={{"background": "#fff3c9"} as any}>
-                      <svg viewBox={"0 0 24 24"} width={"92"} height={"92"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                        <path d={"M8 3h8l3 9H5l3-9zM12 12v7M8 21h8"}></path>
-                      </svg>
-                    </div>
-                    <a className={"sp-plus"} href={"#"} aria-label={"Add"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"Mini Desk Lamp"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <b>
-                      {"$21.00"}
-                    </b>
-                  </p>
-                </article>
-              </div>
-            </div>
-          </div>
-        </section>
-        <section className={"sp-sec"}>
-          <div className={"padding-global"}>
-            <div className={"container-large"}>
-              <div className={"sp-head"}>
-                <h2 className={"sp-h"}>
-                  {"Picked just for you"}
-                </h2>
-                <a className={"sp-all"} href={"#"}>
-                  {"View all"}
-                </a>
-              </div>
-              <div className={"sp-row"}>
-                <article className={"sp-card big"}>
-                  <div className={"sp-img"} style={{"background": "linear-gradient(135deg,#1e3a8a,#38bdf8)"} as any}>
-                    <span className={"sp-badge"}>
-                      <svg viewBox={"0 0 24 24"} width={"16"} height={"16"} fill={"#14924f"}>
-                        <path d={"M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 14l.9 2.6L22.5 18l-2.6.9L19 21.5l-.9-2.6L15.5 18l2.6-.9z"}></path>
-                      </svg>
-                      {"BEST SELLER"}
-                    </span>
-                    <svg viewBox={"0 0 24 24"} width={"110"} height={"110"} fill={"none"} stroke={"#fff"} strokeWidth={"1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                      <path d={"M4 15v-3a8 8 0 0116 0v3"}></path>
-                      <rect x={"3"} y={"14"} width={"4"} height={"6"} rx={"1.5"}></rect>
-                      <rect x={"17"} y={"14"} width={"4"} height={"6"} rx={"1.5"}></rect>
-                    </svg>
-                    <a className={"sp-plus"} href={"#"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"Earbuds + Case Bundle"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <b>
-                      {"$49"}
-                    </b>
-                  </p>
-                </article>
-                <article className={"sp-card big"}>
-                  <div className={"sp-img"} style={{"background": "linear-gradient(135deg,#0a0a0a,#3f3f46)"} as any}>
-                    <span className={"sp-badge"}>
-                      <svg viewBox={"0 0 24 24"} width={"16"} height={"16"} fill={"#14924f"}>
-                        <path d={"M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 14l.9 2.6L22.5 18l-2.6.9L19 21.5l-.9-2.6L15.5 18l2.6-.9z"}></path>
-                      </svg>
-                      {"POPULAR"}
-                    </span>
-                    <svg viewBox={"0 0 24 24"} width={"110"} height={"110"} fill={"none"} stroke={"#fff"} strokeWidth={"1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                      <rect x={"7"} y={"6"} width={"10"} height={"12"} rx={"3"}></rect>
-                      <path d={"M9 6l1-3h4l1 3M9 18l1 3h4l1-3"}></path>
-                    </svg>
-                    <a className={"sp-plus"} href={"#"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"Smart Watch Pro"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <b>
-                      {"$129"}
-                    </b>
-                  </p>
-                </article>
-                <article className={"sp-card big"}>
-                  <div className={"sp-img"} style={{"background": "linear-gradient(135deg,#2e1065,#a78bfa)"} as any}>
-                    <span className={"sp-badge"}>
-                      <svg viewBox={"0 0 24 24"} width={"16"} height={"16"} fill={"#14924f"}>
-                        <path d={"M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 14l.9 2.6L22.5 18l-2.6.9L19 21.5l-.9-2.6L15.5 18l2.6-.9z"}></path>
-                      </svg>
-                      {"NEW"}
-                    </span>
-                    <svg viewBox={"0 0 24 24"} width={"110"} height={"110"} fill={"none"} stroke={"#fff"} strokeWidth={"1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                      <rect x={"2"} y={"8"} width={"20"} height={"10"} rx={"5"}></rect>
-                      <path d={"M7 11v4M5 13h4"}></path>
-                      <circle cx={"16"} cy={"12"} r={"1"}></circle>
-                      <circle cx={"18.5"} cy={"14.5"} r={"1"}></circle>
-                    </svg>
-                    <a className={"sp-plus"} href={"#"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"Gaming Starter Kit"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <b>
-                      {"$99"}
-                    </b>
-                  </p>
-                </article>
               </div>
             </div>
           </div>
