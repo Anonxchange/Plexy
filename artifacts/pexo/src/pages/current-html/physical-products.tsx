@@ -18,7 +18,7 @@ import {
   savedCountry,
   uniqueByName,
   type CardTile,
-} from "./gift-card-utils";
+} from "@/lib/gift-card-utils";
 
 // Products are fetched 60 at a time; the button loads the next 60. No total count is shown anywhere.
 const PAGE_SIZE = 60;
