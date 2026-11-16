@@ -89,7 +89,7 @@ const HERO_CSS = `
 const PRODUCT_PATH = (id: number) => "/gift-cards/" + id; // change to your product route
 const TOPUP_PATH = "/mobile-top-up"; // change to your top-up route
 
-type ShelfTile = { id: number; name: string; img: string; range: string; href: string };
+type ShelfTile = { id: number; name: string; img: string; range: string; href: string; country?: string };
 type ShelfBanner = { bg: string; text: string; img?: string };
 
 let searchQuery = "";
@@ -200,6 +200,7 @@ function giftTile(p: ReloadlyProduct): ShelfTile {
     img: p.logoUrls?.[0] || "",
     range: rangeText(min, max, p.recipientCurrencyCode),
     href: PRODUCT_PATH(p.productId),
+    country: p.country?.name,
   };
 }
 
@@ -230,6 +231,16 @@ function preferredRank(p: ReloadlyProduct) {
   const hay = (p.brand?.brandName || p.productName || "").toLowerCase();
   const i = PREFERRED.findIndex((b) => hay.includes(b));
   return i < 0 ? 99 : i;
+}
+
+function uniqueByName(list: ReloadlyProduct[]) {
+  const seen = new Set<string>();
+  return list.filter((p) => {
+    const k = p.productName.toLowerCase();
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
 }
 
 function uniqueByBrand(list: ReloadlyProduct[]) {
@@ -295,9 +306,10 @@ const SHELF_CSS = `
 .pxg .gs .gs-ban{height:104px;border-radius:14px;display:flex;flex-direction:column;justify-content:flex-end;padding:14px 16px;color:#fff;font-weight:800;font-size:clamp(20px,5vw,26px);line-height:1.05;letter-spacing:-.03em;overflow:hidden;position:relative;background-size:cover;background-position:center}
 .pxg .gs .gs-ban svg{position:absolute;left:0;top:0;width:100%;height:60%;opacity:.3}
 .pxg .gs .gs-ban span{position:relative}
-.pxg .gs .gs-grid{display:grid;grid-auto-flow:column;grid-template-rows:repeat(2,auto);grid-auto-columns:min(53vw,236px);gap:20px 14px;margin:14px -16px 0;padding:0 16px 6px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-left:16px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.pxg .gs .gs-grid{display:grid;grid-auto-flow:column;grid-template-rows:repeat(2,auto);grid-auto-columns:min(49vw,218px);gap:20px 14px;margin:14px -16px 0;padding:0 16px 6px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-left:16px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .pxg .gs .gs-grid::-webkit-scrollbar{display:none}
 .pxg .gs .gs-grid.one{grid-template-rows:auto}
+
 .pxg .gs .gs-tile{display:block;text-decoration:none;color:inherit;scroll-snap-align:start}
 .pxg .gs .gs-art{position:relative;aspect-ratio:1.586;border-radius:14px;overflow:hidden;display:grid;place-items:center;border:1px solid var(--gs-line);background:#fff;transition:transform .2s}
 .pxg .gs .gs-tile:hover .gs-art{transform:translateY(-4px)}
@@ -309,8 +321,8 @@ const SHELF_CSS = `
 @keyframes gs-pulse{to{background-position:-200% 0}}
 .pxg .gs .gs-msg{margin:24px 0;color:var(--gs-mute);font-size:15px}
 .pxg .gs .gs-msg button{font-family:inherit;font-weight:700;color:var(--gs-ink);background:none;border:0;text-decoration:underline;cursor:pointer;padding:0}
-@media(min-width:700px){.pxg .gs .gs-grid{grid-auto-columns:246px;gap:20px 14px;margin:14px 0 0;padding:0 0 6px}.pxg .gs .gs-ban{height:190px}.pxg .gs .gs-shd{grid-template-columns:minmax(0,1fr) minmax(0,3fr)}}
-@media(min-width:1000px){.pxg .gs .gs-grid{grid-auto-columns:calc((100% - 56px)/5)}.pxg .gs .gs-shd{grid-template-columns:calc((100% - 56px)/5) minmax(0,1fr)}.pxg .gs .gs-ban{height:240px}}
+@media(min-width:700px){.pxg .gs .gs-grid{grid-auto-columns:226px;gap:20px 14px;margin:14px 0 0;padding:0 0 6px}.pxg .gs .gs-ban{height:190px}.pxg .gs .gs-shd{grid-template-columns:minmax(0,1fr) minmax(0,3fr)}}
+@media(min-width:1000px){.pxg .gs .gs-grid{grid-auto-columns:calc((100% - 56px)/5.4)}.pxg .gs .gs-shd{grid-template-columns:calc((100% - 56px)/5.4) minmax(0,1fr)}.pxg .gs .gs-ban{height:240px}}
 @media(max-width:699px){
 .pxg .gs .gs-shd{display:block;position:relative}
 .pxg .gs .gs-shd .gs-ban{height:158px;border-radius:16px;padding:0;margin:0 -10px}
@@ -321,9 +333,12 @@ const SHELF_CSS = `
 .pxg .gs .gs-shd .gs-sh h2{color:#fff;font-size:26px;line-height:1}
 .pxg .gs .gs-shd .gs-sh a{background:#fff;color:#091e1c;padding:8px 13px;border-radius:99px;font-size:13px;font-weight:700;flex:0 0 auto}
 }
+.pxg .gs .gs-grid.wrap{grid-auto-flow:row;grid-template-rows:none;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-columns:auto;overflow:visible;margin:14px 0 0;padding:0}
+@media(min-width:700px){.pxg .gs .gs-grid.wrap{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(min-width:1000px){.pxg .gs .gs-grid.wrap{grid-template-columns:repeat(5,minmax(0,1fr))}}
 `;
 
-function ShelfTileView({ t }: { t: ShelfTile }) {
+function ShelfTileView({ t, showCountry }: { t: ShelfTile; showCountry?: boolean }) {
   return (
     <a className={"gs-tile"} href={t.href}>
       <div className={"gs-art"}>
@@ -340,7 +355,7 @@ function ShelfTileView({ t }: { t: ShelfTile }) {
         ) : null}
       </div>
       <div className={"gs-tn"}>{t.name}</div>
-      {t.range ? <div className={"gs-ts"}>{t.range}</div> : null}
+      {t.range || (showCountry && t.country) ? <div className={"gs-ts"}>{[showCountry ? t.country : "", t.range].filter(Boolean).join(" · ")}</div> : null}
     </a>
   );
 }
@@ -383,9 +398,9 @@ function ShelfSectionView({ id, meta, tiles, loading }: { id: string; meta: Shel
 }
 
 function CategorySection({ cat, index, country, plain }: { cat: ReloadlyCategory; index: number; country: string; plain?: boolean }) {
-  const res = useGiftCardProducts({ countryCode: country, categoryId: cat.id, size: 24, page: 1, staleTime: 1000 * 60 * 10 });
+  const res = useGiftCardProducts({ countryCode: country, categoryId: cat.id, size: 100, page: 1, staleTime: 1000 * 60 * 10 });
   const tiles = useMemo(
-    () => uniqueByBrand((res.data?.content ?? []).filter((p) => p.status !== "INACTIVE")).slice(0, 10).map(giftTile),
+    () => uniqueByName((res.data?.content ?? []).filter((p) => p.status !== "INACTIVE")).slice(0, 20).map(giftTile),
     [res.data],
   );
   const id = "cat-" + cat.id;
@@ -415,17 +430,18 @@ function GiftShelf({ part }: { part: "top" | "bottom" }) {
 
   // Popular: one batch for the country, ordered by the PREFERRED brand list
   const list = useGiftCardProducts({ countryCode: country ?? undefined, size: 200, page: 1, staleTime: 1000 * 60 * 10, enabled: !!country && part === "top" });
-  const found = useGiftCardProducts({ countryCode: country ?? undefined, productName: q, size: 24, page: 1, enabled: !!q && !!country, staleTime: 1000 * 60 * 10 });
+  // Search is not limited to the picked country: it looks through every card Reloadly has
+  const found = useGiftCardProducts({ productName: q, size: 60, page: 1, enabled: !!q, staleTime: 1000 * 60 * 10 });
   const air = useAirtimeOperators(country ?? undefined, part === "top");
 
   const popular = useMemo(() => {
     const all = (list.data?.content ?? []).filter((p) => p.status !== "INACTIVE" && p.logoUrls?.length);
     return uniqueByBrand(all)
       .sort((a, b) => preferredRank(a) - preferredRank(b))
-      .slice(0, 10)
+      .slice(0, 20)
       .map(giftTile);
   }, [list.data]);
-  const airtime = useMemo(() => (air.data ?? []).slice(0, 8).map(airTile), [air.data]);
+  const airtime = useMemo(() => (air.data ?? []).slice(0, 12).map(airTile), [air.data]);
 
   // "Payment" category goes below "What happens after you pay"; the rest are shelves up here
   const cats = categories.data ?? [];
@@ -455,7 +471,7 @@ function GiftShelf({ part }: { part: "top" | "bottom" }) {
   topCats.forEach((c) => {
     if ((counts["cat-" + c.id] ?? 0) > 0) tabs.push({ id: "cat-" + c.id, label: c.name });
   });
-  const resultTiles = (found.data?.content ?? []).map(giftTile);
+  const resultTiles = uniqueByName((found.data?.content ?? []).filter((p) => p.status !== "INACTIVE")).map(giftTile);
 
   return (
     <div className={"gs"} id={"gs-top"}>
@@ -488,21 +504,21 @@ function GiftShelf({ part }: { part: "top" | "bottom" }) {
         {q ? (
           <section className={"gs-sec"}>
             <div className={"gs-sh"}>
-              <h2>{"Results for “" + q + "”"}</h2>
+              <h2>{"Results for “" + q + "” in all countries"}</h2>
               <button type={"button"} onClick={() => setSearchQuery("")}>
                 {"Clear search"}
               </button>
             </div>
             {found.isLoading ? (
-              <div className={"gs-grid"}>
+              <div className={"gs-grid wrap"}>
                 {Array.from({ length: 10 }).map((_, i) => (
                   <div key={i} className={"gs-sk"}></div>
                 ))}
               </div>
             ) : resultTiles.length ? (
-              <div className={"gs-grid"}>
+              <div className={"gs-grid wrap"}>
                 {resultTiles.map((t) => (
-                  <ShelfTileView key={"r-" + t.id} t={t} />
+                  <ShelfTileView key={"r-" + t.id} t={t} showCountry />
                 ))}
               </div>
             ) : (
