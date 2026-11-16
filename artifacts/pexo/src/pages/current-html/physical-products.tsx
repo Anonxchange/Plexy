@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "wouter";
 import { CurrentMarketingPage } from "@/components/marketing/current-marketing-page";
 import {
@@ -7,6 +7,18 @@ import {
   MARKET_CHANGED_EVENT,
   type ShopifyProduct,
 } from "@/lib/shopify-service";
+import { useAirtimeOperators } from "@/hooks/use-airtime-operators";
+import { useGiftCardCatalog } from "@/hooks/use-gift-card-catalog";
+// Same helpers the gift cards page uses. Adjust the path if gift-card-utils lives elsewhere.
+import {
+  airTile,
+  giftTile,
+  guessCountry,
+  preferredRank,
+  savedCountry,
+  uniqueByName,
+  type CardTile,
+} from "./gift-card-utils";
 
 // Products are fetched 60 at a time; the button loads the next 60. No total count is shown anywhere.
 const PAGE_SIZE = 60;
@@ -20,6 +32,14 @@ const SHOP_GRID_CSS = `
 .sp-all-grid .sp-card a.sp-card-link{display:block;color:inherit;text-decoration:none}
 .sp-all-grid .sp-img.sp-real{position:relative;overflow:hidden;aspect-ratio:1/1;background:#f3f7f6}
 .sp-all-grid .sp-img.sp-real img.sp-real-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.sp-card a.sp-card-link{display:block;color:inherit;text-decoration:none}
+.sp-img.sp-real{position:relative;overflow:hidden;background:#f3f7f6}
+.sp-img.sp-real img.sp-real-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.sp-img.sp-gc{aspect-ratio:1.586;border:1px solid #e3ebe9;border-radius:14px;display:grid;place-items:center}
+.sp-skel.sp-skel-card{aspect-ratio:1.586;flex:0 0 220px}
+.sp-cats.sp-cats-split{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;overflow:visible}
+@media(min-width:700px){.sp-cats.sp-cats-split{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.sp-cats.sp-cats-split .sp-cat{width:auto;min-width:0;flex:none;max-width:none}
 .sp-all-grid .sp-card h3{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .sp-skel{aspect-ratio:1/1;border-radius:18px;background:linear-gradient(90deg,#eef2f1,#f7f9f8,#eef2f1);background-size:200% 100%;animation:sp-pulse 1.2s linear infinite}
 @keyframes sp-pulse{to{background-position:-200% 0}}
@@ -94,7 +114,6 @@ function ShopAllProducts({ category, onClearCategory }: { category: string; onCl
 
   return (
     <section id={"all-products"} className={"sp-sec"}>
-      <style>{SHOP_GRID_CSS}</style>
       <div className={"padding-global"}>
         <div className={"container-large"}>
           <div className={"sp-head"}>
@@ -124,7 +143,6 @@ function ShopAllProducts({ category, onClearCategory }: { category: string; onCl
                         {img?.url ? (
                           <img className={"sp-real-img"} src={img.url} alt={img.altText || node.title} loading={"lazy"} />
                         ) : null}
-                        <span className={"sp-plus"} aria-hidden={"true"}>{"+"}</span>
                       </div>
                       <h3>{node.title}</h3>
                       <p className={"sp-price"}>
@@ -159,11 +177,320 @@ function ShopAllProducts({ category, onClearCategory }: { category: string; onCl
 }
 
 
+// ---------------------------------------------------------------------------
+// Shared tile pieces (no "+" buttons anywhere)
+// ---------------------------------------------------------------------------
+type IconKey = "earbuds" | "watch" | "sneaker" | "lamp" | "bag" | "gamepad" | "phone" | "box" | "gift";
+
+const ICONS: Record<IconKey, ReactNode> = {
+  earbuds: (
+    <>
+      <path d="M4 15v-3a8 8 0 0116 0v3" />
+      <rect x="3" y="14" width="4" height="6" rx="1.5" />
+      <rect x="17" y="14" width="4" height="6" rx="1.5" />
+    </>
+  ),
+  watch: (
+    <>
+      <rect x="7" y="6" width="10" height="12" rx="3" />
+      <path d="M9 6l1-3h4l1 3M9 18l1 3h4l1-3" />
+    </>
+  ),
+  sneaker: <path d="M3 16c0-2 2-3 4-3l3-4 3 3 5 1c2 0 3 1 3 3v2H3z" />,
+  lamp: <path d="M8 3h8l3 9H5l3-9zM12 12v7M8 21h8" />,
+  bag: <path d="M6 8h12l1 12H5L6 8zM9 8a3 3 0 016 0" />,
+  gamepad: (
+    <>
+      <rect x="2" y="8" width="20" height="10" rx="5" />
+      <path d="M7 11v4M5 13h4" />
+      <circle cx="16" cy="12" r="1" />
+      <circle cx="18.5" cy="14.5" r="1" />
+    </>
+  ),
+  phone: (
+    <>
+      <rect x="7" y="2" width="10" height="20" rx="2.5" />
+      <path d="M11 18h2" />
+    </>
+  ),
+  box: <path d="M3 7l9-4 9 4-9 4-9-4zM3 7v10l9 4 9-4V7M12 11v10" />,
+  gift: (
+    <>
+      <rect x="3" y="8" width="18" height="13" rx="2" />
+      <path d="M12 8v13M3 13h18M12 8c-2-4-6-3-5 0 .6 1.5 3 1.2 5 0zm0 0c2-4 6-3 5 0-.6 1.5-3 1.2-5 0z" />
+    </>
+  ),
+};
+
+const FLAME_PATH = "M12 2c1 3-1 4.5-2.5 6.5C8 10.5 7 12 7 14.5A5 5 0 0017 14.5c0-2-1-3.5-2-4.5.2 1.5-.3 2.5-1.2 3 .5-3-.3-6.5-1.8-11z";
+const SPARK_PATH = "M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 14l.9 2.6L22.5 18l-2.6.9L19 21.5l-.9-2.6L15.5 18l2.6-.9z";
+
+function Glyph({ k, size = 92, stroke = "#091e1c", sw = 1.1 }: { k: IconKey; size?: number; stroke?: string; sw?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
+      {ICONS[k]}
+    </svg>
+  );
+}
+
+function Badge({ label, hot }: { label: string; hot?: boolean }) {
+  return (
+    <span className="sp-badge">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill={hot ? "#e8590c" : "#14924f"}>
+        <path d={hot ? FLAME_PATH : SPARK_PATH} />
+      </svg>
+      {label}
+    </span>
+  );
+}
+
+type TileItem = {
+  title: string;
+  price: string;
+  was?: string;
+  badge?: string;
+  hot?: boolean;
+  bg: string;
+  icon: IconKey;
+  tags?: string;
+  gradient?: string; // big card variant
+};
+
+function Tile({ item }: { item: TileItem }) {
+  const big = Boolean(item.gradient);
+  return (
+    <article className={big ? "sp-card big" : "sp-card"} data-tags={item.tags || ""}>
+      <div className="sp-img" style={big ? { background: item.gradient } : undefined}>
+        {item.badge ? <Badge label={item.badge} hot={item.hot} /> : null}
+        {big ? (
+          <Glyph k={item.icon} size={110} stroke="#fff" sw={1} />
+        ) : (
+          <div className="sp-pr" style={{ background: item.bg }}>
+            <Glyph k={item.icon} />
+          </div>
+        )}
+      </div>
+      <h3>{item.title}</h3>
+      <p className="sp-price">
+        {item.was ? <s>{item.was}</s> : null}
+        <b>{item.price}</b>
+      </p>
+    </article>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// "More to love": Hot right now, Our top picks, Everyday finds, Picked for you
+// ---------------------------------------------------------------------------
+const HOT_ITEMS: TileItem[] = [
+  { title: "Wireless Earbuds", price: "$39.00", badge: "HOT", hot: true, bg: "#e8e1ff", icon: "earbuds" },
+  { title: "Smart Watch", price: "$89.00", was: "$99", badge: "HOT", hot: true, bg: "#e3f9dc", icon: "watch" },
+  { title: "Everyday Sneakers", price: "$64.00", badge: "HOT", hot: true, bg: "#ffe9d6", icon: "sneaker" },
+  { title: "Desk Lamp", price: "$27.00", badge: "HOT", hot: true, bg: "#fff3c9", icon: "lamp" },
+  { title: "City Backpack", price: "$45.00", was: "$55", badge: "HOT", hot: true, bg: "#dbeafe", icon: "bag" },
+];
+
+const PICK_ITEMS: TileItem[] = [
+  { title: "Wireless Earbuds", price: "$39.00", badge: "NEW", bg: "#e8e1ff", icon: "earbuds", tags: "popular new fast under50" },
+  { title: "Smart Watch", price: "$89.00", was: "$99", badge: "SAVE 10%", bg: "#e3f9dc", icon: "watch", tags: "popular fast" },
+  { title: "Everyday Sneakers", price: "$64.00", badge: "POPULAR", bg: "#ffe9d6", icon: "sneaker", tags: "popular under100 fast" },
+  { title: "Desk Lamp", price: "$27.00", badge: "UNDER $50", bg: "#fff3c9", icon: "lamp", tags: "under50 new" },
+  { title: "City Backpack", price: "$45.00", was: "$55", badge: "SAVE 18%", bg: "#dbeafe", icon: "bag", tags: "under50 popular" },
+  { title: "Wireless Controller", price: "$59.00", badge: "NEW", bg: "#fce7f3", icon: "gamepad", tags: "new fast" },
+];
+
+const PICK_FILTERS: { key: string; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "popular", label: "Popular" },
+  { key: "fast", label: "Fast shipping" },
+  { key: "under50", label: "Under $50" },
+  { key: "new", label: "New" },
+];
+
+const FIND_ITEMS: TileItem[] = [
+  { title: "Phone Stand", price: "$12.00", badge: "FAST SHIPPING", bg: "#e3f9dc", icon: "phone" },
+  { title: "Cable Organizer", price: "$9.00", badge: "FAST SHIPPING", bg: "#e8e1ff", icon: "box" },
+  { title: "Canvas Tote", price: "$18.00", was: "$24", badge: "SAVE 25%", bg: "#ffe9d6", icon: "bag" },
+  { title: "Mini Desk Lamp", price: "$21.00", badge: "NEW", bg: "#fff3c9", icon: "lamp" },
+];
+
+const FOR_YOU_ITEMS: TileItem[] = [
+  { title: "Earbuds + Case Bundle", price: "$49", badge: "BEST SELLER", bg: "", icon: "earbuds", gradient: "linear-gradient(135deg,#1e3a8a,#38bdf8)" },
+  { title: "Smart Watch Pro", price: "$129", badge: "POPULAR", bg: "", icon: "watch", gradient: "linear-gradient(135deg,#0a0a0a,#3f3f46)" },
+  { title: "Gaming Starter Kit", price: "$99", badge: "NEW", bg: "", icon: "gamepad", gradient: "linear-gradient(135deg,#2e1065,#a78bfa)" },
+];
+
+function shuffled<T>(list: T[]): T[] {
+  const a = list.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function MoreToLove() {
+  const [hot, setHot] = useState<TileItem[]>(() => shuffled(HOT_ITEMS));
+  const [filter, setFilter] = useState("all");
+  const picks = filter === "all" ? PICK_ITEMS : PICK_ITEMS.filter((p) => (p.tags || "").split(" ").includes(filter));
+
+  return (
+    <>
+      <section id={"hot"} className={"sp-sec"}>
+        <div className={"padding-global"}>
+          <div className={"container-large"}>
+            <div className={"sp-head"}>
+              <div>
+                <h2 className={"sp-h"}>{"Hot right now"}</h2>
+                <p className={"sp-sub"}>{"A fresh mix of products, picked at random each visit."}</p>
+              </div>
+              <a className={"sp-all"} href={"#hot"} onClick={(e) => { e.preventDefault(); setHot(shuffled(HOT_ITEMS)); }}>
+                {"Shuffle"}
+              </a>
+            </div>
+            <div className={"sp-row"}>
+              {hot.map((item) => <Tile key={item.title} item={item} />)}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id={"top-picks"} className={"sp-sec"}>
+        <div className={"padding-global"}>
+          <div className={"container-large"}>
+            <div className={"sp-head"}>
+              <div>
+                <h2 className={"sp-h"}>{"Our top picks"}</h2>
+                <p className={"sp-sub"}>{"Real products from verified sellers, paid in crypto."}</p>
+              </div>
+              <a className={"sp-all"} href={"#all-products"}>{"View all"}</a>
+            </div>
+            <div className={"sp-chips"}>
+              {PICK_FILTERS.map((f) => (
+                <button key={f.key} type={"button"} className={filter === f.key ? "on" : ""} onClick={() => setFilter(f.key)}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            <div className={"sp-row"}>
+              {picks.map((item) => <Tile key={item.title} item={item} />)}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className={"sp-sec"}>
+        <div className={"padding-global"}>
+          <div className={"container-large"}>
+            <div className={"sp-head"}>
+              <h2 className={"sp-h"}>{"Everyday finds under $25"}</h2>
+              <a className={"sp-all"} href={"#all-products"}>{"View all"}</a>
+            </div>
+            <div className={"sp-row"}>
+              {FIND_ITEMS.map((item) => <Tile key={item.title} item={item} />)}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className={"sp-sec"}>
+        <div className={"padding-global"}>
+          <div className={"container-large"}>
+            <div className={"sp-head"}>
+              <h2 className={"sp-h"}>{"Picked just for you"}</h2>
+              <a className={"sp-all"} href={"#all-products"}>{"View all"}</a>
+            </div>
+            <div className={"sp-row"}>
+              {FOR_YOU_ITEMS.map((item) => <Tile key={item.title} item={item} />)}
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Gift cards + mobile top ups, from the same data the gift cards page uses
+// ---------------------------------------------------------------------------
+const HOME_GIFT_COUNT = 6;
+const HOME_TOPUP_COUNT = 4;
+
+function GiftCardsAndTopUps() {
+  const country = useMemo(() => savedCountry() ?? guessCountry(), []);
+  const cat = useGiftCardCatalog({ countryCode: country, size: 40, enabled: true });
+  const air = useAirtimeOperators(country, true);
+
+  const tiles = useMemo(() => {
+    const raw = (cat.data?.pages?.[0]?.content ?? []).filter((p: any) => p.status !== "INACTIVE");
+    const sorted = [...uniqueByName(raw)].sort(
+      (a: any, b: any) => preferredRank(a.brand?.brandName || a.productName) - preferredRank(b.brand?.brandName || b.productName),
+    );
+    const gifts: CardTile[] = sorted.slice(0, HOME_GIFT_COUNT).map(giftTile);
+    const topups: CardTile[] = (air.data ?? []).slice(0, HOME_TOPUP_COUNT).map(airTile);
+    // Alternate gift card, top up, gift card, top up ...
+    const out: { t: CardTile; kind: string }[] = [];
+    for (let i = 0; i < Math.max(gifts.length, topups.length); i++) {
+      if (gifts[i]) out.push({ t: gifts[i], kind: "g" });
+      if (topups[i]) out.push({ t: topups[i], kind: "a" });
+    }
+    return out;
+  }, [cat.data, air.data]);
+
+  const loading = cat.isLoading && air.isLoading;
+  const failed = cat.isError && air.isError;
+
+  return (
+    <section id={"giftcards"} className={"sp-sec"}>
+      <div className={"padding-global"}>
+        <div className={"container-large"}>
+          <div className={"sp-head"}>
+            <div>
+              <h2 className={"sp-h"}>{"Gift Cards & Mobile Top Up"}</h2>
+              <p className={"sp-sub"}>{"Gift cards, airtime and data, paid in crypto."}</p>
+            </div>
+            <a className={"sp-all"} id={"gtall"} href={"#"} data-px-link={"giftcards"}>{"View all"}</a>
+          </div>
+          <div className={"sp-row"} id={"gtrow"}>
+            {loading
+              ? Array.from({ length: 6 }).map((_, i) => <div key={i} className={"sp-skel sp-skel-card"}></div>)
+              : tiles.map(({ t, kind }) => (
+                <article key={kind + "-" + t.id} className={"sp-card"}>
+                  <a className={"sp-card-link"} href={t.href}>
+                    <div className={"sp-img sp-real sp-gc"}>
+                      {t.img ? (
+                        <img
+                          className={"sp-real-img"}
+                          src={t.img}
+                          alt={t.name}
+                          loading={"lazy"}
+                          onError={(e) => { e.currentTarget.style.display = "none"; }}
+                        />
+                      ) : (
+                        <div className={"sp-pr"} style={{ background: kind === "a" ? "#e3f9dc" : "#fff0c7" }}>
+                          <Glyph k={kind === "a" ? "phone" : "gift"} />
+                        </div>
+                      )}
+                    </div>
+                    <h3>{t.name}</h3>
+                    {t.range ? <p className={"sp-price"}><b>{t.range}</b></p> : null}
+                  </a>
+                </article>
+              ))}
+          </div>
+          {failed ? <p className={"sp-note"}>{"Gift cards couldn’t be loaded right now."}</p> : null}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function PhysicalProductsExport() {
   const [category, setCategory] = useState("");
   return (
     <CurrentMarketingPage page="physical-products">
     <div className={"page-wrapper"}>
+      <style>{SHOP_GRID_CSS}</style>
       <header className={"px-nav"} id={"pxnav"}>
         <div className={"px-nav-in"}>
           <a className={"px-logo"} href={"#"} data-px-link={"home"}>
@@ -347,7 +674,7 @@ export function PhysicalProductsExport() {
                   {"View all"}
                 </a>
               </div>
-              <div className={"sp-row sp-cats"}>
+              <div className={"sp-row sp-cats sp-cats-split"}>
                 <a className={"sp-cat"} href={"#all-products"} onClick={() => setCategory("Electronics")}>
                   <div className={"t"} style={{"background": "linear-gradient(135deg,#3b1055,#c026d3)"} as any}>
                     <svg viewBox={"0 0 24 24"} width={"64"} height={"64"} fill={"none"} stroke={"#fff"} strokeWidth={"1.2"} strokeLinecap={"round"} strokeLinejoin={"round"}>
@@ -418,261 +745,7 @@ export function PhysicalProductsExport() {
           </div>
         </section>
         <ShopAllProducts category={category} onClearCategory={() => setCategory("")} />
-        <section id={"giftcards"} className={"sp-sec"}>
-          <div className={"padding-global"}>
-            <div className={"container-large"}>
-              <div className={"sp-head"}>
-                <div>
-                  <h2 className={"sp-h"}>
-                    {"Gift Cards & Mobile Top Up"}
-                  </h2>
-                  <p className={"sp-sub"}>
-                    {"Gift cards, airtime and data, paid in crypto."}
-                  </p>
-                </div>
-                <a className={"sp-all"} id={"gtall"} href={"#"} data-px-link={"giftcards"}>
-                  {"View all"}
-                </a>
-              </div>
-              <div className={"sp-row"} id={"gtrow"}>
-                <article className={"sp-card"} data-tags={"gift"} data-kind={"gift"}>
-                  <div className={"sp-img"}>
-                    <span className={"sp-badge"}>
-                      <svg viewBox={"0 0 24 24"} width={"16"} height={"16"} fill={"#14924f"}>
-                        <path d={"M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 14l.9 2.6L22.5 18l-2.6.9L19 21.5l-.9-2.6L15.5 18l2.6-.9z"}></path>
-                      </svg>
-                      {"POPULAR"}
-                    </span>
-                    <div className={"sp-pr"} style={{"background": "#fff0c7"} as any}>
-                      <svg viewBox={"0 0 24 24"} width={"92"} height={"92"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                        <rect x={"3"} y={"8"} width={"18"} height={"13"} rx={"2"}></rect>
-                        <path d={"M12 8v13M3 13h18M12 8c-2-4-6-3-5 0 .6 1.5 3 1.2 5 0zm0 0c2-4 6-3 5 0-.6 1.5-3 1.2-5 0z"}></path>
-                      </svg>
-                    </div>
-                    <a className={"sp-plus"} href={"#"} data-px-link={"giftcards"} aria-label={"Open"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"Amazon Gift Card"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <b>
-                      {"From $10"}
-                    </b>
-                  </p>
-                </article>
-                <article className={"sp-card"} data-tags={"topup"} data-kind={"topup"}>
-                  <div className={"sp-img"}>
-                    <span className={"sp-badge"}>
-                      <svg viewBox={"0 0 24 24"} width={"16"} height={"16"} fill={"#14924f"}>
-                        <path d={"M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 14l.9 2.6L22.5 18l-2.6.9L19 21.5l-.9-2.6L15.5 18l2.6-.9z"}></path>
-                      </svg>
-                      {"POPULAR"}
-                    </span>
-                    <div className={"sp-pr"} style={{"background": "#e3f9dc"} as any}>
-                      <svg viewBox={"0 0 24 24"} width={"92"} height={"92"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                        <rect x={"7"} y={"2"} width={"10"} height={"20"} rx={"2.5"}></rect>
-                        <path d={"M11 18h2"}></path>
-                      </svg>
-                    </div>
-                    <a className={"sp-plus"} href={"#"} data-px-link={"home#top-up"} aria-label={"Open"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"MTN Airtime"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <b>
-                      {"From $2"}
-                    </b>
-                  </p>
-                </article>
-                <article className={"sp-card"} data-tags={"gift"} data-kind={"gift"}>
-                  <div className={"sp-img"}>
-                    <div className={"sp-pr"} style={{"background": "#e8e1ff"} as any}>
-                      <svg viewBox={"0 0 24 24"} width={"92"} height={"92"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                        <rect x={"3"} y={"8"} width={"18"} height={"13"} rx={"2"}></rect>
-                        <path d={"M12 8v13M3 13h18M12 8c-2-4-6-3-5 0 .6 1.5 3 1.2 5 0zm0 0c2-4 6-3 5 0-.6 1.5-3 1.2-5 0z"}></path>
-                      </svg>
-                    </div>
-                    <a className={"sp-plus"} href={"#"} data-px-link={"giftcards"} aria-label={"Open"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"Steam Wallet Code"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <b>
-                      {"From $10"}
-                    </b>
-                  </p>
-                </article>
-                <article className={"sp-card"} data-tags={"topup"} data-kind={"topup"}>
-                  <div className={"sp-img"}>
-                    <div className={"sp-pr"} style={{"background": "#ffe5d9"} as any}>
-                      <svg viewBox={"0 0 24 24"} width={"92"} height={"92"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                        <rect x={"7"} y={"2"} width={"10"} height={"20"} rx={"2.5"}></rect>
-                        <path d={"M11 18h2"}></path>
-                      </svg>
-                    </div>
-                    <a className={"sp-plus"} href={"#"} data-px-link={"home#top-up"} aria-label={"Open"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"Airtel Data Bundle"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <b>
-                      {"From $3"}
-                    </b>
-                  </p>
-                </article>
-                <article className={"sp-card"} data-tags={"gift"} data-kind={"gift"}>
-                  <div className={"sp-img"}>
-                    <span className={"sp-badge"}>
-                      <svg viewBox={"0 0 24 24"} width={"16"} height={"16"} fill={"#14924f"}>
-                        <path d={"M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 14l.9 2.6L22.5 18l-2.6.9L19 21.5l-.9-2.6L15.5 18l2.6-.9z"}></path>
-                      </svg>
-                      {"NEW"}
-                    </span>
-                    <div className={"sp-pr"} style={{"background": "#ffe5d9"} as any}>
-                      <svg viewBox={"0 0 24 24"} width={"92"} height={"92"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                        <rect x={"3"} y={"8"} width={"18"} height={"13"} rx={"2"}></rect>
-                        <path d={"M12 8v13M3 13h18M12 8c-2-4-6-3-5 0 .6 1.5 3 1.2 5 0zm0 0c2-4 6-3 5 0-.6 1.5-3 1.2-5 0z"}></path>
-                      </svg>
-                    </div>
-                    <a className={"sp-plus"} href={"#"} data-px-link={"giftcards"} aria-label={"Open"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"Netflix Gift Card"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <b>
-                      {"From $15"}
-                    </b>
-                  </p>
-                </article>
-                <article className={"sp-card"} data-tags={"topup"} data-kind={"topup"}>
-                  <div className={"sp-img"}>
-                    <span className={"sp-badge"}>
-                      <svg viewBox={"0 0 24 24"} width={"16"} height={"16"} fill={"#14924f"}>
-                        <path d={"M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 14l.9 2.6L22.5 18l-2.6.9L19 21.5l-.9-2.6L15.5 18l2.6-.9z"}></path>
-                      </svg>
-                      {"NEW"}
-                    </span>
-                    <div className={"sp-pr"} style={{"background": "#dff3ff"} as any}>
-                      <svg viewBox={"0 0 24 24"} width={"92"} height={"92"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                        <rect x={"7"} y={"2"} width={"10"} height={"20"} rx={"2.5"}></rect>
-                        <path d={"M11 18h2"}></path>
-                      </svg>
-                    </div>
-                    <a className={"sp-plus"} href={"#"} data-px-link={"home#top-up"} aria-label={"Open"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"Vodafone Top Up"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <b>
-                      {"From $5"}
-                    </b>
-                  </p>
-                </article>
-                <article className={"sp-card"} data-tags={"gift"} data-kind={"gift"}>
-                  <div className={"sp-img"}>
-                    <div className={"sp-pr"} style={{"background": "#e3f9dc"} as any}>
-                      <svg viewBox={"0 0 24 24"} width={"92"} height={"92"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                        <rect x={"3"} y={"8"} width={"18"} height={"13"} rx={"2"}></rect>
-                        <path d={"M12 8v13M3 13h18M12 8c-2-4-6-3-5 0 .6 1.5 3 1.2 5 0zm0 0c2-4 6-3 5 0-.6 1.5-3 1.2-5 0z"}></path>
-                      </svg>
-                    </div>
-                    <a className={"sp-plus"} href={"#"} data-px-link={"giftcards"} aria-label={"Open"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"Spotify Gift Card"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <b>
-                      {"From $10"}
-                    </b>
-                  </p>
-                </article>
-                <article className={"sp-card"} data-tags={"topup"} data-kind={"topup"}>
-                  <div className={"sp-img"}>
-                    <div className={"sp-pr"} style={{"background": "#e8e1ff"} as any}>
-                      <svg viewBox={"0 0 24 24"} width={"92"} height={"92"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                        <rect x={"7"} y={"2"} width={"10"} height={"20"} rx={"2.5"}></rect>
-                        <path d={"M11 18h2"}></path>
-                      </svg>
-                    </div>
-                    <a className={"sp-plus"} href={"#"} data-px-link={"home#top-up"} aria-label={"Open"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"Orange Data Pack"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <b>
-                      {"From $5"}
-                    </b>
-                  </p>
-                </article>
-                <article className={"sp-card"} data-tags={"gift"} data-kind={"gift"}>
-                  <div className={"sp-img"}>
-                    <div className={"sp-pr"} style={{"background": "#dff3ff"} as any}>
-                      <svg viewBox={"0 0 24 24"} width={"92"} height={"92"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                        <rect x={"3"} y={"8"} width={"18"} height={"13"} rx={"2"}></rect>
-                        <path d={"M12 8v13M3 13h18M12 8c-2-4-6-3-5 0 .6 1.5 3 1.2 5 0zm0 0c2-4 6-3 5 0-.6 1.5-3 1.2-5 0z"}></path>
-                      </svg>
-                    </div>
-                    <a className={"sp-plus"} href={"#"} data-px-link={"giftcards"} aria-label={"Open"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"Google Play Gift Card"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <b>
-                      {"From $10"}
-                    </b>
-                  </p>
-                </article>
-                <article className={"sp-card"} data-tags={"topup"} data-kind={"topup"}>
-                  <div className={"sp-img"}>
-                    <div className={"sp-pr"} style={{"background": "#fff0c7"} as any}>
-                      <svg viewBox={"0 0 24 24"} width={"92"} height={"92"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.1"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                        <rect x={"7"} y={"2"} width={"10"} height={"20"} rx={"2.5"}></rect>
-                        <path d={"M11 18h2"}></path>
-                      </svg>
-                    </div>
-                    <a className={"sp-plus"} href={"#"} data-px-link={"home#top-up"} aria-label={"Open"}>
-                      {"+"}
-                    </a>
-                  </div>
-                  <h3>
-                    {"T-Mobile Top Up"}
-                  </h3>
-                  <p className={"sp-price"}>
-                    <b>
-                      {"From $10"}
-                    </b>
-                  </p>
-                </article>
-              </div>
-            </div>
-          </div>
-        </section>
+        <GiftCardsAndTopUps />
         <section className={"sp-sec tight"} id={"why"}>
           <div className={"padding-global"}>
             <div className={"container-large"}>
@@ -696,6 +769,7 @@ export function PhysicalProductsExport() {
             </div>
           </div>
         </section>
+        <MoreToLove />
         <section className={"sp-sec"}>
           <div className={"padding-global"}>
             <div className={"container-large"}>
