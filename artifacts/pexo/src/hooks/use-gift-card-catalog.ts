@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, type InfiniteData } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import type { ProductsResponse } from "@/hooks/use-reloadly";
 
@@ -28,25 +28,23 @@ export function useGiftCardCatalog(params: {
 }) {
   const size = params.size ?? 100;
 
-  return useInfiniteQuery<ProductsResponse>({
+  return useInfiniteQuery<ProductsResponse, Error, InfiniteData<ProductsResponse>, readonly unknown[], number>({
     queryKey: ["gift-card-catalog", params.countryCode, params.categoryId, size],
     enabled: params.enabled ?? true,
     staleTime: 1000 * 60 * 10,
     refetchOnWindowFocus: false,
-    // required by react-query v5; ignored by v4 (cast keeps both type-checking)
-    ...({ initialPageParam: 1 } as object),
-    queryFn: async (ctx) => {
-      const page = Number((ctx as { pageParam?: number }).pageParam ?? 1);
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }) => {
       const url = new URL(`${FUNCTIONS_BASE}/reloadly-products`);
-      url.searchParams.set("page", String(page));
+      url.searchParams.set("page", String(pageParam));
       url.searchParams.set("size", String(size));
       if (params.countryCode) url.searchParams.set("countryCode", params.countryCode);
       if (params.categoryId) url.searchParams.set("categoryId", String(params.categoryId));
       const res = await fetch(url.toString(), { headers: await authHeaders() });
       if (!res.ok) throw new Error("Failed to fetch products");
-      return res.json();
+      return (await res.json()) as ProductsResponse;
     },
-    getNextPageParam: (last: ProductsResponse, all: ProductsResponse[]) =>
-      all.length < (last?.totalPages ?? 1) ? all.length + 1 : undefined,
+    getNextPageParam: (lastPage, allPages) =>
+      allPages.length < (lastPage?.totalPages ?? 1) ? allPages.length + 1 : undefined,
   });
 }
