@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "reac
 import { CurrentMarketingPage } from "@/components/marketing/current-marketing-page";
 import { useGiftCardCategories, useGiftCardCountries, useGiftCardProducts, type ReloadlyCategory, type ReloadlyProduct } from "@/hooks/use-reloadly";
 import { useAirtimeOperators, type AirtimeOperator } from "@/hooks/use-airtime-operators";
-import { useGiftCardCatalog } from "@/hooks/use-gift-card-catalog";
 
 const HERO_CARDS = [
   { n: "Steam", f: "$20", usd: 20, img: "/marketing-media/gift-cards/steam.jpeg" },
@@ -89,6 +88,7 @@ const HERO_CSS = `
 // ---------------------------------------------------------------------------
 const PRODUCT_PATH = (id: number) => "/gift-cards/" + id; // change to your product route
 const TOPUP_PATH = "/mobile-top-up"; // change to your top-up route
+const SEE_ALL_PATH = "/gift-cards/all"; // route of the See all page (gift-cards-all.tsx)
 
 type ShelfTile = { id: number; name: string; img: string; range: string; href: string; country?: string; usd?: number | null };
 type ShelfBanner = { bg: string; text: string; img?: string };
@@ -97,10 +97,6 @@ let searchQuery = "";
 const searchSubs = new Set<() => void>();
 function setSearchQuery(q: string) {
   searchQuery = q;
-  if (q && seeAllTarget) {
-    seeAllTarget = null;
-    seeAllSubs.forEach((f) => f());
-  }
   searchSubs.forEach((f) => f());
 }
 function useSearchQuery() {
@@ -113,28 +109,6 @@ function useSearchQuery() {
     },
     () => searchQuery,
     () => "",
-  );
-}
-
-// "See all" view: which list is open (null = the normal shelves)
-type SeeAllTarget = { kind: "gift"; title: string; categoryId?: number } | { kind: "airtime" } | null;
-let seeAllTarget: SeeAllTarget = null;
-const seeAllSubs = new Set<() => void>();
-function openSeeAll(t: SeeAllTarget) {
-  seeAllTarget = t;
-  seeAllSubs.forEach((f) => f());
-  setTimeout(() => document.getElementById("gs-top")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
-}
-function useSeeAll() {
-  return useSyncExternalStore(
-    (cb) => {
-      seeAllSubs.add(cb);
-      return () => {
-        seeAllSubs.delete(cb);
-      };
-    },
-    () => seeAllTarget,
-    () => null,
   );
 }
 
@@ -397,15 +371,11 @@ function ShelfTileView({ t, showCountry }: { t: ShelfTile; showCountry?: boolean
   );
 }
 
-function ShelfSectionView({ id, meta, tiles, loading, onSeeAll }: { id: string; meta: ShelfMeta; tiles: ShelfTile[]; loading?: boolean; onSeeAll?: () => void }) {
+function ShelfSectionView({ id, meta, tiles, loading, seeAllHref }: { id: string; meta: ShelfMeta; tiles: ShelfTile[]; loading?: boolean; seeAllHref?: string }) {
   const head = (
     <div className={"gs-sh"}>
       <h2>{meta.title}</h2>
-      {onSeeAll ? (
-        <button type={"button"} onClick={onSeeAll}>
-          {"See all"}
-        </button>
-      ) : null}
+      {seeAllHref ? <a href={seeAllHref}>{"See all"}</a> : null}
     </div>
   );
   return (
@@ -438,102 +408,6 @@ function ShelfSectionView({ id, meta, tiles, loading, onSeeAll }: { id: string; 
   );
 }
 
-type CountryOption = { isoName: string; name: string; flag: string };
-
-// Full list for one category (or every card): country filter, sort, endless scroll.
-function SeeAllView({ target, country, countries }: { target: Exclude<SeeAllTarget, null>; country: string | null; countries: CountryOption[] }) {
-  const [sort, setSort] = useState("default");
-  const isAir = target.kind === "airtime";
-  const cat = useGiftCardCatalog({
-    countryCode: country ?? undefined,
-    categoryId: target.kind === "gift" ? target.categoryId : undefined,
-    enabled: !isAir && !!country,
-  });
-  const air = useAirtimeOperators(country ?? undefined, isAir);
-  const sentinel = useRef<HTMLDivElement>(null);
-  const pages = cat.data?.pages.length ?? 0;
-
-  useEffect(() => {
-    const el = sentinel.current;
-    if (isAir || !el || !cat.hasNextPage) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !cat.isFetchingNextPage) cat.fetchNextPage();
-      },
-      { rootMargin: "500px" },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [isAir, cat.hasNextPage, cat.isFetchingNextPage, pages]);
-
-  const tiles = useMemo(() => {
-    const base = isAir
-      ? (air.data ?? []).map(airTile)
-      : uniqueByName((cat.data?.pages.flatMap((p) => p.content ?? []) ?? []).filter((p) => p.status !== "INACTIVE")).map(giftTile);
-    const out = [...base];
-    if (sort === "az") out.sort((a, b) => a.name.localeCompare(b.name));
-    if (sort === "za") out.sort((a, b) => b.name.localeCompare(a.name));
-    if (sort === "low") out.sort((a, b) => (a.usd ?? Infinity) - (b.usd ?? Infinity));
-    if (sort === "high") out.sort((a, b) => (b.usd ?? -1) - (a.usd ?? -1));
-    return out;
-  }, [isAir, air.data, cat.data, sort]);
-
-  const title = target.kind === "gift" ? target.title : "Mobile top up";
-  const loading = isAir ? air.isLoading : cat.isLoading;
-  const failed = isAir ? air.isError : cat.isError;
-  const total = !isAir ? cat.data?.pages[0]?.totalElements : undefined;
-
-  return (
-    <div className={"gs-w"}>
-      <div className={"gs-sa-top"}>
-        <button type={"button"} className={"gs-back"} aria-label={"Back"} onClick={() => openSeeAll(null)}>
-          {"←"}
-        </button>
-        <h2>{title}</h2>
-      </div>
-      <div className={"gs-sa-bar"}>
-        <label className={"gs-pill"}>
-          <span>{"Works in"}</span>
-          <select value={country ?? ""} onChange={(e) => setCountry(e.target.value, true)} aria-label={"Country"}>
-            {country && !countries.some((c) => c.isoName === country) ? <option value={country}>{country}</option> : null}
-            {countries.map((c) => (
-              <option key={c.isoName} value={c.isoName}>
-                {c.flag + " " + c.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        {isAir ? null : (
-          <label className={"gs-pill"}>
-            <span>{"Sort by"}</span>
-            <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label={"Sort by"}>
-              <option value={"default"}>{"Recommended"}</option>
-              <option value={"az"}>{"Name A–Z"}</option>
-              <option value={"za"}>{"Name Z–A"}</option>
-              <option value={"low"}>{"Price: low to high"}</option>
-              <option value={"high"}>{"Price: high to low"}</option>
-            </select>
-          </label>
-        )}
-      </div>
-      {!loading && !failed && total ? <div className={"gs-count"}>{total.toLocaleString("en-US") + " cards"}</div> : null}
-      <div className={"gs-grid wrap"}>
-        {loading ? Array.from({ length: 10 }).map((_, i) => <div key={i} className={"gs-sk"}></div>) : tiles.map((t) => <ShelfTileView key={"sa-" + t.id} t={t} />)}
-      </div>
-      {failed ? <p className={"gs-msg"}>{"Cards couldn’t be loaded right now."}</p> : null}
-      {!loading && !failed && tiles.length === 0 ? <p className={"gs-msg"}>{"Nothing available for this country yet."}</p> : null}
-      {!isAir && cat.hasNextPage ? (
-        <>
-          <div ref={sentinel} style={{ height: 1 }}></div>
-          <button type={"button"} className={"gs-more"} onClick={() => cat.fetchNextPage()} disabled={cat.isFetchingNextPage}>
-            {cat.isFetchingNextPage ? "Loading…" : "Load more"}
-          </button>
-        </>
-      ) : null}
-    </div>
-  );
-}
-
 function CategorySection({ cat, index, country, plain }: { cat: ReloadlyCategory; index: number; country: string; plain?: boolean }) {
   const res = useGiftCardProducts({ countryCode: country, categoryId: cat.id, size: 100, page: 1, staleTime: 1000 * 60 * 10 });
   const tiles = useMemo(
@@ -550,7 +424,7 @@ function CategorySection({ cat, index, country, plain }: { cat: ReloadlyCategory
     tab: cat.name,
     banner: plain ? undefined : { bg: BANNER_COLORS[index % BANNER_COLORS.length], text: cat.name },
   };
-  return <ShelfSectionView id={id} meta={meta} tiles={tiles} loading={res.isLoading} onSeeAll={() => openSeeAll({ kind: "gift", title: cat.name, categoryId: cat.id })} />;
+  return <ShelfSectionView id={id} meta={meta} tiles={tiles} loading={res.isLoading} seeAllHref={SEE_ALL_PATH + "?category=" + cat.id + "&name=" + encodeURIComponent(cat.name)} />;
 }
 
 function GiftShelf({ part }: { part: "top" | "bottom" }) {
@@ -558,7 +432,6 @@ function GiftShelf({ part }: { part: "top" | "bottom" }) {
   const q = useSearchQuery();
   const [activeTab, setActiveTab] = useState("popular");
   const counts = useSectionCounts();
-  const target = useSeeAll();
   const countries = useGiftCardCountries({ enabled: part === "top" });
   const categories = useGiftCardCategories();
 
@@ -587,7 +460,7 @@ function GiftShelf({ part }: { part: "top" | "bottom" }) {
   const topCats = cats.filter((c) => c !== payCat).slice(0, MAX_CATEGORIES);
 
   if (part === "bottom") {
-    if (q || target || !country || !payCat) return null;
+    if (q || !country || !payCat) return null;
     return (
       <div className={"gs"}>
         <style>{SHELF_CSS}</style>
@@ -614,10 +487,6 @@ function GiftShelf({ part }: { part: "top" | "bottom" }) {
   return (
     <div className={"gs"} id={"gs-top"}>
       <style>{SHELF_CSS}</style>
-      {target && !q ? (
-        <SeeAllView target={target} country={country} countries={countries.data ?? []} />
-      ) : (
-      <>
       <div className={"gs-w"}>
         <label className={"gs-cty"}>
           <span>{"Cards for"}</span>
@@ -676,14 +545,12 @@ function GiftShelf({ part }: { part: "top" | "bottom" }) {
           </p>
         ) : (
           <>
-            {popular.length || list.isLoading ? <ShelfSectionView id={"popular"} meta={POPULAR_META} tiles={popular} loading={list.isLoading} onSeeAll={() => openSeeAll({ kind: "gift", title: "All Gift Cards" })} /> : null}
-            {airtime.length ? <ShelfSectionView id={"airtime"} meta={AIRTIME_META} tiles={airtime} onSeeAll={() => openSeeAll({ kind: "airtime" })} /> : null}
+            {popular.length || list.isLoading ? <ShelfSectionView id={"popular"} meta={POPULAR_META} tiles={popular} loading={list.isLoading} seeAllHref={SEE_ALL_PATH} /> : null}
+            {airtime.length ? <ShelfSectionView id={"airtime"} meta={AIRTIME_META} tiles={airtime} seeAllHref={SEE_ALL_PATH + "?type=airtime"} /> : null}
             {country ? topCats.map((c, i) => <CategorySection key={c.id} cat={c} index={i} country={country} />) : null}
           </>
         )}
       </div>
-      </>
-      )}
     </div>
   );
 }
