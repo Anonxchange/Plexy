@@ -23,13 +23,14 @@ async function authHeaders(): Promise<Record<string, string>> {
 export function useGiftCardCatalog(params: {
   countryCode?: string;
   categoryId?: number;
+  productName?: string;
   size?: number;
   enabled?: boolean;
 }) {
   const size = params.size ?? 100;
 
   return useInfiniteQuery<ProductsResponse, Error, InfiniteData<ProductsResponse>, readonly unknown[], number>({
-    queryKey: ["gift-card-catalog", params.countryCode, params.categoryId, size],
+    queryKey: ["gift-card-catalog", params.countryCode, params.categoryId, params.productName, size],
     enabled: params.enabled ?? true,
     staleTime: 1000 * 60 * 10,
     refetchOnWindowFocus: false,
@@ -40,6 +41,7 @@ export function useGiftCardCatalog(params: {
       url.searchParams.set("size", String(size));
       if (params.countryCode) url.searchParams.set("countryCode", params.countryCode);
       if (params.categoryId) url.searchParams.set("categoryId", String(params.categoryId));
+      if (params.productName) url.searchParams.set("productName", params.productName);
       const res = await fetch(url.toString(), { headers: await authHeaders() });
       if (!res.ok) throw new Error("Failed to fetch products");
       return (await res.json()) as ProductsResponse;
