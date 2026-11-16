@@ -9,7 +9,7 @@ import {
 } from "@/lib/shopify-service";
 import { useAirtimeOperators } from "@/hooks/use-airtime-operators";
 import { useGiftCardCatalog } from "@/hooks/use-gift-card-catalog";
-// Same helpers the gift cards page uses. Adjust the path if gift-card-utils lives elsewhere.
+// Same helpers the gift cards page uses.
 import {
   airTile,
   giftTile,
@@ -37,9 +37,7 @@ const SHOP_GRID_CSS = `
 .sp-img.sp-real img.sp-real-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 .sp-img.sp-gc{aspect-ratio:1.586;border:1px solid #e3ebe9;border-radius:14px;display:grid;place-items:center}
 .sp-skel.sp-skel-card{aspect-ratio:1.586;flex:0 0 220px}
-.sp-cats.sp-cats-split{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;overflow:visible}
-@media(min-width:700px){.sp-cats.sp-cats-split{grid-template-columns:repeat(3,minmax(0,1fr))}}
-.sp-cats.sp-cats-split .sp-cat{width:auto;min-width:0;flex:none;max-width:none}
+.sp-cat .t.sp-cat-img{background-size:cover;background-position:center;background-repeat:no-repeat}
 .sp-all-grid .sp-card h3{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .sp-skel{aspect-ratio:1/1;border-radius:18px;background:linear-gradient(90deg,#eef2f1,#f7f9f8,#eef2f1);background-size:200% 100%;animation:sp-pulse 1.2s linear infinite}
 @keyframes sp-pulse{to{background-position:-200% 0}}
@@ -52,6 +50,92 @@ const SHOP_GRID_CSS = `
 .sp-filter-pill{display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:8px 8px 8px 16px;border:1.5px solid #e3ebe9;border-radius:999px;font-weight:700;font-size:15px;color:#091e1c;background:#fff}
 .sp-filter-pill button{width:28px;height:28px;border:0;border-radius:50%;background:#f3f7f6;color:#091e1c;cursor:pointer;font-size:16px;line-height:1}
 `;
+
+// ---------------------------------------------------------------------------
+// Shop by category: real categories taken from the store's own products
+// ---------------------------------------------------------------------------
+type ShopCategory = { name: string; img?: string; count: number };
+
+const CATEGORY_GRADIENTS = [
+  "linear-gradient(135deg,#3b1055,#c026d3)",
+  "linear-gradient(135deg,#9f1239,#fb7185)",
+  "linear-gradient(135deg,#0a0a0a,#3f3f46)",
+  "linear-gradient(135deg,#2e1065,#a78bfa)",
+  "linear-gradient(135deg,#1e3a8a,#38bdf8)",
+  "linear-gradient(135deg,#9a3412,#fdba74)",
+];
+
+function useShopCategories() {
+  const [cats, setCats] = useState<ShopCategory[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await shopifyService.getProducts(250, undefined, undefined);
+        if (!alive) return;
+        const map = new Map<string, ShopCategory>();
+        for (const { node } of res.products as ShopifyProduct[]) {
+          const name = String((node as any).productType || "").trim();
+          if (!name) continue;
+          const img = node.images?.edges?.[0]?.node?.url as string | undefined;
+          const cur = map.get(name);
+          if (cur) {
+            cur.count += 1;
+            if (!cur.img && img) cur.img = img;
+          } else {
+            map.set(name, { name, img, count: 1 });
+          }
+        }
+        setCats(Array.from(map.values()).sort((a, b) => b.count - a.count));
+      } catch {
+        if (alive) setCats([]);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  return { cats, loading };
+}
+
+function ShopCategories({ onPick }: { onPick: (name: string) => void }) {
+  const { cats, loading } = useShopCategories();
+  if (!loading && cats.length === 0) return null;
+
+  return (
+    <section id={"categories"} className={"sp-sec"}>
+      <div className={"padding-global"}>
+        <div className={"container-large"}>
+          <div className={"sp-head"}>
+            <h2 className={"sp-h"}>{"Shop by category"}</h2>
+            <a className={"sp-all"} href={"#all-products"} onClick={() => onPick("")}>{"View all"}</a>
+          </div>
+          <div className={"sp-row sp-cats"}>
+            {loading
+              ? Array.from({ length: 6 }).map((_, i) => <div key={i} className={"sp-skel sp-skel-card"}></div>)
+              : cats.map((c, i) => (
+                <a key={c.name} className={"sp-cat"} href={"#all-products"} onClick={() => onPick(c.name)}>
+                  <div
+                    className={c.img ? "t sp-cat-img" : "t"}
+                    style={{
+                      background: c.img ? undefined : CATEGORY_GRADIENTS[i % CATEGORY_GRADIENTS.length],
+                      backgroundImage: c.img ? `url("${c.img}")` : undefined,
+                    } as any}
+                  >
+                    {c.img ? null : <Glyph k={"box"} size={64} stroke={"#fff"} sw={1.2} />}
+                  </div>
+                  <div className={"l"}>{c.name}</div>
+                </a>
+              ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function ShopAllProducts({ category, onClearCategory }: { category: string; onClearCategory: () => void }) {
   const [products, setProducts] = useState<ShopifyProduct[]>([]);
@@ -663,88 +747,7 @@ export function PhysicalProductsExport() {
             </div>
           </div>
         </section>
-        <section id={"categories"} className={"sp-sec"}>
-          <div className={"padding-global"}>
-            <div className={"container-large"}>
-              <div className={"sp-head"}>
-                <h2 className={"sp-h"}>
-                  {"Shop by category"}
-                </h2>
-                <a className={"sp-all"} href={"#all-products"} onClick={() => setCategory("")}>
-                  {"View all"}
-                </a>
-              </div>
-              <div className={"sp-row sp-cats sp-cats-split"}>
-                <a className={"sp-cat"} href={"#all-products"} onClick={() => setCategory("Electronics")}>
-                  <div className={"t"} style={{"background": "linear-gradient(135deg,#3b1055,#c026d3)"} as any}>
-                    <svg viewBox={"0 0 24 24"} width={"64"} height={"64"} fill={"none"} stroke={"#fff"} strokeWidth={"1.2"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                      <rect x={"5"} y={"6"} width={"14"} height={"10"} rx={"1.5"}></rect>
-                      <path d={"M3 19h18"}></path>
-                    </svg>
-                  </div>
-                  <div className={"l"}>
-                    {"Electronics"}
-                  </div>
-                </a>
-                <a className={"sp-cat"} href={"#all-products"} onClick={() => setCategory("Fashion")}>
-                  <div className={"t"} style={{"background": "linear-gradient(135deg,#9f1239,#fb7185)"} as any}>
-                    <svg viewBox={"0 0 24 24"} width={"64"} height={"64"} fill={"none"} stroke={"#fff"} strokeWidth={"1.2"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                      <path d={"M8 4l-5 3 2 4 3-1v10h8V10l3 1 2-4-5-3a4 4 0 01-8 0z"}></path>
-                    </svg>
-                  </div>
-                  <div className={"l"}>
-                    {"Fashion"}
-                  </div>
-                </a>
-                <a className={"sp-cat"} href={"#all-products"} onClick={() => setCategory("Home & Living")}>
-                  <div className={"t"} style={{"background": "linear-gradient(135deg,#0a0a0a,#3f3f46)"} as any}>
-                    <svg viewBox={"0 0 24 24"} width={"64"} height={"64"} fill={"none"} stroke={"#fff"} strokeWidth={"1.2"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                      <path d={"M3 11l9-8 9 8M5 10v10h14V10"}></path>
-                    </svg>
-                  </div>
-                  <div className={"l"}>
-                    {"Home & Living"}
-                  </div>
-                </a>
-                <a className={"sp-cat"} href={"#all-products"} onClick={() => setCategory("Gaming & Gear")}>
-                  <div className={"t"} style={{"background": "linear-gradient(135deg,#2e1065,#a78bfa)"} as any}>
-                    <svg viewBox={"0 0 24 24"} width={"64"} height={"64"} fill={"none"} stroke={"#fff"} strokeWidth={"1.2"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                      <rect x={"2"} y={"8"} width={"20"} height={"10"} rx={"5"}></rect>
-                      <path d={"M7 11v4M5 13h4"}></path>
-                      <circle cx={"16"} cy={"12"} r={"1"}></circle>
-                      <circle cx={"18.5"} cy={"14.5"} r={"1"}></circle>
-                    </svg>
-                  </div>
-                  <div className={"l"}>
-                    {"Gaming & Gear"}
-                  </div>
-                </a>
-                <a className={"sp-cat"} href={"#all-products"} onClick={() => setCategory("Accessories")}>
-                  <div className={"t"} style={{"background": "linear-gradient(135deg,#1e3a8a,#38bdf8)"} as any}>
-                    <svg viewBox={"0 0 24 24"} width={"64"} height={"64"} fill={"none"} stroke={"#fff"} strokeWidth={"1.2"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                      <rect x={"7"} y={"6"} width={"10"} height={"12"} rx={"3"}></rect>
-                      <path d={"M9 6l1-3h4l1 3M9 18l1 3h4l1-3"}></path>
-                    </svg>
-                  </div>
-                  <div className={"l"}>
-                    {"Accessories"}
-                  </div>
-                </a>
-                <a className={"sp-cat"} href={"#all-products"} onClick={() => setCategory("Beauty")}>
-                  <div className={"t"} style={{"background": "linear-gradient(135deg,#9a3412,#fdba74)"} as any}>
-                    <svg viewBox={"0 0 24 24"} width={"64"} height={"64"} fill={"none"} stroke={"#fff"} strokeWidth={"1.2"} strokeLinecap={"round"} strokeLinejoin={"round"}>
-                      <path d={"M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"}></path>
-                    </svg>
-                  </div>
-                  <div className={"l"}>
-                    {"Beauty"}
-                  </div>
-                </a>
-              </div>
-            </div>
-          </div>
-        </section>
-        <ShopAllProducts category={category} onClearCategory={() => setCategory("")} />
+        <ShopCategories onPick={setCategory} />
         <GiftCardsAndTopUps />
         <section className={"sp-sec tight"} id={"why"}>
           <div className={"padding-global"}>
@@ -770,6 +773,7 @@ export function PhysicalProductsExport() {
           </div>
         </section>
         <MoreToLove />
+        <ShopAllProducts category={category} onClearCategory={() => setCategory("")} />
         <section className={"sp-sec"}>
           <div className={"padding-global"}>
             <div className={"container-large"}>
