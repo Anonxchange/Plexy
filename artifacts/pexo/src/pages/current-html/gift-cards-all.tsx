@@ -1,7 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
 import { CurrentMarketingPage } from "@/components/marketing/current-marketing-page";
-// Your icon set (the icons.tsx file). Adjust this path if the file lives elsewhere.
 import {
   ArrowUpDown,
   ChevronDown,
@@ -21,7 +20,7 @@ import {
   Tag,
   Ticket,
   UtensilsCrossed,
-} from "@/components/icons";
+} from "@/lib/icons";
 import { useGiftCardCategories, useGiftCardCountries } from "@/hooks/use-reloadly";
 import { useAirtimeOperators } from "@/hooks/use-airtime-operators";
 import { useGiftCardCatalog } from "@/hooks/use-gift-card-catalog";
@@ -34,7 +33,7 @@ import {
   savedCountry,
   uniqueByName,
   type CardTile,
-} from "./gift-card-utils";
+} from "@/lib/gift-card-utils";
 
 const ALL = "ALL";
 const PAGE_SIZE = 40;
