@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { CurrentMarketingPage } from "@/components/marketing/current-marketing-page";
-import { useGiftCardCountries, useGiftCardProducts, type ReloadlyProduct } from "@/hooks/use-reloadly";
+import { useGiftCardCategories, useGiftCardCountries, useGiftCardProducts, type ReloadlyCategory, type ReloadlyProduct } from "@/hooks/use-reloadly";
 import { useAirtimeOperators, type AirtimeOperator } from "@/hooks/use-airtime-operators";
 
 const HERO_CARDS = [
@@ -232,17 +232,6 @@ function preferredRank(p: ReloadlyProduct) {
   return i < 0 ? 99 : i;
 }
 
-function sectionOf(p: ReloadlyProduct): string | null {
-  const brandAndName = ((p.brand?.brandName || "") + " " + p.productName).toLowerCase();
-  const catAndBrand = ((p.category?.name || "") + " " + (p.brand?.brandName || "")).toLowerCase();
-  if (/visa|mastercard|prepaid|virtual card|debit card/.test(brandAndName)) return "payment";
-  if (/gam|xbox|playstation|steam|roblox|nintendo|razer|fortnite|pubg|riot/.test(catAndBrand)) return "gaming";
-  if (/entertain|music|stream|movie|netflix|spotify|app store|itunes|google play/.test(catAndBrand)) return "entertainment";
-  if (/travel|hotel|flight|airline|transport|uber|airbnb|rental/.test(catAndBrand)) return "travel";
-  if (/shop|retail|fashion|electron|home|beauty|market|amazon|walmart|target/.test(catAndBrand)) return "shopping";
-  return null;
-}
-
 function uniqueByBrand(list: ReloadlyProduct[]) {
   const seen = new Set<string>();
   return list.filter((p) => {
@@ -253,18 +242,38 @@ function uniqueByBrand(list: ReloadlyProduct[]) {
   });
 }
 
+// Popular and Top Up are fixed sections. Every other section is a real Reloadly
+// category (loaded with categoryId), so titles and contents come from Reloadly.
 // Put your own banner photos in /public and set `img` to use them.
-const SHELF_META: Record<string, { title: string; tab: string; banner?: ShelfBanner; one?: boolean }> = {
-  popular: { title: "8,000+ products in 180+ countries", tab: "Popular" },
-  airtime: { title: "Mobile top up", tab: "Top Up", one: true, banner: { bg: "#0b6e4f", text: "Airtime in seconds" } },
-  payment: { title: "Payment cards", tab: "Payment Cards" },
-  gaming: { title: "Gaming", tab: "Gaming", banner: { bg: "#1b2a6b", text: "Level up with crypto" } },
-  entertainment: { title: "Entertainment", tab: "Entertainment", banner: { bg: "#3b1f5c", text: "Press play" } },
-  shopping: { title: "Shopping", tab: "Shopping", banner: { bg: "#8a2f4d", text: "Treat yourself" } },
-  travel: { title: "For your travel needs", tab: "Travel", banner: { bg: "#0e6f8a", text: "Go somewhere" } },
-};
-const TOP_ORDER = ["popular", "airtime", "gaming", "travel", "shopping", "entertainment"];
-const TAB_ORDER = ["popular", "airtime", "payment", "gaming", "entertainment", "shopping", "travel"];
+type ShelfMeta = { title: string; tab: string; banner?: ShelfBanner; one?: boolean };
+const POPULAR_META: ShelfMeta = { title: "8,000+ products in 180+ countries", tab: "Popular" };
+const AIRTIME_META: ShelfMeta = { title: "Mobile top up", tab: "Top Up", one: true, banner: { bg: "#0b6e4f", text: "Airtime in seconds" } };
+const BANNER_COLORS = ["#1b2a6b", "#0e6f8a", "#8a2f4d", "#3b1f5c", "#2d5a4a", "#8a5a3c", "#3b4a8f", "#0b6e4f"];
+const MAX_CATEGORIES = 8;
+
+// How many cards each section has, so tabs only show for sections that have cards.
+const sectionCounts: Record<string, number> = {};
+let countsVersion = 0;
+const countSubs = new Set<() => void>();
+function reportCount(id: string, n: number) {
+  if (sectionCounts[id] === n) return;
+  sectionCounts[id] = n;
+  countsVersion++;
+  countSubs.forEach((f) => f());
+}
+function useSectionCounts() {
+  useSyncExternalStore(
+    (cb) => {
+      countSubs.add(cb);
+      return () => {
+        countSubs.delete(cb);
+      };
+    },
+    () => countsVersion,
+    () => 0,
+  );
+  return sectionCounts;
+}
 
 const SHELF_CSS = `
 .pxg .gs{--gs-ink:#091e1c;--gs-mute:#52625f;--gs-line:#e3ebe9;--gs-field:#f3f7f6;color:var(--gs-ink)}
@@ -336,8 +345,7 @@ function ShelfTileView({ t }: { t: ShelfTile }) {
   );
 }
 
-function ShelfSectionView({ id, tiles, loading }: { id: string; tiles: ShelfTile[]; loading?: boolean }) {
-  const meta = SHELF_META[id];
+function ShelfSectionView({ id, meta, tiles, loading }: { id: string; meta: ShelfMeta; tiles: ShelfTile[]; loading?: boolean }) {
   const head = (
     <div className={"gs-sh"}>
       <h2>{meta.title}</h2>
@@ -374,57 +382,79 @@ function ShelfSectionView({ id, tiles, loading }: { id: string; tiles: ShelfTile
   );
 }
 
+function CategorySection({ cat, index, country, plain }: { cat: ReloadlyCategory; index: number; country: string; plain?: boolean }) {
+  const res = useGiftCardProducts({ countryCode: country, categoryId: cat.id, size: 24, page: 1, staleTime: 1000 * 60 * 10 });
+  const tiles = useMemo(
+    () => uniqueByBrand((res.data?.content ?? []).filter((p) => p.status !== "INACTIVE")).slice(0, 10).map(giftTile),
+    [res.data],
+  );
+  const id = "cat-" + cat.id;
+  useEffect(() => {
+    reportCount(id, res.isLoading ? -1 : tiles.length);
+  }, [id, res.isLoading, tiles.length]);
+  if (!res.isLoading && tiles.length === 0) return null;
+  const meta: ShelfMeta = {
+    title: cat.name,
+    tab: cat.name,
+    banner: plain ? undefined : { bg: BANNER_COLORS[index % BANNER_COLORS.length], text: cat.name },
+  };
+  return <ShelfSectionView id={id} meta={meta} tiles={tiles} loading={res.isLoading} />;
+}
+
 function GiftShelf({ part }: { part: "top" | "bottom" }) {
   const country = useCountry();
   const q = useSearchQuery();
   const [activeTab, setActiveTab] = useState("popular");
+  const counts = useSectionCounts();
   const countries = useGiftCardCountries({ enabled: part === "top" });
+  const categories = useGiftCardCategories();
 
   useEffect(() => {
     if (part === "top" && !country && countryValue == null) setCountry(guessCountry(), false);
   }, [part, country]);
 
-  const list = useGiftCardProducts({ countryCode: country ?? undefined, size: 200, page: 1, staleTime: 1000 * 60 * 10, enabled: !!country });
+  // Popular: one batch for the country, ordered by the PREFERRED brand list
+  const list = useGiftCardProducts({ countryCode: country ?? undefined, size: 200, page: 1, staleTime: 1000 * 60 * 10, enabled: !!country && part === "top" });
   const found = useGiftCardProducts({ countryCode: country ?? undefined, productName: q, size: 24, page: 1, enabled: !!q && !!country, staleTime: 1000 * 60 * 10 });
   const air = useAirtimeOperators(country ?? undefined, part === "top");
 
-  const sections = useMemo(() => {
-    const all = (list.data?.content ?? []).filter((p) => p.status !== "INACTIVE");
-    const by: Record<string, ReloadlyProduct[]> = { gaming: [], entertainment: [], shopping: [], travel: [], payment: [] };
-    all.forEach((p) => {
-      const k = sectionOf(p);
-      if (k) by[k].push(p);
-    });
-    const out: Record<string, ShelfTile[]> = {};
-    Object.keys(by).forEach((k) => {
-      out[k] = uniqueByBrand(by[k]).slice(0, 10).map(giftTile);
-    });
-    out.popular = uniqueByBrand(all.filter((p) => p.logoUrls?.length))
+  const popular = useMemo(() => {
+    const all = (list.data?.content ?? []).filter((p) => p.status !== "INACTIVE" && p.logoUrls?.length);
+    return uniqueByBrand(all)
       .sort((a, b) => preferredRank(a) - preferredRank(b))
       .slice(0, 10)
       .map(giftTile);
-    out.airtime = (air.data ?? []).slice(0, 8).map(airTile);
-    return out;
-  }, [list.data, air.data]);
+  }, [list.data]);
+  const airtime = useMemo(() => (air.data ?? []).slice(0, 8).map(airTile), [air.data]);
 
-  const goTab = (id: string) => {
-    setActiveTab(id);
-    document.getElementById("gs-s-" + id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
+  // "Payment" category goes below "What happens after you pay"; the rest are shelves up here
+  const cats = categories.data ?? [];
+  const payCat = cats.find((c) => /payment|prepaid/i.test(c.name));
+  const topCats = cats.filter((c) => c !== payCat).slice(0, MAX_CATEGORIES);
 
   if (part === "bottom") {
-    if (q || !(sections.payment || []).length) return null;
+    if (q || !country || !payCat) return null;
     return (
       <div className={"gs"}>
         <style>{SHELF_CSS}</style>
         <div className={"gs-w"}>
-          <ShelfSectionView id={"payment"} tiles={sections.payment} />
+          <CategorySection cat={payCat} index={0} country={country} plain />
         </div>
       </div>
     );
   }
 
-  const visibleTabs = TAB_ORDER.filter((id) => (sections[id] || []).length > 0 || (list.isLoading && id === "popular"));
+  const goTab = (id: string) => {
+    setActiveTab(id);
+    document.getElementById("gs-s-" + id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  const tabs: { id: string; label: string }[] = [];
+  if (popular.length || list.isLoading) tabs.push({ id: "popular", label: POPULAR_META.tab });
+  if (airtime.length) tabs.push({ id: "airtime", label: AIRTIME_META.tab });
+  if (payCat && (counts["cat-" + payCat.id] ?? 0) > 0) tabs.push({ id: "cat-" + payCat.id, label: payCat.name });
+  topCats.forEach((c) => {
+    if ((counts["cat-" + c.id] ?? 0) > 0) tabs.push({ id: "cat-" + c.id, label: c.name });
+  });
   const resultTiles = (found.data?.content ?? []).map(giftTile);
 
   return (
@@ -446,9 +476,9 @@ function GiftShelf({ part }: { part: "top" | "bottom" }) {
       {q ? null : (
         <div className={"gs-w"}>
           <div className={"gs-tabs"} role={"tablist"}>
-            {visibleTabs.map((id) => (
-              <button key={id} type={"button"} className={"gs-tab"} aria-pressed={activeTab === id} onClick={() => goTab(id)}>
-                {SHELF_META[id].tab}
+            {tabs.map((t) => (
+              <button key={t.id} type={"button"} className={"gs-tab"} aria-pressed={activeTab === t.id} onClick={() => goTab(t.id)}>
+                {t.label}
               </button>
             ))}
           </div>
@@ -487,9 +517,11 @@ function GiftShelf({ part }: { part: "top" | "bottom" }) {
             </button>
           </p>
         ) : (
-          TOP_ORDER.filter((id) => (sections[id] || []).length > 0 || (list.isLoading && id === "popular")).map((id) => (
-            <ShelfSectionView key={id} id={id} tiles={sections[id] || []} loading={list.isLoading && id === "popular"} />
-          ))
+          <>
+            {popular.length || list.isLoading ? <ShelfSectionView id={"popular"} meta={POPULAR_META} tiles={popular} loading={list.isLoading} /> : null}
+            {airtime.length ? <ShelfSectionView id={"airtime"} meta={AIRTIME_META} tiles={airtime} /> : null}
+            {country ? topCats.map((c, i) => <CategorySection key={c.id} cat={c} index={i} country={country} />) : null}
+          </>
         )}
       </div>
     </div>
