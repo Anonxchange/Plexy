@@ -26,6 +26,7 @@ import { PageSkeleton, WalletPageSkeleton } from "@/components/page-skeleton";
 const PexlyHomepage = lazy(() => import("@/pages/current-html/home").then(m => ({ default: m.PexlyHomepage })));
 const PhysicalProductsExport = lazy(() => import("@/pages/current-html/physical-products").then(m => ({ default: m.PhysicalProductsExport })));
 const GiftCardsExport = lazy(() => import("@/pages/current-html/gift-cards").then(m => ({ default: m.GiftCardsExport })));
+const GiftCardsAllPage = lazy(() => import("@/pages/current-html/gift-cards-all").then(m => ({ default: m.GiftCardsAllPage })));
 const AboutUsExport = lazy(() => import("@/pages/current-html/about-us").then(m => ({ default: m.AboutUsExport })));
 const TeamsExport = lazy(() => import("@/pages/current-html/teams").then(m => ({ default: m.TeamsExport })));
 const CareerExport = lazy(() => import("@/pages/current-html/career").then(m => ({ default: m.CareerExport })));
@@ -203,6 +204,7 @@ function AppRoutes() {
     <Switch>
       <Route path="/">{() => <LazyRoute component={PexlyHomepage} />}</Route>
       <Route path="/gift-cards/browse">{() => <LazyRoute component={GiftCardBrowse} />}</Route>
+      <Route path="/gift-cards/all">{() => <LazyRoute component={GiftCardsAllPage} />}</Route>
       <Route path="/gift-cards/:id">{() => <LazyRoute component={GiftCardDetail} />}</Route>
       <Route path="/gift-cards">{() => <LazyRoute component={GiftCardsExport} />}</Route>
       <Route path="/shop/product/:id">{() => <LazyRoute component={ProductDetail} />}</Route>
@@ -249,7 +251,7 @@ function AppContent() {
   const [location] = useLocation();
   const isHomepage = location === "/";
   const isPhysicalProductsPage = location === "/shop";
-  const isGiftCardsTemplatePage = location === "/gift-cards";
+  const isGiftCardsTemplatePage = location === "/gift-cards" || location === "/gift-cards/all";
   const showMarketplaceChat = isPhysicalProductsPage || isGiftCardsTemplatePage;
   const isStandaloneCompanyPage = [
     "/about", "/about-us", "/about-us.html",
