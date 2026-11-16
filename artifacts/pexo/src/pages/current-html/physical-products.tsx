@@ -37,6 +37,17 @@ const SHOP_GRID_CSS = `
 .sp-img.sp-real img.sp-real-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 .sp-img.sp-gc{aspect-ratio:1.586;border:1px solid #e3ebe9;border-radius:14px;display:grid;place-items:center}
 .sp-skel.sp-skel-card{aspect-ratio:1.586;flex:0 0 220px}
+.sp-masonry{display:flex;gap:12px;margin-top:22px;align-items:flex-start}
+@media(min-width:700px){.sp-masonry{gap:18px}}
+.sp-mcol{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:18px}
+.sp-masonry .sp-card{width:auto;min-width:0;flex:none;max-width:none}
+.sp-masonry .sp-card a.sp-card-link{display:block;color:inherit;text-decoration:none}
+.sp-masonry .sp-img.sp-real{position:relative;overflow:hidden;border-radius:16px;background:#f3f7f6;width:100%}
+.sp-masonry .sp-img.sp-real img.sp-real-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.sp-masonry .sp-card h3{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sp-masonry .sp-skel{width:100%;aspect-ratio:auto}
+.sp-row .sp-img.sp-real{aspect-ratio:1/1}
+.sp-skel.sp-skel-sq{flex:0 0 190px}
 .sp-cat .t.sp-cat-img{background-size:cover;background-position:center;background-repeat:no-repeat}
 .sp-all-grid .sp-card h3{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .sp-skel{aspect-ratio:1/1;border-radius:18px;background:linear-gradient(90deg,#eef2f1,#f7f9f8,#eef2f1);background-size:200% 100%;animation:sp-pulse 1.2s linear infinite}
@@ -65,6 +76,13 @@ const CATEGORY_GRADIENTS = [
   "linear-gradient(135deg,#9a3412,#fdba74)",
 ];
 
+// getProducts' third argument is a Shopify search string, so a category has to be sent as a product_type filter.
+function categoryQuery(name: string): string | undefined {
+  const n = name.trim();
+  if (!n) return undefined;
+  return 'product_type:"' + n.replace(/"/g, '\\"') + '"';
+}
+
 function useShopCategories() {
   const [cats, setCats] = useState<ShopCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,28 +90,27 @@ function useShopCategories() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      try {
-        const res = await shopifyService.getProducts(250, undefined, undefined);
-        if (!alive) return;
-        const map = new Map<string, ShopCategory>();
-        for (const { node } of res.products as ShopifyProduct[]) {
-          const name = String((node as any).productType || "").trim();
-          if (!name) continue;
-          const img = node.images?.edges?.[0]?.node?.url as string | undefined;
-          const cur = map.get(name);
-          if (cur) {
-            cur.count += 1;
-            if (!cur.img && img) cur.img = img;
-          } else {
-            map.set(name, { name, img, count: 1 });
-          }
-        }
-        setCats(Array.from(map.values()).sort((a, b) => b.count - a.count));
-      } catch {
-        if (alive) setCats([]);
-      } finally {
-        if (alive) setLoading(false);
+      const [types, prods] = await Promise.all([
+        shopifyService.getProductTypes(250).catch(() => [] as string[]),
+        shopifyService.getProducts(250, undefined, undefined).catch(() => ({ products: [] as any[] })),
+      ]);
+      if (!alive) return;
+      const map = new Map<string, ShopCategory>();
+      for (const t of types as string[]) {
+        const name = String(t).trim();
+        if (name && !map.has(name)) map.set(name, { name, count: 0 });
       }
+      for (const { node } of prods.products as ShopifyProduct[]) {
+        const name = (node.productType || "").trim();
+        if (!name) continue;
+        const img = node.images?.edges?.[0]?.node?.url;
+        const cur = map.get(name) ?? { name, count: 0 };
+        cur.count += 1;
+        if (!cur.img && img) cur.img = img;
+        map.set(name, cur);
+      }
+      setCats(Array.from(map.values()).sort((x, y) => y.count - x.count || x.name.localeCompare(y.name)));
+      setLoading(false);
     })();
     return () => { alive = false; };
   }, []);
@@ -137,6 +154,36 @@ function ShopCategories({ onPick }: { onPick: (name: string) => void }) {
   );
 }
 
+function columnsForWidth(): number {
+  if (typeof window === "undefined") return 2;
+  const w = window.innerWidth;
+  return w >= 1280 ? 5 : w >= 1000 ? 4 : w >= 700 ? 3 : 2;
+}
+
+function useColumnCount() {
+  const [n, setN] = useState(columnsForWidth);
+  useEffect(() => {
+    const on = () => setN(columnsForWidth());
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
+  return n;
+}
+
+// Height / width of a product photo. Uses the real image size when the store returns it,
+// otherwise a steady per-product variation so the grid still staggers.
+function photoRatio(node: any): number {
+  const img = node?.images?.edges?.[0]?.node;
+  const w = Number(img?.width);
+  const h = Number(img?.height);
+  if (w > 0 && h > 0) return Math.min(1.5, Math.max(0.8, h / w));
+  const steps = [1, 1.25, 1.12, 1.4, 1.18];
+  let hash = 0;
+  const key = String(node?.id || "");
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  return steps[hash % steps.length];
+}
+
 function ShopAllProducts({ category, onClearCategory }: { category: string; onClearCategory: () => void }) {
   const [products, setProducts] = useState<ShopifyProduct[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -145,13 +192,25 @@ function ShopAllProducts({ category, onClearCategory }: { category: string; onCl
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestId = useRef(0);
+  const colCount = useColumnCount();
+  const cols = useMemo(() => {
+    const out = Array.from({ length: colCount }, () => ({ h: 0, items: [] as { p: ShopifyProduct; r: number }[] }));
+    for (const p of products) {
+      const r = photoRatio(p.node);
+      let target = out[0];
+      for (const c of out) if (c.h < target.h) target = c;
+      target.items.push({ p, r });
+      target.h += r + 0.45;
+    }
+    return out;
+  }, [products, colCount]);
 
   const loadFirst = useCallback(async () => {
     const id = ++requestId.current;
     setLoading(true);
     setError(null);
     try {
-      const res = await shopifyService.getProducts(PAGE_SIZE, undefined, category || undefined);
+      const res = await shopifyService.getProducts(PAGE_SIZE, undefined, categoryQuery(category));
       if (id !== requestId.current) return;
       setProducts(res.products as ShopifyProduct[]);
       setHasMore(Boolean(res.pageInfo?.hasNextPage));
@@ -180,7 +239,7 @@ function ShopAllProducts({ category, onClearCategory }: { category: string; onCl
     const id = requestId.current;
     setLoadingMore(true);
     try {
-      const res = await shopifyService.getProducts(PAGE_SIZE, cursor, category || undefined);
+      const res = await shopifyService.getProducts(PAGE_SIZE, cursor, categoryQuery(category));
       if (id !== requestId.current) return;
       const next = res.products as ShopifyProduct[];
       setProducts((prev) => {
@@ -213,29 +272,40 @@ function ShopAllProducts({ category, onClearCategory }: { category: string; onCl
             </div>
           </div>
 
-          <div className={"sp-all-grid"}>
+          <div className={"sp-masonry"}>
             {loading
-              ? Array.from({ length: 10 }).map((_, i) => <div key={i} className={"sp-skel"}></div>)
-              : products.map(({ node }) => {
-                const img = node.images?.edges?.[0]?.node;
-                const price = node.priceRange?.minVariantPrice;
-                const href = `/shop/product/${node.handle}`;
-                return (
-                  <article key={node.id} className={"sp-card"}>
-                    <Link href={href} className={"sp-card-link"}>
-                      <div className={"sp-img sp-real"}>
-                        {img?.url ? (
-                          <img className={"sp-real-img"} src={img.url} alt={img.altText || node.title} loading={"lazy"} />
-                        ) : null}
-                      </div>
-                      <h3>{node.title}</h3>
-                      <p className={"sp-price"}>
-                        <b>{price ? formatPrice(price.amount, price.currencyCode) : ""}</b>
-                      </p>
-                    </Link>
-                  </article>
-                );
-              })}
+              ? Array.from({ length: colCount }).map((_, ci) => (
+                <div key={ci} className={"sp-mcol"}>
+                  {[1.2, 1, 1.35, 1.1].map((r, i) => (
+                    <div key={i} className={"sp-skel"} style={{ height: 0, paddingBottom: Math.round(r * 100) + "%" }}></div>
+                  ))}
+                </div>
+              ))
+              : cols.map((col, ci) => (
+                <div key={ci} className={"sp-mcol"}>
+                  {col.items.map(({ p, r }) => {
+                    const node = p.node;
+                    const img = node.images?.edges?.[0]?.node;
+                    const price = node.priceRange?.minVariantPrice;
+                    const href = `/shop/product/${node.handle}`;
+                    return (
+                      <article key={node.id} className={"sp-card"}>
+                        <Link href={href} className={"sp-card-link"}>
+                          <div className={"sp-img sp-real"} style={{ aspectRatio: "1 / " + r }}>
+                            {img?.url ? (
+                              <img className={"sp-real-img"} src={img.url} alt={img.altText || node.title} loading={"lazy"} />
+                            ) : null}
+                          </div>
+                          <h3>{node.title}</h3>
+                          <p className={"sp-price"}>
+                            <b>{price ? formatPrice(price.amount, price.currencyCode) : ""}</b>
+                          </p>
+                        </Link>
+                      </article>
+                    );
+                  })}
+                </div>
+              ))}
           </div>
 
           {error ? (
@@ -328,82 +398,6 @@ function Badge({ label, hot }: { label: string; hot?: boolean }) {
   );
 }
 
-type TileItem = {
-  title: string;
-  price: string;
-  was?: string;
-  badge?: string;
-  hot?: boolean;
-  bg: string;
-  icon: IconKey;
-  tags?: string;
-  gradient?: string; // big card variant
-};
-
-function Tile({ item }: { item: TileItem }) {
-  const big = Boolean(item.gradient);
-  return (
-    <article className={big ? "sp-card big" : "sp-card"} data-tags={item.tags || ""}>
-      <div className="sp-img" style={big ? { background: item.gradient } : undefined}>
-        {item.badge ? <Badge label={item.badge} hot={item.hot} /> : null}
-        {big ? (
-          <Glyph k={item.icon} size={110} stroke="#fff" sw={1} />
-        ) : (
-          <div className="sp-pr" style={{ background: item.bg }}>
-            <Glyph k={item.icon} />
-          </div>
-        )}
-      </div>
-      <h3>{item.title}</h3>
-      <p className="sp-price">
-        {item.was ? <s>{item.was}</s> : null}
-        <b>{item.price}</b>
-      </p>
-    </article>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// "More to love": Hot right now, Our top picks, Everyday finds, Picked for you
-// ---------------------------------------------------------------------------
-const HOT_ITEMS: TileItem[] = [
-  { title: "Wireless Earbuds", price: "$39.00", badge: "HOT", hot: true, bg: "#e8e1ff", icon: "earbuds" },
-  { title: "Smart Watch", price: "$89.00", was: "$99", badge: "HOT", hot: true, bg: "#e3f9dc", icon: "watch" },
-  { title: "Everyday Sneakers", price: "$64.00", badge: "HOT", hot: true, bg: "#ffe9d6", icon: "sneaker" },
-  { title: "Desk Lamp", price: "$27.00", badge: "HOT", hot: true, bg: "#fff3c9", icon: "lamp" },
-  { title: "City Backpack", price: "$45.00", was: "$55", badge: "HOT", hot: true, bg: "#dbeafe", icon: "bag" },
-];
-
-const PICK_ITEMS: TileItem[] = [
-  { title: "Wireless Earbuds", price: "$39.00", badge: "NEW", bg: "#e8e1ff", icon: "earbuds", tags: "popular new fast under50" },
-  { title: "Smart Watch", price: "$89.00", was: "$99", badge: "SAVE 10%", bg: "#e3f9dc", icon: "watch", tags: "popular fast" },
-  { title: "Everyday Sneakers", price: "$64.00", badge: "POPULAR", bg: "#ffe9d6", icon: "sneaker", tags: "popular under100 fast" },
-  { title: "Desk Lamp", price: "$27.00", badge: "UNDER $50", bg: "#fff3c9", icon: "lamp", tags: "under50 new" },
-  { title: "City Backpack", price: "$45.00", was: "$55", badge: "SAVE 18%", bg: "#dbeafe", icon: "bag", tags: "under50 popular" },
-  { title: "Wireless Controller", price: "$59.00", badge: "NEW", bg: "#fce7f3", icon: "gamepad", tags: "new fast" },
-];
-
-const PICK_FILTERS: { key: string; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "popular", label: "Popular" },
-  { key: "fast", label: "Fast shipping" },
-  { key: "under50", label: "Under $50" },
-  { key: "new", label: "New" },
-];
-
-const FIND_ITEMS: TileItem[] = [
-  { title: "Phone Stand", price: "$12.00", badge: "FAST SHIPPING", bg: "#e3f9dc", icon: "phone" },
-  { title: "Cable Organizer", price: "$9.00", badge: "FAST SHIPPING", bg: "#e8e1ff", icon: "box" },
-  { title: "Canvas Tote", price: "$18.00", was: "$24", badge: "SAVE 25%", bg: "#ffe9d6", icon: "bag" },
-  { title: "Mini Desk Lamp", price: "$21.00", badge: "NEW", bg: "#fff3c9", icon: "lamp" },
-];
-
-const FOR_YOU_ITEMS: TileItem[] = [
-  { title: "Earbuds + Case Bundle", price: "$49", badge: "BEST SELLER", bg: "", icon: "earbuds", gradient: "linear-gradient(135deg,#1e3a8a,#38bdf8)" },
-  { title: "Smart Watch Pro", price: "$129", badge: "POPULAR", bg: "", icon: "watch", gradient: "linear-gradient(135deg,#0a0a0a,#3f3f46)" },
-  { title: "Gaming Starter Kit", price: "$99", badge: "NEW", bg: "", icon: "gamepad", gradient: "linear-gradient(135deg,#2e1065,#a78bfa)" },
-];
-
 function shuffled<T>(list: T[]): T[] {
   const a = list.slice();
   for (let i = a.length - 1; i > 0; i--) {
@@ -413,10 +407,132 @@ function shuffled<T>(list: T[]): T[] {
   return a;
 }
 
-function MoreToLove() {
-  const [hot, setHot] = useState<TileItem[]>(() => shuffled(HOT_ITEMS));
+// ---------------------------------------------------------------------------
+// Product rails: Hot right now + Our top picks, built from real store products
+// ---------------------------------------------------------------------------
+type RailProduct = {
+  id: string;
+  handle: string;
+  title: string;
+  img?: string;
+  alt: string;
+  amountRaw: any;
+  amount: number;
+  currency: string;
+  wasRaw?: any;
+  wasAmount?: number;
+  createdAt?: number;
+};
+
+function toRail(p: ShopifyProduct): RailProduct {
+  const n: any = p.node;
+  const price = n.priceRange?.minVariantPrice;
+  const cmp = n.compareAtPriceRange?.minVariantPrice;
+  const amount = Number(price?.amount ?? 0);
+  const cmpAmount = Number(cmp?.amount ?? 0);
+  const hasWas = cmpAmount > amount && amount > 0;
+  const created = n.createdAt ? Date.parse(n.createdAt) : NaN;
+  const img = n.images?.edges?.[0]?.node;
+  return {
+    id: n.id,
+    handle: n.handle,
+    title: n.title,
+    img: img?.url,
+    alt: img?.altText || n.title,
+    amountRaw: price?.amount,
+    amount,
+    currency: price?.currencyCode || "USD",
+    wasRaw: hasWas ? cmp.amount : undefined,
+    wasAmount: hasWas ? cmpAmount : undefined,
+    createdAt: Number.isNaN(created) ? undefined : created,
+  };
+}
+
+function useRailProducts() {
+  const [items, setItems] = useState<RailProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      try {
+        const res = await shopifyService.getProducts(100, undefined, undefined);
+        if (!alive) return;
+        setItems((res.products as ShopifyProduct[]).map(toRail));
+      } catch {
+        if (alive) setItems([]);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    };
+    load();
+    window.addEventListener(MARKET_CHANGED_EVENT, load);
+    return () => {
+      alive = false;
+      window.removeEventListener(MARKET_CHANGED_EVENT, load);
+    };
+  }, []);
+
+  return { items, loading };
+}
+
+const NEW_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+
+function badgeFor(p: RailProduct, now: number): string | undefined {
+  if (p.wasAmount && p.amount > 0) {
+    const pct = Math.round((1 - p.amount / p.wasAmount) * 100);
+    if (pct >= 1) return "SAVE " + pct + "%";
+  }
+  if (p.createdAt && now - p.createdAt < NEW_WINDOW_MS) return "NEW";
+  return undefined;
+}
+
+function ProductCard({ p, now }: { p: RailProduct; now: number }) {
+  const badge = badgeFor(p, now);
+  return (
+    <article className={"sp-card"}>
+      <Link href={"/shop/product/" + p.handle} className={"sp-card-link"}>
+        <div className={"sp-img sp-real"}>
+          {badge ? <Badge label={badge} /> : null}
+          {p.img ? <img className={"sp-real-img"} src={p.img} alt={p.alt} loading={"lazy"} /> : null}
+        </div>
+        <h3>{p.title}</h3>
+        <p className={"sp-price"}>
+          {p.wasRaw ? <s>{formatPrice(p.wasRaw, p.currency as any)}</s> : null}
+          <b>{formatPrice(p.amountRaw, p.currency as any)}</b>
+        </p>
+      </Link>
+    </article>
+  );
+}
+
+function ProductRails() {
+  const { items, loading } = useRailProducts();
+  const [seed, setSeed] = useState(0);
   const [filter, setFilter] = useState("all");
-  const picks = filter === "all" ? PICK_ITEMS : PICK_ITEMS.filter((p) => (p.tags || "").split(" ").includes(filter));
+  const now = useMemo(() => Date.now(), []);
+
+  const hot = useMemo(() => shuffled(items.slice(0, 40)).slice(0, 8), [items, seed]);
+
+  const currency = items[0]?.currency || "USD";
+  const filters = useMemo(() => {
+    const all = { key: "all", label: "All", list: items.slice(0, 12) };
+    const fresh = items.filter((p) => p.createdAt && now - p.createdAt < NEW_WINDOW_MS).slice(0, 12);
+    const sale = items.filter((p) => p.wasAmount).slice(0, 12);
+    const under = items.filter((p) => p.amount > 0 && p.amount < 50).slice(0, 12);
+    return [
+      all,
+      { key: "new", label: "New", list: fresh },
+      { key: "sale", label: "On sale", list: sale },
+      { key: "under50", label: "Under " + formatPrice("50", currency as any), list: under },
+    ].filter((f) => f.key === "all" || f.list.length > 0);
+  }, [items, now, currency]);
+
+  const active = filters.find((f) => f.key === filter) || filters[0];
+
+  if (!loading && items.length === 0) return null;
+
+  const skeletons = Array.from({ length: 6 }).map((_, i) => <div key={i} className={"sp-skel sp-skel-sq"}></div>);
 
   return (
     <>
@@ -428,12 +544,12 @@ function MoreToLove() {
                 <h2 className={"sp-h"}>{"Hot right now"}</h2>
                 <p className={"sp-sub"}>{"A fresh mix of products, picked at random each visit."}</p>
               </div>
-              <a className={"sp-all"} href={"#hot"} onClick={(e) => { e.preventDefault(); setHot(shuffled(HOT_ITEMS)); }}>
+              <a className={"sp-all"} href={"#hot"} onClick={(e) => { e.preventDefault(); setSeed((n) => n + 1); }}>
                 {"Shuffle"}
               </a>
             </div>
             <div className={"sp-row"}>
-              {hot.map((item) => <Tile key={item.title} item={item} />)}
+              {loading ? skeletons : hot.map((p) => <ProductCard key={p.id} p={p} now={now} />)}
             </div>
           </div>
         </div>
@@ -449,43 +565,17 @@ function MoreToLove() {
               </div>
               <a className={"sp-all"} href={"#all-products"}>{"View all"}</a>
             </div>
-            <div className={"sp-chips"}>
-              {PICK_FILTERS.map((f) => (
-                <button key={f.key} type={"button"} className={filter === f.key ? "on" : ""} onClick={() => setFilter(f.key)}>
-                  {f.label}
-                </button>
-              ))}
-            </div>
+            {!loading && filters.length > 1 ? (
+              <div className={"sp-chips"}>
+                {filters.map((f) => (
+                  <button key={f.key} type={"button"} className={active.key === f.key ? "on" : ""} onClick={() => setFilter(f.key)}>
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
             <div className={"sp-row"}>
-              {picks.map((item) => <Tile key={item.title} item={item} />)}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className={"sp-sec"}>
-        <div className={"padding-global"}>
-          <div className={"container-large"}>
-            <div className={"sp-head"}>
-              <h2 className={"sp-h"}>{"Everyday finds under $25"}</h2>
-              <a className={"sp-all"} href={"#all-products"}>{"View all"}</a>
-            </div>
-            <div className={"sp-row"}>
-              {FIND_ITEMS.map((item) => <Tile key={item.title} item={item} />)}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className={"sp-sec"}>
-        <div className={"padding-global"}>
-          <div className={"container-large"}>
-            <div className={"sp-head"}>
-              <h2 className={"sp-h"}>{"Picked just for you"}</h2>
-              <a className={"sp-all"} href={"#all-products"}>{"View all"}</a>
-            </div>
-            <div className={"sp-row"}>
-              {FOR_YOU_ITEMS.map((item) => <Tile key={item.title} item={item} />)}
+              {loading ? skeletons : active.list.map((p) => <ProductCard key={p.id} p={p} now={now} />)}
             </div>
           </div>
         </div>
@@ -772,7 +862,7 @@ export function PhysicalProductsExport() {
             </div>
           </div>
         </section>
-        <MoreToLove />
+        <ProductRails />
         <ShopAllProducts category={category} onClearCategory={() => setCategory("")} />
         <section className={"sp-sec"}>
           <div className={"padding-global"}>
