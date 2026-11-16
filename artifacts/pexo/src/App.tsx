@@ -233,9 +233,10 @@ function AppRoutes() {
       <Route path="/dashboard">{() => <Redirect to="/wallet" />}</Route>
       <Route path="/wallet">{() => <ProtectedRoute component={Wallet} skeleton={<WalletPageSkeleton />} />}</Route>
       <Route path="/wallet/virtual-numbers">{() => <Redirect to="/shop" />}</Route>
-      <Route path="/wallet/mobile-topup">{() => <LazyRoute component={MobileTopup} />}</Route>
-      <Route path="/mobile-topup">{() => <Redirect to="/wallet/mobile-topup" />}</Route>
-      <Route path="/mobile-top-up">{() => <Redirect to="/wallet/mobile-topup" />}</Route>
+      {/* Mobile top-up is public: no sign-in needed, so it lives outside /wallet */}
+      <Route path="/mobile-topup">{() => <LazyRoute component={MobileTopup} />}</Route>
+      <Route path="/wallet/mobile-topup">{() => <Redirect to="/mobile-topup" />}</Route>
+      <Route path="/mobile-top-up">{() => <Redirect to="/mobile-topup" />}</Route>
       <Route path="/utility">{() => <LazyRoute component={UtilityBill} />}</Route>
       <Route path="/wallet/utility-bill">{() => <LazyRoute component={UtilityBill} />}</Route>
       <Route path="/wallet/utility">{() => <Redirect to="/utility" />}</Route>
@@ -251,7 +252,7 @@ function AppContent() {
   const [location] = useLocation();
   const isHomepage = location === "/";
   const isPhysicalProductsPage = location === "/shop";
-  const isGiftCardsTemplatePage = location === "/gift-cards" || location === "/gift-cards/all";
+  const isGiftCardsTemplatePage = location === "/gift-cards" || location === "/gift-cards/all" || location === "/mobile-topup";
   const showMarketplaceChat = isPhysicalProductsPage || isGiftCardsTemplatePage;
   const isStandaloneCompanyPage = [
     "/about", "/about-us", "/about-us.html",
