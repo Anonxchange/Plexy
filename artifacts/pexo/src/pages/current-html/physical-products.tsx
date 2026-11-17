@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Link } from "wouter";
 import { CurrentMarketingPage } from "@/components/marketing/current-marketing-page";
 import {
   shopifyService,
@@ -283,7 +282,7 @@ function ShopAllProducts({ category }: { category: string }) {
                     const href = `/shop/product/${node.handle}`;
                     return (
                       <article key={node.id} className={"sp-card"}>
-                        <Link href={href} className={"sp-card-link"}>
+                        <a href={href} className={"sp-card-link"}>
                           <div className={"sp-img sp-real"} style={{ aspectRatio: "1 / " + r }}>
                             {img?.url ? (
                               <img className={"sp-real-img"} src={img.url} alt={img.altText || node.title} loading={"lazy"} />
@@ -293,7 +292,7 @@ function ShopAllProducts({ category }: { category: string }) {
                           <p className={"sp-price"}>
                             <b>{price ? formatPrice(price.amount, price.currencyCode) : ""}</b>
                           </p>
-                        </Link>
+                        </a>
                       </article>
                     );
                   })}
@@ -469,14 +468,14 @@ function LeadStory() {
       <div className={"padding-global"}>
         <div className={"container-large"}>
           <div className={"ed-lead"}>
-            <Link href={href} className={"ed-lead-img"}>
+            <a href={href} className={"ed-lead-img"}>
               <img src={lead.img} alt={lead.alt} />
-            </Link>
+            </a>
             <div>
               <p className={"ed-label"}>{fresh ? "New this week" : "Featured"}</p>
               <h1 className={"ed-title"}>{lead.title}</h1>
               <p className={"ed-price"}>{formatPrice(lead.amountRaw, lead.currency as any)}</p>
-              <Link href={href} className={"ed-link"}>{"View product"}</Link>
+              <a href={href} className={"ed-link"}>{"View product"}</a>
             </div>
           </div>
         </div>
