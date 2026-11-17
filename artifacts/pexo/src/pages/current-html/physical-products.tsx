@@ -46,6 +46,24 @@ const SHOP_GRID_CSS = `
 .sp-masonry .sp-img.sp-real img.sp-real-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 .sp-masonry .sp-card h3{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .sp-masonry .sp-skel{width:100%;aspect-ratio:auto}
+.ed-cats-wrap{border-bottom:1px solid #e3ebe9}
+.ed-cats{display:flex;gap:24px;overflow-x:auto;scrollbar-width:none}
+.ed-cats::-webkit-scrollbar{display:none}
+.ed-cat{flex:none;background:none;border:0;padding:14px 0;font:inherit;font-size:15px;color:#52625f;white-space:nowrap;cursor:pointer}
+.ed-cat.on{color:#091e1c;box-shadow:inset 0 -2px 0 #091e1c}
+.ed-lead{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;padding:20px 0 8px}
+@media(min-width:900px){.ed-lead{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:56px;align-items:center;padding:36px 0}}
+.ed-lead-img{display:block;position:relative;overflow:hidden;border-radius:6px;background:#f3f7f6;aspect-ratio:4/5}
+.ed-lead-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.ed-label{margin:0 0 6px;font-size:13px;color:#52625f}
+.ed-title{margin:0 0 10px;font-family:Georgia,"Times New Roman",serif;font-weight:400;font-size:clamp(26px,4vw,44px);line-height:1.15;color:#091e1c}
+.ed-price{margin:0 0 14px;font-size:15px;color:#52625f;font-variant-numeric:tabular-nums}
+.ed-link{font-size:15px;color:#091e1c;text-decoration:underline;text-underline-offset:3px}
+.ed-foot{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:28px;padding:14px 0;border-top:1px solid #e3ebe9;font-size:13px;color:#52625f}
+.sp-masonry .sp-img.sp-real{border-radius:6px}
+.sp-masonry .sp-card h3{font-size:14px;font-weight:400;line-height:1.35;margin:10px 0 2px;color:#091e1c}
+.sp-masonry .sp-price{margin:0;font-size:14px;color:#52625f;font-variant-numeric:tabular-nums}
+.sp-masonry .sp-price b{font-weight:400}
 .sp-row .sp-img.sp-real{aspect-ratio:1/1}
 .sp-skel.sp-skel-sq{flex:0 0 190px}
 .sp-cat .t.sp-cat-img{background-size:cover;background-position:center;background-repeat:no-repeat}
@@ -66,15 +84,6 @@ const SHOP_GRID_CSS = `
 // Shop by category: real categories taken from the store's own products
 // ---------------------------------------------------------------------------
 type ShopCategory = { name: string; img?: string; count: number };
-
-const CATEGORY_GRADIENTS = [
-  "linear-gradient(135deg,#3b1055,#c026d3)",
-  "linear-gradient(135deg,#9f1239,#fb7185)",
-  "linear-gradient(135deg,#0a0a0a,#3f3f46)",
-  "linear-gradient(135deg,#2e1065,#a78bfa)",
-  "linear-gradient(135deg,#1e3a8a,#38bdf8)",
-  "linear-gradient(135deg,#9a3412,#fdba74)",
-];
 
 // getProducts' third argument is a Shopify search string, so a category has to be sent as a product_type filter.
 function categoryQuery(name: string): string | undefined {
@@ -104,7 +113,7 @@ function useShopCategories() {
         const name = (node.productType || "").trim();
         if (!name) continue;
         const img = node.images?.edges?.[0]?.node?.url;
-        const cur = map.get(name) ?? { name, count: 0 };
+        const cur: ShopCategory = map.get(name) ?? { name, count: 0 };
         cur.count += 1;
         if (!cur.img && img) cur.img = img;
         map.set(name, cur);
@@ -118,39 +127,32 @@ function useShopCategories() {
   return { cats, loading };
 }
 
-function ShopCategories({ onPick }: { onPick: (name: string) => void }) {
+function CategoryStrip({ active, onPick }: { active: string; onPick: (name: string) => void }) {
   const { cats, loading } = useShopCategories();
   if (!loading && cats.length === 0) return null;
 
+  const pick = (name: string) => {
+    onPick(name);
+    window.setTimeout(() => {
+      document.getElementById("all-products")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+  };
+
   return (
-    <section id={"categories"} className={"sp-sec"}>
+    <div className={"ed-cats-wrap"} id={"categories"}>
       <div className={"padding-global"}>
         <div className={"container-large"}>
-          <div className={"sp-head"}>
-            <h2 className={"sp-h"}>{"Shop by category"}</h2>
-            <a className={"sp-all"} href={"#all-products"} onClick={() => onPick("")}>{"View all"}</a>
-          </div>
-          <div className={"sp-row sp-cats"}>
-            {loading
-              ? Array.from({ length: 6 }).map((_, i) => <div key={i} className={"sp-skel sp-skel-card"}></div>)
-              : cats.map((c, i) => (
-                <a key={c.name} className={"sp-cat"} href={"#all-products"} onClick={() => onPick(c.name)}>
-                  <div
-                    className={c.img ? "t sp-cat-img" : "t"}
-                    style={{
-                      background: c.img ? undefined : CATEGORY_GRADIENTS[i % CATEGORY_GRADIENTS.length],
-                      backgroundImage: c.img ? `url("${c.img}")` : undefined,
-                    } as any}
-                  >
-                    {c.img ? null : <Glyph k={"box"} size={64} stroke={"#fff"} sw={1.2} />}
-                  </div>
-                  <div className={"l"}>{c.name}</div>
-                </a>
-              ))}
+          <div className={"ed-cats"}>
+            <button type={"button"} className={active === "" ? "ed-cat on" : "ed-cat"} onClick={() => pick("")}>{"All"}</button>
+            {cats.map((c) => (
+              <button key={c.name} type={"button"} className={active === c.name ? "ed-cat on" : "ed-cat"} onClick={() => pick(c.name)}>
+                {c.name}
+              </button>
+            ))}
           </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -184,7 +186,7 @@ function photoRatio(node: any): number {
   return steps[hash % steps.length];
 }
 
-function ShopAllProducts({ category, onClearCategory }: { category: string; onClearCategory: () => void }) {
+function ShopAllProducts({ category }: { category: string }) {
   const [products, setProducts] = useState<ShopifyProduct[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -260,16 +262,7 @@ function ShopAllProducts({ category, onClearCategory }: { category: string; onCl
       <div className={"padding-global"}>
         <div className={"container-large"}>
           <div className={"sp-head"}>
-            <div>
-              <h2 className={"sp-h"}>{category ? category : "All products"}</h2>
-              <p className={"sp-sub"}>{"Real products from verified sellers, paid in crypto."}</p>
-              {category ? (
-                <div className={"sp-filter-pill"}>
-                  <span>{category}</span>
-                  <button type={"button"} aria-label={"Clear filter"} onClick={onClearCategory}>{"×"}</button>
-                </div>
-              ) : null}
-            </div>
+            <h2 className={"sp-h"}>{category ? category : "Just in"}</h2>
           </div>
 
           <div className={"sp-masonry"}>
@@ -324,6 +317,11 @@ function ShopAllProducts({ category, onClearCategory }: { category: string; onCl
               </button>
             </div>
           ) : null}
+
+          <div className={"ed-foot"}>
+            <span>{"Verified sellers"}</span>
+            <span>{"Pay with USDT, BTC or ETH"}</span>
+          </div>
         </div>
       </div>
     </section>
@@ -376,9 +374,6 @@ const ICONS: Record<IconKey, ReactNode> = {
   ),
 };
 
-const FLAME_PATH = "M12 2c1 3-1 4.5-2.5 6.5C8 10.5 7 12 7 14.5A5 5 0 0017 14.5c0-2-1-3.5-2-4.5.2 1.5-.3 2.5-1.2 3 .5-3-.3-6.5-1.8-11z";
-const SPARK_PATH = "M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 14l.9 2.6L22.5 18l-2.6.9L19 21.5l-.9-2.6L15.5 18l2.6-.9z";
-
 function Glyph({ k, size = 92, stroke = "#091e1c", sw = 1.1 }: { k: IconKey; size?: number; stroke?: string; sw?: number }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
@@ -387,29 +382,6 @@ function Glyph({ k, size = 92, stroke = "#091e1c", sw = 1.1 }: { k: IconKey; siz
   );
 }
 
-function Badge({ label, hot }: { label: string; hot?: boolean }) {
-  return (
-    <span className="sp-badge">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill={hot ? "#e8590c" : "#14924f"}>
-        <path d={hot ? FLAME_PATH : SPARK_PATH} />
-      </svg>
-      {label}
-    </span>
-  );
-}
-
-function shuffled<T>(list: T[]): T[] {
-  const a = list.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-// ---------------------------------------------------------------------------
-// Product rails: Hot right now + Our top picks, built from real store products
-// ---------------------------------------------------------------------------
 type RailProduct = {
   id: string;
   handle: string;
@@ -417,20 +389,13 @@ type RailProduct = {
   img?: string;
   alt: string;
   amountRaw: any;
-  amount: number;
   currency: string;
-  wasRaw?: any;
-  wasAmount?: number;
   createdAt?: number;
 };
 
 function toRail(p: ShopifyProduct): RailProduct {
   const n: any = p.node;
   const price = n.priceRange?.minVariantPrice;
-  const cmp = n.compareAtPriceRange?.minVariantPrice;
-  const amount = Number(price?.amount ?? 0);
-  const cmpAmount = Number(cmp?.amount ?? 0);
-  const hasWas = cmpAmount > amount && amount > 0;
   const created = n.createdAt ? Date.parse(n.createdAt) : NaN;
   const img = n.images?.edges?.[0]?.node;
   return {
@@ -440,10 +405,7 @@ function toRail(p: ShopifyProduct): RailProduct {
     img: img?.url,
     alt: img?.altText || n.title,
     amountRaw: price?.amount,
-    amount,
     currency: price?.currencyCode || "USD",
-    wasRaw: hasWas ? cmp.amount : undefined,
-    wasAmount: hasWas ? cmpAmount : undefined,
     createdAt: Number.isNaN(created) ? undefined : created,
   };
 }
@@ -456,7 +418,7 @@ function useRailProducts() {
     let alive = true;
     const load = async () => {
       try {
-        const res = await shopifyService.getProducts(100, undefined, undefined);
+        const res = await shopifyService.getProducts(24, undefined, undefined);
         if (!alive) return;
         setItems((res.products as ShopifyProduct[]).map(toRail));
       } catch {
@@ -476,111 +438,50 @@ function useRailProducts() {
   return { items, loading };
 }
 
-const NEW_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
-
-function badgeFor(p: RailProduct, now: number): string | undefined {
-  if (p.wasAmount && p.amount > 0) {
-    const pct = Math.round((1 - p.amount / p.wasAmount) * 100);
-    if (pct >= 1) return "SAVE " + pct + "%";
-  }
-  if (p.createdAt && now - p.createdAt < NEW_WINDOW_MS) return "NEW";
-  return undefined;
-}
-
-function ProductCard({ p, now }: { p: RailProduct; now: number }) {
-  const badge = badgeFor(p, now);
-  return (
-    <article className={"sp-card"}>
-      <Link href={"/shop/product/" + p.handle} className={"sp-card-link"}>
-        <div className={"sp-img sp-real"}>
-          {badge ? <Badge label={badge} /> : null}
-          {p.img ? <img className={"sp-real-img"} src={p.img} alt={p.alt} loading={"lazy"} /> : null}
-        </div>
-        <h3>{p.title}</h3>
-        <p className={"sp-price"}>
-          {p.wasRaw ? <s>{formatPrice(p.wasRaw, p.currency as any)}</s> : null}
-          <b>{formatPrice(p.amountRaw, p.currency as any)}</b>
-        </p>
-      </Link>
-    </article>
-  );
-}
-
-function ProductRails() {
+// ---------------------------------------------------------------------------
+// Lead story: one large real product under the category strip
+// ---------------------------------------------------------------------------
+function LeadStory() {
   const { items, loading } = useRailProducts();
-  const [seed, setSeed] = useState(0);
-  const [filter, setFilter] = useState("all");
-  const now = useMemo(() => Date.now(), []);
+  const [now] = useState(() => Date.now());
+  const lead = items.find((p) => p.img);
 
-  const hot = useMemo(() => shuffled(items.slice(0, 40)).slice(0, 8), [items, seed]);
+  if (loading) {
+    return (
+      <section className={"sp-sec"}>
+        <div className={"padding-global"}>
+          <div className={"container-large"}>
+            <div className={"ed-lead"}>
+              <div className={"sp-skel"} style={{ aspectRatio: "4 / 5" }}></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+  if (!lead) return null;
 
-  const currency = items[0]?.currency || "USD";
-  const filters = useMemo(() => {
-    const all = { key: "all", label: "All", list: items.slice(0, 12) };
-    const fresh = items.filter((p) => p.createdAt && now - p.createdAt < NEW_WINDOW_MS).slice(0, 12);
-    const sale = items.filter((p) => p.wasAmount).slice(0, 12);
-    const under = items.filter((p) => p.amount > 0 && p.amount < 50).slice(0, 12);
-    return [
-      all,
-      { key: "new", label: "New", list: fresh },
-      { key: "sale", label: "On sale", list: sale },
-      { key: "under50", label: "Under " + formatPrice("50", currency as any), list: under },
-    ].filter((f) => f.key === "all" || f.list.length > 0);
-  }, [items, now, currency]);
-
-  const active = filters.find((f) => f.key === filter) || filters[0];
-
-  if (!loading && items.length === 0) return null;
-
-  const skeletons = Array.from({ length: 6 }).map((_, i) => <div key={i} className={"sp-skel sp-skel-sq"}></div>);
+  const fresh = Boolean(lead.createdAt && now - lead.createdAt < 7 * 24 * 60 * 60 * 1000);
+  const href = "/shop/product/" + lead.handle;
 
   return (
-    <>
-      <section id={"hot"} className={"sp-sec"}>
-        <div className={"padding-global"}>
-          <div className={"container-large"}>
-            <div className={"sp-head"}>
-              <div>
-                <h2 className={"sp-h"}>{"Hot right now"}</h2>
-                <p className={"sp-sub"}>{"A fresh mix of products, picked at random each visit."}</p>
-              </div>
-              <a className={"sp-all"} href={"#hot"} onClick={(e) => { e.preventDefault(); setSeed((n) => n + 1); }}>
-                {"Shuffle"}
-              </a>
-            </div>
-            <div className={"sp-row"}>
-              {loading ? skeletons : hot.map((p) => <ProductCard key={p.id} p={p} now={now} />)}
+    <section className={"sp-sec"}>
+      <div className={"padding-global"}>
+        <div className={"container-large"}>
+          <div className={"ed-lead"}>
+            <Link href={href} className={"ed-lead-img"}>
+              <img src={lead.img} alt={lead.alt} />
+            </Link>
+            <div>
+              <p className={"ed-label"}>{fresh ? "New this week" : "Featured"}</p>
+              <h1 className={"ed-title"}>{lead.title}</h1>
+              <p className={"ed-price"}>{formatPrice(lead.amountRaw, lead.currency as any)}</p>
+              <Link href={href} className={"ed-link"}>{"View product"}</Link>
             </div>
           </div>
         </div>
-      </section>
-
-      <section id={"top-picks"} className={"sp-sec"}>
-        <div className={"padding-global"}>
-          <div className={"container-large"}>
-            <div className={"sp-head"}>
-              <div>
-                <h2 className={"sp-h"}>{"Our top picks"}</h2>
-                <p className={"sp-sub"}>{"Real products from verified sellers, paid in crypto."}</p>
-              </div>
-              <a className={"sp-all"} href={"#all-products"}>{"View all"}</a>
-            </div>
-            {!loading && filters.length > 1 ? (
-              <div className={"sp-chips"}>
-                {filters.map((f) => (
-                  <button key={f.key} type={"button"} className={active.key === f.key ? "on" : ""} onClick={() => setFilter(f.key)}>
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-            <div className={"sp-row"}>
-              {loading ? skeletons : active.list.map((p) => <ProductCard key={p.id} p={p} now={now} />)}
-            </div>
-          </div>
-        </div>
-      </section>
-    </>
+      </div>
+    </section>
   );
 }
 
@@ -774,71 +675,10 @@ export function PhysicalProductsExport() {
         </div>
       </header>
       <main id={"top"}>
-        <section className={"section-h-v3-hero"}>
-          <div className={"padding-global"}>
-            <div className={"container-large"}>
-              <div className={"v3-herocontent-wrapper"}>
-                <div className={"v3-hero-content"}>
-                  <h1 data-w-id={"efc00cef-13a7-739b-1069-88d52025811f"} className={"h1-large"}>
-                    {"Real goods. Paid in crypto."}
-                  </h1>
-                  <div className={"v3-hero-text-block"}>
-                    <p data-w-id={"9be5ebdd-eacb-1105-68a6-cae003ce4cfc"} className={"p-large cyan"}>
-                      {"Order electronics, fashion, home and gaming gear from verified sellers. Pay with crypto straight from your own wallet."}
-                    </p>
-                  </div>
-                  <div data-w-id={"0f339b4c-3cc1-73c1-73d5-37ae38bef528"} className={"v3-hero-btn-wrap"}>
-                    <a href={"#all-products"} className={"btn-primary w-button"}>
-                      {"Browse Products"}
-                    </a>
-                  </div>
-                </div>
-                <div data-w-id={"4c14da3e-38d8-bfee-2ab8-a136ac40cf4e"} className={"v3-hero-right-block"}>
-                  <div className={"v3-hero-banner-block"}>
-                    <img src={"/marketing-media/media-1ee388ec36d8c9a7.avif"} loading={"lazy"} alt={""} className={"v3-hero-banner"} />
-                  </div>
-                  <div className={"v3-tag-block"}>
-                    <div className={"px-tag px-tag1"}>
-                      <div className={"r"}>
-                        <span className={"b"}>
-                          {"pexly"}
-                        </span>
-                      </div>
-                      <div className={"big"}>
-                        {"Order #4821"}
-                      </div>
-                    </div>
-                  </div>
-                  <div className={"v3-tag-block _2"}>
-                    <div className={"px-tag px-tag2"}>
-                      <span className={"ic"}>
-                        {"₮"}
-                      </span>
-                      <div className={"m"}>
-                        <b>
-                          {"Wireless Earbuds"}
-                        </b>
-                        <small>
-                          {"Paid with USDT"}
-                        </small>
-                      </div>
-                      <div className={"e"}>
-                        <b>
-                          {"$39.00"}
-                        </b>
-                        <small>
-                          {"Shipped"}
-                        </small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-        <ShopCategories onPick={setCategory} />
+        <CategoryStrip active={category} onPick={setCategory} />
+        <LeadStory />
         <GiftCardsAndTopUps />
+        <ShopAllProducts category={category} />
         <section className={"sp-sec tight"} id={"why"}>
           <div className={"padding-global"}>
             <div className={"container-large"}>
@@ -862,8 +702,6 @@ export function PhysicalProductsExport() {
             </div>
           </div>
         </section>
-        <ProductRails />
-        <ShopAllProducts category={category} onClearCategory={() => setCategory("")} />
         <section className={"sp-sec"}>
           <div className={"padding-global"}>
             <div className={"container-large"}>
