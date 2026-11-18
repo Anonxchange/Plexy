@@ -10,7 +10,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
-import { EvmWalletProvider } from "@/lib/evm-wallet-provider";
+import { EvmWalletProvider, useEvmWallet } from "@/lib/wallet-provider";
 import { CartProvider } from "@/hooks/use-shopify-cart";
 
 // Deferred — invisible until triggered, no need to block initial paint
@@ -36,6 +36,9 @@ const VerifyEmail = lazy(() => import("@/pages/verify-email").then(m => ({ defau
 const SignIn = lazy(() => import("@/pages/signin").then(m => ({ default: m.SignIn })));
 const SignUp = lazy(() => import("@/pages/signup").then(m => ({ default: m.SignUp })));
 const Wallet = lazy(() => import("@/pages/wallet"));
+const WalletToolsRouteProvider = lazy(() =>
+  import("@/lib/evm-wallet-provider").then(module => ({ default: module.WalletToolsRouteProvider })),
+);
 const MobileTopup = lazy(() => import("@/pages/mobile-topup"));
 const UtilityBill = lazy(() => import("@/pages/utility-bill"));
 const Support = lazy(() => import("@/pages/support"));
@@ -46,6 +49,7 @@ const Checkout = lazy(() => import("@/pages/checkout").then(m => ({ default: m.C
 const CheckoutPayCrypto = lazy(() => import("@/pages/checkout-pay-crypto").then(m => ({ default: m.CheckoutPayCrypto })));
 const GiftCardBrowse = lazy(() => import("@/pages/gift-card-browse").then(m => ({ default: m.GiftCardBrowse })));
 const GiftCardDetail = lazy(() => import("@/pages/gift-card-detail").then(m => ({ default: m.GiftCardDetail })));
+const SearchPage = lazy(() => import("@/pages/search").then(m => ({ default: m.SearchPage })));
 const ProductDetail = lazy(() => import("@/pages/product-detail").then(m => ({ default: m.ProductDetail })));
 import { GiftCardCartProvider } from "@/hooks/use-gift-card-cart";
 
@@ -136,6 +140,7 @@ function ProtectedRoute({
   skeleton?: React.ReactNode;
 }) {
   const guard = useAuthGuard();
+  const wallet = useEvmWallet();
   const [location] = useLocation();
 
   if (guard === 'pending') return <>{skeleton}</>;
@@ -145,9 +150,13 @@ function ProtectedRoute({
     return <Redirect to={`/signin?redirect=${returnTo}`} />;
   }
 
+  if (!wallet.ready) return <>{skeleton}</>;
+
   return (
     <Suspense fallback={skeleton}>
-      <Component />
+      <WalletToolsRouteProvider>
+        <Component />
+      </WalletToolsRouteProvider>
     </Suspense>
   );
 }
@@ -209,6 +218,7 @@ function AppRoutes() {
       <Route path="/gift-cards">{() => <LazyRoute component={GiftCardsExport} />}</Route>
       <Route path="/shop/product/:id">{() => <LazyRoute component={ProductDetail} />}</Route>
       <Route path="/shop">{() => <LazyRoute component={PhysicalProductsExport} />}</Route>
+      <Route path="/search">{() => <LazyRoute component={SearchPage} />}</Route>
       <Route path="/about-us">{() => <LazyRoute component={AboutUsExport} />}</Route>
       <Route path="/about-us.html">{() => <Redirect to="/about-us" />}</Route>
       <Route path="/about">{() => <Redirect to="/about-us" />}</Route>

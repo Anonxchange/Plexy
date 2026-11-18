@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { shopifyService, formatCheckoutUrl } from '@/lib/shopify-service';
+import { shopifyService, formatCheckoutUrl, getMarketCountry, MARKET_CHANGED_EVENT } from '@/lib/shopify-service';
 import { toast } from 'sonner';
+import { safeStorage as localStorage } from "@/lib/safe-storage";
 
 interface CartItem {
   id: string;
@@ -18,6 +19,7 @@ interface CartContextType {
   checkoutUrl: string | null;
   items: CartItem[];
   isLoading: boolean;
+  marketError: string | null;
   addToCart: (variantId: string, itemData: Omit<CartItem, 'id' | 'quantity'>) => Promise<void>;
   updateQuantity: (lineId: string, quantity: number) => Promise<void>;
   removeItem: (lineId: string) => Promise<void>;
@@ -58,6 +60,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [marketBusy, setMarketBusy] = useState(false);
+  const [marketError, setMarketError] = useState<string | null>(null);
+  const marketGeneration = React.useRef(0);
   const isRefreshing = React.useRef(false);
 
   const itemsRef = React.useRef<CartItem[]>([]);
@@ -97,7 +102,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
     }
     try {
+      const generation = marketGeneration.current;
       const data = await shopifyService.getCart(currentCartId);
+      if (generation !== marketGeneration.current) return;
 
       if (data && data.items) {
         const newItems = Array.isArray(data.items) ? [...data.items] : [];
@@ -109,12 +116,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             availableForSale: item.availableForSale ?? localItem?.availableForSale ?? true
           };
         });
-
-        // Don't let an empty server response wipe non-empty local state
-        if (newItems.length === 0 && itemsRef.current.length > 0) {
-          console.warn("useCart: Shopify returned empty cart but local state has items. Preserving local state.");
-          return;
-        }
 
         const isDifferent = JSON.stringify(itemsWithInventory) !== JSON.stringify(itemsRef.current);
         const hasNewCheckoutUrl = data.checkoutUrl && data.checkoutUrl !== checkoutUrlRef.current;
@@ -138,6 +139,55 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isRefreshing.current = false;
     }
   }, [clearCart]);
+
+  useEffect(() => {
+    let disposed = false;
+    let queue = Promise.resolve();
+    const localize = () => {
+      const country = getMarketCountry();
+      const id = localStorage.getItem(CART_ID_KEY);
+      if (!country || !id) return;
+      const generation = ++marketGeneration.current;
+      setMarketBusy(true);
+      setMarketError(null);
+      queue = queue.catch(() => {}).then(async () => {
+        try {
+          const result = await shopifyService.updateCartCountry(id, country);
+          if (!result.success) throw new Error("Could not update cart delivery country. Change country again to retry before checkout.");
+          const cart = await shopifyService.getCart(id);
+          if (disposed || generation !== marketGeneration.current) return;
+          if (!cart) { clearCart(); return; }
+          if (cart.countryCode !== country) throw new Error("Cart delivery country could not be confirmed. Change country again to retry before checkout.");
+          const oldItems = itemsRef.current;
+          setItems(cart.items);
+          itemsRef.current = cart.items;
+          setCheckoutUrl(cart.checkoutUrl);
+          checkoutUrlRef.current = cart.checkoutUrl;
+          localStorage.setItem(`${ITEMS_PREFIX}${id}`, JSON.stringify(cart.items));
+          localStorage.setItem(CHECKOUT_URL_KEY, cart.checkoutUrl || "");
+          if (oldItems.some(item => !cart.items.some(next => next.variantId === item.variantId)) ||
+              cart.items.some(item => item.availableForSale === false)) {
+            toast.warning("Some cart items are unavailable for this delivery country. Review your cart before checkout.");
+          }
+        } catch (error) {
+          if (!disposed && generation === marketGeneration.current) {
+            setMarketError(error instanceof Error ? error.message : "Cart localization failed. Please retry.");
+          }
+        } finally {
+          if (!disposed && generation === marketGeneration.current) setMarketBusy(false);
+        }
+      });
+    };
+    const busy = (event: Event) => setMarketBusy((event as CustomEvent<{ busy: boolean }>).detail.busy);
+    window.addEventListener(MARKET_CHANGED_EVENT, localize);
+    window.addEventListener("pexly:cart-localizing", busy);
+    localize();
+    return () => {
+      disposed = true;
+      window.removeEventListener(MARKET_CHANGED_EVENT, localize);
+      window.removeEventListener("pexly:cart-localizing", busy);
+    };
+  }, [cartId, clearCart]);
 
   useEffect(() => {
     const handleExternalUpdate = (e: any) => {
@@ -198,6 +248,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [refreshCart]);
 
   const addToCart = async (variantId: string, itemData: Omit<CartItem, 'id' | 'quantity'>) => {
+    if (marketBusy || marketError) { toast.error("Review the delivery country and cart before adding items."); return; }
     setIsLoading(true);
     try {
       const currentCartId = localStorage.getItem(CART_ID_KEY);
@@ -295,6 +346,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateQuantity = async (lineId: string, quantity: number) => {
+    if (marketBusy) return;
     const currentCartId = localStorage.getItem(CART_ID_KEY);
     if (!currentCartId) return;
 
@@ -330,6 +382,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const removeItem = async (lineId: string) => {
+    if (marketBusy) return;
     const currentCartId = localStorage.getItem(CART_ID_KEY);
     if (!currentCartId) return;
 
@@ -371,7 +424,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       cartId,
       checkoutUrl,
       items,
-      isLoading,
+      isLoading: isLoading || marketBusy,
+      marketError,
       addToCart,
       updateQuantity,
       removeItem,

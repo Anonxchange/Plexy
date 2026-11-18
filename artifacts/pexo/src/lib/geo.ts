@@ -31,10 +31,16 @@ const ISO_TO_CALLING: Record<string, string> = {
  * <meta name="cf-country"> tag stamped at the edge — zero network request.
  * In dev (Replit, localhost) it falls back to ipapi.co with a 3-second timeout.
  */
-export async function getCountryCode(): Promise<string> {
+let countryRequest: Promise<string> | undefined;
+
+export function getCountryCode(): Promise<string> {
+  return countryRequest ??= detectCountryCode();
+}
+
+async function detectCountryCode(): Promise<string> {
   const meta = document.querySelector<HTMLMetaElement>('meta[name="cf-country"]');
   const fromMeta = meta?.getAttribute("content")?.trim();
-  if (fromMeta) return fromMeta;
+  if (fromMeta && /^[A-Z]{2}$/i.test(fromMeta) && !["XX", "T1"].includes(fromMeta.toUpperCase())) return fromMeta.toUpperCase();
 
   try {
     const res = await fetch("https://ipapi.co/json/", {
@@ -43,18 +49,20 @@ export async function getCountryCode(): Promise<string> {
     if (res.ok) {
       const data = await res.json();
       const code = (data.country_code as string | undefined)?.trim();
-      if (code) return code;
+      if (code && /^[A-Z]{2}$/i.test(code)) return code.toUpperCase();
     }
   } catch {
-    // Silently fall through to default
+    // A failed lookup is not evidence that the visitor is in the US.
   }
-  return "US";
+  throw new Error("We couldn’t detect your country. Please choose it in the header.");
 }
 
 /**
  * Returns the phone dialling prefix (e.g. "+44") for the current user's country.
  */
 export async function getCallingCode(): Promise<string> {
-  const iso = await getCountryCode();
-  return ISO_TO_CALLING[iso] ?? "+1";
+  try {
+    const iso = await getCountryCode();
+    return ISO_TO_CALLING[iso] ?? "";
+  } catch { return ""; }
 }

@@ -21,21 +21,18 @@ import {
   Ticket,
   UtensilsCrossed,
 } from "@/lib/icons";
-import { useGiftCardCategories, useGiftCardCountries } from "@/hooks/use-reloadly";
+import { useGiftCardCategories } from "@/hooks/use-reloadly";
 import { useAirtimeOperators } from "@/hooks/use-airtime-operators";
 import { useGiftCardCatalog } from "@/hooks/use-gift-card-catalog";
+import { useDigitalCountry } from "@/lib/country-preferences";
 import {
   airTile,
   giftTile,
-  guessCountry,
   preferredRank,
-  rememberCountry,
-  savedCountry,
   uniqueByName,
   type CardTile,
 } from "@/lib/gift-card-utils";
 
-const ALL = "ALL";
 const PAGE_SIZE = 40;
 
 type IconType = typeof Flame;
@@ -169,25 +166,22 @@ function AllCardsList() {
   const [categoryName, setCategoryName] = useState<string>(initial.name);
   const [qInput, setQInput] = useState(initial.q);
   const [q, setQ] = useState(initial.q);
-  const [country, setCountryState] = useState<string>(() => savedCountry() ?? guessCountry());
+  const country = useDigitalCountry();
   const [sort, setSort] = useState("recommended");
   const [panelOpen, setPanelOpen] = useState(false);
   const [onlyDiscount, setOnlyDiscount] = useState(false);
   const [onlyRange, setOnlyRange] = useState(false);
 
   const categories = useGiftCardCategories();
-  const countries = useGiftCardCountries();
   const isAir = kind === "airtime";
-  const isAll = country === ALL;
-  // top up needs a real country
-  const airCountry = isAll ? guessCountry() : country;
+  const airCountry = country;
 
   const cat = useGiftCardCatalog({
-    countryCode: isAll ? undefined : country,
+    countryCode: country,
     categoryId: categoryId ?? undefined,
     productName: q || undefined,
     size: PAGE_SIZE,
-    enabled: !isAir,
+    enabled: !isAir && !!country,
   });
   const air = useAirtimeOperators(airCountry, isAir);
 
@@ -208,11 +202,6 @@ function AllCardsList() {
     setQ(v);
     writeParams({ category: categoryId, name: categoryName, type: kind, q: v });
   };
-  const changeCountry = (c: string) => {
-    setCountryState(c);
-    if (c !== ALL) rememberCountry(c);
-  };
-
   const loadedRaw = cat.data?.pages.flatMap((p) => p.content ?? []) ?? [];
   const total = cat.data?.pages[0]?.totalElements ?? 0;
 
@@ -243,7 +232,6 @@ function AllCardsList() {
   const failed = isAir ? air.isError : cat.isError;
   const filtersOn = onlyDiscount || onlyRange;
   const shown = loadedRaw.length;
-  const countryList = countries.data ?? [];
 
   return (
     <div className={"gsa"}>
@@ -307,19 +295,6 @@ function AllCardsList() {
               {filtersOn ? <span className={"gsa-dot"}></span> : null}
             </button>
           )}
-          <label className={"gsa-pill has-lead"}>
-            <Globe size={20} className={"lead"} />
-            <select value={country} onChange={(e) => changeCountry(e.target.value)} aria-label={"Works in"}>
-              {isAir ? null : <option value={ALL}>{"Works in: all countries"}</option>}
-              {country !== ALL && !countryList.some((c) => c.isoName === country) ? <option value={country}>{"Works in " + country}</option> : null}
-              {countryList.map((c) => (
-                <option key={c.isoName} value={c.isoName}>
-                  {"Works in " + c.flag + " " + c.name}
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={18} className={"tail"} />
-          </label>
           <label className={"gsa-pill has-lead"}>
             <ArrowUpDown size={20} className={"lead"} />
             <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label={"Sort by"}>

@@ -150,7 +150,7 @@ export function ShippingEstimator({
   useEffect(() => {
     let cancelled = false;
     async function detectCountry() {
-      const code = await getCountryCode(); // reads CF edge tag → ipapi.co JSON → "US"
+      const code = await getCountryCode().catch(() => "");
       if (cancelled) return;
       const match = availableCountries.find((c) => c.code === code);
       // If detected country isn't in the available list, fall back to US or first entry

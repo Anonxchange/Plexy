@@ -1,0 +1,7 @@
+/* Available before JavaScript or wallet libraries download. React replaces it. */
+.app-startup{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#fffefa;color:#091e1c;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.app-startup strong{font-size:26px;letter-spacing:-1px}
+.app-startup>span:last-child{font-size:14px;color:#52645d}
+.app-startup__spinner{width:34px;height:34px;border:3px solid #e7ede2;border-top-color:#52782c;border-radius:50%;animation:pexly-startup-spin .8s linear infinite}
+@keyframes pexly-startup-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.app-startup__spinner{animation:none;border-top-color:#52782c}}

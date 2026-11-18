@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { CurrentMarketingPage } from "@/components/marketing/current-marketing-page";
+import "./page-styles/home.css";
 
 export function PexlyHomepage() {
   const [newsletterStatus, setNewsletterStatus] = useState("");
@@ -151,7 +152,7 @@ export function PexlyHomepage() {
                   <div className={"v3-tag-block _2"}>
                     <div className={"px-tag px-tag2"}>
                       <span className={"ic"}>
-                        {"₮"}
+                        <img src={"/logos/tether-usdt-logo.svg"} alt={"Tether (USDT)"} />
                       </span>
                       <div className={"m"}>
                         <b>

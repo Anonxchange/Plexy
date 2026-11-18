@@ -1,27 +1,35 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { PexlyLogo } from "@/components/pexly-logo";
 import { useAuth } from "@/lib/auth-context";
-import { useEvmWallet } from "@/lib/evm-wallet-provider";
-import { Check, Search, ShoppingCart, User } from "@/lib/icons";
-import { CartSheet } from "@/components/shop/CartSheet";
+import { useEvmWallet } from "@/lib/wallet-provider";
+import { Check, Search, ShoppingCart, User } from "@/components/header-icons";
+import { useCart } from "@/hooks/use-shopify-cart";
+import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
+import { useTopupCart } from "@/hooks/use-topup-cart";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useGiftCardCountries } from "@/hooks/use-reloadly";
 import {
-  initializeMarketCountry,
-  MARKET_CHANGED_EVENT,
-  setMarketCountry,
-  SUPPORTED_MARKETS,
+  getMarketConfig,
+  SUPPORTED_MARKETS as COUNTRY_NAMES,
 } from "@/lib/market-manager";
 import {
-  GIFT_CARD_MARKET_CHANGED_EVENT,
-  getGiftCardMarketCountry,
   setGiftCardMarketCountry,
 } from "@/lib/gift-card-market";
 import { isValidLang } from "@/lib/detect-language";
 import { switchLanguage } from "@/lib/language-navigation";
 import i18n from "@/lib/i18n";
 import "./app-header.css";
+import { OPEN_COUNTRY_MENU_EVENT, useCountryPreferences, type CountryScope as PreferenceScope } from "@/lib/country-preferences";
+import { useQuery } from "@tanstack/react-query";
+import { shopifyService } from "@/lib/shopify-service";
+
+const HeaderSearch = lazy(() =>
+  import("@/components/header-search").then(module => ({ default: module.HeaderSearch })),
+);
+const CartSheet = lazy(() =>
+  import("@/components/shop/CartSheet").then(module => ({ default: module.CartSheet })),
+);
 
 type CountryScope = "shop" | "gift-card";
 
@@ -75,14 +83,14 @@ export function AppHeader() {
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
   const wallet = useEvmWallet();
+  const shopCart = useCart();
+  const giftCart = useGiftCardCart();
+  const topupCart = useTopupCart();
   const routePath = normalizeRoute(location);
   const isHomePage = routePath === "/";
   const isGiftCardsPage = routePath.startsWith("/gift-cards");
-  const isGiftCardBrowsePage = routePath === "/gift-cards/browse";
+  const isTopupPage = /mobile-top-?up/.test(routePath);
   const isShopPage = routePath === "/shop" || routePath.startsWith("/shop/");
-  const giftCountriesQuery = useGiftCardCountries({
-    enabled: isHomePage || isGiftCardsPage,
-  });
   const [menuOpen, setMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -90,20 +98,39 @@ export function AppHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [countryOpen, setCountryOpen] = useState(false);
   const [countrySearch, setCountrySearch] = useState("");
-  const [shopCountry, setShopCountry] = useState(initializeMarketCountry);
-  const [giftCardCountry, setGiftCardCountry] = useState(getGiftCardMarketCountry);
-  const [homeCountryScope, setHomeCountryScope] = useState<CountryScope>("gift-card");
+  const [cartOpen, setCartOpen] = useState(
+    () => new URLSearchParams(window.location.search).get("openCart") === "1",
+  );
+  const giftCountriesQuery = useGiftCardCountries({
+    enabled: countryOpen,
+  });
+  const preferences = useCountryPreferences();
+  const shopCountry = preferences.delivery?.country;
+  const giftCardCountry = preferences.digital?.country;
+  const [editingScope, setEditingScope] = useState<CountryScope | null>(null);
+  const [countryBusy, setCountryBusy] = useState(false);
+  const marketsQuery = useQuery({
+    queryKey: ["shopify-localization"],
+    queryFn: () => shopifyService.getAvailableCountries(),
+    staleTime: 300_000,
+    retry: false,
+    enabled: countryOpen,
+  });
   const openCartFromUrl = new URLSearchParams(window.location.search).get("openCart") === "1";
+  const cartItemCount =
+    shopCart.items.reduce((count, item) => count + item.quantity, 0) +
+    giftCart.items.reduce((count, item) => count + item.quantity, 0) +
+    topupCart.items.length;
   const walletHref = user ? "/wallet" : "/signin?redirect=%2Fwallet";
-  const activeCountryScope: CountryScope = isGiftCardsPage
+  const activeCountryScope: CountryScope = isGiftCardsPage || isTopupPage
     ? "gift-card"
     : isShopPage
       ? "shop"
       : isHomePage
-        ? homeCountryScope
+        ? "gift-card"
         : "shop";
-  const displayedGiftCardCountry =
-    giftCardCountry ?? (isGiftCardBrowsePage ? undefined : "NG");
+  const pickerScope = editingScope ?? activeCountryScope;
+  const displayedGiftCardCountry = giftCardCountry;
   const activeCountryFlag =
     activeCountryScope === "shop"
       ? flagForCountry(shopCountry)
@@ -111,10 +138,15 @@ export function AppHeader() {
           country => country.isoName === displayedGiftCardCountry,
         )?.flag ?? flagForCountry(displayedGiftCardCountry);
   const normalizedSearch = countrySearch.trim().toLocaleLowerCase();
-  const filteredShopCountries = SUPPORTED_MARKETS.filter(country =>
+  const filteredShopCountries = (marketsQuery.data ?? []).filter(country =>
     `${country.region} ${country.code}`.toLocaleLowerCase().includes(normalizedSearch),
   );
-  const filteredGiftCountries = (giftCountriesQuery.data ?? []).filter(country =>
+  // Gift-card availability must not hide a country that may have top-ups.
+  // Each digital provider checks availability for the shared selection.
+  const digitalCountryOptions = COUNTRY_NAMES.map(country =>
+    giftCountriesQuery.data?.find(giftCountry => giftCountry.isoName === country.code) ??
+    { isoName: country.code, name: country.region, flag: flagForCountry(country.code) });
+  const filteredGiftCountries = digitalCountryOptions.filter(country =>
     `${country.name} ${country.isoName}`.toLocaleLowerCase().includes(normalizedSearch),
   );
   const currentLanguage = i18n.language?.split("-")[0] || "en";
@@ -127,20 +159,15 @@ export function AppHeader() {
   }, []);
 
   useEffect(() => {
-    const handleShopCountryChange = (event: Event) => {
-      const countryCode = (event as CustomEvent<{ countryCode?: string }>).detail?.countryCode;
-      if (countryCode) setShopCountry(countryCode);
+    const open = (event: Event) => {
+      const scope = (event as CustomEvent<{ scope: PreferenceScope }>).detail.scope;
+      setEditingScope(scope === "delivery" ? "shop" : "gift-card");
+      setCountrySearch("");
+      setCountryOpen(true);
     };
-    const handleGiftCardCountryChange = (event: Event) => {
-      const countryCode = (event as CustomEvent<{ countryCode?: string }>).detail?.countryCode;
-      setGiftCardCountry(countryCode);
-    };
-
-    window.addEventListener(MARKET_CHANGED_EVENT, handleShopCountryChange);
-    window.addEventListener(GIFT_CARD_MARKET_CHANGED_EVENT, handleGiftCardCountryChange);
+    window.addEventListener(OPEN_COUNTRY_MENU_EVENT, open);
     return () => {
-      window.removeEventListener(MARKET_CHANGED_EVENT, handleShopCountryChange);
-      window.removeEventListener(GIFT_CARD_MARKET_CHANGED_EVENT, handleGiftCardCountryChange);
+      window.removeEventListener(OPEN_COUNTRY_MENU_EVENT, open);
     };
   }, []);
 
@@ -150,6 +177,7 @@ export function AppHeader() {
     setSearchOpen(false);
     setCountryOpen(false);
     setCountrySearch("");
+    setEditingScope(null);
   }, [location]);
 
   useEffect(() => {
@@ -164,14 +192,19 @@ export function AppHeader() {
     setCountrySearch("");
   };
 
-  const selectShopCountry = (countryCode: string) => {
-    setShopCountry(countryCode);
-    setMarketCountry(countryCode);
-    closeCountryPicker();
+  const selectShopCountry = async (countryCode: string) => {
+    if (countryBusy) return;
+    setCountryBusy(true);
+    try {
+      await shopifyService.changeDeliveryCountry(countryCode);
+      closeCountryPicker();
+    } catch (error) {
+      const { toast } = await import("sonner");
+      toast.error(error instanceof Error ? error.message : "Could not change delivery country.");
+    } finally { setCountryBusy(false); }
   };
 
   const selectGiftCardCountry = (countryCode?: string) => {
-    setGiftCardCountry(countryCode);
     setGiftCardMarketCountry(countryCode);
     closeCountryPicker();
   };
@@ -181,20 +214,13 @@ export function AppHeader() {
     setOpenDropdown(null);
     setSearchOpen(false);
   };
-  const submitSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const query = searchQuery.trim();
-    const searchingGiftCards =
-      isGiftCardsPage || (isHomePage && activeCountryScope === "gift-card");
-    const searchPath = searchingGiftCards ? "/gift-cards/browse" : "/shop";
-    const searchParam = searchingGiftCards ? "q" : "search";
-    setLocation(query ? `${searchPath}?${searchParam}=${encodeURIComponent(query)}` : searchPath);
-    closeMenu();
-  };
-  const searchLabel =
-    isGiftCardsPage || (isHomePage && activeCountryScope === "gift-card")
-      ? "Search gift cards"
-      : "Search products";
+  const searchLabel = "Search gift cards, top-ups and products";
+
+  useEffect(() => {
+    if (routePath !== "/search") return;
+    const q = new URLSearchParams(window.location.search).get("q");
+    if (q !== null) setSearchQuery(q);
+  }, [routePath, location]);
 
   const dropdown = (name: string, links: typeof marketplace) => (
     <div className={`px-dd${openDropdown === name ? " open" : ""}`} key={name}>
@@ -256,24 +282,15 @@ export function AppHeader() {
             <span>{searchLabel}</span>
           </button>
           {searchOpen && (
-            <form
-              className="px-mobile-search-form"
-              id="px-mobile-search-panel"
-              role="search"
-              aria-label={searchLabel}
-              onSubmit={submitSearch}
-            >
-              <Search aria-hidden="true" />
-              <input
-                autoFocus
-                type="search"
-                aria-label={searchLabel}
-                placeholder={`${searchLabel}...`}
-                value={searchQuery}
-                onChange={event => setSearchQuery(event.target.value)}
-              />
-              <button className="px-search-submit" type="submit">Search</button>
-            </form>
+            <Suspense fallback={null}>
+            <HeaderSearch
+              variant="mobile"
+              label={searchLabel}
+              query={searchQuery}
+              onQueryChange={setSearchQuery}
+              onNavigate={closeMenu}
+            />
+            </Suspense>
           )}
           <div className="px-mob-btns">
             <Link className="px-btn ghost" href={walletHref} onClick={closeMenu}>
@@ -286,6 +303,7 @@ export function AppHeader() {
           open={countryOpen}
           onOpenChange={open => {
             setCountryOpen(open);
+            if (open) setEditingScope(activeCountryScope);
             if (!open) setCountrySearch("");
           }}
         >
@@ -299,41 +317,42 @@ export function AppHeader() {
               <span className="px-country-flag" aria-hidden="true">{activeCountryFlag}</span>
             </button>
           </PopoverTrigger>
-          <PopoverContent className="px-country-popover" align="end" sideOffset={8}>
+          <PopoverContent className="px-country-popover" aria-label="Country and language settings" align="end" sideOffset={8}>
             <div className="px-country-heading">
               <strong>Region &amp; language</strong>
               <span>
-                {activeCountryScope === "shop" ? "Shop country" : "Gift Cards country"}
+                Choose separate service countries
               </span>
             </div>
-            {isHomePage && (
-              <div className="px-country-store-tabs" role="tablist" aria-label="Choose store">
+              <div className="px-country-store-tabs" role="group" aria-label="Country settings">
                 <button
                   type="button"
-                  role="tab"
-                  aria-selected={activeCountryScope === "shop"}
-                  className={activeCountryScope === "shop" ? "active" : ""}
+                  aria-pressed={pickerScope === "shop"}
+                  className={pickerScope === "shop" ? "active" : ""}
                   onClick={() => {
-                    setHomeCountryScope("shop");
+                    setEditingScope("shop");
                     setCountrySearch("");
                   }}
                 >
-                  Shop
+                  Shop delivery country: {shopCountry || "Not set"}
                 </button>
                 <button
                   type="button"
-                  role="tab"
-                  aria-selected={activeCountryScope === "gift-card"}
-                  className={activeCountryScope === "gift-card" ? "active" : ""}
+                  aria-pressed={pickerScope === "gift-card"}
+                  className={pickerScope === "gift-card" ? "active" : ""}
                   onClick={() => {
-                    setHomeCountryScope("gift-card");
+                    setEditingScope("gift-card");
                     setCountrySearch("");
                   }}
                 >
-                  Gift Cards
+                  Gift cards &amp; top-ups: {giftCardCountry || "Not set"}
                 </button>
               </div>
-            )}
+            {preferences.detection === "failed" && <p className="px-country-empty" role="status">Couldn’t detect your country. Choose each setting below.</p>}
+            {preferences.detection === "loading" && <p className="px-country-empty" role="status">Detecting your approximate country… You can choose manually now.</p>}
+            {preferences.storageBlocked && <p className="px-country-empty" role="status">Browser storage is blocked. Your choices apply for this visit only.</p>}
+            {preferences.legacyConflict && <p className="px-country-empty" role="status">Your older country choices differed. The saved header choice was kept; please confirm it.</p>}
+            {pickerScope === "shop" && shopCountry && marketsQuery.data && !marketsQuery.data.some(c => c.code === shopCountry) && <p className="px-country-empty" role="alert">Shop delivery to {getMarketConfig(shopCountry)?.region || shopCountry} is not available. Choose a configured delivery country.</p>}
             <div className="px-country-list-section">
               <label className="sr-only" htmlFor="px-country-search">Search countries</label>
               <input
@@ -344,57 +363,47 @@ export function AppHeader() {
                 value={countrySearch}
                 onChange={event => setCountrySearch(event.target.value)}
               />
-              <div className="px-country-options" role="listbox" aria-label="Available countries">
-                {activeCountryScope === "shop" ? (
+              <div className="px-country-options" role="group" aria-label="Available countries">
+                {pickerScope === "shop" ? (
+                  marketsQuery.isLoading ? <p className="px-country-empty" role="status">Checking delivery markets…</p> :
+                  marketsQuery.isError ? <div className="px-country-empty" role="alert">Delivery markets could not be verified. Your saved choice has not changed. <button type="button" onClick={() => void marketsQuery.refetch()}>Try again</button></div> :
                   filteredShopCountries.length > 0 ? filteredShopCountries.map(country => (
                     <button
                       key={country.code}
                       className="px-country-option"
                       type="button"
-                      role="option"
-                      aria-selected={shopCountry === country.code}
+                      disabled={countryBusy}
+                      aria-pressed={shopCountry === country.code}
                       onClick={() => selectShopCountry(country.code)}
                     >
                       <span className="px-country-option-flag" aria-hidden="true">{flagForCountry(country.code)}</span>
                       <span className="px-country-option-name">{country.region}</span>
                       <span className="px-country-option-code">{country.code}</span>
+                      <span className="px-country-option-code">{country.currency}</span>
                       {shopCountry === country.code && <Check aria-hidden="true" />}
                     </button>
-                  )) : <p className="px-country-empty">No countries match that search.</p>
+                  )) : <p className="px-country-empty">No configured delivery markets match. This country is not available for shop delivery.</p>
                 ) : (
                   <>
-                    {isGiftCardBrowsePage && (
-                      <button
-                        className="px-country-option"
-                        type="button"
-                        role="option"
-                        aria-selected={!giftCardCountry}
-                        onClick={() => selectGiftCardCountry(undefined)}
-                      >
-                        <span className="px-country-option-flag" aria-hidden="true">🌍</span>
-                        <span className="px-country-option-name">All countries</span>
-                        {!giftCardCountry && <Check aria-hidden="true" />}
-                      </button>
-                    )}
+                    {giftCardCountry && giftCountriesQuery.data && !giftCountriesQuery.data.some(c => c.isoName === giftCardCountry) && <p className="px-country-empty" role="status">Gift cards may be unavailable in {giftCardCountry}. Choose another country or check top-up availability.</p>}
                     {giftCountriesQuery.isLoading && (
                       <p className="px-country-empty" role="status">Loading countries…</p>
                     )}
                     {giftCountriesQuery.isError && (
                       <div className="px-country-empty" role="alert">
-                        <span>Couldn’t load Gift Cards countries.</span>
+                        <span>Couldn’t verify gift-card availability. You can still choose a country; cards and operators will be checked when loaded.</span>
                         <button type="button" onClick={() => void giftCountriesQuery.refetch()}>
                           Try again
                         </button>
                       </div>
                     )}
-                    {!giftCountriesQuery.isLoading && !giftCountriesQuery.isError && (
+                    {!giftCountriesQuery.isLoading && (
                       filteredGiftCountries.length > 0 ? filteredGiftCountries.map(country => (
                         <button
                           key={country.isoName}
                           className="px-country-option"
                           type="button"
-                          role="option"
-                          aria-selected={displayedGiftCardCountry === country.isoName}
+                          aria-pressed={displayedGiftCardCountry === country.isoName}
                           onClick={() => selectGiftCardCountry(country.isoName)}
                         >
                           <span className="px-country-option-flag" aria-hidden="true">{country.flag}</span>
@@ -426,7 +435,7 @@ export function AppHeader() {
           <button
             className="px-tool-search"
             type="button"
-            aria-label="Search products"
+            aria-label={searchLabel}
             aria-expanded={searchOpen}
             aria-controls="px-header-search-panel"
             onClick={() => {
@@ -437,19 +446,20 @@ export function AppHeader() {
             <Search aria-hidden="true" />
             <span>Search</span>
           </button>
-          <CartSheet
-            initiallyOpen={openCartFromUrl}
-            renderTrigger={(itemCount) => (
-              <button
-                className="px-tool-cart"
-                type="button"
-                aria-label={`Open shop cart, ${itemCount} ${itemCount === 1 ? "item" : "items"}`}
-              >
-                <ShoppingCart aria-hidden="true" />
-                <span className="px-tool-cart-count" aria-hidden="true">{itemCount}</span>
-              </button>
-            )}
-          />
+          <button
+            className="px-tool-cart"
+            type="button"
+            aria-label={`Open cart, ${cartItemCount} ${cartItemCount === 1 ? "item" : "items"}`}
+            onClick={() => setCartOpen(true)}
+          >
+            <ShoppingCart aria-hidden="true" />
+            <span className="px-tool-cart-count" aria-hidden="true">{cartItemCount}</span>
+          </button>
+          {cartOpen && (
+            <Suspense fallback={null}>
+              <CartSheet open={cartOpen} onOpenChange={setCartOpen} />
+            </Suspense>
+          )}
           {wallet.isConnected && (
             <Link
               className="px-profile-link px-profile-link-desktop"
@@ -478,18 +488,15 @@ export function AppHeader() {
       </div>
       {searchOpen && (
         <div className="px-search-panel" id="px-header-search-panel">
-          <form className="px-search-form" role="search" aria-label={searchLabel} onSubmit={submitSearch}>
-            <Search aria-hidden="true" />
-            <input
-              autoFocus
-              type="search"
-              aria-label={searchLabel}
-              placeholder={`${searchLabel}...`}
-              value={searchQuery}
-              onChange={event => setSearchQuery(event.target.value)}
+          <Suspense fallback={null}>
+            <HeaderSearch
+              variant="desktop"
+              label={searchLabel}
+              query={searchQuery}
+              onQueryChange={setSearchQuery}
+              onNavigate={closeMenu}
             />
-            <button className="px-search-submit" type="submit">Search</button>
-          </form>
+          </Suspense>
         </div>
       )}
     </header>

@@ -1,0 +1,180 @@
+
+
+.export-page .p-regular._w-medium.text-darkgrey{
+  color: var(--_color---typography--dark-gray);
+}
+
+.export-page .p-regular._w-medium.text-darkgrey {
+  color: var(--_color---typography--dark-gray);
+}
+
+.export-page .section-padding.roles-padding {
+  padding-top: 0;
+  padding-bottom: 10rem;
+}
+
+.export-page .container-small {
+  width: 100%;
+  max-width: 54.375rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.export-page .contact-tittle-wrapper {
+  text-align: center;
+  max-width: 48.5rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.export-page .contact-summury-block {
+  margin-top: 1.5rem;
+}
+
+.export-page .career-image-block {
+  grid-column-gap: 1.5rem;
+  grid-row-gap: 1.5rem;
+  margin-top: 4rem;
+  display: flex;
+}
+
+.export-page .career-image-item {
+  border-radius: 1.25rem;
+  height: 25rem;
+  overflow: hidden;
+}
+
+.export-page .c-image {
+  object-fit: cover;
+}
+
+.export-page .roles-tittle-block {
+  text-align: center;
+}
+
+.export-page .roles-card-block {
+  justify-content: space-between;
+  padding: 2rem 1.75rem;
+  transition: all .32s;
+  display: flex;
+}
+
+.export-page .roles-card-block:hover {
+  background-color: var(--_color---button--btn-secondary);
+}
+
+.export-page .roles-card-wrapper {
+  border: 1px solid #e3e3e3;
+  border-radius: .75rem;
+  margin-top: 3.5rem;
+  overflow: hidden;
+}
+
+.export-page .roles-button-block {
+  text-align: center;
+  margin-top: 2.5rem;
+}
+
+.export-page .job-hide {
+  display: none;
+}
+
+@media screen and (max-width: 991px) {
+
+  .export-page .career-image-item {
+    height: 19rem;
+  }
+}
+
+@media screen and (max-width: 991px) {
+
+  .export-page .roles-card-wrapper {
+    margin-top: 2.5rem;
+  }
+}
+
+@media screen and (max-width: 767px) {
+
+  .export-page .contact-summury-block {
+    margin-top: 1rem;
+  }
+}
+
+@media screen and (max-width: 767px) {
+
+  .export-page .career-image-block {
+    flex-flow: column;
+    margin-top: 3rem;
+  }
+}
+
+@media screen and (max-width: 767px) {
+
+  .export-page .career-image-item {
+    height: auto;
+  }
+}
+
+@media screen and (max-width: 479px) {
+
+  .export-page .career-image-block {
+    grid-column-gap: .79375rem;
+    grid-row-gap: .79375rem;
+    margin-top: 2rem;
+  }
+}
+
+@media screen and (max-width: 479px) {
+
+  .export-page .roles-card-block {
+    padding: .75rem 1rem;
+  }
+}
+
+@media screen and (max-width: 479px) {
+
+  .export-page .roles-card-wrapper {
+    margin-top: 2rem;
+  }
+}
+
+@media screen and (max-width: 479px) {
+
+  .export-page .r-text-block.break {
+    width: 100%;
+    max-width: 7.5625rem;
+  }
+}
+
+@media screen and (max-width: 479px) {
+
+  .export-page .roles-button-block {
+    margin-top: 2rem;
+  }
+}
+
+.export-page.current-source-page-career [data-w-id][style*='opacity: 0'] { opacity: 1 !important; transform: none !important; filter: none !important; }
+
+@media (min-width: 992px) {
+  .export-page.current-source-page-career.w-mod-js:not(.w-mod-ix) [data-w-id="e02f224c-608e-fe35-b869-eb70be3e991b"] { transform: translate3d(0px, 25px, 0px) scale3d(1, 1, 1) rotateX(0deg) rotateY(0deg) rotateZ(0deg) skew(0deg, 0deg); opacity: 0; filter: blur(5px); }
+}
+
+@media (min-width: 992px) {
+  .export-page.current-source-page-career.w-mod-js:not(.w-mod-ix) [data-w-id="e02f224c-608e-fe35-b869-eb70be3e991e"] { transform: translate3d(0px, 25px, 0px) scale3d(1, 1, 1) rotateX(0deg) rotateY(0deg) rotateZ(0deg) skew(0deg, 0deg); opacity: 0; filter: blur(5px); }
+}
+
+@media (min-width: 992px) {
+  .export-page.current-source-page-career.w-mod-js:not(.w-mod-ix) [data-w-id="1116f241-a1f8-64bf-2a4f-e5f7db0d7269"] { transform: translate3d(0px, 25px, 0px) scale3d(1, 1, 1) rotateX(0deg) rotateY(0deg) rotateZ(0deg) skew(0deg, 0deg); opacity: 0; filter: blur(5px); }
+}
+
+@media (max-width: 991px) and (min-width: 768px) {
+  .export-page.current-source-page-career.w-mod-js:not(.w-mod-ix) [data-w-id="e02f224c-608e-fe35-b869-eb70be3e991b"] { transform: translate3d(0px, 25px, 0px) scale3d(1, 1, 1) rotateX(0deg) rotateY(0deg) rotateZ(0deg) skew(0deg, 0deg); opacity: 0; filter: blur(5px); }
+}
+
+@media (max-width: 991px) and (min-width: 768px) {
+  .export-page.current-source-page-career.w-mod-js:not(.w-mod-ix) [data-w-id="e02f224c-608e-fe35-b869-eb70be3e991e"] { transform: translate3d(0px, 25px, 0px) scale3d(1, 1, 1) rotateX(0deg) rotateY(0deg) rotateZ(0deg) skew(0deg, 0deg); opacity: 0; filter: blur(5px); }
+}
+
+@media (max-width: 991px) and (min-width: 768px) {
+  .export-page.current-source-page-career.w-mod-js:not(.w-mod-ix) [data-w-id="1116f241-a1f8-64bf-2a4f-e5f7db0d7269"] { transform: translate3d(0px, 25px, 0px) scale3d(1, 1, 1) rotateX(0deg) rotateY(0deg) rotateZ(0deg) skew(0deg, 0deg); opacity: 0; filter: blur(5px); }
+}

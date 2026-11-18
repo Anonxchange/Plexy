@@ -12,6 +12,7 @@ import { useReownWalletAuth } from "@/hooks/use-reown-wallet-auth";
 import { resolveAccountState } from "@/lib/google-account-state";
 import { useTheme } from "@/components/theme-provider";
 import { Turnstile } from "@marsidev/react-turnstile";
+import { TURNSTILE_ENABLED, TURNSTILE_PAUSED, TURNSTILE_SITE_KEY } from "@/lib/turnstile-config";
 import { deviceFingerprint } from "@/lib/security/device-fingerprint";
 import { webAuthnService } from "@/lib/webauthn";
 import { ForgotPasswordDialog } from "@/components/forgot-password-dialog";
@@ -21,7 +22,9 @@ function friendlyAuthError(raw: string | undefined | null): string {
   if (!raw) return "Something went wrong. Please try again.";
   const msg = raw.toLowerCase();
   if (msg.includes("captcha") || msg.includes("no captcha_token") || msg.includes("request disallowed"))
-    return "Please complete the security check and try again.";
+    return TURNSTILE_PAUSED
+      ? "CAPTCHA is paused in this preview, but Supabase still requires it. Temporarily turn off CAPTCHA protection in your Supabase authentication settings to test sign-in."
+      : "Please complete the security check and try again.";
   if (msg.includes("invalid login credentials") || msg.includes("invalid email or password"))
     return "Incorrect email or password. Please try again.";
   if (msg.includes("email not confirmed"))
@@ -98,7 +101,7 @@ export function SignIn() {
       if (!supported) return;
 
       // If captcha is configured, skip the background conditional flow entirely.
-      if (import.meta.env.VITE_TURNSTILE_SITE_KEY) return;
+      if (TURNSTILE_ENABLED) return;
 
       try {
         const controller = new AbortController();
@@ -397,7 +400,7 @@ export function SignIn() {
   const handleGoogleSignIn = async () => {
     if (googleRedirectingRef.current) return;
 
-    if (import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken) {
+    if (TURNSTILE_ENABLED && !captchaToken) {
       toast({
         title: "Security check required",
         description: "Complete the CAPTCHA before continuing with Google.",
@@ -418,7 +421,7 @@ export function SignIn() {
       sessionStorage.removeItem("pexly.oauth.provider");
       googleRedirectingRef.current = false;
       setGoogleRedirecting(false);
-      if (import.meta.env.VITE_TURNSTILE_SITE_KEY) {
+      if (TURNSTILE_ENABLED) {
         setCaptchaToken(null);
         setCaptchaError(null);
         setCaptchaKey((key) => key + 1);
@@ -434,7 +437,7 @@ export function SignIn() {
   const handleWalletConnectSignIn = async () => {
     if (walletConnecting || googleRedirecting) return;
 
-    if (import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken) {
+    if (TURNSTILE_ENABLED && !captchaToken) {
       toast({
         title: "Security check required",
         description: "Complete the CAPTCHA before continuing with WalletConnect.",
@@ -456,7 +459,7 @@ export function SignIn() {
         setWalletError("Connect or create a wallet, then click Continue with Wallet again.");
         return;
       }
-      if (import.meta.env.VITE_TURNSTILE_SITE_KEY) {
+      if (TURNSTILE_ENABLED) {
         setCaptchaToken(null);
         setCaptchaError(null);
         setCaptchaKey((key) => key + 1);
@@ -473,7 +476,7 @@ export function SignIn() {
             ? "Please complete the security check and try again."
             : "Wallet sign-in failed. Check your wallet and try again.";
       setWalletError(friendlyMessage);
-      if (import.meta.env.VITE_TURNSTILE_SITE_KEY) {
+      if (TURNSTILE_ENABLED) {
         setCaptchaToken(null);
         setCaptchaError(null);
         setCaptchaKey((key) => key + 1);
@@ -545,7 +548,7 @@ export function SignIn() {
       // Force a fresh captcha token — Turnstile tokens are single-use, so
       // without this every retry after the first failed with a captcha error
       // instead of a real credential check.
-      if (import.meta.env.VITE_TURNSTILE_SITE_KEY) {
+      if (TURNSTILE_ENABLED) {
         setCaptchaToken(null);
         setCaptchaError(null);
         setCaptchaKey((k) => k + 1);
@@ -801,7 +804,7 @@ export function SignIn() {
   };
 
   const turnstileChallenge =
-    !show2FAInput && import.meta.env.VITE_TURNSTILE_SITE_KEY ? (
+    !show2FAInput && TURNSTILE_ENABLED ? (
       captchaError !== null ? (
         <div className="flex flex-col items-center gap-2">
           <p className={`text-sm ${isDark ? "text-red-400" : "text-red-500"}`}>
@@ -822,7 +825,7 @@ export function SignIn() {
       ) : (
         <Turnstile
           key={captchaKey}
-          siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+          siteKey={TURNSTILE_SITE_KEY}
           scriptOptions={{ async: true, defer: true, appendTo: "head" }}
           onSuccess={(token) => {
             setCaptchaToken(token);
@@ -861,7 +864,7 @@ export function SignIn() {
         !supabaseReady ||
         googleRedirecting ||
         walletConnecting ||
-        Boolean(import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken)
+        Boolean(TURNSTILE_ENABLED && !captchaToken)
       }
       providerLoading={googleRedirecting ? "google" : walletConnecting ? "wallet" : null}
       securityChallenge={!emailFormOpen ? turnstileChallenge : undefined}
@@ -961,7 +964,7 @@ export function SignIn() {
                 disabled={
                   loading ||
                   isLockedOut ||
-                  (!!import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken)
+                  (TURNSTILE_ENABLED && !captchaToken)
                 }
                 className="auth-submit-button"
               >
@@ -980,7 +983,7 @@ export function SignIn() {
                   onClick={handlePasskeySignIn}
                   disabled={
                     loading ||
-                    (!!import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken)
+                    (TURNSTILE_ENABLED && !captchaToken)
                   }
                   className={`w-full flex items-center justify-center gap-2 py-3 rounded-full text-sm font-medium transition-colors mt-3 disabled:opacity-40 disabled:cursor-not-allowed ${
                     isDark

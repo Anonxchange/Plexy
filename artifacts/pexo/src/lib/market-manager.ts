@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { getCountryCode } from "@/lib/geo";
+import { initializeCountryPreferences } from "@/lib/country-preferences";
 import { getMarketCountry, setMarketCountry, MARKET_CHANGED_EVENT } from "@/lib/shopify-service";
 
 export interface MarketCountry {
@@ -8,8 +8,8 @@ export interface MarketCountry {
 }
 
 // Shopify's CountryCode input uses ISO 3166-1 alpha-2 country codes. Keep the
-// complete list here so a visitor is not silently changed to US just because
-// their country was missing from the old four-country market selector.
+// complete name lookup here. This is NOT a list of enabled Shopify markets:
+// shopifyService.getAvailableCountries validates real delivery availability.
 const SHOPIFY_COUNTRY_CODES = `
   AD AE AF AG AI AL AM AO AQ AS AT AU AW AX AZ
   BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ
@@ -66,10 +66,10 @@ export function getMarketConfig(code: string): MarketCountry | undefined {
 }
 
 /** Country to use on first render, before any async geo lookup resolves. */
-export function initializeMarketCountry(): string {
+export function initializeMarketCountry(): string | undefined {
   const saved = getMarketCountry();
   if (isSupportedCountry(saved)) return saved;
-  return "US";
+  return undefined;
 }
 
 /**
@@ -81,10 +81,8 @@ export async function detectAndSetMarketCountry(): Promise<string | null> {
   const saved = getMarketCountry();
   if (saved && isSupportedCountry(saved)) return null;
 
-  const detected = (await getCountryCode()).toUpperCase();
-  const resolved = isSupportedCountry(detected) ? detected : "US";
-  setMarketCountry(resolved);
-  return resolved;
+  await initializeCountryPreferences();
+  return getMarketCountry() ?? null;
 }
 
 // Re-exported so components only ever need to import from one place.

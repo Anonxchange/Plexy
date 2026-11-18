@@ -5,8 +5,8 @@ import { SendCryptoDialog } from "@/components/send-crypto-dialog";
 import { ReceiveCryptoDialog } from "@/components/receive-crypto-dialog";
 import { WalletHeader } from "@/components/wallet/WalletHeader";
 import { AssetList } from "@/components/wallet/AssetList";
-import { useEvmWallet } from "@/lib/evm-wallet-provider";
-import { useEvmWalletData } from "@/hooks/use-evm-wallet-data";
+import { useEvmWallet } from "@/lib/wallet-provider";
+import { useWalletPortfolio } from "@/hooks/use-wallet-portfolio";
 import { useWalletAccountLink } from "@/hooks/use-wallet-account-link";
 import { RecentActivity } from "@/components/wallet/RecentActivity";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,7 +22,7 @@ export default function WalletPage() {
   const [, setLocation] = useLocation();
   const wallet = useEvmWallet();
   const walletLink = useWalletAccountLink();
-  const { refetch } = useEvmWalletData();
+  const { refetch } = useWalletPortfolio();
   const [sendOpen, setSendOpen] = useState(false);
   const [receiveOpen, setReceiveOpen] = useState(false);
   const [selectedSymbol, setSelectedSymbol] = useState<string>();
@@ -31,7 +31,10 @@ export default function WalletPage() {
     setSelectedSymbol(symbol);
     setSendOpen(true);
   };
-  const openReceive = () => setReceiveOpen(true);
+  const openReceive = (symbol?: string) => {
+    setSelectedSymbol(symbol);
+    setReceiveOpen(true);
+  };
   const linkCurrentWallet = async () => {
     try {
       await walletLink.linkCurrentWallet();
@@ -70,7 +73,7 @@ export default function WalletPage() {
                           ? "Linked wallet — reconnect to transact"
                           : walletLink.status === "different"
                             ? "Connected wallet does not match"
-                            : "Connect or Create Wallet"}
+                        : "Pexly account linking (EVM)"}
                   </h2>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {walletLink.status === "linked"
@@ -79,7 +82,7 @@ export default function WalletPage() {
                         ? "Retry before sending or receiving."
                       : walletLink.linkedAddress
                         ? `Saved address: ${walletLink.linkedAddress}`
-                        : "Connect a wallet to link it to your signed-in Pexly account. You approve every transaction in your wallet."}
+                        : "Link your EVM wallet to Pexly here. To use Bitcoin, Solana or TRON, choose that coin below and connect its compatible wallet."}
                   </p>
                   {walletLink.error && <p role="alert" className="mt-2 text-xs text-destructive">{walletLink.error}</p>}
                 </div>
@@ -129,7 +132,7 @@ export default function WalletPage() {
                 </Tabs>
               </div>
 
-              {!wallet.configured ? (
+              {!wallet.configured && (
                 <Card className="border border-[#e7ede2] shadow-[0_16px_40px_rgba(19,56,43,.07)] bg-[#fffefa] dark:bg-card rounded-[18px]">
                   <CardContent className="p-6 sm:p-8">
                     <div className="flex gap-4 items-start">
@@ -144,18 +147,17 @@ export default function WalletPage() {
                     </div>
                   </CardContent>
                 </Card>
-              ) : (
+              )}
                 <Card className="border border-[#e7ede2] shadow-[0_16px_40px_rgba(19,56,43,.07)] bg-[#fffefa] dark:bg-card overflow-hidden rounded-[18px] transition-colors">
                   <CardContent className="p-0">
                     <div className="divide-y divide-border">
-                      <WalletHeader onSend={() => openSend()} onReceive={openReceive} />
+                    <WalletHeader onSend={() => openSend()} onReceive={() => openReceive()} />
                       <div className="p-4 sm:p-6">
                         <AssetList onSend={openSend} onReceive={openReceive} />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-              )}
               {wallet.configured && wallet.isConnected && (
                 <section className="px-4 sm:px-0 space-y-3">
                   <div>
@@ -188,7 +190,7 @@ export default function WalletPage() {
                     <h2 className="font-bold text-sm">Network & balances</h2>
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed mb-4">
-                    Asset balances are read from the connected address on supported EVM networks. Network availability depends on your wallet.
+                    Balances are combined per coin across supported EVM networks, Bitcoin, Solana and TRON. Choose the exact network in Send or Receive. Network availability depends on your wallet.
                   </p>
                   <Button variant="outline" size="sm" className="w-full" onClick={() => void refetch()}>
                     Refresh balances
@@ -201,7 +203,7 @@ export default function WalletPage() {
       </div>
 
       <SendCryptoDialog open={sendOpen} onOpenChange={setSendOpen} initialSymbol={selectedSymbol} onSuccess={() => void refetch()} />
-      <ReceiveCryptoDialog open={receiveOpen} onOpenChange={setReceiveOpen} />
+      <ReceiveCryptoDialog open={receiveOpen} onOpenChange={setReceiveOpen} initialSymbol={selectedSymbol} />
     </div>
   );
 }

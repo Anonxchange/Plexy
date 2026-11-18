@@ -10,7 +10,7 @@ import { useWalletActivity } from "@/hooks/use-wallet-activity";
 import { format, subDays, subMonths, startOfDay, isAfter } from "date-fns";
 import { TransactionDetailSheet } from "@/components/wallet/TransactionDetailSheet";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import type { EvmWalletActivity } from "@/lib/evm-wallet-provider";
+import type { EvmWalletActivity } from "@/lib/wallet-provider";
 
 interface RecentActivityProps {
   type: "activity" | "operations";

@@ -1,3 +1,4 @@
+import { TURNSTILE_ENABLED } from "@/lib/turnstile-config";
 import { getSupabase } from "@/lib/supabase";
 
 /**
@@ -43,7 +44,7 @@ export async function signInWithGoogle(
   captchaToken?: string | null,
   redirectPath = "/signin?oauth=google&intent=signin",
 ): Promise<void> {
-  const captchaRequired = Boolean(import.meta.env.VITE_TURNSTILE_SITE_KEY);
+  const captchaRequired = TURNSTILE_ENABLED;
   if (captchaRequired && !captchaToken) {
     throw new Error("Please complete the CAPTCHA before continuing with Google.");
   }

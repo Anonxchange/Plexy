@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect, type ReactNode } from "react";
-import { Link } from "wouter";
+import { useState, useMemo, useEffect, useRef, type ReactNode } from "react";
+import { Link, useSearch } from "wouter";
 import { ChevronDown, ArrowRight, Smartphone, Gift, Star, Shield, Mail, UserCheck, ChevronUp, Share2, Heart, Plus } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -10,16 +10,18 @@ import { CurrentMarketingPage } from "@/components/marketing/current-marketing-p
 // Same data hooks as the All Gift Cards page, so top-up works for guests exactly like it does there.
 import { useGiftCardCountries } from "@/hooks/use-reloadly";
 import { useAirtimeOperators } from "@/hooks/use-airtime-operators";
-import { guessCountry, rememberCountry, savedCountry } from "@/lib/gift-card-utils";
+import { useTopupCart, type SavedTopup } from "@/hooks/use-topup-cart";
+import { openCartCheckout } from "@/lib/cart-checkout";
+import { useDigitalCountry } from "@/lib/country-preferences";
 
 const TOPUP_CSS = `
-.pxg .gsa{--ink:#091e1c;--mute:#52625f;--line:#e3ebe9;--field:#f3f7f6;--lime:#bef264;color:var(--ink);background:#fff;min-height:80vh;padding-bottom:40px}
+.pxg .gsa{--ink:var(--_color---typography--cyan,#0c1111);--mute:var(--_color---typography--dark-gray,#464646);--line:#e3ebe9;--field:#f3f7f6;--lime:#bef264;color:var(--ink);background:#fff;min-height:80vh;padding-bottom:40px;font-family:"Plus Jakarta Sans",system-ui,sans-serif}
 .pxg .gsa .gsa-w{max-width:1100px;margin:0 auto;padding:0 16px}
 .pxg .gsa .gsa-kinds{display:flex;justify-content:center;gap:8px;padding-top:22px;overflow-x:auto;scrollbar-width:none}
 .pxg .gsa .gsa-kinds::-webkit-scrollbar{display:none}
 .pxg .gsa .gsa-kind{flex:0 0 auto;display:inline-flex;align-items:center;height:48px;padding:0 24px;border:1.5px solid transparent;border-radius:999px;color:var(--ink);font-weight:700;font-size:18px;text-decoration:none;background:transparent}
 .pxg .gsa .gsa-kind[aria-current="page"]{border-color:var(--ink)}
-.pxg .gsa .gsa-hero{margin:44px auto 0;max-width:760px;text-align:center;font-weight:900;text-transform:uppercase;font-size:clamp(34px,9vw,64px);line-height:1.08;letter-spacing:-.01em;color:var(--ink)}
+.pxg .gsa .gsa-hero{margin:44px auto 0;max-width:760px;text-align:center;font-weight:800;text-transform:uppercase;font-size:clamp(34px,9vw,64px);line-height:1.08;letter-spacing:-.035em;color:var(--ink)}
 .pxg .gsa .gsa-bar{display:flex;align-items:center;gap:6px;max-width:680px;height:64px;margin:40px auto 0;padding:0 6px 0 14px;background:var(--field);border:1.5px solid var(--line);border-radius:999px}
 .pxg .gsa .gsa-bar:focus-within{border-color:var(--ink)}
 .pxg .gsa .gsa-cs{position:relative;flex:0 0 auto;display:flex;align-items:center;gap:6px;height:100%}
@@ -110,7 +112,7 @@ function CryptoIconImg({ symbol, label }: { symbol: string; label: string }) {
   if (!src || failed) {
     return (
       <div className="w-9 h-9 rounded-full bg-[#f3f7f6] border border-[#e3ebe9] flex items-center justify-center shadow-sm">
-        <span className="text-[10px] font-bold text-[#52625f]">{symbol.slice(0, 3)}</span>
+        <span className="text-[10px] font-bold text-[#464646]">{symbol.slice(0, 3)}</span>
       </div>
     );
   }
@@ -174,10 +176,10 @@ function RelatedOperators({
   return (
     <section className="py-12 px-4 md:px-6 lg:px-8 border-t border-[#e3ebe9]">
       <div className="max-w-2xl mx-auto">
-        <h2 className="text-2xl font-black text-[#091e1c] mb-1">
+        <h2 className="text-2xl font-extrabold text-[#0c1111] mb-1">
           {countryName ? `More operators in ${countryName}` : "More operators"}
         </h2>
-        <p className="text-sm text-[#52625f] mb-6">
+        <p className="text-sm text-[#464646] mb-6">
           Other carriers available for this country.
         </p>
         <div className="grid grid-cols-2 gap-3">
@@ -218,7 +220,7 @@ function RelatedOperators({
                     {op.name}
                   </p>
                   {rangeLabel && (
-                    <p className="text-xs text-[#52625f] mt-0.5">
+                    <p className="text-xs text-[#464646] mt-0.5">
                       {rangeLabel} {currency}
                     </p>
                   )}
@@ -239,11 +241,11 @@ function TopupFaqItem({ question, answer }: { question: string; answer: string }
       <button onClick={() => setOpen(v => !v)} className="w-full flex items-center justify-between py-4 text-left gap-4">
         <span className="text-[#091e1c] font-semibold text-sm leading-snug">{question}</span>
         <span className={cn("flex-shrink-0 h-6 w-6 rounded-full border border-[#e3ebe9] flex items-center justify-center transition-transform duration-200", open ? "rotate-45" : "")}>
-          <Plus className="h-3 w-3 text-[#52625f]" />
+          <Plus className="h-3 w-3 text-[#464646]" />
         </span>
       </button>
       <div className={cn("overflow-hidden transition-all duration-300", open ? "max-h-[300px]" : "max-h-0")}>
-        <p className="text-[#52625f] text-sm leading-relaxed pb-4">{answer}</p>
+        <p className="text-[#464646] text-sm leading-relaxed pb-4">{answer}</p>
       </div>
     </div>
   );
@@ -253,9 +255,9 @@ function TopupFaq() {
   return (
     <section className="py-14 px-4 md:px-6 lg:px-8 border-t border-[#e3ebe9]">
       <div className="max-w-2xl mx-auto">
-        <h2 className="text-3xl font-black text-[#091e1c] mb-1">Frequently asked</h2>
-        <h2 className="text-3xl font-black text-[#091e1c] mb-2">questions</h2>
-        <p className="text-sm text-[#52625f] mb-8">
+        <h2 className="text-3xl font-extrabold text-[#0c1111] mb-1">Frequently asked</h2>
+        <h2 className="text-3xl font-extrabold text-[#0c1111] mb-2">questions</h2>
+        <p className="text-sm text-[#464646] mb-8">
           Everything you need to know about mobile top-ups on Pexly.
         </p>
         <div>
@@ -292,36 +294,55 @@ const TopupDetailView = ({
   onBack: () => void;
 }) => {
   const [descOpen, setDescOpen] = useState(true);
+  const topupCart = useTopupCart();
 
   const currency = selectedOperator.senderCurrencyCode || "USD";
   const minAmt   = selectedOperator.minAmount ?? "";
   const maxAmt   = selectedOperator.maxAmount ?? "";
   const rangePlaceholder = minAmt && maxAmt ? `${minAmt} - ${maxAmt}` : "Enter amount";
 
-  const handleCheckout = () => {
-    if (!amount || !phoneNumber) {
-      toast.error("Please enter both phone number and amount");
-      return;
+  const prepareTopup = (): Omit<SavedTopup, "id"> | null => {
+    const numericAmount = Number(amount);
+    const normalizedPhone = phoneNumber.replace(/[\s()+-]/g, "");
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0 || !/^[1-9]\d{6,14}$/.test(normalizedPhone)) {
+      toast.error("Enter a valid amount and full international phone number.");
+      return null;
     }
-    localStorage.setItem("pexly_pending_order", JSON.stringify({
-      type: "topup",
+    if ((selectedOperator.minAmount != null && numericAmount < Number(selectedOperator.minAmount)) ||
+        (selectedOperator.maxAmount != null && numericAmount > Number(selectedOperator.maxAmount)) ||
+        (selectedOperator.fixedAmounts?.length > 0 && !selectedOperator.fixedAmounts.some((value: number) => Number(value) === numericAmount))) {
+      toast.error("Choose an amount supported by this operator.");
+      return null;
+    }
+    return {
       title: `${selectedOperator.name} Top-Up`,
       description: `Mobile top-up — ${selectedOperator.name}`,
-      amount: Number(amount),
+      amount: numericAmount,
       currency: currency.toLowerCase(),
       image: sanitizeImageUrl(selectedOperator.logoUrls?.[0]),
       metadata: {
         service: "mobile-topup",
         operatorId: selectedOperator.operatorId,
-        recipientPhone: phoneNumber,
+        recipientPhone: normalizedPhone,
         recipientCountryCode: selectedCountry,
         operatorName: selectedOperator.name,
       },
-    }));
-    devLog.info("Redirecting to checkout for topup");
-    const seg = window.location.pathname.split("/")[1];
-    const langBase = seg && seg.length === 2 ? `/${seg}` : "/en";
-    window.open(`${langBase}/checkout`, "_blank");
+    };
+  };
+
+  const handleAddToCart = () => {
+    const order = prepareTopup();
+    if (order) topupCart.addItem(order);
+  };
+
+  const handleCheckout = () => {
+    const order = prepareTopup();
+    if (!order) return;
+    try {
+      openCartCheckout({ ...order, type: "topup" });
+    } catch {
+      toast.error("Could not open checkout. Allow browser storage and try again.");
+    }
   };
 
   const [liked, setLiked] = useState(false);
@@ -338,7 +359,7 @@ const TopupDetailView = ({
   return (
     <div className="animate-fade-in max-w-xl mx-auto">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-1.5 text-sm text-[#52625f] mb-5">
+      <nav className="flex items-center gap-1.5 text-sm text-[#464646] mb-5">
         <button onClick={onBack} className="hover:text-[#091e1c] underline underline-offset-2 transition-colors">
           {currentCountry?.name || selectedCountry}
         </button>
@@ -365,7 +386,7 @@ const TopupDetailView = ({
           </button>
         </div>
         <div className="w-28 h-28 bg-white rounded-2xl border border-[#e3ebe9] flex items-center justify-center p-3 shadow-sm overflow-hidden">
-          <LogoWithFallback src={proxiedOperatorLogo} alt={selectedOperator.name} fallback={<Smartphone className="w-12 h-12 text-[#52625f]" />} />
+          <LogoWithFallback src={proxiedOperatorLogo} alt={selectedOperator.name} fallback={<Smartphone className="w-12 h-12 text-[#464646]" />} />
         </div>
       </div>
 
@@ -375,11 +396,11 @@ const TopupDetailView = ({
         {[1,2,3,4,5].map(i => (
           <Star key={i} className="w-4 h-4 text-yellow-400 fill-yellow-400" />
         ))}
-        <span className="text-sm text-[#52625f] ml-1">4.8 (228)</span>
+        <span className="text-sm text-[#464646] ml-1">4.8 (228)</span>
       </div>
 
       {/* Description blurb */}
-      <p className="text-sm text-[#52625f] text-center mb-8 leading-relaxed px-2">
+      <p className="text-sm text-[#464646] text-center mb-8 leading-relaxed px-2">
         {selectedOperator.name} is a mobile operator in {currentCountry?.name || selectedCountry}. Top up mobile
         minutes and data instantly using Bitcoin, USDT, and other cryptocurrencies.
       </p>
@@ -398,11 +419,11 @@ const TopupDetailView = ({
             placeholder={rangePlaceholder}
             min={selectedOperator.minAmount}
             max={selectedOperator.maxAmount}
-            className="flex-1 bg-transparent text-[#091e1c] placeholder:text-[#52625f] text-base py-4 px-4 outline-none min-w-0"
+            className="flex-1 bg-transparent text-[#0c1111] placeholder:text-[#464646] text-base py-4 px-4 outline-none min-w-0"
           />
         </div>
         {minAmt && maxAmt && (
-          <p className="text-xs text-[#52625f] mt-1.5 px-1">
+          <p className="text-xs text-[#464646] mt-1.5 px-1">
             Range: {currency} {minAmt} – {maxAmt}
           </p>
         )}
@@ -417,13 +438,13 @@ const TopupDetailView = ({
               onClick={() => setAmount(item.amount.toString())}
               className={`py-2.5 px-2 rounded-xl border transition-all flex flex-col items-center gap-0.5 text-sm font-semibold ${
                 amount === item.amount.toString()
-                  ? "border-[#bef264] bg-[#bef264] text-[#091e1c] ring-2 ring-[#bef264]/20"
-                  : "border-[#e3ebe9] bg-white hover:border-[#bef264]/50 text-[#091e1c] hover:bg-[#f3f7f6]/30"
+                  ? "border-[#bef264] bg-[#bef264] text-[#0c1111] ring-2 ring-[#bef264]/20"
+                  : "border-[#e3ebe9] bg-white hover:border-[#bef264]/50 text-[#0c1111] hover:bg-[#f3f7f6]/30"
               }`}
             >
               {selectedOperator.senderCurrencySymbol || ""}{item.amount}
               {item.description && (
-                <span className={`text-[10px] font-normal line-clamp-1 ${amount === item.amount.toString() ? "text-[#091e1c]/70" : "text-[#52625f]"}`}>
+                <span className={`text-[10px] font-normal line-clamp-1 ${amount === item.amount.toString() ? "text-[#091e1c]/70" : "text-[#464646]"}`}>
                   {item.description}
                 </span>
               )}
@@ -440,7 +461,7 @@ const TopupDetailView = ({
           value={phoneNumber}
           onChange={(e) => setPhoneNumber(e.target.value)}
           placeholder="e.g. 0802 123 4567"
-          className="w-full border border-[#e3ebe9] rounded-xl bg-white text-[#091e1c] placeholder:text-[#52625f] text-base py-4 px-4 outline-none focus:ring-2 focus:ring-[#bef264]/40 transition-all"
+          className="w-full border border-[#e3ebe9] rounded-xl bg-white text-[#0c1111] placeholder:text-[#464646] text-base py-4 px-4 outline-none focus:ring-2 focus:ring-[#bef264]/40 transition-all"
         />
       </div>
 
@@ -448,7 +469,7 @@ const TopupDetailView = ({
       <div className="space-y-3 mb-8">
         <button
           disabled={!amount || !phoneNumber}
-          onClick={handleCheckout}
+          onClick={handleAddToCart}
           className="w-full flex items-center justify-center gap-2 py-4 px-6 rounded-full bg-[#FFC439] hover:bg-[#f0b429] active:bg-[#e0a420] disabled:opacity-50 disabled:cursor-not-allowed text-[#003087] font-bold text-base transition-colors shadow-md"
         >
           <span>Add to cart</span>
@@ -506,10 +527,10 @@ const TopupDetailView = ({
           className="w-full flex items-center justify-between py-2 text-left"
         >
           <span className="font-semibold text-[#091e1c]">Description</span>
-          {descOpen ? <ChevronUp className="w-5 h-5 text-[#52625f]" /> : <ChevronDown className="w-5 h-5 text-[#52625f]" />}
+          {descOpen ? <ChevronUp className="w-5 h-5 text-[#464646]" /> : <ChevronDown className="w-5 h-5 text-[#464646]" />}
         </button>
         {descOpen && (
-          <div className="mt-3 space-y-3 text-sm text-[#52625f] leading-relaxed pb-2">
+          <div className="mt-3 space-y-3 text-sm text-[#464646] leading-relaxed pb-2">
             <p>
               {selectedOperator.name} mobile allows you to refill mobile minutes and data instantly with cryptocurrency.
             </p>
@@ -534,16 +555,30 @@ const Index = () => {
   const [selectedOperator, setSelectedOperator] = useState<any>(null);
   const [amount, setAmount] = useState<string>("");
   const [kind, setKind] = useState<"all" | "data">("all");
-  const [selectedCountry, setSelectedCountry] = useState<string>(() => {
-    const s = savedCountry();
-    return s && s !== "ALL" ? s : guessCountry();
-  });
+  const selectedCountry = useDigitalCountry();
+  useEffect(() => {
+    setSelectedOperator(null);
+    setAmount("");
+  }, [selectedCountry]);
 
   const countriesQuery = useGiftCardCountries();
   const operatorsQuery = useAirtimeOperators(selectedCountry, true);
   const countries: any[] = countriesQuery.data ?? [];
   const operators: any[] = useMemo(() => (operatorsQuery.data ?? []).map(normalizeOperator), [operatorsQuery.data]);
   const isLoadingOperators = operatorsQuery.isLoading;
+  const search = useSearch();
+  const requestedOperator = new URLSearchParams(search).get("operator");
+  const appliedOperator = useRef("");
+  useEffect(() => {
+    const key = `${selectedCountry ?? ""}:${requestedOperator ?? ""}`;
+    if (!requestedOperator || !selectedCountry || appliedOperator.current === key) return;
+    const match = operators.find(op => String(op.operatorId) === requestedOperator);
+    if (match) {
+      setSelectedOperator(match);
+      setAmount("");
+      appliedOperator.current = key;
+    }
+  }, [operators, requestedOperator, selectedCountry]);
 
   const currentCountry = useMemo(
     () => countries.find((c: any) => c.isoName === selectedCountry),
@@ -575,12 +610,6 @@ const Index = () => {
       .map(a => ({ amount: a, description: null }));
   }, [selectedOperator]);
 
-  const changeCountry = (c: string) => {
-    setSelectedCountry(c);
-    setSelectedOperator(null);
-    rememberCountry(c);
-  };
-
   const openOperator = (operator: any) => {
     setSelectedOperator(operator);
     setAmount("");
@@ -601,7 +630,7 @@ const Index = () => {
   };
 
   return (
-    <CurrentMarketingPage page={"gift-cards"}>
+    <CurrentMarketingPage page={"mobile-topup"}>
       <div className={"page-wrapper"}>
         <main id={"top"}>
           <div className={"pxg"}>
@@ -615,7 +644,7 @@ const Index = () => {
                 </div>
               </div>
 
-              {selectedOperator ? (
+              {selectedOperator && selectedCountry ? (
                 <div className={"gsa-w pt-6"}>
                   <TopupDetailView
                     selectedOperator={selectedOperator}
@@ -635,16 +664,6 @@ const Index = () => {
                   <h1 className={"gsa-hero"}>{"Top-up prepaid phones, from anywhere."}</h1>
 
                   <div className={"gsa-bar"}>
-                    <label className={"gsa-cs"}>
-                      <img className={"gsa-flag"} src={flagUrl(selectedCountry)} alt={""} />
-                      <ChevronDown size={18} />
-                      <select value={selectedCountry} onChange={(e) => changeCountry(e.target.value)} aria-label={"Country"}>
-                        {!countries.some((c: any) => c.isoName === selectedCountry) ? <option value={selectedCountry}>{selectedCountry}</option> : null}
-                        {countries.map((c: any) => (
-                          <option key={c.isoName} value={c.isoName}>{c.name}</option>
-                        ))}
-                      </select>
-                    </label>
                     <input
                       type={"tel"}
                       value={phoneNumber}
@@ -665,8 +684,8 @@ const Index = () => {
                   </div>
 
                   <div className={"gsa-pop"} id={"topup-operators"}>
-                    <img className={"gsa-flag"} src={flagUrl(selectedCountry)} alt={""} />
-                    <span>{"Popular in " + countryName}</span>
+                    {selectedCountry && <img className={"gsa-flag"} src={flagUrl(selectedCountry)} alt={""} />}
+                    <span>{selectedCountry ? "Popular in " + countryName : "Choose a recipient country"}</span>
                   </div>
 
                   <div className={"gsa-filter"}>
@@ -690,7 +709,7 @@ const Index = () => {
                               {logo ? (
                                 <img src={logo} alt={""} loading={"lazy"} onError={(e) => { e.currentTarget.style.display = "none"; }} />
                               ) : (
-                                <Smartphone className={"w-10 h-10 text-[#52625f]"} />
+                                <Smartphone className={"w-10 h-10 text-[#464646]"} />
                               )}
                             </div>
                             <div className={"gsa-tn"}>{op.name}</div>
@@ -723,8 +742,8 @@ const Index = () => {
       {/* ── How Refills Work ── */}
       <section className="py-16 px-4 md:px-6 lg:px-8">
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-3xl font-black text-[#091e1c] mb-2">How refills work</h2>
-          <p className="text-[#52625f] mb-10 text-sm">Three simple steps — takes less than a minute.</p>
+          <h2 className="text-3xl font-extrabold text-[#0c1111] mb-2">How refills work</h2>
+          <p className="text-[#464646] mb-10 text-sm">Three simple steps — takes less than a minute.</p>
 
           <div className="space-y-8">
             {/* Step 1 */}
@@ -741,7 +760,7 @@ const Index = () => {
                 </div>
               </div>
               <h3 className="font-bold text-[#091e1c] text-base mb-1">Enter a phone number &amp; amount</h3>
-              <p className="text-sm text-[#52625f]">Type in the phone number and the amount you want us to refill.</p>
+              <p className="text-sm text-[#464646]">Type in the phone number and the amount you want us to refill.</p>
             </div>
 
             {/* Step 2 */}
@@ -752,7 +771,7 @@ const Index = () => {
                   <div className="w-14 h-14 rounded-full bg-[#F7931A] flex items-center justify-center shadow-lg shrink-0">
                     <span className="text-[#091e1c] font-black text-xl">₿</span>
                   </div>
-                  <ArrowRight className="w-5 h-5 text-[#52625f]" />
+                  <ArrowRight className="w-5 h-5 text-[#464646]" />
                   {/* QR code */}
                   <div className="w-14 h-14 bg-white border border-[#e3ebe9] rounded-xl p-1.5 flex items-center justify-center shrink-0">
                     <svg viewBox="0 0 21 21" className="w-full h-full" fill="currentColor">
@@ -774,7 +793,7 @@ const Index = () => {
                 </div>
               </div>
               <h3 className="font-bold text-[#091e1c] text-base mb-1">Pay with any payment method</h3>
-              <p className="text-sm text-[#52625f]">Your payment is confirmed the same minute in most cases.</p>
+              <p className="text-sm text-[#464646]">Your payment is confirmed the same minute in most cases.</p>
             </div>
 
             {/* Step 3 */}
@@ -794,7 +813,7 @@ const Index = () => {
                 </div>
               </div>
               <h3 className="font-bold text-[#091e1c] text-base mb-1">That's it, here is your refill</h3>
-              <p className="text-sm text-[#52625f]">Once your payment is confirmed you will get your refill sent out.</p>
+              <p className="text-sm text-[#464646]">Once your payment is confirmed you will get your refill sent out.</p>
             </div>
           </div>
         </div>

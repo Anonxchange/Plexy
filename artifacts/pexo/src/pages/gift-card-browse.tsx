@@ -1,20 +1,13 @@
 import { useHead } from "@unhead/react";
 import { useState, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
-import { ArrowLeft, Search, SlidersHorizontal, Gift, ChevronDown, Check, ChevronsUpDown } from "@/lib/icons";
+import { ArrowLeft, Search, Gift, ChevronDown } from "@/lib/icons";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useGiftCardProducts, useGiftCardCategories, useGiftCardCountries } from "@/hooks/use-reloadly";
-import {
-  GIFT_CARD_MARKET_CHANGED_EVENT,
-  getGiftCardMarketCountry,
-  setGiftCardMarketCountry,
-} from "@/lib/gift-card-market";
 import { mapProducts, ProductCardGrid } from "@/components/gift-card-browse-cards";
+import { useDigitalCountry } from "@/lib/country-preferences";
 
 // ── Sidebar (shared with main page, but locally defined here to avoid circular imports) ──
 const STATIC_SIDEBAR = [
@@ -83,8 +76,7 @@ export function GiftCardBrowse() {
   const [sortOpen,     setSortOpen]       = useState(false);
   const [sortBy,       setSortBy]         = useState("Popular");
   const [page,         setPage]           = useState(1);
-  const [openCountry,  setOpenCountry]    = useState(false);
-  const [countryCode,  setCountryCode]    = useState<string | undefined>(getGiftCardMarketCountry);
+  const countryCode = useDigitalCountry();
   const [accumulated,  setAccumulated]    = useState<import("@/hooks/use-reloadly").ReloadlyProduct[]>([]);
 
   useHead({
@@ -96,33 +88,17 @@ export function GiftCardBrowse() {
   const activeCountryObj = (reloadlyCountries ?? []).find(c => c.isoName === countryCode);
 
   useEffect(() => {
-    const handleCountryChange = (event: Event) => {
-      const code = (event as CustomEvent<{ countryCode?: string }>).detail?.countryCode;
-      setCountryCode(code);
-      setPage(1);
-      setAccumulated([]);
-    };
-    window.addEventListener(GIFT_CARD_MARKET_CHANGED_EVENT, handleCountryChange);
-    return () => window.removeEventListener(GIFT_CARD_MARKET_CHANGED_EVENT, handleCountryChange);
-  }, []);
+    setPage(1);
+    setAccumulated([]);
+  }, [countryCode]);
 
-  useEffect(() => {
-    if (
-      countryCode &&
-      reloadlyCountries?.length &&
-      !reloadlyCountries.some(country => country.isoName === countryCode)
-    ) {
-      setCountryCode(undefined);
-      setGiftCardMarketCountry(undefined);
-    }
-  }, [countryCode, reloadlyCountries]);
-
-  const { data, isLoading, isFetching } = useGiftCardProducts({
+  const { data, isLoading, isFetching, isError, refetch } = useGiftCardProducts({
     page,
     size: 60,
     categoryId,
     productName: searchQuery || undefined,
     countryCode,
+    enabled: !!countryCode,
   });
 
   useEffect(() => {
@@ -164,14 +140,6 @@ export function GiftCardBrowse() {
     setAccumulated([]);
   };
 
-  const handleCountrySelect = (code: string | undefined) => {
-    setCountryCode(code);
-    setGiftCardMarketCountry(code);
-    setOpenCountry(false);
-    setPage(1);
-    setAccumulated([]);
-  };
-
   const handleLoadMore = () => {
     setPage(p => p + 1);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -179,6 +147,7 @@ export function GiftCardBrowse() {
 
   return (
     <div className="min-h-screen bg-background">
+      {isError && <p className="p-4 text-sm" role="alert">Gift cards couldn’t be loaded. <button type="button" className="underline" onClick={() => void refetch()}>Try again</button></p>}
 
       {/* ════════════════════════════════════════════════════════
           DESKTOP layout (lg+)
@@ -232,38 +201,6 @@ export function GiftCardBrowse() {
             )}
           </div>
 
-          {/* Country picker */}
-          <Popover open={openCountry} onOpenChange={setOpenCountry}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="h-10 px-3 rounded-xl text-sm flex-shrink-0">
-                <span className="max-w-[110px] truncate">
-                  {activeCountryObj ? `${activeCountryObj.flag} ${activeCountryObj.name}` : "🌍 All Countries"}
-                </span>
-                <ChevronsUpDown className="h-3 w-3 ml-1 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[280px] p-0" align="end">
-              <Command>
-                <CommandInput placeholder="Search country..." />
-                <CommandList>
-                  <CommandEmpty className="text-sm py-4 text-center text-muted-foreground">No country found.</CommandEmpty>
-                  <CommandGroup>
-                    <CommandItem value="all" onSelect={() => handleCountrySelect(undefined)}>
-                      <Check className={cn("mr-2 h-4 w-4", !countryCode ? "opacity-100" : "opacity-0")} />
-                      <span className="mr-2">🌍</span>All Countries
-                    </CommandItem>
-                    {(reloadlyCountries ?? []).map(c => (
-                      <CommandItem key={c.isoName} value={`${c.name} ${c.isoName}`} onSelect={() => handleCountrySelect(c.isoName)}>
-                        <Check className={cn("mr-2 h-4 w-4", countryCode === c.isoName ? "opacity-100" : "opacity-0")} />
-                        <span className="mr-2">{c.flag}</span>
-                        <span>{c.name}</span>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
         </div>
 
         {/* Sidebar + grid */}
@@ -359,34 +296,6 @@ export function GiftCardBrowse() {
 
         {/* Sort / filter bar */}
         <div className="px-4 py-2 flex items-center gap-2 overflow-x-auto scrollbar-hide">
-          <Popover open={openCountry} onOpenChange={setOpenCountry}>
-            <PopoverTrigger asChild>
-              <button className="flex-shrink-0 h-9 w-9 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors">
-                <SlidersHorizontal className="h-4 w-4 text-foreground" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[280px] p-0" align="start">
-              <Command>
-                <CommandInput placeholder="Search country..." />
-                <CommandList>
-                  <CommandEmpty className="text-sm py-4 text-center text-muted-foreground">No country found.</CommandEmpty>
-                  <CommandGroup heading="Country">
-                    <CommandItem value="all" onSelect={() => handleCountrySelect(undefined)}>
-                      <Check className={cn("mr-2 h-4 w-4", !countryCode ? "opacity-100" : "opacity-0")} />
-                      <span className="mr-2">🌍</span>All Countries
-                    </CommandItem>
-                    {(reloadlyCountries ?? []).map(c => (
-                      <CommandItem key={c.isoName} value={`${c.name} ${c.isoName}`} onSelect={() => handleCountrySelect(c.isoName)}>
-                        <Check className={cn("mr-2 h-4 w-4", countryCode === c.isoName ? "opacity-100" : "opacity-0")} />
-                        <span className="mr-2">{c.flag}</span>
-                        <span>{c.name}</span>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
           <div className="relative">
             <button
               onClick={() => setSortOpen(v => !v)}
@@ -422,7 +331,6 @@ export function GiftCardBrowse() {
             {countryCode && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20">
                 {activeCountryObj ? `${activeCountryObj.flag} ${activeCountryObj.name}` : countryCode}
-                <button onClick={() => handleCountrySelect(undefined)} className="hover:opacity-70 ml-0.5">×</button>
               </span>
             )}
           </div>

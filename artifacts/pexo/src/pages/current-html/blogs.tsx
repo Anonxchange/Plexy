@@ -1,3 +1,4 @@
+import "./page-styles/blogs.css";
 import { CurrentMarketingPage } from "@/components/marketing/current-marketing-page";
 
 export function BlogsExport() {

@@ -13,6 +13,7 @@ import { useTheme } from "@/components/theme-provider";
 import { amlScreening } from "@/lib/security/aml-screening";
 import { deviceFingerprint } from "@/lib/security/device-fingerprint";
 import { Turnstile } from "@marsidev/react-turnstile";
+import { TURNSTILE_ENABLED, TURNSTILE_SITE_KEY } from "@/lib/turnstile-config";
 import {
   Select,
   SelectContent,
@@ -185,7 +186,7 @@ export function SignUp() {
   const handleGoogleSignIn = async () => {
     if (googleRedirectingRef.current) return;
 
-    if (import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken) {
+    if (TURNSTILE_ENABLED && !captchaToken) {
       toast({
         title: "Security check required",
         description: "Complete the CAPTCHA before continuing with Google.",
@@ -217,7 +218,7 @@ export function SignUp() {
   const handleWalletConnectSignup = async () => {
     if (walletConnecting || googleRedirecting) return;
 
-    if (import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken) {
+    if (TURNSTILE_ENABLED && !captchaToken) {
       toast({
         title: "Security check required",
         description: "Complete the CAPTCHA before continuing with WalletConnect.",
@@ -268,7 +269,7 @@ export function SignUp() {
       });
     } finally {
       setWalletConnecting(false);
-      if (import.meta.env.VITE_TURNSTILE_SITE_KEY) {
+      if (TURNSTILE_ENABLED) {
         setCaptchaToken(null);
         setCaptchaError(false);
         setCaptchaKey((key) => key + 1);
@@ -512,7 +513,7 @@ export function SignUp() {
       // it, which also means it's the one endpoint on this page a bot could
       // hammer to enumerate registered emails. Require the Turnstile token
       // first so every call to it is already rate-limited by the captcha.
-      if (import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken) {
+      if (TURNSTILE_ENABLED && !captchaToken) {
         toast({
           title: "Security check required",
           description: "Complete the CAPTCHA before continuing.",
@@ -765,7 +766,7 @@ export function SignUp() {
     }
   };
 
-  const turnstileChallenge = import.meta.env.VITE_TURNSTILE_SITE_KEY ? (
+  const turnstileChallenge = TURNSTILE_ENABLED ? (
     captchaError ? (
       <div className="flex flex-col items-center gap-2">
         <p className="text-sm text-destructive">Security check failed to load.</p>
@@ -784,7 +785,7 @@ export function SignUp() {
     ) : (
       <Turnstile
         key={captchaKey}
-        siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+        siteKey={TURNSTILE_SITE_KEY}
         scriptOptions={{ async: true, defer: true, appendTo: "head" }}
         onSuccess={(token) => { setCaptchaToken(token); setCaptchaError(false); }}
         onError={() => { setCaptchaToken(null); setCaptchaError(true); }}
@@ -833,7 +834,7 @@ export function SignUp() {
       providerActionsDisabled={
         walletConnecting ||
         googleRedirecting ||
-        Boolean(import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken)
+        Boolean(TURNSTILE_ENABLED && !captchaToken)
       }
       providerLoading={googleRedirecting ? "google" : walletConnecting ? "wallet" : null}
       securityChallenge={step === "methods" ? turnstileChallenge : undefined}
@@ -1153,7 +1154,7 @@ export function SignUp() {
 
               <button 
                 type="submit"
-                disabled={loading || (!!import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken)}
+                disabled={loading || (TURNSTILE_ENABLED && !captchaToken)}
                 className="auth-submit-button"
               >
                 {loading ? "Creating account..." : "Create account"}

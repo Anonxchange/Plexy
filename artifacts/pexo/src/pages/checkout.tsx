@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
+import { removeSavedTopup } from "@/hooks/use-topup-cart";
 import { placeReloadlyOrder } from "@/hooks/use-utility-billers";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -379,7 +380,7 @@ function KoraPayTrigger({
 export function Checkout() {
   const { user, loading } = useAuth();
   const [, setLocation] = useLocation();
-  const { clearCart } = useGiftCardCart();
+  const { clearCart, removePurchasedItems } = useGiftCardCart();
   const [activePayment, setActivePayment] = useState<PaymentMethod>("card");
   const [showOrderSummary, setShowOrderSummary] = useState(true);
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("contact");
@@ -391,9 +392,13 @@ export function Checkout() {
   const [selectedUsdtNetwork, setSelectedUsdtNetwork] = useState<StablecoinNetwork>(USDT_NETWORKS[0]);
   const [selectedUsdcNetwork, setSelectedUsdcNetwork] = useState<StablecoinNetwork>(USDC_NETWORKS[0]);
   const [rates, setRates] = useState<Record<string, number>>({ USD: 1 });
+  const [cartOrderKey] = useState(() => {
+    const id = new URLSearchParams(window.location.search).get("cartOrder");
+    return id && /^[a-f0-9-]{36}$/i.test(id) ? `pexly_cart_order_${id}` : null;
+  });
   const [pendingOrder] = useState<PendingOrder | null>(() => {
     try {
-      const raw = localStorage.getItem("pexly_pending_order");
+      const raw = cartOrderKey ? sessionStorage.getItem(cartOrderKey) : localStorage.getItem("pexly_pending_order");
       return raw ? JSON.parse(raw) : null;
     } catch { return null; }
   });
@@ -516,11 +521,19 @@ export function Checkout() {
       }
 
       // ── Standard order success ─────────────────────────────────────────────
-      localStorage.removeItem("pexly_pending_order");
-      // Bundled cart checkouts (metadata.fromCart) leave the cart items intact
-      // in storage until payment actually succeeds — clear them now.
+      if (cartOrderKey) sessionStorage.removeItem(cartOrderKey);
+      else localStorage.removeItem("pexly_pending_order");
+      // Remove only the purchased snapshot, never unrelated or newly added items.
       if (pendingOrder.metadata?.fromCart) {
-        clearCart();
+        if (Array.isArray(pendingOrder.metadata.cartItems)) {
+          removePurchasedItems(pendingOrder.metadata.cartItems);
+        } else {
+          clearCart(); // Legacy orders created before cart snapshots.
+        }
+      }
+      if (pendingOrder.metadata?.savedTopupId) {
+        try { removeSavedTopup(pendingOrder.metadata.savedTopupId); }
+        catch { toast({ title: "Payment confirmed", description: "Could not update your saved top-ups. Remove the paid top-up from your cart before buying again." }); }
       }
       try {
         const saved = JSON.parse(localStorage.getItem("pexly_digital_orders") || "[]");
@@ -552,7 +565,9 @@ export function Checkout() {
       : 0;
 
     // Sub-line shown under product name in summary (phone / account / qty)
-    const orderSubline = pendingOrder.metadata?.recipientPhone
+    const orderSubline = (pendingOrder.metadata?.recipientPhone
+      ? [pendingOrder.metadata.recipientPhone, pendingOrder.metadata.recipientCountryCode].filter(Boolean).join(" · ")
+      : "")
       || pendingOrder.metadata?.accountNumber
       || (cartItemCount > 1 ? `${cartItemCount} gift cards` : "")
       || (pendingOrder.metadata?.quantity > 1 ? `Qty: ${pendingOrder.metadata.quantity}` : "")

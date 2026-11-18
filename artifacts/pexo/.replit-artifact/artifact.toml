@@ -1,7 +1,7 @@
 kind = "web"
 previewPath = "/"
 title = "Pexly Marketplace"
-description = "Pexly's digital marketplace for gift cards, mobile top-ups, physical products, and a connected EVM wallet."
+description = "Imported Pezx marketplace with unified search across gift cards, mobile top-ups and Shopify products."
 version = "1.0.0"
 id = "artifacts/pexo"
 router = "path"
