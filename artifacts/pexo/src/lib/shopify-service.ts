@@ -1,6 +1,8 @@
 import { toast } from "sonner";
 import { getSupabase } from "./supabase";
 import { devLog } from "./dev-logger";
+import { getCountryPreferences, setCountryPreference, initializeCountryPreferences } from "./country-preferences";
+import { safeStorage } from "./safe-storage";
 
 export interface ShopifyProduct {
   node: {
@@ -134,39 +136,42 @@ export const CART_BUYER_IDENTITY_UPDATE_MUTATION = 'cartBuyerIdentityUpdate';
 // Shopify does NOT auto-detect market from IP — without this being set
 // explicitly (e.g. from a country switcher), every request resolves to the
 // store's primary market regardless of who's visiting.
-const MARKET_COUNTRY_STORAGE_KEY = 'pexly_market_country';
-
 // Fired whenever the market changes (manual selection or IP detection).
 // Any page/component can listen instead of forcing a full window.location.reload().
 export const MARKET_CHANGED_EVENT = 'pexly:market-changed';
+let localizationRequest: Promise<Array<{ code: string; region: string; currency: string }>> | undefined;
+let localizationExpiresAt = 0;
 
 export function getMarketCountry(): string | undefined {
-  if (typeof window === 'undefined') return undefined;
-  try {
-    const stored = window.localStorage.getItem(MARKET_COUNTRY_STORAGE_KEY);
-    return stored && /^[A-Z]{2}$/.test(stored) ? stored : undefined;
-  } catch {
-    return undefined;
-  }
+  return getCountryPreferences().delivery?.country;
 }
 
 export function setMarketCountry(countryCode: string) {
-  if (typeof window === 'undefined') return;
-  const normalized = countryCode.trim().toUpperCase();
-  if (!/^[A-Z]{2}$/.test(normalized)) return;
-  try {
-    window.localStorage.setItem(MARKET_COUNTRY_STORAGE_KEY, normalized);
-  } catch {
-    // localStorage unavailable (e.g. private browsing) — silently no-op,
-    // requests just fall back to IP-based market detection.
-  }
-  window.dispatchEvent(new CustomEvent(MARKET_CHANGED_EVENT, { detail: { countryCode: normalized } }));
+  setCountryPreference("delivery", countryCode);
 }
 
 export async function storefrontApiRequest(queryName: string, variables: Record<string, unknown> = {}) {
   try {
+    await initializeCountryPreferences();
+    const country = typeof variables.country === "string" ? variables.country : getMarketCountry();
+    // Verify catalog context as well as cart context: an unsupported country can
+    // silently fall back to the store's primary market even with @inContext.
+    // Showing an error is safer than displaying prices for the wrong market.
+    const needsMarket = [
+      PRODUCTS_QUERY, PRODUCT_BY_HANDLE_QUERY, PRODUCT_TYPES_QUERY, COLLECTIONS_QUERY,
+      COLLECTION_BY_HANDLE_QUERY, COLLECTION_PRODUCT_TYPES_QUERY, CART_CREATE_MUTATION,
+      CART_LINES_ADD_MUTATION, CART_BUYER_IDENTITY_UPDATE_MUTATION,
+    ].includes(queryName);
+    if (needsMarket) {
+      const selectedCountry = (variables.buyerIdentity as { countryCode?: string } | undefined)?.countryCode || country;
+      if (!selectedCountry) throw new Error("Choose your shop delivery country in the header.");
+      const markets = await shopifyService.getAvailableCountries();
+      if (!markets.some(market => market.code === selectedCountry)) {
+        throw new Error(`Shop delivery to ${selectedCountry} is not available. Choose another country in the header.`);
+      }
+    }
     const supabase = await getSupabase();
-    const requestVariables = { country: getMarketCountry(), ...variables };
+    const requestVariables = { country, ...variables };
     const { data, error } = await supabase.functions.invoke('shopify-storefront', {
       body: { queryName, variables: requestVariables }
     });
@@ -176,10 +181,16 @@ export async function storefrontApiRequest(queryName: string, variables: Record<
         toast.error("Shopify: Payment required", {
           description: "Your store needs an active billing plan. Visit https://admin.shopify.com to upgrade.",
         });
-        return;
+        throw new Error("Shop catalog is temporarily unavailable.");
       }
       const errorMessage = error.message || "Failed to process request";
       devLog.error('Supabase function error:', error);
+      if (queryName === "getLocalization") {
+        throw new Error("Shop delivery markets could not be verified. Please try again later.");
+      }
+      if (queryName === CART_BUYER_IDENTITY_UPDATE_MUTATION) {
+        throw new Error("Your cart could not be updated. Your delivery country has not changed. Please try again.");
+      }
       throw new Error(errorMessage);
     }
 
@@ -210,6 +221,45 @@ function isCartNotFoundError(userErrors: Array<{ field: string[] | null; message
 }
 
 export const shopifyService = {
+  async getAvailableCountries(): Promise<Array<{ code: string; region: string; currency: string }>> {
+    if (localizationRequest && Date.now() < localizationExpiresAt) return localizationRequest;
+    localizationExpiresAt = Date.now() + 300_000;
+    localizationRequest = (async () => {
+      const data = await storefrontApiRequest("getLocalization");
+      const countries = data?.data?.localization?.availableCountries;
+      if (!Array.isArray(countries)) throw new Error("The store did not return its configured delivery markets.");
+      return countries.map((country: any) => ({
+        code: country.isoCode,
+        region: country.name,
+        currency: country.currency?.isoCode,
+      })).filter((country: any) => /^[A-Z]{2}$/.test(country.code) && typeof country.currency === "string");
+    })();
+    // Failed requests are retryable from the header.
+    void localizationRequest.catch(() => { localizationRequest = undefined; });
+    return localizationRequest;
+  },
+
+  async changeDeliveryCountry(country: string) {
+    const countries = await shopifyService.getAvailableCountries();
+    if (!countries.some(c => c.code === country)) {
+      throw new Error(`Shop delivery to ${country} is not available. Your saved choice has not changed.`);
+    }
+    const cartId = safeStorage.getItem("shopify_cart_id");
+    window.dispatchEvent(new CustomEvent("pexly:cart-localizing", { detail: { busy: true } }));
+    try {
+      if (cartId) {
+        const result = await shopifyService.updateCartCountry(cartId, country);
+        if (!result.success) throw new Error("Your cart could not be updated. Your delivery country has not changed.");
+      }
+      setMarketCountry(country);
+      if (cartId) toast.info("Delivery country changed. Cart prices and item availability are being refreshed. Review your cart before checkout.");
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent("pexly:cart-localizing", { detail: { busy: false } }));
+      throw error;
+    }
+    if (!cartId) window.dispatchEvent(new CustomEvent("pexly:cart-localizing", { detail: { busy: false } }));
+  },
+
   async getProducts(first: number = 250, after?: string, query?: string) {
     const data = await storefrontApiRequest(PRODUCTS_QUERY, { first, after, query });
     return {
@@ -294,9 +344,10 @@ export const shopifyService = {
         id: node.id,
         variantId: variant?.id || '',
         title: node.title || (product?.title || 'Product') + (variant?.title && variant.title !== 'Default Title' ? ` - ${variant.title}` : ''),
-        price: costAmount ? parseFloat(costAmount) : (variant?.price?.amount ? parseFloat(variant.price.amount) : 0),
+        price: costAmount ? parseFloat(costAmount) / Math.max(1, node.quantity) : (variant?.price?.amount ? parseFloat(variant.price.amount) : 0),
         currency: costCurrency || variant?.price?.currencyCode || 'USD',
         quantity: node.quantity,
+        availableForSale: variant?.availableForSale,
         image: node.image?.url || product?.images?.edges?.[0]?.node?.url || product?.images?.nodes?.[0]?.url || ''
       };
     });
@@ -304,12 +355,14 @@ export const shopifyService = {
     return {
       id: cart.id,
       totalQuantity: cart.totalQuantity,
+      countryCode: cart.buyerIdentity?.countryCode as string | undefined,
       checkoutUrl: formatCheckoutUrl(cart.checkoutUrl),
       items
     };
   },
 
   async createCart(item: { variantId: string; quantity: number }) {
+    await initializeCountryPreferences();
     const country = getMarketCountry();
     const data = await storefrontApiRequest(CART_CREATE_MUTATION, {
       input: {
@@ -327,6 +380,9 @@ export const shopifyService = {
 
     const cart = data?.data?.cartCreate?.cart;
     if (!cart?.checkoutUrl) return null;
+    if (cart.buyerIdentity?.countryCode !== country) {
+      throw new Error("The cart delivery country could not be confirmed. Please try again.");
+    }
 
     const lineId = cart.lines?.edges?.[0]?.node?.id;
     if (!lineId) {
@@ -391,6 +447,10 @@ export const shopifyService = {
     const userErrors = data?.data?.cartBuyerIdentityUpdate?.userErrors || [];
     if (isCartNotFoundError(userErrors)) return { success: false, cartNotFound: true };
     if (userErrors.length > 0) return { success: false };
+    const cart = data?.data?.cartBuyerIdentityUpdate?.cart;
+    if (cart?.buyerIdentity?.countryCode !== countryCode) {
+      throw new Error("Shopify did not confirm the requested cart delivery country. Your saved choice has not changed.");
+    }
     return { success: true };
   }
 };

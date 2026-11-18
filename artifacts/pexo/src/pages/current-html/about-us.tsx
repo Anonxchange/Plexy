@@ -1,3 +1,4 @@
+import "./page-styles/about-us.css";
 import { CurrentMarketingPage } from "@/components/marketing/current-marketing-page";
 
 export function AboutUsExport() {

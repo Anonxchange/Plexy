@@ -1,9 +1,7 @@
 import { useCallback } from "react";
-import { useAccount, useSignMessage } from "wagmi";
-import { createSiweMessage } from "viem/siwe";
 import type { User } from "@supabase/supabase-js";
 import { getSupabase } from "@/lib/supabase";
-import { useEvmWallet } from "@/lib/evm-wallet-provider";
+import { useEvmWallet } from "@/lib/wallet-provider";
 
 type WalletAuthResult =
   | { status: "connection-opened" }
@@ -15,8 +13,6 @@ type WalletAuthResult =
  */
 export function useReownWalletAuth() {
   const wallet = useEvmWallet();
-  const account = useAccount();
-  const { signMessageAsync } = useSignMessage();
 
   const signIn = useCallback(
     async (captchaToken: string | null): Promise<WalletAuthResult> => {
@@ -24,7 +20,7 @@ export function useReownWalletAuth() {
         throw new Error("Wallet connection is not configured. Add VITE_REOWN_PROJECT_ID to the app environment.");
       }
 
-      if (!account.isConnected || !account.address) {
+      if (!wallet.isConnected || !wallet.address) {
         wallet.openConnect();
         return { status: "connection-opened" };
       }
@@ -37,7 +33,7 @@ export function useReownWalletAuth() {
           body: {
             action: "nonce",
             purpose: "sign-in",
-            walletAddress: account.address,
+            walletAddress: wallet.address,
           },
         });
       if (nonceError) throw nonceError;
@@ -45,9 +41,10 @@ export function useReownWalletAuth() {
       if (!nonce) throw new Error("Could not start secure wallet sign-in. Request a new challenge.");
 
       const issuedAt = new Date();
+      const { createSiweMessage } = await import("viem/siwe");
       const message = createSiweMessage({
-        address: account.address,
-        chainId: account.chainId ?? 1,
+        address: wallet.address,
+        chainId: wallet.chainId ?? 1,
         domain: window.location.host,
         nonce,
         uri,
@@ -56,15 +53,12 @@ export function useReownWalletAuth() {
         issuedAt,
         expirationTime: new Date(issuedAt.getTime() + 4 * 60_000),
       });
-      const signature = await signMessageAsync({
-        account: account.address,
-        message,
-      });
+      const signature = await wallet.signMessage(message);
 
       const { data, error } = await supabase.functions.invoke("link-wallet", {
         body: {
           action: "sign-in",
-          walletAddress: account.address,
+          walletAddress: wallet.address,
           message,
           signature,
           captchaToken: captchaToken ?? undefined,
@@ -88,8 +82,8 @@ export function useReownWalletAuth() {
       }
       return { status: "signed-in", user: sessionData.user };
     },
-    [account.address, account.chainId, account.isConnected, signMessageAsync, wallet],
+    [wallet],
   );
 
-  return { signIn, isConnected: account.isConnected, address: account.address };
+  return { signIn, isConnected: wallet.isConnected, address: wallet.address };
 }

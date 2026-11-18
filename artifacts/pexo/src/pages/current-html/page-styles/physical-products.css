@@ -1,0 +1,81 @@
+
+
+.export-page .sp-gc .l{width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.22);display:grid;place-items:center;font-weight:800}
+
+.export-page .sp-gc .v{font-weight:800;font-size:24px}
+
+.export-page .sp-btn.wide{width:100%;border:0;cursor:pointer;font-family:inherit}
+
+.export-page .sp-sec.tight{padding:24px 0}
+
+.export-page .sp-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:28px}
+
+.export-page .sp-sub{margin:8px 0 0;font-size:17px;color:#464646}
+
+.export-page .sp-all{font-weight:700;font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:#091e1c;text-decoration:none;white-space:nowrap;padding-bottom:4px;border-bottom:2px solid #d8ff85}
+
+.export-page .sp-gc{width:68%;aspect-ratio:1.6;border-radius:16px;color:#fff;padding:14px 16px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 14px 30px rgba(9,30,28,.22);transform:rotate(-5deg);font-family:"Plus Jakarta Sans",system-ui,sans-serif}
+
+.export-page .sp-gc .n{position:absolute;right:16px;top:14px;font-size:12px;font-weight:700;opacity:.85}
+
+.export-page .sp-gc{position:relative}
+
+.export-page .sp-guide{position:relative;border-radius:24px;overflow:hidden;min-height:380px}
+
+.export-page .sp-guide img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+
+.export-page .sp-guide:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(9,30,28,.75),rgba(9,30,28,.1))}
+
+.export-page .sp-guide .ov{position:relative;z-index:2;padding:clamp(28px,5vw,72px);color:#fff;display:flex;flex-direction:column;gap:6px;align-items:flex-start;justify-content:center;min-height:380px}
+
+.export-page .sp-guide .ov span{font-style:italic;font-size:clamp(20px,2.4vw,30px);font-weight:500}
+
+.export-page .sp-guide .ov b{font-size:clamp(34px,5vw,64px);line-height:1.05;font-weight:800;color:#d8ff85;margin-bottom:18px}
+
+.export-page .sp-btn{display:inline-block;background:#091e1c;color:#fff;font-weight:700;font-size:16px;padding:15px 34px;border-radius:12px;text-decoration:none;transition:.2s}
+
+.export-page .sp-btn:hover{background:#d8ff85;color:#091e1c}
+
+.export-page .sp-btn.light{background:#fff;color:#091e1c}
+
+.export-page .sp-btn.light:hover{background:#d8ff85}
+
+.export-page .sp-feature{padding:24px 0 72px}
+
+.export-page .sp-feature-in{display:grid;grid-template-columns:1.1fr 1fr;border-radius:28px;overflow:hidden;background:#e3f9dc}
+
+.export-page .sp-feature-in img{width:100%;height:100%;min-height:420px;object-fit:cover;display:block}
+
+.export-page .sp-feature-in .txt{padding:clamp(28px,5vw,72px);display:flex;flex-direction:column;gap:20px;justify-content:center;align-items:flex-start}
+
+.export-page .sp-feature-in p{margin:0;font-size:clamp(17px,1.5vw,20px);line-height:1.6;color:#2a3d37;max-width:34em}
+
+.export-page .sp-eyebrow{text-align:center;font-weight:700;letter-spacing:.16em;text-transform:uppercase;font-size:15px;margin:0 0 18px;color:#091e1c}
+
+.export-page .sp-marq{overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent);mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent)}
+
+.export-page .sp-marq .in{display:flex;gap:64px;width:max-content;animation:spm 30s linear infinite}
+
+.export-page .sp-marq span{font-weight:800;font-size:28px;color:#8a948f;white-space:nowrap}
+
+@media(max-width:991px){.export-page .sp-feature-in{grid-template-columns:1fr}}
+
+@media(max-width:991px){.export-page .sp-feature-in img{min-height:280px;max-height:340px}}
+
+@media(max-width:991px){.export-page .sp-feature{padding:8px 0 48px}}
+
+@media(max-width:767px){.export-page .sp-head{align-items:flex-end}}
+
+@media(max-width:767px){.export-page .sp-guide{min-height:300px}}
+
+@media(max-width:767px){.export-page .sp-guide .ov{min-height:300px}}
+
+@media(max-width:767px){.export-page .sp-marq span{font-size:22px}}
+
+.export-page .sp-btn.ghost{background:transparent;color:#091e1c;border:1.5px solid #091e1c}
+
+.export-page .sp-btn.ghost:hover{background:#091e1c;color:#d8ff85}
+
+.export-page #hot .sp-head{margin-bottom:18px}
+
+.export-page #giftcards .sp-head{margin-bottom:18px}

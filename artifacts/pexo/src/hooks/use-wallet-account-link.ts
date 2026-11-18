@@ -3,7 +3,7 @@ import { useSignMessage } from "wagmi";
 import { createSiweMessage } from "viem/siwe";
 import { useAuth } from "@/lib/auth-context";
 import { getSupabase } from "@/lib/supabase";
-import { useEvmWallet } from "@/lib/evm-wallet-provider";
+import { useEvmWallet } from "@/lib/wallet-provider";
 
 type WalletLinkStatus = "loading" | "error" | "unlinked" | "disconnected" | "linked" | "different";
 
@@ -61,10 +61,12 @@ export function useWalletAccountLink() {
 
   const status: WalletLinkStatus = !user?.id
     ? "unlinked"
-    : loading || loadedUserId !== user.id
+    : loading
       ? "loading"
       : error
         ? "error"
+        : loadedUserId !== user.id
+          ? "loading"
         : !linkedAddress
           ? "unlinked"
           : !wallet.isConnected || !wallet.address

@@ -280,7 +280,6 @@ export function GiftCardDetail() {
   const [, setLocation] = useLocation();
   const [, params] = useRoute("/gift-cards/:id");
   const [cardValue, setCardValue] = useState("");
-  useEffect(() => { localStorage.removeItem("pexly_pending_order"); }, []);
 
   const MAX_GIFT_CARD_QUANTITY = 999;
   const [numberOfCards, setNumberOfCards] = useState("1");
@@ -426,7 +425,7 @@ export function GiftCardDetail() {
       recipientAmount: value,
       recipientCurrency: rangeCurrency ?? card.recipientCurrencyCode,
       image: sanitizeImageUrl(card.logoUrls?.[0]),
-    });
+    }, qty);
     setCartOpen(true);
   };
 

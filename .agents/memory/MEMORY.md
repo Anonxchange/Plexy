@@ -1,0 +1,4 @@
+- [Marketplace scope](marketplace-scope.md) — imported Pezx; universal discovery must cover digital services and physical goods without mixing country preferences.
+- [Wallet coin visibility](wallet-coins.md) — always-visible grouped coins, per-action network choices, missing native coins, and development origin policy.
+- [Wallet connector constraints](wallet-connector-constraints.md) — load SDKs on demand without resetting forms; avoid blocked Bitcoin dependencies; verify each network's RPC.
+- [Pexly icon source](pexly-icon-source.md) — use Hugeicons exclusively in the Pexly product UI; avoid adding alternate icon libraries.

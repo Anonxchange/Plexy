@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { getSupabase, supabase } from "@/lib/supabase";
 import { hasGiftCardDenominationRange } from "@/lib/gift-card-denominations";
 
 export interface ReloadlyProduct {
@@ -41,9 +41,10 @@ export interface ProductsResponse {
 const FUNCTIONS_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
 async function authHeaders(): Promise<Record<string, string>> {
+  const client = await getSupabase();
   const {
     data: { session },
-  } = await supabase.auth.getSession();
+  } = await client.auth.getSession();
   const token = session?.access_token ?? import.meta.env.VITE_SUPABASE_ANON_KEY;
   return {
     Authorization: `Bearer ${token}`,

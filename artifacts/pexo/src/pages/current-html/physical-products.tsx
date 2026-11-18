@@ -1,3 +1,4 @@
+import "./page-styles/physical-products.css";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CurrentMarketingPage } from "@/components/marketing/current-marketing-page";
 import {
@@ -7,14 +8,13 @@ import {
   type ShopifyProduct,
 } from "@/lib/shopify-service";
 import { useAirtimeOperators } from "@/hooks/use-airtime-operators";
+import { useDigitalCountry } from "@/lib/country-preferences";
 import { useGiftCardCatalog } from "@/hooks/use-gift-card-catalog";
 // Same helpers the gift cards page uses.
 import {
   airTile,
   giftTile,
-  guessCountry,
   preferredRank,
-  savedCountry,
   uniqueByName,
   type CardTile,
 } from "@/lib/gift-card-utils";
@@ -48,20 +48,20 @@ const SHOP_GRID_CSS = `
 .ed-cats-wrap{border-bottom:1px solid #e3ebe9}
 .ed-cats{display:flex;gap:24px;overflow-x:auto;scrollbar-width:none}
 .ed-cats::-webkit-scrollbar{display:none}
-.ed-cat{flex:none;background:none;border:0;padding:14px 0;font:inherit;font-size:15px;color:#52625f;white-space:nowrap;cursor:pointer}
+.ed-cat{flex:none;background:none;border:0;padding:14px 0;font:inherit;font-size:15px;color:#464646;white-space:nowrap;cursor:pointer}
 .ed-cat.on{color:#091e1c;box-shadow:inset 0 -2px 0 #091e1c}
 .ed-lead{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;padding:20px 0 8px}
 @media(min-width:900px){.ed-lead{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:56px;align-items:center;padding:36px 0}}
 .ed-lead-img{display:block;position:relative;overflow:hidden;border-radius:6px;background:#f3f7f6;aspect-ratio:4/5}
 .ed-lead-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-.ed-label{margin:0 0 6px;font-size:13px;color:#52625f}
-.ed-title{margin:0 0 10px;font-family:Georgia,"Times New Roman",serif;font-weight:400;font-size:clamp(26px,4vw,44px);line-height:1.15;color:#091e1c}
-.ed-price{margin:0 0 14px;font-size:15px;color:#52625f;font-variant-numeric:tabular-nums}
+.ed-label{margin:0 0 6px;font-size:13px;color:#464646}
+.ed-title{margin:0 0 10px;font-family:"Plus Jakarta Sans",system-ui,sans-serif;font-weight:700;font-size:clamp(26px,4vw,44px);line-height:1.15;letter-spacing:-.035em;color:#0c1111}
+.ed-price{margin:0 0 14px;font-size:15px;color:#464646;font-variant-numeric:tabular-nums}
 .ed-link{font-size:15px;color:#091e1c;text-decoration:underline;text-underline-offset:3px}
-.ed-foot{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:28px;padding:14px 0;border-top:1px solid #e3ebe9;font-size:13px;color:#52625f}
+.ed-foot{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:28px;padding:14px 0;border-top:1px solid #e3ebe9;font-size:13px;color:#464646}
 .sp-masonry .sp-img.sp-real{border-radius:6px}
-.sp-masonry .sp-card h3{font-size:14px;font-weight:400;line-height:1.35;margin:10px 0 2px;color:#091e1c}
-.sp-masonry .sp-price{margin:0;font-size:14px;color:#52625f;font-variant-numeric:tabular-nums}
+.sp-masonry .sp-card h3{font-size:14px;font-weight:600;line-height:1.35;margin:10px 0 2px;color:#0c1111}
+.sp-masonry .sp-price{margin:0;font-size:14px;color:#464646;font-variant-numeric:tabular-nums}
 .sp-masonry .sp-price b{font-weight:400}
 .sp-row .sp-img.sp-real{aspect-ratio:1/1}
 .sp-skel.sp-skel-sq{flex:0 0 190px}
@@ -73,7 +73,7 @@ const SHOP_GRID_CSS = `
 .sp-more{display:inline-flex;align-items:center;justify-content:center;min-width:200px;height:54px;padding:0 30px;border:1.5px solid #091e1c;border-radius:999px;background:#fff;color:#091e1c;font-family:inherit;font-weight:700;font-size:17px;cursor:pointer}
 .sp-more:hover{background:#bef264}
 .sp-more[disabled]{opacity:.6;cursor:default}
-.sp-note{margin:30px 0;text-align:center;color:#52625f;font-size:15px}
+.sp-note{margin:30px 0;text-align:center;color:#464646;font-size:15px}
 .sp-note button{text-decoration:underline;background:none;border:0;color:inherit;cursor:pointer;font:inherit}
 .sp-filter-pill{display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:8px 8px 8px 16px;border:1.5px solid #e3ebe9;border-radius:999px;font-weight:700;font-size:15px;color:#091e1c;background:#fff}
 .sp-filter-pill button{width:28px;height:28px;border:0;border-radius:50%;background:#f3f7f6;color:#091e1c;cursor:pointer;font-size:16px;line-height:1}
@@ -97,12 +97,15 @@ function useShopCategories() {
 
   useEffect(() => {
     let alive = true;
-    (async () => {
+    let request = 0;
+    const load = async () => {
+      const current = ++request;
+      setLoading(true);
       const [types, prods] = await Promise.all([
         shopifyService.getProductTypes(250).catch(() => [] as string[]),
         shopifyService.getProducts(250, undefined, undefined).catch(() => ({ products: [] as any[] })),
       ]);
-      if (!alive) return;
+      if (!alive || current !== request) return;
       const map = new Map<string, ShopCategory>();
       for (const t of types as string[]) {
         const name = String(t).trim();
@@ -119,8 +122,10 @@ function useShopCategories() {
       }
       setCats(Array.from(map.values()).sort((x, y) => y.count - x.count || x.name.localeCompare(y.name)));
       setLoading(false);
-    })();
-    return () => { alive = false; };
+    };
+    void load();
+    window.addEventListener(MARKET_CHANGED_EVENT, load);
+    return () => { alive = false; window.removeEventListener(MARKET_CHANGED_EVENT, load); };
   }, []);
 
   return { cats, loading };
@@ -415,15 +420,18 @@ function useRailProducts() {
 
   useEffect(() => {
     let alive = true;
+    let request = 0;
     const load = async () => {
+      const current = ++request;
+      setLoading(true);
       try {
         const res = await shopifyService.getProducts(24, undefined, undefined);
-        if (!alive) return;
+        if (!alive || current !== request) return;
         setItems((res.products as ShopifyProduct[]).map(toRail));
       } catch {
-        if (alive) setItems([]);
+        if (alive && current === request) setItems([]);
       } finally {
-        if (alive) setLoading(false);
+        if (alive && current === request) setLoading(false);
       }
     };
     load();
@@ -491,8 +499,8 @@ const HOME_GIFT_COUNT = 6;
 const HOME_TOPUP_COUNT = 4;
 
 function GiftCardsAndTopUps() {
-  const country = useMemo(() => savedCountry() ?? guessCountry(), []);
-  const cat = useGiftCardCatalog({ countryCode: country, size: 40, enabled: true });
+  const country = useDigitalCountry();
+  const cat = useGiftCardCatalog({ countryCode: country, size: 40, enabled: !!country });
   const air = useAirtimeOperators(country, true);
 
   const tiles = useMemo(() => {

@@ -57,13 +57,11 @@
     "date-fns": "^4.4.0",
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",
-    "lucide-react": "catalog:",
     "next-themes": "^0.4.6",
     "react": "19.3.0",
     "react-day-picker": "^9.14.0",
     "react-dom": "19.3.0",
     "react-hook-form": "^7.90.0",
-    "react-icons": "^5.7.0",
     "react-resizable-panels": "^2.1.9",
     "recharts": "^2.15.4",
     "sonner": "^2.0.8",
@@ -86,9 +84,14 @@
     "@hugeicons/core-free-icons": "^4.2.3",
     "@hugeicons/react": "^1.1.9",
     "@marsidev/react-turnstile": "^1.5.5",
+    "@reown/appkit-adapter-solana": "1.8.24",
+    "@reown/appkit-adapter-tron": "1.8.24",
+    "@solana/web3.js": "1.98.4",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.119.0",
+    "@tronweb3/tronwallet-adapter-tronlink": "1.1.13",
     "@unhead/react": "^3.3.1",
+    "bitcoinjs-lib": "^7.0.5",
     "dompurify": "^3.4.16",
     "get-nonce": "^1.0.1",
     "html-react-parser": "^6.1.5",
@@ -96,6 +99,8 @@
     "idb": "^8.0.3",
     "lottie-web": "^5.13.0",
     "qrcode.react": "^4.2.0",
-    "react-i18next": "^17.0.11"
+    "react-i18next": "^17.0.11",
+    "sats-connect": "^4.2.1",
+    "tronweb": "^6.5.2"
   }
 }

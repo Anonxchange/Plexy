@@ -2,8 +2,8 @@ import { useCallback, useMemo } from "react";
 import { formatUnits, zeroAddress, type Address } from "viem";
 import { useBalance, useReadContracts } from "wagmi";
 import { useCryptoPrices } from "@/lib/crypto-prices";
-import { evmNetworkById } from "@/lib/reown-config";
-import { useEvmWallet } from "@/lib/evm-wallet-provider";
+import { evmNetworkById } from "@/lib/wallet-networks";
+import { useEvmWallet } from "@/lib/wallet-provider";
 
 const erc20BalanceAbi = [
   {
@@ -32,6 +32,7 @@ export interface EvmWalletAsset {
   chainId: number;
   chainName: string;
   balance: number;
+  balanceStatus: "disconnected" | "loading" | "error" | "ready";
   decimals: number;
   usdPrice: number | null;
   usdValue: number | null;
@@ -64,7 +65,7 @@ const tokenDefinitions: TokenDefinition[] = [
     symbol: "USDT",
     chainId: 137,
     chainName: "Polygon",
-    address: "0xc2132d05d31c914a87c6611c10748aacba5a600",
+    address: "0xc2132d05d31c914a87c6611c10748aeb04b58e8f",
     decimals: 6,
   },
   {
@@ -191,8 +192,6 @@ export function useEvmWalletData() {
   const prices = useCryptoPrices(priceSymbols);
 
   const assets = useMemo(() => {
-    if (!enabled) return [];
-
     const nativeResults = [
       ethereum.data,
       polygon.data,
@@ -202,12 +201,17 @@ export function useEvmWalletData() {
       optimism.data,
       avalanche.data,
     ];
+    const nativeErrors = [
+      ethereum.isError, polygon.isError, bsc.isError, arbitrum.isError,
+      base.isError, optimism.isError, avalanche.isError,
+    ];
 
     const output: EvmWalletAsset[] = [];
     nativeAssets.forEach((definition, index) => {
       const result = nativeResults[index];
-      const balance = result?.formatted ?? "0";
-      if (Number(balance) <= 0) return;
+      const balanceStatus: EvmWalletAsset["balanceStatus"] = !enabled ? "disconnected"
+        : nativeErrors[index] ? "error" : result ? "ready" : "loading";
+      const balance = balanceStatus === "ready" ? result?.formatted ?? "0" : "0";
       const price = prices.data?.[definition.symbol]?.current_price;
       output.push({
         id: definition.id,
@@ -216,20 +220,21 @@ export function useEvmWalletData() {
         chainId: definition.chainId,
         chainName: evmNetworkById.get(definition.chainId)?.name ?? "EVM network",
         balance: Number(balance),
+        balanceStatus,
         decimals: definition.decimals,
         usdPrice: typeof price === "number" ? price : null,
-        usdValue: typeof price === "number" ? Number(balance) * price : null,
+        usdValue: balanceStatus === "ready" && typeof price === "number" ? Number(balance) * price : null,
         isNative: true,
       });
     });
 
     tokenDefinitions.forEach((definition, index) => {
       const result = tokenBalances.data?.[index];
-      if (!result || result.status !== "success" || typeof result.result !== "bigint") {
-        return;
-      }
-      const balance = formatUnits(result.result, definition.decimals);
-      if (Number(balance) <= 0) return;
+      const balanceStatus: EvmWalletAsset["balanceStatus"] = !enabled ? "disconnected"
+        : tokenBalances.isError || result?.status === "failure" ? "error"
+        : result?.status === "success" && typeof result.result === "bigint" ? "ready" : "loading";
+      const balance = balanceStatus === "ready" && result?.status === "success" && typeof result.result === "bigint"
+        ? formatUnits(result.result, definition.decimals) : "0";
       const price = prices.data?.[definition.symbol]?.current_price;
       output.push({
         id: definition.id,
@@ -238,9 +243,10 @@ export function useEvmWalletData() {
         chainId: definition.chainId,
         chainName: definition.chainName,
         balance: Number(balance),
+        balanceStatus,
         decimals: definition.decimals,
         usdPrice: typeof price === "number" ? price : null,
-        usdValue: typeof price === "number" ? Number(balance) * price : null,
+        usdValue: balanceStatus === "ready" && typeof price === "number" ? Number(balance) * price : null,
         isNative: false,
         contractAddress: definition.address,
       });
@@ -259,11 +265,20 @@ export function useEvmWalletData() {
     base.data,
     optimism.data,
     avalanche.data,
+    ethereum.isError,
+    polygon.isError,
+    bsc.isError,
+    arbitrum.isError,
+    base.isError,
+    optimism.isError,
+    avalanche.isError,
     tokenBalances.data,
+    tokenBalances.isError,
     prices.data,
   ]);
 
   const refetch = useCallback(async () => {
+    if (!enabled) return;
     await Promise.all([
       ethereum.refetch(),
       polygon.refetch(),
@@ -276,6 +291,7 @@ export function useEvmWalletData() {
       prices.refetch(),
     ]);
   }, [
+    enabled,
     ethereum.refetch,
     polygon.refetch,
     bsc.refetch,

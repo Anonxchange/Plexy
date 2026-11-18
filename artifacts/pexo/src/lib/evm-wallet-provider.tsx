@@ -1,86 +1,25 @@
 import {
-  createContext,
+  memo,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react";
-import { WagmiProvider, useAccount, useDisconnect, useSendTransaction, useSwitchChain, useWriteContract } from "wagmi";
+import { WagmiProvider, useAccount, useDisconnect, useSendTransaction, useSignMessage, useSwitchChain, useWriteContract } from "wagmi";
 import { useAppKit } from "@reown/appkit/react";
 import { isAddress, parseEther, parseUnits, type Address } from "viem";
 import {
   evmNetworkById,
-  isReownConfigured,
   transactionExplorerUrl,
   wagmiConfig,
 } from "./reown-config";
 import { clearWalletQueryCaches } from "./wallet-query-cache";
-
-export interface EvmWalletActivity {
-  hash: `0x${string}`;
-  to: string;
-  amount: string;
-  symbol: string;
-  chainId: number;
-  chainName: string;
-  explorerUrl?: string;
-  createdAt: string;
-}
-
-export interface SendNativeInput {
-  to: string;
-  amount: string;
-  symbol: string;
-  chainId: number;
-}
-
-export interface SendTokenInput extends SendNativeInput {
-  tokenAddress: string;
-  decimals: number;
-}
-
-export interface EvmWalletContextValue {
-  configured: boolean;
-  isConnected: boolean;
-  isConnecting: boolean;
-  address?: Address;
-  chainId?: number;
-  chainName?: string;
-  error?: string;
-  openConnect: () => void;
-  openNetworkSwitcher: () => void;
-  openAccount: () => void;
-  disconnect: () => Promise<void>;
-  switchNetwork: (chainId: number) => Promise<void>;
-  sendNative: (input: SendNativeInput) => Promise<`0x${string}`>;
-  sendToken: (input: SendTokenInput) => Promise<`0x${string}`>;
-  recentActivity: EvmWalletActivity[];
-}
-
-const unavailableWallet: EvmWalletContextValue = {
-  configured: false,
-  isConnected: false,
-  isConnecting: false,
-  openConnect: () => undefined,
-  openNetworkSwitcher: () => undefined,
-  openAccount: () => undefined,
-  disconnect: async () => undefined,
-  switchNetwork: async () => {
-    throw new Error("Wallet connection is not configured.");
-  },
-  sendNative: async () => {
-    throw new Error("Wallet connection is not configured.");
-  },
-  sendToken: async () => {
-    throw new Error("Wallet connection is not configured.");
-  },
-  recentActivity: [],
-};
-
-const EvmWalletContext = createContext<EvmWalletContextValue>(unavailableWallet);
+import { ExtraWalletRuntime } from "./extra-wallet-provider";
+import type { ExtraWalletContextValue } from "./extra-wallet-context";
+import type { EvmWalletActivity, EvmWalletContextValue, RuntimeProps, SendNativeInput, SendTokenInput } from "./wallet-provider";
+export { wagmiConfig };
 
 function validateTransfer(to: string, amount: string, chainId: number) {
   if (!isAddress(to)) {
@@ -94,7 +33,10 @@ function validateTransfer(to: string, amount: string, chainId: number) {
   }
 }
 
-function WalletBridge({ children }: { children: ReactNode }) {
+function WalletBridge({ onChange, onExtraChange }: {
+  onChange: (value: EvmWalletContextValue) => void;
+  onExtraChange: (value: ExtraWalletContextValue) => void;
+}) {
   const [recentActivity, setRecentActivity] = useState<EvmWalletActivity[]>([]);
   const account = useAccount();
   const previousWalletRef = useRef<{
@@ -106,6 +48,7 @@ function WalletBridge({ children }: { children: ReactNode }) {
   const { disconnectAsync } = useDisconnect();
   const { switchChainAsync } = useSwitchChain();
   const { sendTransactionAsync } = useSendTransaction();
+  const { signMessageAsync } = useSignMessage();
   const { writeContractAsync } = useWriteContract();
 
   useEffect(() => {
@@ -201,6 +144,7 @@ function WalletBridge({ children }: { children: ReactNode }) {
         throw new Error("Amount must be greater than zero.");
       }
       const hash = await sendTransactionAsync({
+        account: account.address,
         to: to as Address,
         value,
         chainId,
@@ -208,7 +152,7 @@ function WalletBridge({ children }: { children: ReactNode }) {
       addRecentActivity({ to, amount, symbol, chainId }, hash);
       return hash;
     },
-    [addRecentActivity, ensureNetwork, sendTransactionAsync],
+    [account.address, addRecentActivity, ensureNetwork, sendTransactionAsync],
   );
 
   const sendToken = useCallback(
@@ -226,6 +170,7 @@ function WalletBridge({ children }: { children: ReactNode }) {
         throw new Error("Amount must be greater than zero.");
       }
       const hash = await writeContractAsync({
+        account: account.address,
         address: tokenAddress as Address,
         abi: [
           {
@@ -246,12 +191,13 @@ function WalletBridge({ children }: { children: ReactNode }) {
       addRecentActivity({ to, amount, symbol, chainId }, hash);
       return hash;
     },
-    [addRecentActivity, ensureNetwork, writeContractAsync],
+    [account.address, addRecentActivity, ensureNetwork, writeContractAsync],
   );
 
   const contextValue = useMemo<EvmWalletContextValue>(
     () => ({
       configured: true,
+      ready: true,
       isConnected: account.isConnected,
       isConnecting:
         account.status === "connecting" || account.status === "reconnecting",
@@ -267,6 +213,7 @@ function WalletBridge({ children }: { children: ReactNode }) {
       switchNetwork,
       sendNative,
       sendToken,
+      signMessage: message => signMessageAsync({ account: account.address, message }),
       recentActivity,
     }),
     [
@@ -279,33 +226,25 @@ function WalletBridge({ children }: { children: ReactNode }) {
       openConnect,
       openNetworkSwitcher,
       recentActivity,
+      signMessageAsync,
       sendNative,
       sendToken,
       switchNetwork,
     ],
   );
 
-  return (
-    <EvmWalletContext.Provider value={contextValue}>
-      {children}
-    </EvmWalletContext.Provider>
-  );
+  useEffect(() => { onChange(contextValue); }, [onChange, contextValue]);
+  return <ExtraWalletRuntime onChange={onExtraChange} />;
 }
+// Isolate Wagmi and Reown providers in this dynamically loaded module.
+export const WalletRuntime = memo(function WalletRuntime(props: RuntimeProps) {
+  return <WagmiProvider config={wagmiConfig}>
+    <WalletBridge {...props} />
+  </WagmiProvider>;
+});
 
-export function EvmWalletProvider({ children }: { children: ReactNode }) {
-  return (
-    <WagmiProvider config={wagmiConfig}>
-      {isReownConfigured ? (
-        <WalletBridge>{children}</WalletBridge>
-      ) : (
-        <EvmWalletContext.Provider value={unavailableWallet}>
-          {children}
-        </EvmWalletContext.Provider>
-      )}
-    </WagmiProvider>
-  );
-}
-
-export function useEvmWallet() {
-  return useContext(EvmWalletContext);
+// Protected wallet routes use the same config for their Wagmi hooks. The root
+// runtime owns reconnection; this nested provider only exposes the shared state.
+export function WalletToolsRouteProvider({ children }: { children: ReactNode }) {
+  return <WagmiProvider config={wagmiConfig} reconnectOnMount={false}>{children}</WagmiProvider>;
 }

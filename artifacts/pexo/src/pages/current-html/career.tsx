@@ -1,3 +1,4 @@
+import "./page-styles/career.css";
 import { CurrentMarketingPage } from "@/components/marketing/current-marketing-page";
 
 export function CareerExport() {

@@ -1,3 +1,4 @@
+import "./page-styles/teams.css";
 import { CurrentMarketingPage } from "@/components/marketing/current-marketing-page";
 
 export function TeamsExport() {

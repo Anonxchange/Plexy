@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useEvmWallet } from "@/lib/evm-wallet-provider";
-import { useEvmWalletData } from "@/hooks/use-evm-wallet-data";
+import { useEvmWallet } from "@/lib/wallet-provider";
+import { useWalletPortfolio } from "@/hooks/use-wallet-portfolio";
+import { useExtraWallet } from "@/lib/extra-wallet-context";
 import { Eye, EyeOff, Copy, Send, WalletAdd, ChevronDown, LogOut, AlertCircle } from "@/lib/icons";
 import { useToast } from "@/hooks/use-toast";
 
@@ -13,17 +14,23 @@ interface WalletHeaderProps {
 
 export function WalletHeader({ onSend, onReceive }: WalletHeaderProps) {
   const wallet = useEvmWallet();
-  const { assets, totalUsd, isLoading, error } = useEvmWalletData();
+  const { assets, totalUsd, isLoading, error, isConnected } = useWalletPortfolio();
+  const extra = useExtraWallet();
   const { toast } = useToast();
   const [showBalance, setShowBalance] = useState(true);
   const hasAssets = assets.some((asset) => asset.balance > 0);
-  const addressLabel = wallet.address ? `${wallet.address.slice(0, 7)}…${wallet.address.slice(-5)}` : "";
+  const hasKnownBalance = assets.some((asset) => asset.balanceStatus === "ready");
+  const hasUnavailableBalance = assets.some((asset) => asset.balanceStatus !== "ready");
+  const otherAccount = Object.entries(extra.addresses).find(([, address]) => !!address);
+  const activeAddress = wallet.address ?? otherAccount?.[1];
+  const activeNetwork = wallet.address ? wallet.chainName : otherAccount?.[0].toUpperCase();
+  const addressLabel = activeAddress ? `${activeAddress.slice(0, 7)}…${activeAddress.slice(-5)}` : "";
   const walletError = wallet.error || "";
 
   const copyAddress = async () => {
-    if (!wallet.address) return;
+    if (!activeAddress) return;
     try {
-      await navigator.clipboard.writeText(wallet.address);
+      await navigator.clipboard.writeText(activeAddress);
       toast({ title: "Address copied", description: "Your wallet address is on the clipboard." });
     } catch {
       toast({ title: "Copy unavailable", description: "Select the address and copy it manually." });
@@ -48,7 +55,7 @@ export function WalletHeader({ onSend, onReceive }: WalletHeaderProps) {
 
   const disconnect = async () => {
     try {
-      await wallet.disconnect();
+      await Promise.all([...(wallet.isConnected ? [wallet.disconnect()] : []), extra.disconnect()]);
     } catch (reason) {
       toast({ title: "Could not disconnect", description: reason instanceof Error ? reason.message : "Please try again." });
     }
@@ -57,7 +64,7 @@ export function WalletHeader({ onSend, onReceive }: WalletHeaderProps) {
   return (
     <div className="bg-[#eaf1e3] dark:bg-card overflow-hidden transition-colors">
       <div className="p-5 sm:p-6">
-        {!wallet.isConnected ? (
+        {!isConnected ? (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
             <div>
               <div className="text-sm font-medium text-muted-foreground mb-2">Wallet balance</div>
@@ -80,10 +87,10 @@ export function WalletHeader({ onSend, onReceive }: WalletHeaderProps) {
                   </button>
                 </div>
                 <div className="text-4xl font-bold tracking-tight text-[#091e1c] dark:text-foreground">
-                  {isLoading ? <Skeleton className="h-9 w-36" /> : showBalance ? `$${totalUsd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "••••••"}
+                  {isLoading ? <Skeleton className="h-9 w-36" /> : showBalance ? hasKnownBalance ? `$${totalUsd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—" : "••••••"}
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {isLoading ? <Skeleton className="h-4 w-40" /> : hasAssets ? "On-chain portfolio value" : "No supported assets found on this network"}
+                  {isLoading ? <Skeleton className="h-4 w-40" /> : hasUnavailableBalance ? "Some balances are unavailable" : hasAssets ? "On-chain portfolio value" : "All supported assets have zero balance"}
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -95,13 +102,13 @@ export function WalletHeader({ onSend, onReceive }: WalletHeaderProps) {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-[#d4dfce] pt-4">
               <div className="flex min-w-0 items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-[#5c8a42]" />
-                <span className="text-sm font-semibold">{wallet.chainName || "Connected network"}</span>
+                <span className="text-sm font-semibold">{activeNetwork || "Connected network"}</span>
                 <span className="text-muted-foreground">·</span>
                 <span className="font-mono text-xs text-muted-foreground">{addressLabel}</span>
                 <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Copy wallet address" onClick={() => void copyAddress()}><Copy className="h-3.5 w-3.5" /></Button>
               </div>
               <div className="flex gap-2">
-                <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => void changeNetwork()}><ChevronDown className="h-3.5 w-3.5" />Network</Button>
+                {wallet.isConnected && <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => void changeNetwork()}><ChevronDown className="h-3.5 w-3.5" />Network</Button>}
                 <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs text-muted-foreground" onClick={() => void disconnect()}><LogOut className="h-3.5 w-3.5" />Disconnect</Button>
               </div>
             </div>
