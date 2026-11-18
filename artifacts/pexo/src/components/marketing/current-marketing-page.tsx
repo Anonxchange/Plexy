@@ -1,6 +1,5 @@
 import { useEffect, useRef, type KeyboardEvent, type MouseEvent } from "react";
 import { useLocation } from "wouter";
-import lottie from "lottie-web/build/player/lottie_light.js";
 import { setupHomepageNativeInteractions } from "./homepage-native-interactions";
 
 import "./homepage-native-interactions.css";
@@ -202,27 +201,59 @@ export function CurrentMarketingPage({ page, children }: CurrentMarketingPagePro
     const root = rootRef.current;
     if (!root) return;
 
-    const animations: ReturnType<typeof lottie.loadAnimation>[] = [];
+    let disposed = false;
+    let lottieModulePromise:
+      | Promise<typeof import("lottie-web/build/player/lottie_light.js")>
+      | undefined;
+    const animations: Array<{ destroy: () => void }> = [];
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     initializeTabs(root);
     const homepageCleanup =
       page === "home" ? setupHomepageNativeInteractions(root, reducedMotion) : undefined;
 
-    root.querySelectorAll<HTMLElement>('[data-animation-type="lottie"][data-src]').forEach((element) => {
+    const animationElements = Array.from(
+      root.querySelectorAll<HTMLElement>('[data-animation-type="lottie"][data-src]'),
+    );
+
+    const loadAnimation = async (element: HTMLElement) => {
       const source = element.dataset.src;
-      if (!source) return;
+      if (!source || disposed) return;
       const path = source.startsWith("/") ? source : `/${source.replace(/^\.?\//, "")}`;
-      const animation = lottie.loadAnimation({
-        container: element,
-        renderer: element.dataset.renderer === "canvas" ? "canvas" : "svg",
-        path,
-        loop: element.dataset.loop === "1",
-        autoplay: !reducedMotion && element.dataset.autoplay !== "0",
-        rendererSettings: { preserveAspectRatio: "xMidYMid meet" },
-      });
-      if (element.dataset.direction === "-1") animation.setDirection(-1);
-      animations.push(animation);
-    });
+      try {
+        lottieModulePromise ??= import("lottie-web/build/player/lottie_light.js");
+        const { default: lottie } = await lottieModulePromise;
+        if (disposed || !element.isConnected) return;
+        const animation = lottie.loadAnimation({
+          container: element,
+          renderer: element.dataset.renderer === "canvas" ? "canvas" : "svg",
+          path,
+          loop: element.dataset.loop === "1",
+          autoplay: !reducedMotion && element.dataset.autoplay !== "0",
+          rendererSettings: { preserveAspectRatio: "xMidYMid meet" },
+        });
+        if (element.dataset.direction === "-1") animation.setDirection(-1);
+        animations.push(animation);
+      } catch (error) {
+        console.error("Could not load a marketing animation.", error);
+      }
+    };
+
+    let animationObserver: IntersectionObserver | undefined;
+    let animationFallbackTimer: ReturnType<typeof setTimeout> | undefined;
+    if ("IntersectionObserver" in window) {
+      animationObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          animationObserver?.unobserve(entry.target);
+          void loadAnimation(entry.target as HTMLElement);
+        });
+      }, { rootMargin: "240px 0px" });
+      animationElements.forEach((element) => animationObserver?.observe(element));
+    } else if (animationElements.length > 0) {
+      animationFallbackTimer = setTimeout(() => {
+        animationElements.forEach((element) => void loadAnimation(element));
+      }, 1000);
+    }
 
     const hidden = Array.from(root.querySelectorAll<HTMLElement>("[data-w-id]")).filter((element) => {
       const style = window.getComputedStyle(element);
@@ -245,7 +276,10 @@ export function CurrentMarketingPage({ page, children }: CurrentMarketingPagePro
     }
 
     return () => {
+      disposed = true;
       observer?.disconnect();
+      animationObserver?.disconnect();
+      if (animationFallbackTimer !== undefined) window.clearTimeout(animationFallbackTimer);
       animations.forEach((animation) => animation.destroy());
       homepageCleanup?.();
     };

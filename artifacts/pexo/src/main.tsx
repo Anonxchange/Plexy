@@ -32,13 +32,20 @@ if (rootElement) {
       <App />
     </UnheadProvider>
   );
-  // Kick off the DOM-level translator after the first paint so it starts
-  // walking the rendered tree as soon as React has committed.
+  // Run the DOM-level translator when the browser has idle time, not during
+  // the first homepage paint. It can walk a large marketing page.
   if (typeof window !== "undefined") {
+    const scheduleTranslation = () => {
+      if ("requestIdleCallback" in window) {
+        window.requestIdleCallback(startAutoTranslate, { timeout: 2000 });
+      } else {
+        setTimeout(startAutoTranslate, 500);
+      }
+    };
     if (document.readyState === "complete" || document.readyState === "interactive") {
-      queueMicrotask(startAutoTranslate);
+      scheduleTranslation();
     } else {
-      window.addEventListener("DOMContentLoaded", () => startAutoTranslate(), { once: true });
+      window.addEventListener("DOMContentLoaded", scheduleTranslation, { once: true });
     }
   }
 }
