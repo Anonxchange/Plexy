@@ -3,16 +3,14 @@ import { useAppKit, useAppKitAccount, useAppKitNetwork, useAppKitProvider, useDi
 import { useAppKitConnection, type Provider as SolanaProvider } from "@reown/appkit-adapter-solana/react";
 import type { TronConnector } from "@reown/appkit-adapter-tron";
 import { solana, tronMainnet } from "@reown/appkit/networks";
-import { PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
-import { address as bitcoinAddress, networks as bitcoinNetworks } from "bitcoinjs-lib";
-import SatsWallet, { AddressPurpose } from "sats-connect";
 import { solanaWalletNetwork, tronWalletNetwork } from "./reown-config";
 import { transferUnits, type WalletAsset } from "./wallet-assets";
 import { sendTronNative } from "./send-tron";
 import type { ExtraNamespace, ExtraWalletContextValue } from "./extra-wallet-context";
 
-function validateBitcoinAddress(address: string) {
-  try { bitcoinAddress.toOutputScript(address, bitcoinNetworks.bitcoin); }
+async function validateBitcoinAddress(address: string) {
+  const { address: bitcoinAddress, networks } = await import("bitcoinjs-lib");
+  try { bitcoinAddress.toOutputScript(address, networks.bitcoin); }
   catch { throw new Error("Use a valid Bitcoin mainnet payment address."); }
 }
 
@@ -39,22 +37,33 @@ function ExtraWalletBridge({ onChange }: { onChange: (value: ExtraWalletContextV
   useEffect(() => {
     if (!btcAddress) return;
     const clear = () => setBtcAddress(undefined);
-    const removers = [
-      SatsWallet.addListener({ eventName: "accountChange", cb: clear }),
-      SatsWallet.addListener({ eventName: "networkChange", cb: clear }),
-      SatsWallet.addListener({ eventName: "disconnect", cb: clear }),
-    ];
-    return () => removers.forEach(remove => remove());
+    let cancelled = false;
+    let removeListeners: (() => void)[] = [];
+    void import("sats-connect").then(({ default: satsWallet }) => {
+      if (cancelled) return;
+      removeListeners = [
+        satsWallet.addListener({ eventName: "accountChange", cb: clear }),
+        satsWallet.addListener({ eventName: "networkChange", cb: clear }),
+        satsWallet.addListener({ eventName: "disconnect", cb: clear }),
+      ];
+    }).catch(() => {
+      if (!cancelled) setBtcAddress(undefined);
+    });
+    return () => {
+      cancelled = true;
+      removeListeners.forEach(remove => remove());
+    };
   }, [btcAddress]);
 
   async function getBitcoinAccount() {
-    const result = await SatsWallet.request("getAccounts", {
+    const { default: satsWallet, AddressPurpose } = await import("sats-connect");
+    const result = await satsWallet.request("getAccounts", {
       purposes: [AddressPurpose.Payment], message: "Connect your Bitcoin payment wallet to Pexly.",
     });
     if (result.status === "error") throw new Error(result.error.message);
     const account = result.result.find(item => item.purpose === AddressPurpose.Payment);
     if (!account) throw new Error("The wallet did not provide a Bitcoin payment address.");
-    validateBitcoinAddress(account.address);
+    await validateBitcoinAddress(account.address);
     return account.address;
   }
 
@@ -75,6 +84,7 @@ function ExtraWalletBridge({ onChange }: { onChange: (value: ExtraWalletContextV
     if (!asset.address) throw new Error("Connect a wallet first.");
     if (asset.namespace === "solana") {
       if (!connection) throw new Error("Solana connection is unavailable.");
+      const { PublicKey } = await import("@solana/web3.js");
       return (await connection.getBalance(new PublicKey(asset.address))) / 1e9;
     }
     if (asset.namespace === "bitcoin") {
@@ -107,17 +117,19 @@ function ExtraWalletBridge({ onChange }: { onChange: (value: ExtraWalletContextV
     if (!from || from !== asset.address) throw new Error("Your wallet account changed. Reconnect and review the transfer.");
     const units = transferUnits(amount, asset.decimals);
     if (asset.namespace === "bitcoin") {
-      validateBitcoinAddress(to);
+      await validateBitcoinAddress(to);
       const current = await getBitcoinAccount();
       if (current !== from) { setBtcAddress(undefined); throw new Error("Bitcoin account changed. Reconnect before sending."); }
       if (units > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("The amount is too large.");
-      const result = await SatsWallet.request("sendTransfer", { recipients: [{ address: to, amount: Number(units) }] });
+      const { default: satsWallet } = await import("sats-connect");
+      const result = await satsWallet.request("sendTransfer", { recipients: [{ address: to, amount: Number(units) }] });
       if (result.status === "error") throw new Error(result.error.message);
       if (!/^[a-f0-9]{64}$/i.test(result.result.txid)) throw new Error("The wallet did not return a valid Bitcoin transaction ID.");
       return result.result.txid;
     }
     if (asset.namespace === "solana") {
       if (!solanaProvider || !connection || !solanaMainnet) throw new Error("Connect a Solana mainnet wallet.");
+      const { PublicKey, SystemProgram, Transaction } = await import("@solana/web3.js");
       const destination = new PublicKey(to);
       const latest = await connection.getLatestBlockhash();
       const transaction = new Transaction({
@@ -129,6 +141,7 @@ function ExtraWalletBridge({ onChange }: { onChange: (value: ExtraWalletContextV
     }
     // TRON uses Base58Check like Bitcoin, but with its own 0x41 prefix.
     try {
+      const { address: bitcoinAddress } = await import("bitcoinjs-lib");
       if (bitcoinAddress.fromBase58Check(to).version !== 0x41) throw new Error("Wrong address network");
     } catch { throw new Error("Enter a valid TRON address."); }
     if (!tronProvider || !tronMainnetConnected) throw new Error("Connect a TRON mainnet wallet.");
@@ -141,7 +154,7 @@ function ExtraWalletBridge({ onChange }: { onChange: (value: ExtraWalletContextV
     addresses, connect, readBalance, send,
     disconnect: async () => {
       await Promise.all([
-        ...(btcAddress ? [SatsWallet.disconnect().then(() => setBtcAddress(undefined))] : []),
+        ...(btcAddress ? [import("sats-connect").then(({ default: satsWallet }) => satsWallet.disconnect()).then(() => setBtcAddress(undefined))] : []),
         ...(solanaAccount.isConnected ? [disconnect({ namespace: "solana" })] : []),
         ...(tronAccount.isConnected ? [disconnect({ namespace: "tron" })] : []),
       ]);
