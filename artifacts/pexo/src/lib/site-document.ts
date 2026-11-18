@@ -130,21 +130,13 @@ export function createEntryDocument({
     <meta name="twitter:image" content="${escapeAttribute(siteMetadata.image)}" />
     <meta name="twitter:image:alt" content="${escapeAttribute(siteMetadata.imageAlt)}" />
     <link rel="icon" type="image/webp" href="${escapeAttribute(assetUrl("favicon.webp"))}" />
-    <link rel="stylesheet" href="${escapeAttribute(assetUrl("app-loading.css"))}" />
     <link rel="preload" href="${escapeAttribute(assetUrl("assets/fonts/plus-jakarta-sans-52d04440.woff2"))}" as="font" type="font/woff2" crossorigin />
     <script id="pexly-site-structured-data" type="application/ld+json">${structuredData}</script>
     ${stylesheets}
     ${viteClient}
   </head>
   <body>
-    <div id="root"><div class="app-startup">
-      <a class="app-startup__brand" href="/" aria-label="Pexly home">pexly</a>
-      <main class="app-startup__content">
-        <p>SHOP AND PAY WITH CRYPTO</p>
-        <h1>One marketplace for gift cards, mobile top ups and physical products.</h1>
-        <a href="/gift-cards">Start shopping</a>
-      </main>
-    </div></div>
+    <div id="root"></div>
     <script type="module" crossorigin src="${escapeAttribute(entryUrl)}"></script>
   </body>
 </html>`;
