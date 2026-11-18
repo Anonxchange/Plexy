@@ -75,11 +75,6 @@
     "wagmi": "^2.19.5",
     "wouter": "^3.10.0"
   },
-  "overrides": {
-    "lodash": ">=4.17.21",
-    "ws": ">=8.20.1",
-    "qs": ">=6.15.2"
-  },
   "dependencies": {
     "@hugeicons/core-free-icons": "^4.2.3",
     "@hugeicons/react": "^1.1.9",
