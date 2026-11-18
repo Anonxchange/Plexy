@@ -568,6 +568,11 @@ function applyAttrTranslation(
 /* ─── Walk + collect candidates ───────────────────────────────────────────── */
 
 function collectFromRoot(root: Node) {
+  // English is the source language, so walking every text and attribute node
+  // on large marketing pages only adds startup work without translating them.
+  // The language-change handler performs a full sweep if the user switches.
+  if (currentLang === "en") return;
+
   if (root.nodeType === Node.TEXT_NODE) {
     queueText(root as Text);
     return;

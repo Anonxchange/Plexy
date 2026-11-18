@@ -137,7 +137,14 @@ export function createEntryDocument({
     ${viteClient}
   </head>
   <body>
-    <div id="root"><div class="app-startup" role="status" aria-live="polite"><span class="app-startup__spinner" aria-hidden="true"></span><strong>Pexly</strong><span>Loading your marketplace…</span></div></div>
+    <div id="root"><div class="app-startup">
+      <a class="app-startup__brand" href="/" aria-label="Pexly home">pexly</a>
+      <main class="app-startup__content">
+        <p>SHOP AND PAY WITH CRYPTO</p>
+        <h1>One marketplace for gift cards, mobile top ups and physical products.</h1>
+        <a href="/gift-cards">Start shopping</a>
+      </main>
+    </div></div>
     <script type="module" crossorigin src="${escapeAttribute(entryUrl)}"></script>
   </body>
 </html>`;
