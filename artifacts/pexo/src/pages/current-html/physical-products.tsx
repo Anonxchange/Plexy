@@ -42,7 +42,9 @@ const SHOP_GRID_CSS = `
 .tm-search-x{flex:none;width:28px;height:28px;display:grid;place-items:center;border:0;border-radius:50%;background:#f3f7f6;color:#091e1c;cursor:pointer}
 .tm-search-go{flex:none;height:34px;padding:0 14px;border:0;border-radius:5px;background:#091e1c;color:#fff;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
 .tm-search-go:hover{background:#0f302c}
-.tm-sortbar{display:flex;align-items:center;gap:10px;margin:0 0 14px;flex-wrap:wrap}
+.tm-sortbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 14px}
+.tm-sortbar>.tm-fbtn,.tm-sortbar>.tm-sort{flex:1 1 0;min-width:0;justify-content:center}
+@media(min-width:700px){.tm-sortbar>.tm-fbtn,.tm-sortbar>.tm-sort{flex:0 0 auto}}
 .tm-fbtn{position:relative;display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border:0;border-radius:8px;background:#f3f7f6;color:#091e1c;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
 .tm-fbtn.on{background:#091e1c;color:#fff}
 .tm-fbadge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#bef264;color:#091e1c;font-size:11px;font-weight:800}
@@ -54,11 +56,11 @@ const SHOP_GRID_CSS = `
 .tm-fact button{height:40px;padding:0 18px;border-radius:8px;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
 .tm-fapply{border:0;background:#091e1c;color:#fff}
 .tm-fclear{border:1px solid #e3ebe9;background:#fff;color:#091e1c}
-.tm-sort select{padding-left:38px}
-.tm-sort-lead{position:absolute;left:12px;top:50%;margin-top:-9px;pointer-events:none;color:#091e1c}
-.tm-sort{position:relative;display:inline-flex;align-items:center;height:40px;border-radius:8px;background:#f3f7f6}
-.tm-sort select{appearance:none;-webkit-appearance:none;height:100%;padding:0 38px 0 16px;border:0;border-radius:8px;background:transparent;color:#091e1c;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
-.tm-sort-ic{position:absolute;right:12px;top:50%;margin-top:-9px;pointer-events:none;color:#091e1c}
+
+.tm-sort{position:relative;display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px;border-radius:8px;background:#f3f7f6;color:#091e1c;font-size:15px;font-weight:600;white-space:nowrap}
+.tm-sort select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px}
+.tm-sort svg,.tm-fbtn svg{display:block;flex:none}
+.tm-sort-txt{overflow:hidden;text-overflow:ellipsis}
 .tm-tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 0 6px}
 .tm-tabs::-webkit-scrollbar{display:none}
 .tm-tab{flex:none;display:inline-flex;align-items:center;height:36px;padding:0 16px;border:1.5px solid #e3ebe9;border-radius:999px;background:#fff;color:#464646;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
@@ -301,6 +303,15 @@ function photoRatio(node: any): number {
 
 type SortKey = "all" | "new" | "low" | "high";
 
+const SORT_LABELS: Record<SortKey, string> = { all: "Best match", new: "Newest", low: "Price: low to high", high: "Price: high to low" };
+
+const SORTS: { key: SortKey; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "new", label: "Newest" },
+  { key: "low", label: "Price: low to high" },
+  { key: "high", label: "Price: high to low" },
+];
+
 function ShopAllProducts({ category, search, excludeIds, hold }: { category: string; search: string; excludeIds: Set<string>; hold: boolean }) {
   const [index, setIndex] = useState<ProductIndexItem[]>([]);
   const [count, setCount] = useState(PAGE_SIZE);
@@ -318,7 +329,12 @@ function ShopAllProducts({ category, search, excludeIds, hold }: { category: str
   const colCount = useColumnCount();
 
   // A new search always starts on best match.
-  useEffect(() => { setSort("all"); }, [search]);
+  useEffect(() => {
+    setSort("all");
+    setMinDraft(""); setMaxDraft("");
+    setMinPrice(null); setMaxPrice(null);
+    setPanelOpen(false);
+  }, [search]);
 
   // Order across the WHOLE catalog (shuffled on load unless the visitor sorts or searches).
   const ordered = useMemo(() => {
@@ -421,37 +437,48 @@ function ShopAllProducts({ category, search, excludeIds, hold }: { category: str
           <div className={"tm-head"}>
             <h2>{search ? "Results for \u201c" + search + "\u201d" : category ? category : "More to love"}</h2>
           </div>
-          <div className={"tm-sortbar"}>
-            <button type={"button"} className={panelOpen || activeFilters ? "tm-fbtn on" : "tm-fbtn"} onClick={() => setPanelOpen((o) => !o)} aria-expanded={panelOpen}>
-              <SlidersHorizontal size={18} />
-              {"Filters"}
-              {activeFilters ? <span className={"tm-fbadge"}>{activeFilters}</span> : null}
-            </button>
-            <label className={"tm-sort"}>
-              <ArrowUpDown size={18} className={"tm-sort-lead"} />
-              <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label={"Sort by"}>
-                <option value={"all"}>{search ? "Sort by: Best match" : "Sort by: Recommended"}</option>
-                <option value={"new"}>{"Sort by: Newest"}</option>
-                <option value={"low"}>{"Sort by: Price, low to high"}</option>
-                <option value={"high"}>{"Sort by: Price, high to low"}</option>
-              </select>
-              <ChevronDown size={18} className={"tm-sort-ic"} />
-            </label>
-            {panelOpen ? (
-              <div className={"tm-fpanel"}>
-                <h4>{"Price"}</h4>
-                <div className={"tm-frow"}>
-                  <input type={"number"} inputMode={"decimal"} min={0} placeholder={"Min"} aria-label={"Minimum price"} value={minDraft} onChange={(e) => setMinDraft(e.target.value)} />
-                  <span>{"–"}</span>
-                  <input type={"number"} inputMode={"decimal"} min={0} placeholder={"Max"} aria-label={"Maximum price"} value={maxDraft} onChange={(e) => setMaxDraft(e.target.value)} />
+          {search ? (
+            <div className={"tm-sortbar"}>
+              <button type={"button"} className={panelOpen || activeFilters ? "tm-fbtn on" : "tm-fbtn"} onClick={() => setPanelOpen((o) => !o)} aria-expanded={panelOpen}>
+                <SlidersHorizontal size={18} />
+                {"Filters"}
+                {activeFilters ? <span className={"tm-fbadge"}>{activeFilters}</span> : null}
+              </button>
+              <label className={"tm-sort"}>
+                <ArrowUpDown size={18} />
+                <span className={"tm-sort-txt"}>{SORT_LABELS[sort]}</span>
+                <ChevronDown size={16} />
+                <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label={"Sort by"}>
+                  <option value={"all"}>{SORT_LABELS.all}</option>
+                  <option value={"new"}>{SORT_LABELS.new}</option>
+                  <option value={"low"}>{SORT_LABELS.low}</option>
+                  <option value={"high"}>{SORT_LABELS.high}</option>
+                </select>
+              </label>
+              {panelOpen ? (
+                <div className={"tm-fpanel"}>
+                  <h4>{"Price"}</h4>
+                  <div className={"tm-frow"}>
+                    <input type={"number"} inputMode={"decimal"} min={0} placeholder={"Min"} aria-label={"Minimum price"} value={minDraft} onChange={(e) => setMinDraft(e.target.value)} />
+                    <span>{"–"}</span>
+                    <input type={"number"} inputMode={"decimal"} min={0} placeholder={"Max"} aria-label={"Maximum price"} value={maxDraft} onChange={(e) => setMaxDraft(e.target.value)} />
+                  </div>
+                  <div className={"tm-fact"}>
+                    <button type={"button"} className={"tm-fapply"} onClick={applyFilters}>{"Apply"}</button>
+                    <button type={"button"} className={"tm-fclear"} onClick={clearFilters}>{"Clear"}</button>
+                  </div>
                 </div>
-                <div className={"tm-fact"}>
-                  <button type={"button"} className={"tm-fapply"} onClick={applyFilters}>{"Apply"}</button>
-                  <button type={"button"} className={"tm-fclear"} onClick={clearFilters}>{"Clear"}</button>
-                </div>
-              </div>
-            ) : null}
-          </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className={"tm-tabs"} role={"tablist"}>
+              {SORTS.map((o) => (
+                <button key={o.key} type={"button"} role={"tab"} aria-selected={sort === o.key} className={sort === o.key ? "tm-tab on" : "tm-tab"} onClick={() => setSort(o.key)}>
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className={"sp-masonry"}>
             {loading
