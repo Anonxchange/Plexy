@@ -32,7 +32,8 @@ const SHOP_GRID_CSS = `
 .ed-label{margin:0;font-size:13px;color:#464646}
 .tm-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 10px}
 .tm-head h1,.tm-head h2{margin:0;font-family:"Plus Jakarta Sans",system-ui,sans-serif;font-weight:800;font-size:clamp(20px,2.6vw,28px);letter-spacing:-.03em;color:#091e1c}
-.tm-rail .sp-card{flex:0 0 170px;width:170px}
+.tm-rail{scroll-snap-type:x mandatory}
+.tm-rail .sp-card{flex:0 0 min(calc(100vw - 56px),420px);width:min(calc(100vw - 56px),420px);scroll-snap-align:start}
 @media(min-width:700px){.tm-rail .sp-card{flex-basis:240px;width:240px}}
 .tm-tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 0 6px}
 .tm-tabs::-webkit-scrollbar{display:none}
@@ -57,7 +58,8 @@ const SHOP_GRID_CSS = `
 .sp-img.sp-gc{aspect-ratio:1.586;border:1px solid #e3ebe9;border-radius:14px;display:grid;place-items:center}
 .sp-skel.sp-skel-card{aspect-ratio:1.586;flex:0 0 220px}
 .sp-row .sp-img.sp-real{aspect-ratio:1/1;border-radius:8px}
-.sp-skel.sp-skel-sq{flex:0 0 170px}
+.sp-skel.sp-skel-sq{flex:0 0 min(calc(100vw - 56px),420px)}
+@media(min-width:700px){.sp-skel.sp-skel-sq{flex-basis:240px}}
 .sp-cat .t.sp-cat-img{background-size:cover;background-position:center;background-repeat:no-repeat}
 .sp-skel{aspect-ratio:1/1;border-radius:18px;background:linear-gradient(90deg,#eef2f1,#f7f9f8,#eef2f1);background-size:200% 100%;animation:sp-pulse 1.2s linear infinite}
 @keyframes sp-pulse{to{background-position:-200% 0}}
@@ -190,7 +192,7 @@ const SORTS: { key: SortKey; label: string }[] = [
   { key: "high", label: "Price: high to low" },
 ];
 
-function ShopAllProducts({ category }: { category: string }) {
+function ShopAllProducts({ category, excludeIds }: { category: string; excludeIds: Set<string> }) {
   const [products, setProducts] = useState<ShopifyProduct[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -202,14 +204,14 @@ function ShopAllProducts({ category }: { category: string }) {
   const colCount = useColumnCount();
 
   const shown = useMemo(() => {
-    const list = [...products];
+    const list = products.filter((p) => !excludeIds.has(p.node.id));
     const amt = (p: ShopifyProduct) => Number(p.node.priceRange?.minVariantPrice?.amount) || 0;
     const made = (p: ShopifyProduct) => (p.node as any).createdAt ? Date.parse((p.node as any).createdAt) || 0 : 0;
     if (sort === "new") list.sort((a, b) => made(b) - made(a));
     else if (sort === "low") list.sort((a, b) => amt(a) - amt(b));
     else if (sort === "high") list.sort((a, b) => amt(b) - amt(a));
     return list;
-  }, [products, sort]);
+  }, [products, sort, excludeIds]);
 
   const cols = useMemo(() => {
     const out = Array.from({ length: colCount }, () => ({ h: 0, items: [] as { p: ShopifyProduct; r: number }[] }));
@@ -278,7 +280,7 @@ function ShopAllProducts({ category }: { category: string }) {
       <div className={"padding-global"}>
         <div className={"container-large"}>
           <div className={"tm-head"}>
-            <h2>{category ? category : "More to explore"}</h2>
+            <h2>{category ? category : "More to love"}</h2>
           </div>
           <div className={"tm-tabs"} role={"tablist"}>
             {SORTS.map((s) => (
@@ -329,7 +331,7 @@ function ShopAllProducts({ category }: { category: string }) {
               {error + " "}
               <button type={"button"} onClick={() => (products.length ? loadMore() : loadFirst())}>{"Try again"}</button>
             </p>
-          ) : !loading && products.length === 0 ? (
+          ) : !loading && shown.length === 0 && !hasMore ? (
             <p className={"sp-note"}>{category ? "No products found in this category yet." : "No products available right now."}</p>
           ) : null}
 
@@ -417,12 +419,13 @@ function useRailProducts() {
 // ---------------------------------------------------------------------------
 // Just in: horizontal rail of the newest real products, right under the category tabs
 // ---------------------------------------------------------------------------
-function JustInRail() {
-  const { items, loading } = useRailProducts();
-  const list = useMemo(
-    () => [...items].filter((p) => p.img).sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0)).slice(0, 12),
-    [items],
-  );
+const JUST_IN_COUNT = 12;
+
+function pickJustIn(items: RailProduct[]): RailProduct[] {
+  return [...items].filter((p) => p.img).sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0)).slice(0, JUST_IN_COUNT);
+}
+
+function JustInRail({ list, loading }: { list: RailProduct[]; loading: boolean }) {
   if (!loading && list.length === 0) return null;
 
   return (
@@ -455,6 +458,10 @@ function JustInRail() {
 
 export function PhysicalProductsExport() {
   const [category, setCategory] = useState("");
+  const rail = useRailProducts();
+  const justIn = useMemo(() => pickJustIn(rail.items), [rail.items]);
+  // Products shown in "Just in" never repeat in "More to love".
+  const justInIds = useMemo(() => new Set(justIn.map((p) => p.id)), [justIn]);
   return (
     <CurrentMarketingPage page="physical-products">
     <div className={"page-wrapper"}>
@@ -569,8 +576,8 @@ export function PhysicalProductsExport() {
       </header>
       <main id={"top"}>
         <CategoryStrip active={category} onPick={setCategory} />
-        <JustInRail />
-        <ShopAllProducts category={category} />
+        <JustInRail list={justIn} loading={rail.loading} />
+        <ShopAllProducts category={category} excludeIds={justInIds} />
       </main>
       <footer className={"footer"}>
         <div className={"padding-global"}>
