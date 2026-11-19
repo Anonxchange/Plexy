@@ -6,6 +6,7 @@ import {
   formatPrice,
   MARKET_CHANGED_EVENT,
   type ShopifyProduct,
+  type ProductIndexItem,
 } from "@/lib/shopify-service";
 // Products are fetched 60 at a time; the button loads the next 60. No total count is shown anywhere.
 const PAGE_SIZE = 60;
@@ -106,23 +107,27 @@ function shuffle<T>(list: T[]): T[] {
   return a;
 }
 
-// Pulls the entire catalog (250 at a time, until the store has no more pages) so the shuffle covers every product.
-const CATALOG_CAP = 50000; // safety stop only
-const catalogCache = new Map<string, Promise<ShopifyProduct[]>>();
-if (typeof window !== "undefined") window.addEventListener(MARKET_CHANGED_EVENT, () => catalogCache.clear());
+// The whole catalog is indexed with tiny records (id, created time, price), so it can be shuffled and sorted
+// in full. Only the products actually on screen then get fetched as full cards.
+const INDEX_CAP = 50000; // safety stop only
+const indexCache = new Map<string, Promise<ProductIndexItem[]>>();
+const cardCache = new Map<string, ShopifyProduct>();
+if (typeof window !== "undefined") {
+  window.addEventListener(MARKET_CHANGED_EVENT, () => { indexCache.clear(); cardCache.clear(); });
+}
 
-function fetchCatalog(query?: string): Promise<ShopifyProduct[]> {
+function fetchIndex(query?: string): Promise<ProductIndexItem[]> {
   const key = query ?? "";
-  const hit = catalogCache.get(key);
+  const hit = indexCache.get(key);
   if (hit) return hit;
   const job = (async () => {
-    const out: ShopifyProduct[] = [];
+    const out: ProductIndexItem[] = [];
     const seen = new Set<string>();
     let cursor: string | undefined;
-    while (out.length < CATALOG_CAP) {
-      const res = await shopifyService.getProducts(250, cursor, query);
-      for (const p of res.products as ShopifyProduct[]) {
-        if (!seen.has(p.node.id)) { seen.add(p.node.id); out.push(p); }
+    while (out.length < INDEX_CAP) {
+      const res = await shopifyService.getProductIndex(250, cursor, query);
+      for (const it of res.items) {
+        if (!seen.has(it.id)) { seen.add(it.id); out.push(it); }
       }
       const next = res.pageInfo?.endCursor;
       if (!res.pageInfo?.hasNextPage || !next) break;
@@ -130,9 +135,18 @@ function fetchCatalog(query?: string): Promise<ShopifyProduct[]> {
     }
     return out;
   })();
-  catalogCache.set(key, job);
-  job.catch(() => catalogCache.delete(key));
+  indexCache.set(key, job);
+  job.catch(() => indexCache.delete(key));
   return job;
+}
+
+// Full card details for the given ids, fetched 100 at a time and remembered so nothing loads twice.
+async function fetchCards(ids: string[]): Promise<void> {
+  const missing = ids.filter((id) => !cardCache.has(id));
+  for (let i = 0; i < missing.length; i += 100) {
+    const got = await shopifyService.getProductCards(missing.slice(i, i + 100));
+    for (const p of got) cardCache.set(p.node.id, p);
+  }
 }
 
 // Category and search text combine into one Shopify search string (space = AND).
@@ -152,23 +166,15 @@ function useShopCategories() {
     const load = async () => {
       const current = ++request;
       setLoading(true);
-      const [types, prods] = await Promise.all([
-        shopifyService.getProductTypes(250).catch(() => [] as string[]),
-        shopifyService.getProducts(250, undefined, undefined).catch(() => ({ products: [] as any[] })),
-      ]);
+      // Light query: one product type per product, so counting repeats gives the category sizes.
+      const types = await shopifyService.getProductTypes(250).catch(() => [] as string[]);
       if (!alive || current !== request) return;
       const map = new Map<string, ShopCategory>();
       for (const t of types as string[]) {
         const name = String(t).trim();
-        if (name && !map.has(name)) map.set(name, { name, count: 0 });
-      }
-      for (const { node } of prods.products as ShopifyProduct[]) {
-        const name = (node.productType || "").trim();
         if (!name) continue;
-        const img = node.images?.edges?.[0]?.node?.url;
-        const cur: ShopCategory = map.get(name) ?? { name, count: 0 };
+        const cur = map.get(name) ?? { name, count: 0 };
         cur.count += 1;
-        if (!cur.img && img) cur.img = img;
         map.set(name, cur);
       }
       setCats(Array.from(map.values()).sort((x, y) => y.count - x.count || x.name.localeCompare(y.name)));
@@ -285,28 +291,47 @@ const SORTS: { key: SortKey; label: string }[] = [
   { key: "high", label: "Price: high to low" },
 ];
 
-function ShopAllProducts({ category, search, excludeIds }: { category: string; search: string; excludeIds: Set<string> }) {
-  const [products, setProducts] = useState<ShopifyProduct[]>([]);
+function ShopAllProducts({ category, search, excludeIds, hold }: { category: string; search: string; excludeIds: Set<string>; hold: boolean }) {
+  const [index, setIndex] = useState<ProductIndexItem[]>([]);
   const [count, setCount] = useState(PAGE_SIZE);
-  const [loading, setLoading] = useState(true);
+  const [indexLoading, setIndexLoading] = useState(true);
+  const [cardsLoading, setCardsLoading] = useState(false);
+  const [cardsTick, setCardsTick] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [sort, setSort] = useState<SortKey>("all");
   const requestId = useRef(0);
   const colCount = useColumnCount();
 
-  const sorted = useMemo(() => {
-    const list = products.filter((p) => !excludeIds.has(p.node.id));
-    const amt = (p: ShopifyProduct) => Number(p.node.priceRange?.minVariantPrice?.amount) || 0;
-    const made = (p: ShopifyProduct) => (p.node as any).createdAt ? Date.parse((p.node as any).createdAt) || 0 : 0;
-    if (sort === "new") list.sort((a, b) => made(b) - made(a));
-    else if (sort === "low") list.sort((a, b) => amt(a) - amt(b));
-    else if (sort === "high") list.sort((a, b) => amt(b) - amt(a));
+  // Order across the WHOLE catalog (shuffled on load unless the visitor sorts or searches).
+  const ordered = useMemo(() => {
+    const list = index.filter((it) => !excludeIds.has(it.id));
+    if (sort === "new") list.sort((a, b) => b.createdAt - a.createdAt);
+    else if (sort === "low") list.sort((a, b) => a.price - b.price);
+    else if (sort === "high") list.sort((a, b) => b.price - a.price);
     return list;
-  }, [products, sort, excludeIds]);
+  }, [index, sort, excludeIds]);
 
-  // The whole catalog is shuffled once per load; "Load more" just reveals the next slice.
-  const shown = useMemo(() => sorted.slice(0, count), [sorted, count]);
-  const hasMore = sorted.length > count;
+  const visibleIds = useMemo(() => ordered.slice(0, count).map((it) => it.id), [ordered, count]);
+  const hasMore = ordered.length > count;
+
+  // Fetch card details only for what is on screen.
+  useEffect(() => {
+    if (indexLoading || visibleIds.length === 0) return;
+    let alive = true;
+    setCardsLoading(true);
+    fetchCards(visibleIds)
+      .then(() => { if (alive) setCardsTick((t) => t + 1); })
+      .catch((e: any) => { if (alive) setError(e?.message || "Could not load products"); })
+      .finally(() => { if (alive) setCardsLoading(false); });
+    return () => { alive = false; };
+  }, [visibleIds, indexLoading]);
+
+  const shown = useMemo(
+    () => visibleIds.map((id) => cardCache.get(id)).filter((p): p is ShopifyProduct => Boolean(p)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [visibleIds, cardsTick],
+  );
+  const loading = indexLoading || hold || (cardsLoading && shown.length === 0);
 
   const cols = useMemo(() => {
     const out = Array.from({ length: colCount }, () => ({ h: 0, items: [] as { p: ShopifyProduct; r: number }[] }));
@@ -322,19 +347,19 @@ function ShopAllProducts({ category, search, excludeIds }: { category: string; s
 
   const loadFirst = useCallback(async () => {
     const id = ++requestId.current;
-    setLoading(true);
+    setIndexLoading(true);
     setError(null);
     try {
-      const all = await fetchCatalog(buildQuery(category, search));
+      const all = await fetchIndex(buildQuery(category, search));
       if (id !== requestId.current) return;
-      setProducts(search ? all : shuffle(all));
+      setIndex(search ? all : shuffle(all));
       setCount(PAGE_SIZE);
     } catch (e: any) {
       if (id !== requestId.current) return;
-      setProducts([]);
+      setIndex([]);
       setError(e?.message || "Could not load products");
     } finally {
-      if (id === requestId.current) setLoading(false);
+      if (id === requestId.current) setIndexLoading(false);
     }
   }, [category, search]);
 
@@ -405,14 +430,14 @@ function ShopAllProducts({ category, search, excludeIds }: { category: string; s
               {error + " "}
               <button type={"button"} onClick={() => loadFirst()}>{"Try again"}</button>
             </p>
-          ) : !loading && shown.length === 0 && !hasMore ? (
+          ) : !loading && ordered.length === 0 ? (
             <p className={"sp-note"}>{search ? "No products match your search." : category ? "No products found in this category yet." : "No products available right now."}</p>
           ) : null}
 
           {!loading && hasMore ? (
             <div className={"sp-more-wrap"}>
-              <button type={"button"} className={"sp-more"} onClick={loadMore}>
-                {"Load more"}
+              <button type={"button"} className={"sp-more"} onClick={loadMore} disabled={cardsLoading}>
+                {cardsLoading ? "Loading…" : "Load more"}
               </button>
             </div>
           ) : null}
@@ -459,7 +484,7 @@ function toRail(p: ShopifyProduct): RailProduct {
   };
 }
 
-function useRailProducts() {
+function useJustIn() {
   const [items, setItems] = useState<RailProduct[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -470,9 +495,18 @@ function useRailProducts() {
       const current = ++request;
       setLoading(true);
       try {
-        const all = await fetchCatalog(undefined);
+        const index = await fetchIndex(undefined);
+        // Random picks from the whole catalog; a few spares in case some have no photo.
+        const ids = shuffle(index.map((it) => it.id)).slice(0, JUST_IN_COUNT + 6);
+        await fetchCards(ids);
         if (!alive || current !== request) return;
-        setItems(all.map(toRail));
+        const picked = ids
+          .map((id) => cardCache.get(id))
+          .filter((p): p is ShopifyProduct => Boolean(p))
+          .map(toRail)
+          .filter((p) => p.img)
+          .slice(0, JUST_IN_COUNT);
+        setItems(picked);
       } catch {
         if (alive && current === request) setItems([]);
       } finally {
@@ -490,15 +524,8 @@ function useRailProducts() {
   return { items, loading };
 }
 
-// ---------------------------------------------------------------------------
-// Just in: horizontal rail of the newest real products, right under the category tabs
-// ---------------------------------------------------------------------------
 const JUST_IN_COUNT = 12;
 const NO_IDS: Set<string> = new Set();
-
-function pickJustIn(items: RailProduct[]): RailProduct[] {
-  return shuffle(items.filter((p) => p.img)).slice(0, JUST_IN_COUNT);
-}
 
 function JustInRail({ list, loading }: { list: RailProduct[]; loading: boolean }) {
   if (!loading && list.length === 0) return null;
@@ -534,8 +561,8 @@ function JustInRail({ list, loading }: { list: RailProduct[]; loading: boolean }
 export function PhysicalProductsExport() {
   const [category, setCategory] = useState("");
   const [search, setSearch] = useState("");
-  const rail = useRailProducts();
-  const justIn = useMemo(() => pickJustIn(rail.items), [rail.items]);
+  const rail = useJustIn();
+  const justIn = rail.items;
   // Products shown in "Just in" never repeat in "More to love".
   const justInIds = useMemo(() => new Set(justIn.map((p) => p.id)), [justIn]);
   return (
@@ -654,7 +681,7 @@ export function PhysicalProductsExport() {
         <CategoryStrip active={category} onPick={setCategory} />
         <SearchBar value={search} onSearch={setSearch} />
         {search ? null : <JustInRail list={justIn} loading={rail.loading} />}
-        <ShopAllProducts category={category} search={search} excludeIds={search ? NO_IDS : justInIds} />
+        <ShopAllProducts category={category} search={search} excludeIds={search ? NO_IDS : justInIds} hold={!search && rail.loading} />
       </main>
       <footer className={"footer"}>
         <div className={"padding-global"}>
