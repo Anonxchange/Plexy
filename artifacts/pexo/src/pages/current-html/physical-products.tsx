@@ -34,11 +34,11 @@ const SHOP_GRID_CSS = `
 .tm-head h1,.tm-head h2{margin:0;font-family:"Plus Jakarta Sans",system-ui,sans-serif;font-weight:800;font-size:clamp(20px,2.6vw,28px);letter-spacing:-.03em;color:#091e1c}
 .tm-rail .sp-card{flex:0 0 170px;width:170px}
 @media(min-width:700px){.tm-rail .sp-card{flex-basis:240px;width:240px}}
-.tm-search{display:flex;align-items:center;gap:10px;margin:14px 0 4px;padding:8px 8px 8px 16px;border:1.5px solid #e3ebe9;border-radius:999px;background:#fff}
+.tm-search{display:flex;align-items:center;gap:10px;margin:14px 0 4px;padding:8px 8px 8px 16px;border:1.5px solid #e3ebe9;border-radius:10px;background:#fff}
 .tm-search input{flex:1 1 auto;min-width:0;border:0;outline:0;background:none;font:inherit;font-size:16px;color:#091e1c}
 .tm-search input::placeholder{color:#8a9694}
 .tm-search-x{flex:none;width:28px;height:28px;border:0;border-radius:50%;background:#f3f7f6;color:#091e1c;font-size:18px;line-height:1;cursor:pointer}
-.tm-search-go{flex:none;height:44px;padding:0 22px;border:0;border-radius:999px;background:#091e1c;color:#fff;font:inherit;font-size:16px;font-weight:700;cursor:pointer}
+.tm-search-go{flex:none;height:44px;padding:0 22px;border:0;border-radius:6px;background:#091e1c;color:#fff;font:inherit;font-size:16px;font-weight:700;cursor:pointer}
 .tm-search-go:hover{background:#0f302c}
 .tm-tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 0 6px}
 .tm-tabs::-webkit-scrollbar{display:none}
@@ -94,6 +94,16 @@ function categoryQuery(name: string): string | undefined {
   const n = name.trim();
   if (!n) return undefined;
   return 'product_type:"' + n.replace(/"/g, '\\"') + '"';
+}
+
+// Fisher-Yates shuffle: every page load / refresh shows products in a different order.
+function shuffle<T>(list: T[]): T[] {
+  const a = [...list];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
 // Category and search text combine into one Shopify search string (space = AND).
@@ -286,7 +296,8 @@ function ShopAllProducts({ category, search, excludeIds }: { category: string; s
     try {
       const res = await shopifyService.getProducts(PAGE_SIZE, undefined, buildQuery(category, search));
       if (id !== requestId.current) return;
-      setProducts(res.products as ShopifyProduct[]);
+      const first = res.products as ShopifyProduct[];
+      setProducts(search ? first : shuffle(first));
       setHasMore(Boolean(res.pageInfo?.hasNextPage));
       setCursor(res.pageInfo?.endCursor ?? null);
     } catch (e: any) {
@@ -315,7 +326,8 @@ function ShopAllProducts({ category, search, excludeIds }: { category: string; s
     try {
       const res = await shopifyService.getProducts(PAGE_SIZE, cursor, buildQuery(category, search));
       if (id !== requestId.current) return;
-      const next = res.products as ShopifyProduct[];
+      const fetched = res.products as ShopifyProduct[];
+      const next = search ? fetched : shuffle(fetched);
       setProducts((prev) => {
         const seen = new Set(prev.map((p) => p.node.id));
         return [...prev, ...next.filter((p) => !seen.has(p.node.id))];
@@ -477,7 +489,7 @@ const JUST_IN_COUNT = 12;
 const NO_IDS: Set<string> = new Set();
 
 function pickJustIn(items: RailProduct[]): RailProduct[] {
-  return [...items].filter((p) => p.img).sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0)).slice(0, JUST_IN_COUNT);
+  return shuffle(items.filter((p) => p.img)).slice(0, JUST_IN_COUNT);
 }
 
 function JustInRail({ list, loading }: { list: RailProduct[]; loading: boolean }) {
