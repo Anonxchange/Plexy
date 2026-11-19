@@ -63,6 +63,7 @@ const SHOP_GRID_CSS = `
 .sp-masonry .sp-card h3,.sp-masonry .sp-price{padding:0 8px}
 .sp-masonry .sp-card h3{margin-top:8px}
 }
+.tm-rail .sp-card h3{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:15px;font-weight:600;line-height:1.35;margin:10px 0 2px;color:#0c1111}
 .tm-rail .sp-price{margin:4px 0 0;font-size:15px;color:#464646;font-variant-numeric:tabular-nums}
 .ed-foot{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:28px;padding:14px 0;border-top:1px solid #e3ebe9;font-size:13px;color:#464646}
 .sp-img.sp-real{position:relative;overflow:hidden;background:#f3f7f6}
@@ -547,6 +548,7 @@ function JustInRail({ list, loading }: { list: RailProduct[]; loading: boolean }
                     <div className={"sp-img sp-real"}>
                       <img className={"sp-real-img"} src={p.img} alt={p.alt} loading={"lazy"} />
                     </div>
+                    <h3>{p.title}</h3>
                     <p className={"tm-price"}>{formatPrice(p.amountRaw, p.currency as any)}</p>
                   </a>
                 </article>
