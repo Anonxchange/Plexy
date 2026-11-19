@@ -57,6 +57,12 @@ export interface ShopifyProduct {
   };
 }
 
+export interface ProductIndexItem {
+  id: string;
+  createdAt: number;
+  price: number;
+}
+
 // Shape produced by parsing the "air_reviews_product.data" metafield (Air Reviews app / CJdropshipping import)
 // so it can sit alongside the Supabase `product_reviews` rows in the same UI.
 export interface ImportedReview {
@@ -119,6 +125,8 @@ function parseImportedReviews(
 
 // Query name constants matching server-side allowlist
 export const PRODUCTS_QUERY = 'getProducts';
+export const PRODUCT_INDEX_QUERY = 'getProductIndex';
+export const PRODUCT_CARDS_QUERY = 'getProductCards';
 export const PRODUCT_BY_HANDLE_QUERY = 'getProductByHandle';
 export const PRODUCT_TYPES_QUERY = 'getProductTypes';
 export const COLLECTIONS_QUERY = 'getCollections';
@@ -158,7 +166,7 @@ export async function storefrontApiRequest(queryName: string, variables: Record<
     // silently fall back to the store's primary market even with @inContext.
     // Showing an error is safer than displaying prices for the wrong market.
     const needsMarket = [
-      PRODUCTS_QUERY, PRODUCT_BY_HANDLE_QUERY, PRODUCT_TYPES_QUERY, COLLECTIONS_QUERY,
+      PRODUCTS_QUERY, PRODUCT_INDEX_QUERY, PRODUCT_CARDS_QUERY, PRODUCT_BY_HANDLE_QUERY, PRODUCT_TYPES_QUERY, COLLECTIONS_QUERY,
       COLLECTION_BY_HANDLE_QUERY, COLLECTION_PRODUCT_TYPES_QUERY, CART_CREATE_MUTATION,
       CART_LINES_ADD_MUTATION, CART_BUYER_IDENTITY_UPDATE_MUTATION,
     ].includes(queryName);
@@ -266,6 +274,25 @@ export const shopifyService = {
       products: data?.data?.products?.edges || [],
       pageInfo: data?.data?.products?.pageInfo
     };
+  },
+
+  // Tiny record per product (id, created time, price) so a page can shuffle/sort the whole catalog cheaply.
+  async getProductIndex(first: number = 250, after?: string, query?: string) {
+    const data = await storefrontApiRequest(PRODUCT_INDEX_QUERY, { first, after, query });
+    const items: ProductIndexItem[] = (data?.data?.products?.edges || []).map((edge: any) => ({
+      id: edge.node.id as string,
+      createdAt: edge.node.createdAt ? Date.parse(edge.node.createdAt) || 0 : 0,
+      price: Number(edge.node.priceRange?.minVariantPrice?.amount) || 0,
+    }));
+    return { items, pageInfo: data?.data?.products?.pageInfo as { hasNextPage: boolean; endCursor: string | null } | undefined };
+  },
+
+  // Card-sized details for specific product ids (call with up to ~100 at a time).
+  async getProductCards(ids: string[]): Promise<ShopifyProduct[]> {
+    if (ids.length === 0) return [];
+    const data = await storefrontApiRequest(PRODUCT_CARDS_QUERY, { ids });
+    const nodes: any[] = data?.data?.nodes || [];
+    return nodes.filter((n) => n && n.id).map((node) => ({ node })) as ShopifyProduct[];
   },
 
   async getProductTypes(first: number = 250) {
