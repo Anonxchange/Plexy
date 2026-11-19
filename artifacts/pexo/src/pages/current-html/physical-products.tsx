@@ -36,37 +36,46 @@ const SHOP_GRID_CSS = `
 .sp-img.sp-real img.sp-real-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 .sp-img.sp-gc{aspect-ratio:1.586;border:1px solid #e3ebe9;border-radius:14px;display:grid;place-items:center}
 .sp-skel.sp-skel-card{aspect-ratio:1.586;flex:0 0 220px}
-.sp-masonry{display:flex;gap:12px;margin-top:22px;align-items:flex-start}
-@media(min-width:700px){.sp-masonry{gap:18px}}
-.sp-mcol{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:18px}
-.sp-masonry .sp-card{width:auto;min-width:0;flex:none;max-width:none}
-.sp-masonry .sp-card a.sp-card-link{display:block;color:inherit;text-decoration:none}
-.sp-masonry .sp-img.sp-real{position:relative;overflow:hidden;border-radius:16px;background:#f3f7f6;width:100%}
-.sp-masonry .sp-img.sp-real img.sp-real-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-.sp-masonry .sp-card h3{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.sp-masonry .sp-skel{width:100%;aspect-ratio:auto}
-.ed-cats-wrap{border-bottom:1px solid #e3ebe9}
-.ed-cats{display:flex;gap:24px;overflow-x:auto;scrollbar-width:none}
+.ed-cats-wrap{border-bottom:1px solid #e3ebe9;background:#fff;position:sticky;top:0;z-index:5}
+.ed-cats{display:flex;gap:22px;overflow-x:auto;scrollbar-width:none}
 .ed-cats::-webkit-scrollbar{display:none}
-.ed-cat{flex:none;background:none;border:0;padding:14px 0;font:inherit;font-size:15px;color:#464646;white-space:nowrap;cursor:pointer}
-.ed-cat.on{color:#091e1c;box-shadow:inset 0 -2px 0 #091e1c}
-.ed-lead{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;padding:20px 0 8px}
-@media(min-width:900px){.ed-lead{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:56px;align-items:center;padding:36px 0}}
-.ed-lead-img{display:block;position:relative;overflow:hidden;border-radius:6px;background:#f3f7f6;aspect-ratio:4/5}
-.ed-lead-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-.ed-label{margin:0 0 6px;font-size:13px;color:#464646}
-.ed-title{margin:0 0 10px;font-family:"Plus Jakarta Sans",system-ui,sans-serif;font-weight:700;font-size:clamp(26px,4vw,44px);line-height:1.15;letter-spacing:-.035em;color:#0c1111}
-.ed-price{margin:0 0 14px;font-size:15px;color:#464646;font-variant-numeric:tabular-nums}
-.ed-link{font-size:15px;color:#091e1c;text-decoration:underline;text-underline-offset:3px}
+.ed-cat{flex:none;background:none;border:0;padding:14px 0 12px;font:inherit;font-size:16px;font-weight:500;color:#464646;white-space:nowrap;cursor:pointer;border-bottom:3px solid transparent}
+.ed-cat.on{color:#091e1c;font-weight:700;border-bottom-color:#091e1c}
+.ed-label{margin:0;font-size:13px;color:#464646}
+.tm-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:18px 0 12px}
+.tm-head h1,.tm-head h2{margin:0;font-family:"Plus Jakarta Sans",system-ui,sans-serif;font-weight:800;font-size:clamp(20px,2.6vw,28px);letter-spacing:-.03em;color:#091e1c}
+.tm-rail .sp-card{flex:0 0 170px;width:170px}
+@media(min-width:700px){.tm-rail .sp-card{flex-basis:240px;width:240px}}
+.tm-rail .sp-card h3,.tm-card h3{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tm-price{margin:4px 0 0;font-size:16px;font-weight:800;color:#091e1c;font-variant-numeric:tabular-nums}
+.tm-tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:4px 0 14px}
+.tm-tabs::-webkit-scrollbar{display:none}
+.tm-tab{flex:none;display:inline-flex;align-items:center;height:36px;padding:0 16px;border:1.5px solid #e3ebe9;border-radius:999px;background:#fff;color:#464646;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.tm-tab.on{background:#091e1c;border-color:#091e1c;color:#fff}
+.tm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px;background:#f3f7f6;border:2px solid #f3f7f6;border-radius:10px;overflow:hidden}
+@media(min-width:700px){.tm-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(min-width:1100px){.tm-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.tm-card{background:#fff;min-width:0;display:flex;flex-direction:column}
+.tm-card a.tm-link{display:block;color:inherit;text-decoration:none}
+.tm-img{position:relative;aspect-ratio:1/1;background:#f3f7f6;overflow:hidden}
+.tm-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.tm-badge{position:absolute;left:8px;top:8px;padding:3px 9px;border-radius:999px;background:#bef264;color:#091e1c;font-size:11px;font-weight:800}
+.tm-body{padding:10px 12px 14px}
+.tm-card h3{margin:0;font-size:14.5px;font-weight:500;line-height:1.35;color:#0c1111}
+.tm-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
+.tm-row .tm-price{margin:0;font-size:17px}
+.tm-cart{flex:none;width:38px;height:32px;display:grid;place-items:center;border:1.5px solid #091e1c;border-radius:999px;background:#fff;color:#091e1c}
+.tm-cart:hover{background:#bef264}
+.tm-skel{aspect-ratio:3/4;background:linear-gradient(90deg,#eef2f1,#f7f9f8,#eef2f1);background-size:200% 100%;animation:sp-pulse 1.2s linear infinite}
 .ed-foot{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:28px;padding:14px 0;border-top:1px solid #e3ebe9;font-size:13px;color:#464646}
-.sp-masonry .sp-img.sp-real{border-radius:6px}
-.sp-masonry .sp-card h3{font-size:14px;font-weight:600;line-height:1.35;margin:10px 0 2px;color:#0c1111}
-.sp-masonry .sp-price{margin:0;font-size:14px;color:#464646;font-variant-numeric:tabular-nums}
-.sp-masonry .sp-price b{font-weight:400}
-.sp-row .sp-img.sp-real{aspect-ratio:1/1}
-.sp-skel.sp-skel-sq{flex:0 0 190px}
+.sp-img.sp-real{position:relative;overflow:hidden;background:#f3f7f6}
+.sp-img.sp-real img.sp-real-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.sp-card a.sp-card-link{display:block;color:inherit;text-decoration:none}
+.sp-img.sp-gc{aspect-ratio:1.586;border:1px solid #e3ebe9;border-radius:14px;display:grid;place-items:center}
+.sp-skel.sp-skel-card{aspect-ratio:1.586;flex:0 0 220px}
+.sp-row .sp-img.sp-real{aspect-ratio:1/1;border-radius:8px}
+.sp-skel.sp-skel-sq{flex:0 0 170px}
 .sp-cat .t.sp-cat-img{background-size:cover;background-position:center;background-repeat:no-repeat}
-.sp-all-grid .sp-card h3{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .sp-skel{aspect-ratio:1/1;border-radius:18px;background:linear-gradient(90deg,#eef2f1,#f7f9f8,#eef2f1);background-size:200% 100%;animation:sp-pulse 1.2s linear infinite}
 @keyframes sp-pulse{to{background-position:-200% 0}}
 .sp-more-wrap{display:flex;justify-content:center;margin-top:34px}
@@ -160,35 +169,13 @@ function CategoryStrip({ active, onPick }: { active: string; onPick: (name: stri
   );
 }
 
-function columnsForWidth(): number {
-  if (typeof window === "undefined") return 2;
-  const w = window.innerWidth;
-  return w >= 1280 ? 5 : w >= 1000 ? 4 : w >= 700 ? 3 : 2;
-}
-
-function useColumnCount() {
-  const [n, setN] = useState(columnsForWidth);
-  useEffect(() => {
-    const on = () => setN(columnsForWidth());
-    window.addEventListener("resize", on);
-    return () => window.removeEventListener("resize", on);
-  }, []);
-  return n;
-}
-
-// Height / width of a product photo. Uses the real image size when the store returns it,
-// otherwise a steady per-product variation so the grid still staggers.
-function photoRatio(node: any): number {
-  const img = node?.images?.edges?.[0]?.node;
-  const w = Number(img?.width);
-  const h = Number(img?.height);
-  if (w > 0 && h > 0) return Math.min(1.5, Math.max(0.8, h / w));
-  const steps = [1, 1.25, 1.12, 1.4, 1.18];
-  let hash = 0;
-  const key = String(node?.id || "");
-  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
-  return steps[hash % steps.length];
-}
+type SortKey = "all" | "new" | "low" | "high";
+const SORTS: { key: SortKey; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "new", label: "Newest" },
+  { key: "low", label: "Price: low to high" },
+  { key: "high", label: "Price: high to low" },
+];
 
 function ShopAllProducts({ category }: { category: string }) {
   const [products, setProducts] = useState<ShopifyProduct[]>([]);
@@ -197,19 +184,19 @@ function ShopAllProducts({ category }: { category: string }) {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sort, setSort] = useState<SortKey>("all");
+  const [now] = useState(() => Date.now());
   const requestId = useRef(0);
-  const colCount = useColumnCount();
-  const cols = useMemo(() => {
-    const out = Array.from({ length: colCount }, () => ({ h: 0, items: [] as { p: ShopifyProduct; r: number }[] }));
-    for (const p of products) {
-      const r = photoRatio(p.node);
-      let target = out[0];
-      for (const c of out) if (c.h < target.h) target = c;
-      target.items.push({ p, r });
-      target.h += r + 0.45;
-    }
-    return out;
-  }, [products, colCount]);
+
+  const shown = useMemo(() => {
+    const list = [...products];
+    const amt = (p: ShopifyProduct) => Number(p.node.priceRange?.minVariantPrice?.amount) || 0;
+    const made = (p: ShopifyProduct) => (p.node as any).createdAt ? Date.parse((p.node as any).createdAt) || 0 : 0;
+    if (sort === "new") list.sort((a, b) => made(b) - made(a));
+    else if (sort === "low") list.sort((a, b) => amt(a) - amt(b));
+    else if (sort === "high") list.sort((a, b) => amt(b) - amt(a));
+    return list;
+  }, [products, sort]);
 
   const loadFirst = useCallback(async () => {
     const id = ++requestId.current;
@@ -265,44 +252,47 @@ function ShopAllProducts({ category }: { category: string }) {
     <section id={"all-products"} className={"sp-sec"}>
       <div className={"padding-global"}>
         <div className={"container-large"}>
-          <div className={"sp-head"}>
-            <h2 className={"sp-h"}>{category ? category : "Just in"}</h2>
+          <div className={"tm-head"}>
+            <h2>{category ? category : "Picked for you"}</h2>
+          </div>
+          <div className={"tm-tabs"} role={"tablist"}>
+            {SORTS.map((s) => (
+              <button key={s.key} type={"button"} role={"tab"} aria-selected={sort === s.key} className={sort === s.key ? "tm-tab on" : "tm-tab"} onClick={() => setSort(s.key)}>
+                {s.label}
+              </button>
+            ))}
           </div>
 
-          <div className={"sp-masonry"}>
+          <div className={"tm-grid"}>
             {loading
-              ? Array.from({ length: colCount }).map((_, ci) => (
-                <div key={ci} className={"sp-mcol"}>
-                  {[1.2, 1, 1.35, 1.1].map((r, i) => (
-                    <div key={i} className={"sp-skel"} style={{ height: 0, paddingBottom: Math.round(r * 100) + "%" }}></div>
-                  ))}
-                </div>
-              ))
-              : cols.map((col, ci) => (
-                <div key={ci} className={"sp-mcol"}>
-                  {col.items.map(({ p, r }) => {
-                    const node = p.node;
-                    const img = node.images?.edges?.[0]?.node;
-                    const price = node.priceRange?.minVariantPrice;
-                    const href = `/shop/product/${node.handle}`;
-                    return (
-                      <article key={node.id} className={"sp-card"}>
-                        <a href={href} className={"sp-card-link"}>
-                          <div className={"sp-img sp-real"} style={{ aspectRatio: "1 / " + r }}>
-                            {img?.url ? (
-                              <img className={"sp-real-img"} src={img.url} alt={img.altText || node.title} loading={"lazy"} />
-                            ) : null}
-                          </div>
-                          <h3>{node.title}</h3>
-                          <p className={"sp-price"}>
-                            <b>{price ? formatPrice(price.amount, price.currencyCode) : ""}</b>
-                          </p>
-                        </a>
-                      </article>
-                    );
-                  })}
-                </div>
-              ))}
+              ? Array.from({ length: 8 }).map((_, i) => <div key={i} className={"tm-skel"}></div>)
+              : shown.map((p) => {
+                const node: any = p.node;
+                const img = node.images?.edges?.[0]?.node;
+                const price = node.priceRange?.minVariantPrice;
+                const href = `/shop/product/${node.handle}`;
+                const created = node.createdAt ? Date.parse(node.createdAt) : NaN;
+                const fresh = !Number.isNaN(created) && now - created < 7 * 24 * 60 * 60 * 1000;
+                return (
+                  <article key={node.id} className={"tm-card"}>
+                    <a href={href} className={"tm-link"}>
+                      <div className={"tm-img"}>
+                        {img?.url ? <img src={img.url} alt={img.altText || node.title} loading={"lazy"} /> : null}
+                        {fresh ? <span className={"tm-badge"}>{"New"}</span> : null}
+                      </div>
+                      <div className={"tm-body"}>
+                        <h3>{node.title}</h3>
+                        <div className={"tm-row"}>
+                          <p className={"tm-price"}>{price ? formatPrice(price.amount, price.currencyCode) : ""}</p>
+                          <span className={"tm-cart"} aria-label={"View product"}>
+                            <Glyph k={"bag"} size={18} sw={1.8} />
+                          </span>
+                        </div>
+                      </div>
+                    </a>
+                  </article>
+                );
+              })}
           </div>
 
           {error ? (
@@ -446,45 +436,37 @@ function useRailProducts() {
 }
 
 // ---------------------------------------------------------------------------
-// Lead story: one large real product under the category strip
+// Just in: horizontal rail of the newest real products, right under the category tabs
 // ---------------------------------------------------------------------------
-function LeadStory() {
+function JustInRail() {
   const { items, loading } = useRailProducts();
-  const [now] = useState(() => Date.now());
-  const lead = items.find((p) => p.img);
-
-  if (loading) {
-    return (
-      <section className={"sp-sec"}>
-        <div className={"padding-global"}>
-          <div className={"container-large"}>
-            <div className={"ed-lead"}>
-              <div className={"sp-skel"} style={{ aspectRatio: "4 / 5" }}></div>
-            </div>
-          </div>
-        </div>
-      </section>
-    );
-  }
-  if (!lead) return null;
-
-  const fresh = Boolean(lead.createdAt && now - lead.createdAt < 7 * 24 * 60 * 60 * 1000);
-  const href = "/shop/product/" + lead.handle;
+  const list = useMemo(
+    () => [...items].filter((p) => p.img).sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0)).slice(0, 12),
+    [items],
+  );
+  if (!loading && list.length === 0) return null;
 
   return (
-    <section className={"sp-sec"}>
+    <section className={"sp-sec"} style={{ paddingBottom: 0 }}>
       <div className={"padding-global"}>
         <div className={"container-large"}>
-          <div className={"ed-lead"}>
-            <a href={href} className={"ed-lead-img"}>
-              <img src={lead.img} alt={lead.alt} />
-            </a>
-            <div>
-              <p className={"ed-label"}>{fresh ? "New this week" : "Featured"}</p>
-              <h1 className={"ed-title"}>{lead.title}</h1>
-              <p className={"ed-price"}>{formatPrice(lead.amountRaw, lead.currency as any)}</p>
-              <a href={href} className={"ed-link"}>{"View product"}</a>
-            </div>
+          <div className={"tm-head"}>
+            <h1>{"Just in"}</h1>
+            <p className={"ed-label"}>{"Newly listed by verified sellers"}</p>
+          </div>
+          <div className={"sp-row tm-rail"}>
+            {loading
+              ? Array.from({ length: 6 }).map((_, i) => <div key={i} className={"sp-skel sp-skel-sq"}></div>)
+              : list.map((p) => (
+                <article key={p.id} className={"sp-card"}>
+                  <a className={"sp-card-link"} href={"/shop/product/" + p.handle}>
+                    <div className={"sp-img sp-real"}>
+                      <img className={"sp-real-img"} src={p.img} alt={p.alt} loading={"lazy"} />
+                    </div>
+                    <p className={"tm-price"}>{formatPrice(p.amountRaw, p.currency as any)}</p>
+                  </a>
+                </article>
+              ))}
           </div>
         </div>
       </div>
@@ -683,7 +665,7 @@ export function PhysicalProductsExport() {
       </header>
       <main id={"top"}>
         <CategoryStrip active={category} onPick={setCategory} />
-        <LeadStory />
+        <JustInRail />
         <GiftCardsAndTopUps />
         <ShopAllProducts category={category} />
         <section className={"sp-sec tight"} id={"why"}>
@@ -705,47 +687,6 @@ export function PhysicalProductsExport() {
                     {"See how it works"}
                   </a>
                 </div>
-              </div>
-            </div>
-          </div>
-        </section>
-        <section className={"sp-sec"}>
-          <div className={"padding-global"}>
-            <div className={"container-large"}>
-              <h2 className={"sp-h center"}>
-                {"Explore the rest of the marketplace"}
-              </h2>
-              <div className={"sp-looks"}>
-                <figure className={"sp-look"}>
-                  <img src={"/marketing-media/media-59c99a35d948f6c1.avif"} alt={""} />
-                  <a className={"sp-pill"} href={"#"} data-px-link={"giftcards"}>
-                    <svg viewBox={"0 0 24 24"} width={"20"} height={"20"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.8"}>
-                      <path d={"M3 12l9-9h8v8l-9 9z"}></path>
-                      <circle cx={"16"} cy={"8"} r={"1.2"}></circle>
-                    </svg>
-                    {"Shop Gift Cards"}
-                  </a>
-                </figure>
-                <figure className={"sp-look"}>
-                  <img src={"/marketing-media/media-f9de0167e3e0ed2c.avif"} alt={""} />
-                  <a className={"sp-pill"} href={"#"} data-px-link={"home#top-up"}>
-                    <svg viewBox={"0 0 24 24"} width={"20"} height={"20"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.8"}>
-                      <path d={"M3 12l9-9h8v8l-9 9z"}></path>
-                      <circle cx={"16"} cy={"8"} r={"1.2"}></circle>
-                    </svg>
-                    {"Shop Top Ups"}
-                  </a>
-                </figure>
-                <figure className={"sp-look"}>
-                  <img src={"/marketing-media/media-d9e7636fc944d27d.avif"} alt={""} />
-                  <a className={"sp-pill"} href={"#sellers"}>
-                    <svg viewBox={"0 0 24 24"} width={"20"} height={"20"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.8"}>
-                      <path d={"M3 12l9-9h8v8l-9 9z"}></path>
-                      <circle cx={"16"} cy={"8"} r={"1.2"}></circle>
-                    </svg>
-                    {"Start Selling"}
-                  </a>
-                </figure>
               </div>
             </div>
           </div>
@@ -917,29 +858,6 @@ export function PhysicalProductsExport() {
                     {"Open your store"}
                   </a>
                 </div>
-              </div>
-            </div>
-          </div>
-        </section>
-        <section id={"start"} className={"sp-signup"}>
-          <svg className={"wave"} viewBox={"0 0 1440 120"} preserveAspectRatio={"none"}>
-            <path d={"M0 120V60C120 20 240 0 380 30s260 70 420 40 260-60 400-30 180 50 240 30v80z"} fill={"#091e1c"}></path>
-          </svg>
-          <div className={"padding-global"}>
-            <div className={"container-large"}>
-              <div className={"in"}>
-                <h2>
-                  {"Get 5% back on your first order when you sign up for email!"}
-                </h2>
-                <div className={"f"}>
-                  <input type={"email"} placeholder={"Email address"} aria-label={"Email"} />
-                  <button aria-label={"Subscribe"}>
-                    {"→"}
-                  </button>
-                </div>
-                <small>
-                  {"By submitting this form you agree to receive marketing emails from Pexly. Unsubscribe at any time."}
-                </small>
               </div>
             </div>
           </div>
