@@ -1,6 +1,7 @@
 import "./page-styles/physical-products.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CurrentMarketingPage } from "@/components/marketing/current-marketing-page";
+import { Search, X, ChevronDown, SlidersHorizontal, ArrowUpDown } from "@/components/icons";
 import {
   shopifyService,
   formatPrice,
@@ -38,9 +39,26 @@ const SHOP_GRID_CSS = `
 .tm-search{display:flex;align-items:center;gap:10px;margin:14px 0 4px;padding:4px 4px 4px 12px;border:1px solid #e3ebe9;border-radius:8px;background:#fff}
 .tm-search input{flex:1 1 auto;min-width:0;border:0;outline:0;background:none;font:inherit;font-size:16px;color:#091e1c}
 .tm-search input::placeholder{color:#8a9694}
-.tm-search-x{flex:none;width:28px;height:28px;border:0;border-radius:50%;background:#f3f7f6;color:#091e1c;font-size:18px;line-height:1;cursor:pointer}
+.tm-search-x{flex:none;width:28px;height:28px;display:grid;place-items:center;border:0;border-radius:50%;background:#f3f7f6;color:#091e1c;cursor:pointer}
 .tm-search-go{flex:none;height:34px;padding:0 14px;border:0;border-radius:5px;background:#091e1c;color:#fff;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
 .tm-search-go:hover{background:#0f302c}
+.tm-sortbar{display:flex;align-items:center;gap:10px;margin:0 0 14px;flex-wrap:wrap}
+.tm-fbtn{position:relative;display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border:0;border-radius:8px;background:#f3f7f6;color:#091e1c;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
+.tm-fbtn.on{background:#091e1c;color:#fff}
+.tm-fbadge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#bef264;color:#091e1c;font-size:11px;font-weight:800}
+.tm-fpanel{width:100%;margin:2px 0 4px;padding:14px;border:1px solid #e3ebe9;border-radius:10px;background:#fff}
+.tm-fpanel h4{margin:0 0 10px;font-size:14px;font-weight:700;color:#091e1c}
+.tm-frow{display:flex;align-items:center;gap:10px}
+.tm-frow input{flex:1 1 0;min-width:0;height:42px;padding:0 12px;border:1px solid #e3ebe9;border-radius:8px;font:inherit;font-size:16px;color:#091e1c;background:#fff}
+.tm-fact{display:flex;gap:10px;margin-top:12px}
+.tm-fact button{height:40px;padding:0 18px;border-radius:8px;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
+.tm-fapply{border:0;background:#091e1c;color:#fff}
+.tm-fclear{border:1px solid #e3ebe9;background:#fff;color:#091e1c}
+.tm-sort select{padding-left:38px}
+.tm-sort-lead{position:absolute;left:12px;top:50%;margin-top:-9px;pointer-events:none;color:#091e1c}
+.tm-sort{position:relative;display:inline-flex;align-items:center;height:40px;border-radius:8px;background:#f3f7f6}
+.tm-sort select{appearance:none;-webkit-appearance:none;height:100%;padding:0 38px 0 16px;border:0;border-radius:8px;background:transparent;color:#091e1c;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
+.tm-sort-ic{position:absolute;right:12px;top:50%;margin-top:-9px;pointer-events:none;color:#091e1c}
 .tm-tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 0 6px}
 .tm-tabs::-webkit-scrollbar{display:none}
 .tm-tab{flex:none;display:inline-flex;align-items:center;height:36px;padding:0 16px;border:1.5px solid #e3ebe9;border-radius:999px;background:#fff;color:#464646;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
@@ -203,10 +221,7 @@ function SearchBar({ value, onSearch }: { value: string; onSearch: (q: string) =
     <div className={"padding-global"}>
       <div className={"container-large"}>
         <form className={"tm-search"} onSubmit={submit} role={"search"}>
-          <svg viewBox={"0 0 24 24"} width={"20"} height={"20"} fill={"none"} stroke={"#464646"} strokeWidth={"1.8"} strokeLinecap={"round"}>
-            <circle cx={"11"} cy={"11"} r={"7"}></circle>
-            <path d={"M20 20l-3.5-3.5"}></path>
-          </svg>
+          <Search size={20} color={"#464646"} />
           <input
             type={"search"}
             value={text}
@@ -216,7 +231,7 @@ function SearchBar({ value, onSearch }: { value: string; onSearch: (q: string) =
             enterKeyHint={"search"}
           />
           {value ? (
-            <button type={"button"} className={"tm-search-x"} aria-label={"Clear search"} onClick={() => { setText(""); onSearch(""); }}>{"×"}</button>
+            <button type={"button"} className={"tm-search-x"} aria-label={"Clear search"} onClick={() => { setText(""); onSearch(""); }}><X size={16} /></button>
           ) : null}
           <button type={"submit"} className={"tm-search-go"}>{"Search"}</button>
         </form>
@@ -285,12 +300,6 @@ function photoRatio(node: any): number {
 }
 
 type SortKey = "all" | "new" | "low" | "high";
-const SORTS: { key: SortKey; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "new", label: "Newest" },
-  { key: "low", label: "Price: low to high" },
-  { key: "high", label: "Price: high to low" },
-];
 
 function ShopAllProducts({ category, search, excludeIds, hold }: { category: string; search: string; excludeIds: Set<string>; hold: boolean }) {
   const [index, setIndex] = useState<ProductIndexItem[]>([]);
@@ -300,17 +309,29 @@ function ShopAllProducts({ category, search, excludeIds, hold }: { category: str
   const [cardsTick, setCardsTick] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [sort, setSort] = useState<SortKey>("all");
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [minDraft, setMinDraft] = useState("");
+  const [maxDraft, setMaxDraft] = useState("");
+  const [minPrice, setMinPrice] = useState<number | null>(null);
+  const [maxPrice, setMaxPrice] = useState<number | null>(null);
   const requestId = useRef(0);
   const colCount = useColumnCount();
 
+  // A new search always starts on best match.
+  useEffect(() => { setSort("all"); }, [search]);
+
   // Order across the WHOLE catalog (shuffled on load unless the visitor sorts or searches).
   const ordered = useMemo(() => {
-    const list = index.filter((it) => !excludeIds.has(it.id));
+    const list = index.filter(
+      (it) => !excludeIds.has(it.id)
+        && (minPrice === null || it.price >= minPrice)
+        && (maxPrice === null || it.price <= maxPrice),
+    );
     if (sort === "new") list.sort((a, b) => b.createdAt - a.createdAt);
     else if (sort === "low") list.sort((a, b) => a.price - b.price);
     else if (sort === "high") list.sort((a, b) => b.price - a.price);
     return list;
-  }, [index, sort, excludeIds]);
+  }, [index, sort, excludeIds, minPrice, maxPrice]);
 
   const visibleIds = useMemo(() => ordered.slice(0, count).map((it) => it.id), [ordered, count]);
   const hasMore = ordered.length > count;
@@ -375,6 +396,24 @@ function ShopAllProducts({ category, search, excludeIds, hold }: { category: str
 
   const loadMore = () => setCount((c) => c + PAGE_SIZE);
 
+  const parsePrice = (v: string) => {
+    const n = Number(v.replace(/,/g, "").trim());
+    return v.trim() !== "" && Number.isFinite(n) && n >= 0 ? n : null;
+  };
+  const applyFilters = () => {
+    setMinPrice(parsePrice(minDraft));
+    setMaxPrice(parsePrice(maxDraft));
+    setCount(PAGE_SIZE);
+    setPanelOpen(false);
+  };
+  const clearFilters = () => {
+    setMinDraft(""); setMaxDraft("");
+    setMinPrice(null); setMaxPrice(null);
+    setCount(PAGE_SIZE);
+    setPanelOpen(false);
+  };
+  const activeFilters = (minPrice !== null ? 1 : 0) + (maxPrice !== null ? 1 : 0) > 0 ? 1 : 0;
+
   return (
     <section id={"all-products"} className={"sp-sec"} style={{ paddingTop: 20 }}>
       <div className={"padding-global"}>
@@ -382,12 +421,36 @@ function ShopAllProducts({ category, search, excludeIds, hold }: { category: str
           <div className={"tm-head"}>
             <h2>{search ? "Results for \u201c" + search + "\u201d" : category ? category : "More to love"}</h2>
           </div>
-          <div className={"tm-tabs"} role={"tablist"}>
-            {SORTS.map((s) => (
-              <button key={s.key} type={"button"} role={"tab"} aria-selected={sort === s.key} className={sort === s.key ? "tm-tab on" : "tm-tab"} onClick={() => setSort(s.key)}>
-                {s.label}
-              </button>
-            ))}
+          <div className={"tm-sortbar"}>
+            <button type={"button"} className={panelOpen || activeFilters ? "tm-fbtn on" : "tm-fbtn"} onClick={() => setPanelOpen((o) => !o)} aria-expanded={panelOpen}>
+              <SlidersHorizontal size={18} />
+              {"Filters"}
+              {activeFilters ? <span className={"tm-fbadge"}>{activeFilters}</span> : null}
+            </button>
+            <label className={"tm-sort"}>
+              <ArrowUpDown size={18} className={"tm-sort-lead"} />
+              <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label={"Sort by"}>
+                <option value={"all"}>{search ? "Sort by: Best match" : "Sort by: Recommended"}</option>
+                <option value={"new"}>{"Sort by: Newest"}</option>
+                <option value={"low"}>{"Sort by: Price, low to high"}</option>
+                <option value={"high"}>{"Sort by: Price, high to low"}</option>
+              </select>
+              <ChevronDown size={18} className={"tm-sort-ic"} />
+            </label>
+            {panelOpen ? (
+              <div className={"tm-fpanel"}>
+                <h4>{"Price"}</h4>
+                <div className={"tm-frow"}>
+                  <input type={"number"} inputMode={"decimal"} min={0} placeholder={"Min"} aria-label={"Minimum price"} value={minDraft} onChange={(e) => setMinDraft(e.target.value)} />
+                  <span>{"–"}</span>
+                  <input type={"number"} inputMode={"decimal"} min={0} placeholder={"Max"} aria-label={"Maximum price"} value={maxDraft} onChange={(e) => setMaxDraft(e.target.value)} />
+                </div>
+                <div className={"tm-fact"}>
+                  <button type={"button"} className={"tm-fapply"} onClick={applyFilters}>{"Apply"}</button>
+                  <button type={"button"} className={"tm-fclear"} onClick={clearFilters}>{"Clear"}</button>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className={"sp-masonry"}>
@@ -432,7 +495,7 @@ function ShopAllProducts({ category, search, excludeIds, hold }: { category: str
               <button type={"button"} onClick={() => loadFirst()}>{"Try again"}</button>
             </p>
           ) : !loading && ordered.length === 0 ? (
-            <p className={"sp-note"}>{search ? "No products match your search." : category ? "No products found in this category yet." : "No products available right now."}</p>
+            <p className={"sp-note"}>{activeFilters ? "No products match your filters." : search ? "No products match your search." : category ? "No products found in this category yet." : "No products available right now."}</p>
           ) : null}
 
           {!loading && hasMore ? (
