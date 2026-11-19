@@ -34,6 +34,12 @@ const SHOP_GRID_CSS = `
 .tm-head h1,.tm-head h2{margin:0;font-family:"Plus Jakarta Sans",system-ui,sans-serif;font-weight:800;font-size:clamp(20px,2.6vw,28px);letter-spacing:-.03em;color:#091e1c}
 .tm-rail .sp-card{flex:0 0 170px;width:170px}
 @media(min-width:700px){.tm-rail .sp-card{flex-basis:240px;width:240px}}
+.tm-search{display:flex;align-items:center;gap:10px;margin:14px 0 4px;padding:8px 8px 8px 16px;border:1.5px solid #e3ebe9;border-radius:999px;background:#fff}
+.tm-search input{flex:1 1 auto;min-width:0;border:0;outline:0;background:none;font:inherit;font-size:16px;color:#091e1c}
+.tm-search input::placeholder{color:#8a9694}
+.tm-search-x{flex:none;width:28px;height:28px;border:0;border-radius:50%;background:#f3f7f6;color:#091e1c;font-size:18px;line-height:1;cursor:pointer}
+.tm-search-go{flex:none;height:44px;padding:0 22px;border:0;border-radius:999px;background:#091e1c;color:#fff;font:inherit;font-size:16px;font-weight:700;cursor:pointer}
+.tm-search-go:hover{background:#0f302c}
 .tm-tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 0 6px}
 .tm-tabs::-webkit-scrollbar{display:none}
 .tm-tab{flex:none;display:inline-flex;align-items:center;height:36px;padding:0 16px;border:1.5px solid #e3ebe9;border-radius:999px;background:#fff;color:#464646;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
@@ -90,6 +96,13 @@ function categoryQuery(name: string): string | undefined {
   return 'product_type:"' + n.replace(/"/g, '\\"') + '"';
 }
 
+// Category and search text combine into one Shopify search string (space = AND).
+function buildQuery(category: string, search: string): string | undefined {
+  const t = search.trim().replace(/["\\]/g, " ").replace(/\s+/g, " ");
+  const parts = [t, categoryQuery(category)].filter(Boolean) as string[];
+  return parts.length ? parts.join(" ") : undefined;
+}
+
 function useShopCategories() {
   const [cats, setCats] = useState<ShopCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,6 +141,42 @@ function useShopCategories() {
   }, []);
 
   return { cats, loading };
+}
+
+function SearchBar({ value, onSearch }: { value: string; onSearch: (q: string) => void }) {
+  const [text, setText] = useState(value);
+  useEffect(() => { setText(value); }, [value]);
+  const submit = (e: { preventDefault: () => void }) => {
+    e.preventDefault();
+    onSearch(text.trim());
+    window.setTimeout(() => {
+      document.getElementById("all-products")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+  };
+  return (
+    <div className={"padding-global"}>
+      <div className={"container-large"}>
+        <form className={"tm-search"} onSubmit={submit} role={"search"}>
+          <svg viewBox={"0 0 24 24"} width={"20"} height={"20"} fill={"none"} stroke={"#464646"} strokeWidth={"1.8"} strokeLinecap={"round"}>
+            <circle cx={"11"} cy={"11"} r={"7"}></circle>
+            <path d={"M20 20l-3.5-3.5"}></path>
+          </svg>
+          <input
+            type={"search"}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder={"Search products"}
+            aria-label={"Search products"}
+            enterKeyHint={"search"}
+          />
+          {value ? (
+            <button type={"button"} className={"tm-search-x"} aria-label={"Clear search"} onClick={() => { setText(""); onSearch(""); }}>{"×"}</button>
+          ) : null}
+          <button type={"submit"} className={"tm-search-go"}>{"Search"}</button>
+        </form>
+      </div>
+    </div>
+  );
 }
 
 function CategoryStrip({ active, onPick }: { active: string; onPick: (name: string) => void }) {
@@ -181,8 +230,8 @@ function photoRatio(node: any): number {
   const img = node?.images?.edges?.[0]?.node;
   const w = Number(img?.width);
   const h = Number(img?.height);
-  if (w > 0 && h > 0) return Math.min(1.5, Math.max(0.8, h / w));
-  const steps = [1, 1.25, 1.12, 1.4, 1.18];
+  if (w > 0 && h > 0) return Math.min(1.25, Math.max(1, h / w));
+  const steps = [1, 1.2, 1.1, 1.25, 1.15];
   let hash = 0;
   const key = String(node?.id || "");
   for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
@@ -197,7 +246,7 @@ const SORTS: { key: SortKey; label: string }[] = [
   { key: "high", label: "Price: high to low" },
 ];
 
-function ShopAllProducts({ category, excludeIds }: { category: string; excludeIds: Set<string> }) {
+function ShopAllProducts({ category, search, excludeIds }: { category: string; search: string; excludeIds: Set<string> }) {
   const [products, setProducts] = useState<ShopifyProduct[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -235,7 +284,7 @@ function ShopAllProducts({ category, excludeIds }: { category: string; excludeId
     setLoading(true);
     setError(null);
     try {
-      const res = await shopifyService.getProducts(PAGE_SIZE, undefined, categoryQuery(category));
+      const res = await shopifyService.getProducts(PAGE_SIZE, undefined, buildQuery(category, search));
       if (id !== requestId.current) return;
       setProducts(res.products as ShopifyProduct[]);
       setHasMore(Boolean(res.pageInfo?.hasNextPage));
@@ -248,7 +297,7 @@ function ShopAllProducts({ category, excludeIds }: { category: string; excludeId
     } finally {
       if (id === requestId.current) setLoading(false);
     }
-  }, [category]);
+  }, [category, search]);
 
   useEffect(() => { loadFirst(); }, [loadFirst]);
 
@@ -264,7 +313,7 @@ function ShopAllProducts({ category, excludeIds }: { category: string; excludeId
     const id = requestId.current;
     setLoadingMore(true);
     try {
-      const res = await shopifyService.getProducts(PAGE_SIZE, cursor, categoryQuery(category));
+      const res = await shopifyService.getProducts(PAGE_SIZE, cursor, buildQuery(category, search));
       if (id !== requestId.current) return;
       const next = res.products as ShopifyProduct[];
       setProducts((prev) => {
@@ -285,7 +334,7 @@ function ShopAllProducts({ category, excludeIds }: { category: string; excludeId
       <div className={"padding-global"}>
         <div className={"container-large"}>
           <div className={"tm-head"}>
-            <h2>{category ? category : "More to love"}</h2>
+            <h2>{search ? "Results for \u201c" + search + "\u201d" : category ? category : "More to love"}</h2>
           </div>
           <div className={"tm-tabs"} role={"tablist"}>
             {SORTS.map((s) => (
@@ -337,7 +386,7 @@ function ShopAllProducts({ category, excludeIds }: { category: string; excludeId
               <button type={"button"} onClick={() => (products.length ? loadMore() : loadFirst())}>{"Try again"}</button>
             </p>
           ) : !loading && shown.length === 0 && !hasMore ? (
-            <p className={"sp-note"}>{category ? "No products found in this category yet." : "No products available right now."}</p>
+            <p className={"sp-note"}>{search ? "No products match your search." : category ? "No products found in this category yet." : "No products available right now."}</p>
           ) : null}
 
           {!loading && hasMore ? (
@@ -425,6 +474,7 @@ function useRailProducts() {
 // Just in: horizontal rail of the newest real products, right under the category tabs
 // ---------------------------------------------------------------------------
 const JUST_IN_COUNT = 12;
+const NO_IDS: Set<string> = new Set();
 
 function pickJustIn(items: RailProduct[]): RailProduct[] {
   return [...items].filter((p) => p.img).sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0)).slice(0, JUST_IN_COUNT);
@@ -463,6 +513,7 @@ function JustInRail({ list, loading }: { list: RailProduct[]; loading: boolean }
 
 export function PhysicalProductsExport() {
   const [category, setCategory] = useState("");
+  const [search, setSearch] = useState("");
   const rail = useRailProducts();
   const justIn = useMemo(() => pickJustIn(rail.items), [rail.items]);
   // Products shown in "Just in" never repeat in "More to love".
@@ -581,8 +632,9 @@ export function PhysicalProductsExport() {
       </header>
       <main id={"top"}>
         <CategoryStrip active={category} onPick={setCategory} />
-        <JustInRail list={justIn} loading={rail.loading} />
-        <ShopAllProducts category={category} excludeIds={justInIds} />
+        <SearchBar value={search} onSearch={setSearch} />
+        {search ? null : <JustInRail list={justIn} loading={rail.loading} />}
+        <ShopAllProducts category={category} search={search} excludeIds={search ? NO_IDS : justInIds} />
       </main>
       <footer className={"footer"}>
         <div className={"padding-global"}>
