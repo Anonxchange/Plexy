@@ -32,8 +32,7 @@ const SHOP_GRID_CSS = `
 .ed-label{margin:0;font-size:13px;color:#464646}
 .tm-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 10px}
 .tm-head h1,.tm-head h2{margin:0;font-family:"Plus Jakarta Sans",system-ui,sans-serif;font-weight:800;font-size:clamp(20px,2.6vw,28px);letter-spacing:-.03em;color:#091e1c}
-.tm-rail{scroll-snap-type:x mandatory}
-.tm-rail .sp-card{flex:0 0 min(calc(100vw - 56px),420px);width:min(calc(100vw - 56px),420px);scroll-snap-align:start}
+.tm-rail .sp-card{flex:0 0 170px;width:170px}
 @media(min-width:700px){.tm-rail .sp-card{flex-basis:240px;width:240px}}
 .tm-tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 0 6px}
 .tm-tabs::-webkit-scrollbar{display:none}
@@ -50,6 +49,13 @@ const SHOP_GRID_CSS = `
 .sp-masonry .sp-price{margin:0;font-size:15px;color:#464646;font-variant-numeric:tabular-nums}
 .sp-masonry .sp-price b{font-weight:400}
 .sp-masonry .sp-skel{width:100%;aspect-ratio:auto}
+@media(max-width:699px){
+.sp-masonry{width:100vw;margin-left:calc(50% - 50vw);gap:8px}
+.sp-mcol{gap:14px}
+.sp-masonry .sp-img.sp-real{border-radius:0}
+.sp-masonry .sp-card h3,.sp-masonry .sp-price{padding:0 8px}
+.sp-masonry .sp-card h3{margin-top:8px}
+}
 .tm-rail .sp-price{margin:4px 0 0;font-size:15px;color:#464646;font-variant-numeric:tabular-nums}
 .ed-foot{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:28px;padding:14px 0;border-top:1px solid #e3ebe9;font-size:13px;color:#464646}
 .sp-img.sp-real{position:relative;overflow:hidden;background:#f3f7f6}
@@ -58,8 +64,7 @@ const SHOP_GRID_CSS = `
 .sp-img.sp-gc{aspect-ratio:1.586;border:1px solid #e3ebe9;border-radius:14px;display:grid;place-items:center}
 .sp-skel.sp-skel-card{aspect-ratio:1.586;flex:0 0 220px}
 .sp-row .sp-img.sp-real{aspect-ratio:1/1;border-radius:8px}
-.sp-skel.sp-skel-sq{flex:0 0 min(calc(100vw - 56px),420px)}
-@media(min-width:700px){.sp-skel.sp-skel-sq{flex-basis:240px}}
+.sp-skel.sp-skel-sq{flex:0 0 170px}
 .sp-cat .t.sp-cat-img{background-size:cover;background-position:center;background-repeat:no-repeat}
 .sp-skel{aspect-ratio:1/1;border-radius:18px;background:linear-gradient(90deg,#eef2f1,#f7f9f8,#eef2f1);background-size:200% 100%;animation:sp-pulse 1.2s linear infinite}
 @keyframes sp-pulse{to{background-position:-200% 0}}
