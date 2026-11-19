@@ -1,5 +1,5 @@
 import "./page-styles/physical-products.css";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CurrentMarketingPage } from "@/components/marketing/current-marketing-page";
 import {
   shopifyService,
@@ -7,18 +7,6 @@ import {
   MARKET_CHANGED_EVENT,
   type ShopifyProduct,
 } from "@/lib/shopify-service";
-import { useAirtimeOperators } from "@/hooks/use-airtime-operators";
-import { useDigitalCountry } from "@/lib/country-preferences";
-import { useGiftCardCatalog } from "@/hooks/use-gift-card-catalog";
-// Same helpers the gift cards page uses.
-import {
-  airTile,
-  giftTile,
-  preferredRank,
-  uniqueByName,
-  type CardTile,
-} from "@/lib/gift-card-utils";
-
 // Products are fetched 60 at a time; the button loads the next 60. No total count is shown anywhere.
 const PAGE_SIZE = 60;
 
@@ -42,31 +30,26 @@ const SHOP_GRID_CSS = `
 .ed-cat{flex:none;background:none;border:0;padding:14px 0 12px;font:inherit;font-size:16px;font-weight:500;color:#464646;white-space:nowrap;cursor:pointer;border-bottom:3px solid transparent}
 .ed-cat.on{color:#091e1c;font-weight:700;border-bottom-color:#091e1c}
 .ed-label{margin:0;font-size:13px;color:#464646}
-.tm-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:18px 0 12px}
+.tm-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 10px}
 .tm-head h1,.tm-head h2{margin:0;font-family:"Plus Jakarta Sans",system-ui,sans-serif;font-weight:800;font-size:clamp(20px,2.6vw,28px);letter-spacing:-.03em;color:#091e1c}
 .tm-rail .sp-card{flex:0 0 170px;width:170px}
 @media(min-width:700px){.tm-rail .sp-card{flex-basis:240px;width:240px}}
-.tm-rail .sp-card h3,.tm-card h3{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.tm-price{margin:4px 0 0;font-size:16px;font-weight:800;color:#091e1c;font-variant-numeric:tabular-nums}
-.tm-tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:4px 0 14px}
+.tm-tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 0 6px}
 .tm-tabs::-webkit-scrollbar{display:none}
 .tm-tab{flex:none;display:inline-flex;align-items:center;height:36px;padding:0 16px;border:1.5px solid #e3ebe9;border-radius:999px;background:#fff;color:#464646;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
 .tm-tab.on{background:#091e1c;border-color:#091e1c;color:#fff}
-.tm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px;background:#f3f7f6;border:2px solid #f3f7f6;border-radius:10px;overflow:hidden}
-@media(min-width:700px){.tm-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(min-width:1100px){.tm-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
-.tm-card{background:#fff;min-width:0;display:flex;flex-direction:column}
-.tm-card a.tm-link{display:block;color:inherit;text-decoration:none}
-.tm-img{position:relative;aspect-ratio:1/1;background:#f3f7f6;overflow:hidden}
-.tm-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-.tm-badge{position:absolute;left:8px;top:8px;padding:3px 9px;border-radius:999px;background:#bef264;color:#091e1c;font-size:11px;font-weight:800}
-.tm-body{padding:10px 12px 14px}
-.tm-card h3{margin:0;font-size:14.5px;font-weight:500;line-height:1.35;color:#0c1111}
-.tm-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
-.tm-row .tm-price{margin:0;font-size:17px}
-.tm-cart{flex:none;width:38px;height:32px;display:grid;place-items:center;border:1.5px solid #091e1c;border-radius:999px;background:#fff;color:#091e1c}
-.tm-cart:hover{background:#bef264}
-.tm-skel{aspect-ratio:3/4;background:linear-gradient(90deg,#eef2f1,#f7f9f8,#eef2f1);background-size:200% 100%;animation:sp-pulse 1.2s linear infinite}
+.sp-masonry{display:flex;gap:12px;margin-top:14px;align-items:flex-start}
+@media(min-width:700px){.sp-masonry{gap:18px}}
+.sp-mcol{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:18px}
+.sp-masonry .sp-card{width:auto;min-width:0;flex:none;max-width:none}
+.sp-masonry .sp-card a.sp-card-link{display:block;color:inherit;text-decoration:none}
+.sp-masonry .sp-img.sp-real{position:relative;overflow:hidden;border-radius:6px;background:#f3f7f6;width:100%}
+.sp-masonry .sp-img.sp-real img.sp-real-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.sp-masonry .sp-card h3{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:15px;font-weight:600;line-height:1.35;margin:10px 0 2px;color:#0c1111}
+.sp-masonry .sp-price{margin:0;font-size:15px;color:#464646;font-variant-numeric:tabular-nums}
+.sp-masonry .sp-price b{font-weight:400}
+.sp-masonry .sp-skel{width:100%;aspect-ratio:auto}
+.tm-rail .sp-price{margin:4px 0 0;font-size:15px;color:#464646;font-variant-numeric:tabular-nums}
 .ed-foot{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:28px;padding:14px 0;border-top:1px solid #e3ebe9;font-size:13px;color:#464646}
 .sp-img.sp-real{position:relative;overflow:hidden;background:#f3f7f6}
 .sp-img.sp-real img.sp-real-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
@@ -169,6 +152,36 @@ function CategoryStrip({ active, onPick }: { active: string; onPick: (name: stri
   );
 }
 
+function columnsForWidth(): number {
+  if (typeof window === "undefined") return 2;
+  const w = window.innerWidth;
+  return w >= 1100 ? 4 : w >= 700 ? 3 : 2;
+}
+
+function useColumnCount() {
+  const [n, setN] = useState(columnsForWidth);
+  useEffect(() => {
+    const on = () => setN(columnsForWidth());
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
+  return n;
+}
+
+// Height / width of a product photo. Uses the real image size when the store returns it,
+// otherwise a steady per-product variation so the grid still staggers.
+function photoRatio(node: any): number {
+  const img = node?.images?.edges?.[0]?.node;
+  const w = Number(img?.width);
+  const h = Number(img?.height);
+  if (w > 0 && h > 0) return Math.min(1.5, Math.max(0.8, h / w));
+  const steps = [1, 1.25, 1.12, 1.4, 1.18];
+  let hash = 0;
+  const key = String(node?.id || "");
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  return steps[hash % steps.length];
+}
+
 type SortKey = "all" | "new" | "low" | "high";
 const SORTS: { key: SortKey; label: string }[] = [
   { key: "all", label: "All" },
@@ -185,8 +198,8 @@ function ShopAllProducts({ category }: { category: string }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sort, setSort] = useState<SortKey>("all");
-  const [now] = useState(() => Date.now());
   const requestId = useRef(0);
+  const colCount = useColumnCount();
 
   const shown = useMemo(() => {
     const list = [...products];
@@ -197,6 +210,18 @@ function ShopAllProducts({ category }: { category: string }) {
     else if (sort === "high") list.sort((a, b) => amt(b) - amt(a));
     return list;
   }, [products, sort]);
+
+  const cols = useMemo(() => {
+    const out = Array.from({ length: colCount }, () => ({ h: 0, items: [] as { p: ShopifyProduct; r: number }[] }));
+    for (const p of shown) {
+      const r = photoRatio(p.node);
+      let target = out[0];
+      for (const c of out) if (c.h < target.h) target = c;
+      target.items.push({ p, r });
+      target.h += r + 0.45;
+    }
+    return out;
+  }, [shown, colCount]);
 
   const loadFirst = useCallback(async () => {
     const id = ++requestId.current;
@@ -249,11 +274,11 @@ function ShopAllProducts({ category }: { category: string }) {
   };
 
   return (
-    <section id={"all-products"} className={"sp-sec"}>
+    <section id={"all-products"} className={"sp-sec"} style={{ paddingTop: 20 }}>
       <div className={"padding-global"}>
         <div className={"container-large"}>
           <div className={"tm-head"}>
-            <h2>{category ? category : "Picked for you"}</h2>
+            <h2>{category ? category : "More to explore"}</h2>
           </div>
           <div className={"tm-tabs"} role={"tablist"}>
             {SORTS.map((s) => (
@@ -263,36 +288,40 @@ function ShopAllProducts({ category }: { category: string }) {
             ))}
           </div>
 
-          <div className={"tm-grid"}>
+          <div className={"sp-masonry"}>
             {loading
-              ? Array.from({ length: 8 }).map((_, i) => <div key={i} className={"tm-skel"}></div>)
-              : shown.map((p) => {
-                const node: any = p.node;
-                const img = node.images?.edges?.[0]?.node;
-                const price = node.priceRange?.minVariantPrice;
-                const href = `/shop/product/${node.handle}`;
-                const created = node.createdAt ? Date.parse(node.createdAt) : NaN;
-                const fresh = !Number.isNaN(created) && now - created < 7 * 24 * 60 * 60 * 1000;
-                return (
-                  <article key={node.id} className={"tm-card"}>
-                    <a href={href} className={"tm-link"}>
-                      <div className={"tm-img"}>
-                        {img?.url ? <img src={img.url} alt={img.altText || node.title} loading={"lazy"} /> : null}
-                        {fresh ? <span className={"tm-badge"}>{"New"}</span> : null}
-                      </div>
-                      <div className={"tm-body"}>
-                        <h3>{node.title}</h3>
-                        <div className={"tm-row"}>
-                          <p className={"tm-price"}>{price ? formatPrice(price.amount, price.currencyCode) : ""}</p>
-                          <span className={"tm-cart"} aria-label={"View product"}>
-                            <Glyph k={"bag"} size={18} sw={1.8} />
-                          </span>
-                        </div>
-                      </div>
-                    </a>
-                  </article>
-                );
-              })}
+              ? Array.from({ length: colCount }).map((_, ci) => (
+                <div key={ci} className={"sp-mcol"}>
+                  {[1.2, 1, 1.35, 1.1].map((r, i) => (
+                    <div key={i} className={"sp-skel"} style={{ height: 0, paddingBottom: Math.round(r * 100) + "%" }}></div>
+                  ))}
+                </div>
+              ))
+              : cols.map((col, ci) => (
+                <div key={ci} className={"sp-mcol"}>
+                  {col.items.map(({ p, r }) => {
+                    const node = p.node;
+                    const img = node.images?.edges?.[0]?.node;
+                    const price = node.priceRange?.minVariantPrice;
+                    const href = `/shop/product/${node.handle}`;
+                    return (
+                      <article key={node.id} className={"sp-card"}>
+                        <a href={href} className={"sp-card-link"}>
+                          <div className={"sp-img sp-real"} style={{ aspectRatio: "1 / " + r }}>
+                            {img?.url ? (
+                              <img className={"sp-real-img"} src={img.url} alt={img.altText || node.title} loading={"lazy"} />
+                            ) : null}
+                          </div>
+                          <h3>{node.title}</h3>
+                          <p className={"sp-price"}>
+                            <b>{price ? formatPrice(price.amount, price.currencyCode) : ""}</b>
+                          </p>
+                        </a>
+                      </article>
+                    );
+                  })}
+                </div>
+              ))}
           </div>
 
           {error ? (
@@ -326,56 +355,6 @@ function ShopAllProducts({ category }: { category: string }) {
 // ---------------------------------------------------------------------------
 // Shared tile pieces (no "+" buttons anywhere)
 // ---------------------------------------------------------------------------
-type IconKey = "earbuds" | "watch" | "sneaker" | "lamp" | "bag" | "gamepad" | "phone" | "box" | "gift";
-
-const ICONS: Record<IconKey, ReactNode> = {
-  earbuds: (
-    <>
-      <path d="M4 15v-3a8 8 0 0116 0v3" />
-      <rect x="3" y="14" width="4" height="6" rx="1.5" />
-      <rect x="17" y="14" width="4" height="6" rx="1.5" />
-    </>
-  ),
-  watch: (
-    <>
-      <rect x="7" y="6" width="10" height="12" rx="3" />
-      <path d="M9 6l1-3h4l1 3M9 18l1 3h4l1-3" />
-    </>
-  ),
-  sneaker: <path d="M3 16c0-2 2-3 4-3l3-4 3 3 5 1c2 0 3 1 3 3v2H3z" />,
-  lamp: <path d="M8 3h8l3 9H5l3-9zM12 12v7M8 21h8" />,
-  bag: <path d="M6 8h12l1 12H5L6 8zM9 8a3 3 0 016 0" />,
-  gamepad: (
-    <>
-      <rect x="2" y="8" width="20" height="10" rx="5" />
-      <path d="M7 11v4M5 13h4" />
-      <circle cx="16" cy="12" r="1" />
-      <circle cx="18.5" cy="14.5" r="1" />
-    </>
-  ),
-  phone: (
-    <>
-      <rect x="7" y="2" width="10" height="20" rx="2.5" />
-      <path d="M11 18h2" />
-    </>
-  ),
-  box: <path d="M3 7l9-4 9 4-9 4-9-4zM3 7v10l9 4 9-4V7M12 11v10" />,
-  gift: (
-    <>
-      <rect x="3" y="8" width="18" height="13" rx="2" />
-      <path d="M12 8v13M3 13h18M12 8c-2-4-6-3-5 0 .6 1.5 3 1.2 5 0zm0 0c2-4 6-3 5 0-.6 1.5-3 1.2-5 0z" />
-    </>
-  ),
-};
-
-function Glyph({ k, size = 92, stroke = "#091e1c", sw = 1.1 }: { k: IconKey; size?: number; stroke?: string; sw?: number }) {
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
-      {ICONS[k]}
-    </svg>
-  );
-}
-
 type RailProduct = {
   id: string;
   handle: string;
@@ -447,7 +426,7 @@ function JustInRail() {
   if (!loading && list.length === 0) return null;
 
   return (
-    <section className={"sp-sec"} style={{ paddingBottom: 0 }}>
+    <section className={"sp-sec"} style={{ paddingTop: 14, paddingBottom: 0 }}>
       <div className={"padding-global"}>
         <div className={"container-large"}>
           <div className={"tm-head"}>
@@ -468,81 +447,6 @@ function JustInRail() {
                 </article>
               ))}
           </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Gift cards + mobile top ups, from the same data the gift cards page uses
-// ---------------------------------------------------------------------------
-const HOME_GIFT_COUNT = 6;
-const HOME_TOPUP_COUNT = 4;
-
-function GiftCardsAndTopUps() {
-  const country = useDigitalCountry();
-  const cat = useGiftCardCatalog({ countryCode: country, size: 40, enabled: !!country });
-  const air = useAirtimeOperators(country, true);
-
-  const tiles = useMemo(() => {
-    const raw = (cat.data?.pages?.[0]?.content ?? []).filter((p: any) => p.status !== "INACTIVE");
-    const sorted = [...uniqueByName(raw)].sort(
-      (a: any, b: any) => preferredRank(a.brand?.brandName || a.productName) - preferredRank(b.brand?.brandName || b.productName),
-    );
-    const gifts: CardTile[] = sorted.slice(0, HOME_GIFT_COUNT).map(giftTile);
-    const topups: CardTile[] = (air.data ?? []).slice(0, HOME_TOPUP_COUNT).map(airTile);
-    // Alternate gift card, top up, gift card, top up ...
-    const out: { t: CardTile; kind: string }[] = [];
-    for (let i = 0; i < Math.max(gifts.length, topups.length); i++) {
-      if (gifts[i]) out.push({ t: gifts[i], kind: "g" });
-      if (topups[i]) out.push({ t: topups[i], kind: "a" });
-    }
-    return out;
-  }, [cat.data, air.data]);
-
-  const loading = cat.isLoading && air.isLoading;
-  const failed = cat.isError && air.isError;
-
-  return (
-    <section id={"giftcards"} className={"sp-sec"}>
-      <div className={"padding-global"}>
-        <div className={"container-large"}>
-          <div className={"sp-head"}>
-            <div>
-              <h2 className={"sp-h"}>{"Gift Cards & Mobile Top Up"}</h2>
-              <p className={"sp-sub"}>{"Gift cards, airtime and data, paid in crypto."}</p>
-            </div>
-            <a className={"sp-all"} id={"gtall"} href={"#"} data-px-link={"giftcards"}>{"View all"}</a>
-          </div>
-          <div className={"sp-row"} id={"gtrow"}>
-            {loading
-              ? Array.from({ length: 6 }).map((_, i) => <div key={i} className={"sp-skel sp-skel-card"}></div>)
-              : tiles.map(({ t, kind }) => (
-                <article key={kind + "-" + t.id} className={"sp-card"}>
-                  <a className={"sp-card-link"} href={t.href}>
-                    <div className={"sp-img sp-real sp-gc"}>
-                      {t.img ? (
-                        <img
-                          className={"sp-real-img"}
-                          src={t.img}
-                          alt={t.name}
-                          loading={"lazy"}
-                          onError={(e) => { e.currentTarget.style.display = "none"; }}
-                        />
-                      ) : (
-                        <div className={"sp-pr"} style={{ background: kind === "a" ? "#e3f9dc" : "#fff0c7" }}>
-                          <Glyph k={kind === "a" ? "phone" : "gift"} />
-                        </div>
-                      )}
-                    </div>
-                    <h3>{t.name}</h3>
-                    {t.range ? <p className={"sp-price"}><b>{t.range}</b></p> : null}
-                  </a>
-                </article>
-              ))}
-          </div>
-          {failed ? <p className={"sp-note"}>{"Gift cards couldn’t be loaded right now."}</p> : null}
         </div>
       </div>
     </section>
@@ -666,202 +570,7 @@ export function PhysicalProductsExport() {
       <main id={"top"}>
         <CategoryStrip active={category} onPick={setCategory} />
         <JustInRail />
-        <GiftCardsAndTopUps />
         <ShopAllProducts category={category} />
-        <section className={"sp-sec tight"} id={"why"}>
-          <div className={"padding-global"}>
-            <div className={"container-large"}>
-              <div className={"sp-guide"}>
-                <img src={"/marketing-media/media-ee8829bd9b5cc5ab.avif"} alt={""} />
-                <div className={"ov"}>
-                  <span>
-                    {"Why shop"}
-                  </span>
-                  <b>
-                    {"physical products on Pexly"}
-                  </b>
-                  <p style={{"margin": "0 0 18px", "maxWidth": "30em", "fontSize": "clamp(16px,1.5vw,19px)", "lineHeight": "1.5", "color": "rgba(255,255,255,.92)"} as any}>
-                    {"Real goods from verified sellers, paid straight from your own wallet."}
-                  </p>
-                  <a className={"sp-btn light"} href={"#sellers"}>
-                    {"See how it works"}
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-        <section className={"sp-reviews"}>
-          <div className={"padding-global"}>
-            <div className={"container-large"}>
-              <div className={"sp-stars"}>
-                {"★★★★★"}
-              </div>
-              <h2 className={"sp-h center"}>
-                {"What people are saying"}
-              </h2>
-              <div className={"sp-row"}>
-                <article className={"sp-rev"}>
-                  <div className={"st"}>
-                    {"★★★★★"}
-                  </div>
-                  <p>
-                    {"Ordered earbuds from a verified seller. They arrived in four days and tracking was clear the whole way."}
-                  </p>
-                  <div className={"by"}>
-                    <b>
-                      {"James T."}
-                    </b>
-                    <span>
-                      <i>
-                        {"✓"}
-                      </i>
-                      {"Verified buyer"}
-                    </span>
-                  </div>
-                </article>
-                <article className={"sp-rev"}>
-                  <div className={"st"}>
-                    {"★★★★★"}
-                  </div>
-                  <p>
-                    {"Paid with USDT, got tracking the same day. Easiest online order I have made with crypto."}
-                  </p>
-                  <div className={"by"}>
-                    <b>
-                      {"Marie K."}
-                    </b>
-                    <span>
-                      <i>
-                        {"✓"}
-                      </i>
-                      {"Verified buyer"}
-                    </span>
-                  </div>
-                </article>
-                <article className={"sp-rev"}>
-                  <div className={"st"}>
-                    {"★★★★★"}
-                  </div>
-                  <p>
-                    {"The seller ratings helped me pick. Sneakers fit perfectly and the seller was easy to reach."}
-                  </p>
-                  <div className={"by"}>
-                    <b>
-                      {"Adaeze O."}
-                    </b>
-                    <span>
-                      <i>
-                        {"✓"}
-                      </i>
-                      {"Verified buyer"}
-                    </span>
-                  </div>
-                </article>
-                <article className={"sp-rev"}>
-                  <div className={"st"}>
-                    {"★★★★★"}
-                  </div>
-                  <p>
-                    {"Finally I can spend my crypto on real things without cashing out first."}
-                  </p>
-                  <div className={"by"}>
-                    <b>
-                      {"Sonia D."}
-                    </b>
-                    <span>
-                      <i>
-                        {"✓"}
-                      </i>
-                      {"Verified buyer"}
-                    </span>
-                  </div>
-                </article>
-              </div>
-            </div>
-          </div>
-        </section>
-        <section className={"sp-sec tight"}>
-          <div className={"padding-global"}>
-            <div className={"container-large"}>
-              <p className={"sp-eyebrow"}>
-                {"Pay with"}
-              </p>
-              <div className={"sp-marq"}>
-                <div className={"in"}>
-                  <span>
-                    {"Bitcoin"}
-                  </span>
-                  <span>
-                    {"Ethereum"}
-                  </span>
-                  <span>
-                    {"USDT"}
-                  </span>
-                  <span>
-                    {"USDC"}
-                  </span>
-                  <span>
-                    {"BNB"}
-                  </span>
-                  <span>
-                    {"Solana"}
-                  </span>
-                  <span>
-                    {"Litecoin"}
-                  </span>
-                  <span>
-                    {"Tron"}
-                  </span>
-                  <span>
-                    {"Bitcoin"}
-                  </span>
-                  <span>
-                    {"Ethereum"}
-                  </span>
-                  <span>
-                    {"USDT"}
-                  </span>
-                  <span>
-                    {"USDC"}
-                  </span>
-                  <span>
-                    {"BNB"}
-                  </span>
-                  <span>
-                    {"Solana"}
-                  </span>
-                  <span>
-                    {"Litecoin"}
-                  </span>
-                  <span>
-                    {"Tron"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-        <section id={"sellers"} className={"sp-feature"}>
-          <div className={"padding-global"}>
-            <div className={"container-large"}>
-              <div className={"sp-feature-in"}>
-                <img src={"/marketing-media/media-ebc41a5685db3420.avif"} alt={""} />
-                <div className={"txt"}>
-                  <h2 className={"sp-h"}>
-                    {"Verified sellers"}
-                  </h2>
-                  <p>
-                    {"Every seller is rated by real buyers. Shop with confidence, or open your own store and sell to a global crypto audience."}
-                  </p>
-                  <a className={"sp-btn"} href={"#"}>
-                    {"Open your store"}
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
       </main>
       <footer className={"footer"}>
         <div className={"padding-global"}>
