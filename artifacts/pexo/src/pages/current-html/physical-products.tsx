@@ -1,7 +1,7 @@
 import "./page-styles/physical-products.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CurrentMarketingPage } from "@/components/marketing/current-marketing-page";
-import { Search, X, ChevronDown, SlidersHorizontal, ArrowUpDown } from "@/components/icons";
+import { Search, X, ChevronDown, SlidersHorizontal, ArrowUpDown } from "@/lib/icons";
 import {
   shopifyService,
   formatPrice,
