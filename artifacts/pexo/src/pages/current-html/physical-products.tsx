@@ -34,11 +34,11 @@ const SHOP_GRID_CSS = `
 .tm-head h1,.tm-head h2{margin:0;font-family:"Plus Jakarta Sans",system-ui,sans-serif;font-weight:800;font-size:clamp(20px,2.6vw,28px);letter-spacing:-.03em;color:#091e1c}
 .tm-rail .sp-card{flex:0 0 170px;width:170px}
 @media(min-width:700px){.tm-rail .sp-card{flex-basis:240px;width:240px}}
-.tm-search{display:flex;align-items:center;gap:10px;margin:14px 0 4px;padding:8px 8px 8px 16px;border:1.5px solid #e3ebe9;border-radius:10px;background:#fff}
+.tm-search{display:flex;align-items:center;gap:10px;margin:14px 0 4px;padding:4px 4px 4px 12px;border:1px solid #e3ebe9;border-radius:8px;background:#fff}
 .tm-search input{flex:1 1 auto;min-width:0;border:0;outline:0;background:none;font:inherit;font-size:16px;color:#091e1c}
 .tm-search input::placeholder{color:#8a9694}
 .tm-search-x{flex:none;width:28px;height:28px;border:0;border-radius:50%;background:#f3f7f6;color:#091e1c;font-size:18px;line-height:1;cursor:pointer}
-.tm-search-go{flex:none;height:44px;padding:0 22px;border:0;border-radius:6px;background:#091e1c;color:#fff;font:inherit;font-size:16px;font-weight:700;cursor:pointer}
+.tm-search-go{flex:none;height:34px;padding:0 14px;border:0;border-radius:5px;background:#091e1c;color:#fff;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
 .tm-search-go:hover{background:#0f302c}
 .tm-tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 0 6px}
 .tm-tabs::-webkit-scrollbar{display:none}
@@ -104,6 +104,35 @@ function shuffle<T>(list: T[]): T[] {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+
+// Pulls the entire catalog (250 at a time, until the store has no more pages) so the shuffle covers every product.
+const CATALOG_CAP = 50000; // safety stop only
+const catalogCache = new Map<string, Promise<ShopifyProduct[]>>();
+if (typeof window !== "undefined") window.addEventListener(MARKET_CHANGED_EVENT, () => catalogCache.clear());
+
+function fetchCatalog(query?: string): Promise<ShopifyProduct[]> {
+  const key = query ?? "";
+  const hit = catalogCache.get(key);
+  if (hit) return hit;
+  const job = (async () => {
+    const out: ShopifyProduct[] = [];
+    const seen = new Set<string>();
+    let cursor: string | undefined;
+    while (out.length < CATALOG_CAP) {
+      const res = await shopifyService.getProducts(250, cursor, query);
+      for (const p of res.products as ShopifyProduct[]) {
+        if (!seen.has(p.node.id)) { seen.add(p.node.id); out.push(p); }
+      }
+      const next = res.pageInfo?.endCursor;
+      if (!res.pageInfo?.hasNextPage || !next) break;
+      cursor = next;
+    }
+    return out;
+  })();
+  catalogCache.set(key, job);
+  job.catch(() => catalogCache.delete(key));
+  return job;
 }
 
 // Category and search text combine into one Shopify search string (space = AND).
@@ -258,16 +287,14 @@ const SORTS: { key: SortKey; label: string }[] = [
 
 function ShopAllProducts({ category, search, excludeIds }: { category: string; search: string; excludeIds: Set<string> }) {
   const [products, setProducts] = useState<ShopifyProduct[]>([]);
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
+  const [count, setCount] = useState(PAGE_SIZE);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sort, setSort] = useState<SortKey>("all");
   const requestId = useRef(0);
   const colCount = useColumnCount();
 
-  const shown = useMemo(() => {
+  const sorted = useMemo(() => {
     const list = products.filter((p) => !excludeIds.has(p.node.id));
     const amt = (p: ShopifyProduct) => Number(p.node.priceRange?.minVariantPrice?.amount) || 0;
     const made = (p: ShopifyProduct) => (p.node as any).createdAt ? Date.parse((p.node as any).createdAt) || 0 : 0;
@@ -276,6 +303,10 @@ function ShopAllProducts({ category, search, excludeIds }: { category: string; s
     else if (sort === "high") list.sort((a, b) => amt(b) - amt(a));
     return list;
   }, [products, sort, excludeIds]);
+
+  // The whole catalog is shuffled once per load; "Load more" just reveals the next slice.
+  const shown = useMemo(() => sorted.slice(0, count), [sorted, count]);
+  const hasMore = sorted.length > count;
 
   const cols = useMemo(() => {
     const out = Array.from({ length: colCount }, () => ({ h: 0, items: [] as { p: ShopifyProduct; r: number }[] }));
@@ -294,16 +325,13 @@ function ShopAllProducts({ category, search, excludeIds }: { category: string; s
     setLoading(true);
     setError(null);
     try {
-      const res = await shopifyService.getProducts(PAGE_SIZE, undefined, buildQuery(category, search));
+      const all = await fetchCatalog(buildQuery(category, search));
       if (id !== requestId.current) return;
-      const first = res.products as ShopifyProduct[];
-      setProducts(search ? first : shuffle(first));
-      setHasMore(Boolean(res.pageInfo?.hasNextPage));
-      setCursor(res.pageInfo?.endCursor ?? null);
+      setProducts(search ? all : shuffle(all));
+      setCount(PAGE_SIZE);
     } catch (e: any) {
       if (id !== requestId.current) return;
       setProducts([]);
-      setHasMore(false);
       setError(e?.message || "Could not load products");
     } finally {
       if (id === requestId.current) setLoading(false);
@@ -319,27 +347,7 @@ function ShopAllProducts({ category, search, excludeIds }: { category: string; s
     return () => window.removeEventListener(MARKET_CHANGED_EVENT, onMarket);
   }, [loadFirst]);
 
-  const loadMore = async () => {
-    if (!hasMore || !cursor || loadingMore) return;
-    const id = requestId.current;
-    setLoadingMore(true);
-    try {
-      const res = await shopifyService.getProducts(PAGE_SIZE, cursor, buildQuery(category, search));
-      if (id !== requestId.current) return;
-      const fetched = res.products as ShopifyProduct[];
-      const next = search ? fetched : shuffle(fetched);
-      setProducts((prev) => {
-        const seen = new Set(prev.map((p) => p.node.id));
-        return [...prev, ...next.filter((p) => !seen.has(p.node.id))];
-      });
-      setHasMore(Boolean(res.pageInfo?.hasNextPage));
-      setCursor(res.pageInfo?.endCursor ?? null);
-    } catch (e: any) {
-      setError(e?.message || "Could not load more products");
-    } finally {
-      setLoadingMore(false);
-    }
-  };
+  const loadMore = () => setCount((c) => c + PAGE_SIZE);
 
   return (
     <section id={"all-products"} className={"sp-sec"} style={{ paddingTop: 20 }}>
@@ -395,7 +403,7 @@ function ShopAllProducts({ category, search, excludeIds }: { category: string; s
           {error ? (
             <p className={"sp-note"}>
               {error + " "}
-              <button type={"button"} onClick={() => (products.length ? loadMore() : loadFirst())}>{"Try again"}</button>
+              <button type={"button"} onClick={() => loadFirst()}>{"Try again"}</button>
             </p>
           ) : !loading && shown.length === 0 && !hasMore ? (
             <p className={"sp-note"}>{search ? "No products match your search." : category ? "No products found in this category yet." : "No products available right now."}</p>
@@ -403,8 +411,8 @@ function ShopAllProducts({ category, search, excludeIds }: { category: string; s
 
           {!loading && hasMore ? (
             <div className={"sp-more-wrap"}>
-              <button type={"button"} className={"sp-more"} onClick={loadMore} disabled={loadingMore}>
-                {loadingMore ? "Loading…" : "Load more"}
+              <button type={"button"} className={"sp-more"} onClick={loadMore}>
+                {"Load more"}
               </button>
             </div>
           ) : null}
@@ -462,9 +470,9 @@ function useRailProducts() {
       const current = ++request;
       setLoading(true);
       try {
-        const res = await shopifyService.getProducts(24, undefined, undefined);
+        const all = await fetchCatalog(undefined);
         if (!alive || current !== request) return;
-        setItems((res.products as ShopifyProduct[]).map(toRail));
+        setItems(all.map(toRail));
       } catch {
         if (alive && current === request) setItems([]);
       } finally {
