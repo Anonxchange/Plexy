@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { CurrentMarketingPage } from "@/components/marketing/current-marketing-page";
+import { sanitizeImageUrl } from "@/lib/sanitize";
 import {
   ArrowUpDown,
   ChevronDown,
