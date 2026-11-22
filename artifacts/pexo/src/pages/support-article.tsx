@@ -1,4 +1,5 @@
 import { useHead } from "@unhead/react";
+import { buildCanonicalUrl } from "@/lib/site-document";
 import { useRoute, Link } from "wouter";
 import { ChevronRight, Clock, ThumbsUp, ThumbsDown, Home as HomeIcon, ArrowLeft } from '@/lib/icons';
 import { useState } from "react";
@@ -9,12 +10,26 @@ const SupportArticlePage = () => {
   const [, params] = useRoute("/support/article/:slug");
   const slug = params?.slug ?? "";
   const article = supportArticles[slug];
+  const canonical = buildCanonicalUrl(article ? `/support/article/${encodeURIComponent(slug)}` : "/support");
+  const title = article ? `${article.title} | Pexly Help` : "Article not found | Pexly Help";
+  const description =
+    article?.description ||
+    "Read step-by-step Pexly Help Center documentation for gift cards, mobile top-ups, utility bills, and wallet payments.";
 
   const [helpful, setHelpful] = useState<"yes" | "no" | null>(null);
 
   useHead({
-    title: article ? `${article.title} | Pexly Help` : "Article not found | Pexly Help",
-    meta: [{ name: "description", content: article?.description ?? "" }],
+    title,
+    meta: [
+      { name: "description", content: description },
+      { property: "og:title", content: title },
+      { property: "og:description", content: description },
+      { property: "og:url", content: canonical },
+      { name: "twitter:title", content: title },
+      { name: "twitter:description", content: description },
+      ...(!article ? [{ name: "robots", content: "noindex, follow" }] : []),
+    ],
+    link: [{ rel: "canonical", key: "canonical", href: canonical }],
   });
 
   if (!article) {
