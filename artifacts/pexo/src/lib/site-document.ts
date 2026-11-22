@@ -1,7 +1,14 @@
+export const SITE_ORIGIN = "https://www.pexly.app";
+
+export function buildCanonicalUrl(path = "/"): string {
+  const clean = path.startsWith("/") ? path : `/${path}`;
+  return `${SITE_ORIGIN}${clean === "/" ? "/" : clean.replace(/\/+$/, "")}`;
+}
+
 export const siteMetadata = {
   title: "Pexly — Your wallet, your way to pay",
   description:
-    "Pexly is a non-custodial crypto marketplace for people who use their own wallets to pay for digital services.",
+    "Spend crypto directly from your own wallet. Buy gift cards, top up mobile phones, pay utility bills, and shop global products on Pexly.",
   url: "https://www.pexly.app/",
   image: "https://www.pexly.app/hero-bg.webp",
   imageAlt: "Pexly — digital services with your own wallet",
@@ -17,8 +24,7 @@ export const siteStructuredData = {
       name: "Pexly",
       alternateName: "Pexly",
       url: "https://www.pexly.app/",
-      description:
-        "Pexly is a non-custodial crypto marketplace for people who use their own wallets to pay for digital services.",
+      description: siteMetadata.description,
       foundingDate: "2024",
       logo: {
         "@type": "ImageObject",
@@ -35,7 +41,13 @@ export const siteStructuredData = {
         },
       ],
       sameAs: [],
-      knowsAbout: ["Non-custodial wallets", "Digital services", "Cryptocurrency payments"],
+      knowsAbout: [
+        "Non-custodial wallets",
+        "Crypto gift cards",
+        "Mobile top-ups",
+        "Utility bill payments",
+        "Global online shopping",
+      ],
       slogan: "Your wallet, your way to pay",
     },
     {
@@ -43,8 +55,7 @@ export const siteStructuredData = {
       "@id": "https://www.pexly.app/#website",
       url: "https://www.pexly.app/",
       name: "Pexly",
-      description:
-        "A non-custodial crypto marketplace for digital services, mobile top ups, and utility payments.",
+      description: siteMetadata.description,
       publisher: {
         "@id": "https://www.pexly.app/#organization",
       },
@@ -53,9 +64,9 @@ export const siteStructuredData = {
     {
       "@type": "SoftwareApplication",
       "@id": "https://www.pexly.app/#software",
-      name: "Pexly Decentralized Software",
+      name: "Pexly Marketplace",
       description:
-        "Pexly connects digital services with crypto users paying directly from wallets they control. Pexly does not custody user funds.",
+        "Pexly connects digital services and global shopping with crypto users paying directly from wallets they control without custodying user funds.",
       provider: {
         "@id": "https://www.pexly.app/#organization",
       },
@@ -115,8 +126,9 @@ export function createEntryDocument({
     <meta name="color-scheme" content="light" />
     <title>${escapeAttribute(siteMetadata.title)}</title>
     <meta name="description" content="${escapeAttribute(siteMetadata.description)}" />
+    <link rel="canonical" href="${escapeAttribute(siteMetadata.url)}" />
     <meta property="og:title" content="${escapeAttribute(siteMetadata.title)}" />
-    <meta property="og:description" content="A non-custodial crypto marketplace for digital services. Pay with your own wallet." />
+    <meta property="og:description" content="${escapeAttribute(siteMetadata.description)}" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="${escapeAttribute(siteMetadata.url)}" />
     <meta property="og:image" content="${escapeAttribute(siteMetadata.image)}" />
@@ -126,7 +138,7 @@ export function createEntryDocument({
     <meta property="og:site_name" content="${escapeAttribute(siteMetadata.siteName)}" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="${escapeAttribute(siteMetadata.title)}" />
-    <meta name="twitter:description" content="A non-custodial crypto marketplace for digital services. Pay with your own wallet." />
+    <meta name="twitter:description" content="${escapeAttribute(siteMetadata.description)}" />
     <meta name="twitter:image" content="${escapeAttribute(siteMetadata.image)}" />
     <meta name="twitter:image:alt" content="${escapeAttribute(siteMetadata.imageAlt)}" />
     <link rel="icon" type="image/webp" href="${escapeAttribute(assetUrl("favicon.webp"))}" />
