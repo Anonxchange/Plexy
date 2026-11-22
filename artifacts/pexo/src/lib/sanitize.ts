@@ -141,7 +141,9 @@ export function sanitizeCssId(id: string): string {
 
 export function sanitizeCssColor(color: string): string {
   const trimmed = color.trim();
-  const safe = /^(#[0-9a-fA-F]{3,8}|rgb\([^)]{1,50}\)|rgba\([^)]{1,60}\)|hsl\([^)]{1,50}\)|hsla\([^)]{1,60}\)|[a-zA-Z]{2,30})$/.test(trimmed);
+  // Accept literal color tokens and numeric functions only. Reject CSS block delimiters
+  // inside rgb()/hsl() so untrusted chart config cannot break out of the generated rule.
+  const safe = /^(#[0-9a-fA-F]{3,8}|[a-zA-Z]{2,30}|rgba?\(\s*[\d.%\s,]+\)|hsla?\(\s*[\d.%\s,deg]+\))$/.test(trimmed);
   return safe ? trimmed : "";
 }
 
