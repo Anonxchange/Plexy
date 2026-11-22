@@ -523,22 +523,27 @@ export function ProductDetail() {
   const { addToCart, isLoading: isAddingToCart } = useCart();
   const { user } = useAuth();
 
-  const productUrl = `https://www.pexly.app/shop/product/${id}`;
+  const productUrl = `https://www.pexly.app/shop/product/${encodeURIComponent(id || "")}`;
+  const productTitle = product ? `${product.title} | Pexly Shop` : "Product | Pexly Shop";
   const productDescription = product?.description
     ? product.description.replace(/<[^>]+>/g, '').trim().slice(0, 155)
-    : "View this product in the Pexly shop and complete your purchase using cryptocurrency.";
+    : "View this product in the Pexly shop and complete your purchase directly from your crypto wallet with global delivery.";
+  const productImage = product?.images?.[0] || "";
 
   useHead({
-    title: product ? `${product.title} | Pexly Shop` : "Product | Pexly Shop",
+    title: productTitle,
     meta: [
       { name: "description", content: productDescription },
       { property: "og:type", content: "product" },
-      { property: "og:title", content: product ? `${product.title} | Pexly Shop` : "Product | Pexly Shop" },
+      { property: "og:title", content: productTitle },
       { property: "og:description", content: productDescription },
-      { property: "og:image", content: product?.images?.[0] || "" },
+      { property: "og:image", content: productImage },
       { property: "og:url", content: productUrl },
+      { name: "twitter:title", content: productTitle },
+      { name: "twitter:description", content: productDescription },
+      ...(productImage ? [{ name: "twitter:image", content: productImage }] : []),
     ],
-    link: [{ rel: "canonical", href: productUrl }],
+    link: [{ rel: "canonical", key: "canonical", href: productUrl }],
   });
 
   const productSchema = useMemo(

@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useHead } from "@unhead/react";
+import { buildCanonicalUrl } from "@/lib/site-document";
 import { useLocation } from "wouter";
 import { createClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -7,6 +9,17 @@ import { useTheme } from "@/components/theme-provider";
 import { useAuth } from "@/lib/auth-context";
 
 export function VerifyEmail() {
+  useHead({
+    title: "Verify Email | Pexly",
+    meta: [
+      {
+        name: "description",
+        content: "Verify your email address to activate your Pexly account.",
+      },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+    link: [{ rel: "canonical", key: "canonical", href: buildCanonicalUrl("/verify-email") }],
+  });
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const supabase = createClient();

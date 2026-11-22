@@ -1,4 +1,5 @@
 import { useHead } from "@unhead/react";
+import { buildCanonicalUrl } from "@/lib/site-document";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
@@ -43,7 +44,18 @@ function normalizeAppPath(path: string): string {
 }
 
 export function SignIn() {
-  useHead({ title: "Sign In | Pexly", meta: [{ name: "description", content: "Sign in to access your Pexly wallet, swaps, staking, gift cards, and account features." }] });
+  useHead({
+    title: "Sign In | Pexly",
+    meta: [
+      {
+        name: "description",
+        content:
+          "Sign in to access your Pexly wallet, gift cards, mobile top-ups, utility bill payments, and order history.",
+      },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+    link: [{ rel: "canonical", key: "canonical", href: buildCanonicalUrl("/signin") }],
+  });
   const supabaseReady = isSupabaseConfigured();
   const [inputValue, setInputValue] = useState("");
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);

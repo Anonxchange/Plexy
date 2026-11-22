@@ -1,4 +1,6 @@
 import { useHead } from "@unhead/react";
+import { buildCanonicalUrl } from "@/lib/site-document";
+import { useSchema, supportPageSchema } from "@/hooks/use-schema";
 import {
   Menu,
   Search,
@@ -302,10 +304,23 @@ const NewsletterSignup = () => {
 /* ─── Main component ─────────────────────────────────────────────────────── */
 
 const HelpCenter = () => {
+  const canonical = buildCanonicalUrl("/support");
+  const title = "Help Center — Guides & Customer Support | Pexly";
+  const description =
+    "Browse Pexly Help Center guides for gift cards, mobile top-ups, utility bill payments, physical orders, and self-custody wallet connections.";
   useHead({
-    title: "Help Center | Pexly",
-    meta: [{ name: "description", content: "Browse support articles, watch guides, or contact our team for help with your Pexly wallet." }],
+    title,
+    meta: [
+      { name: "description", content: description },
+      { property: "og:title", content: title },
+      { property: "og:description", content: description },
+      { property: "og:url", content: canonical },
+      { name: "twitter:title", content: title },
+      { name: "twitter:description", content: description },
+    ],
+    link: [{ rel: "canonical", key: "canonical", href: canonical }],
   });
+  useSchema(supportPageSchema, "page-schema");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isMenuOpen, setIsMenuOpen] = useState(false);

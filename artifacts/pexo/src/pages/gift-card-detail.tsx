@@ -1,9 +1,9 @@
 import { useHead } from "@unhead/react";
+import { buildCanonicalUrl } from "@/lib/site-document";
 import { useState, useEffect } from "react";
 import { useLocation, useRoute } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import {
-  ArrowLeft,
   Wallet,
   Building2,
   ShoppingCart,
@@ -255,17 +255,6 @@ function RelatedGiftCards({
 }
 
 export function GiftCardDetail() {
-  useHead({
-    title: "Gift Card | Pexly",
-    meta: [{ name: "description", content: "View and purchase this digital gift card with cryptocurrency. Instant delivery after payment." }],
-    // TrustBox script: loads the Trustpilot widget runtime once for the page.
-    script: [
-      {
-        src: "https://widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js",
-        async: true,
-      },
-    ],
-  });
 
   // Trustpilot config comes from env vars — never hardcode a business's
   // review identifiers in source. The widget section simply doesn't render
@@ -290,13 +279,40 @@ export function GiftCardDetail() {
 
   const cardId = params?.id;
   const { data: card, isLoading, error } = useGiftCardProduct(cardId);
+  const cardCanonical = buildCanonicalUrl(cardId ? `/gift-cards/${encodeURIComponent(cardId)}` : "/gift-cards");
+  const cardTitle = card?.productName ? `${card.productName} Gift Card | Pexly` : "Digital Gift Card | Pexly";
+  const cardDescription = card?.productName
+    ? `Buy a ${card.productName} digital gift card using cryptocurrency on Pexly. Pay directly from your own wallet with instant email delivery.`
+    : "Buy digital gift cards directly with cryptocurrency from your own wallet on Pexly and receive instant digital delivery after payment.";
+  const cardImage = sanitizeImageUrl(card?.logoUrls?.[0]) || undefined;
+
+  useHead({
+    title: cardTitle,
+    meta: [
+      { name: "description", content: cardDescription },
+      { property: "og:title", content: cardTitle },
+      { property: "og:description", content: cardDescription },
+      { property: "og:url", content: cardCanonical },
+      ...(cardImage ? [{ property: "og:image", content: cardImage }] : []),
+      { name: "twitter:title", content: cardTitle },
+      { name: "twitter:description", content: cardDescription },
+      ...(cardImage ? [{ name: "twitter:image", content: cardImage }] : []),
+    ],
+    link: [{ rel: "canonical", key: "canonical", href: cardCanonical }],
+    // TrustBox script: loads the Trustpilot widget runtime once for the page.
+    script: [
+      {
+        src: "https://widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js",
+        async: true,
+      },
+    ],
+  });
   const {
     data: relatedProductsData,
     isLoading: relatedProductsLoading,
   } = useGiftCardProducts({ page: 1, size: 200 });
   const { mutate: createOrder, isPending: isOrdering } = useCreateGiftCardOrder();
-  const { items: cartItems, addToCart, isLoading: isAddingToCart } = useGiftCardCart();
-  const cartCount = cartItems.reduce((acc, i) => acc + i.quantity, 0);
+  const { addToCart, isLoading: isAddingToCart } = useGiftCardCart();
   const [cartOpen, setCartOpen] = useState(false);
 
   const [valueTouched, setValueTouched] = useState(false);
@@ -434,30 +450,6 @@ export function GiftCardDetail() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Top nav bar */}
-      <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-border/60">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <button
-            onClick={() => setLocation("/gift-cards")}
-            className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Gift Cards
-          </button>
-          <button
-            onClick={() => setCartOpen(true)}
-            className="relative p-2 hover:bg-secondary rounded-lg transition-colors"
-          >
-            <ShoppingCart className="h-5 w-5" />
-            {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
-                {cartCount}
-              </span>
-            )}
-          </button>
-        </div>
-      </div>
-
       <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] lg:grid-cols-[1fr_420px] gap-6 lg:gap-8">
 

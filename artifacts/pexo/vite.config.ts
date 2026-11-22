@@ -115,7 +115,6 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
-      "@assets": path.resolve(import.meta.dirname, "attached_assets"),
     },
     dedupe: ["react", "react-dom"],
   },
@@ -125,13 +124,5 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
-  },
-  server: {
-    host: "0.0.0.0",
-    port: Number(process.env.PORT) || 3000,
-    allowedHosts: true,
-    hmr: process.env.DISABLE_HMR !== "true",
-    watch: process.env.DISABLE_HMR === "true" ? null : {},
-    fs: { strict: true },
   },
 });

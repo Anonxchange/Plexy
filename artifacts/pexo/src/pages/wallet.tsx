@@ -1,4 +1,5 @@
 import { useHead } from "@unhead/react";
+import { buildCanonicalUrl } from "@/lib/site-document";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { SendCryptoDialog } from "@/components/send-crypto-dialog";
@@ -17,7 +18,15 @@ import { AlertCircle, CheckCircle2, ShieldCheck, Globe } from "@/lib/icons";
 export default function WalletPage() {
   useHead({
     title: "My Wallet | Pexly",
-    meta: [{ name: "description", content: "Manage your self-custodied crypto assets with Pexly." }],
+    meta: [
+      {
+        name: "description",
+        content:
+          "Manage your connected self-custody wallet balances, recent activity, and crypto transfers directly on Pexly.",
+      },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+    link: [{ rel: "canonical", key: "canonical", href: buildCanonicalUrl("/wallet") }],
   });
   const [, setLocation] = useLocation();
   const wallet = useEvmWallet();

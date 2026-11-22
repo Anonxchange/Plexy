@@ -1,4 +1,7 @@
 import { useState, useMemo, useEffect, type ReactNode } from "react";
+import { useHead } from "@unhead/react";
+import { buildCanonicalUrl } from "@/lib/site-document";
+import { useSchema, utilityPageSchema } from "@/hooks/use-schema";
 import { useLocation } from "wouter";
 import { ChevronDown, ArrowRight, Search, Zap, Bot, Check, Receipt, Filter, ShoppingCart, Gift, Star, Shield, Mail, UserCheck, ChevronUp, Share2, Heart } from '@/lib/icons';
 import { Skeleton } from "@/components/ui/skeleton";
@@ -390,6 +393,23 @@ const ProviderCard = ({
 };
 
 const UtilityBill = () => {
+  const canonical = buildCanonicalUrl("/utility");
+  const title = "Pay Utility Bills with Crypto — Electricity, Water & TV | Pexly";
+  const description =
+    "Pay electricity, water, internet, and TV utility bills directly using cryptocurrency from your self-custody wallet in 100+ countries on Pexly.";
+  useHead({
+    title,
+    meta: [
+      { name: "description", content: description },
+      { property: "og:title", content: title },
+      { property: "og:description", content: description },
+      { property: "og:url", content: canonical },
+      { name: "twitter:title", content: title },
+      { name: "twitter:description", content: description },
+    ],
+    link: [{ rel: "canonical", key: "canonical", href: canonical }],
+  });
+  useSchema(utilityPageSchema, "page-schema");
   const [, setLocation] = useLocation();
   useEffect(() => { localStorage.removeItem("pexly_pending_order"); }, []);
 

@@ -1,4 +1,5 @@
 import { useHead } from "@unhead/react";
+import { buildCanonicalUrl } from "@/lib/site-document";
 import {
   Search,
   Globe,
@@ -97,15 +98,21 @@ const ACCEPTED_TYPES = [
 ];
 
 const ContactPage = () => {
+  const seoCanonical = buildCanonicalUrl("/contact");
+  const seoTitle = "Contact Us — Support & Inquiries | Pexly";
+  const seoDescription =
+    "Reach the Pexly support team for help with gift cards, mobile top-ups, utility bill payments, physical orders, or your wallet.";
   useHead({
-    title: "Contact Us | Pexly",
+    title: seoTitle,
     meta: [
-      {
-        name: "description",
-        content:
-          "Reach the Pexly support team for help with your account or any platform questions.",
-      },
+      { name: "description", content: seoDescription },
+      { property: "og:title", content: seoTitle },
+      { property: "og:description", content: seoDescription },
+      { property: "og:url", content: seoCanonical },
+      { name: "twitter:title", content: seoTitle },
+      { name: "twitter:description", content: seoDescription },
     ],
+    link: [{ rel: "canonical", key: "canonical", href: seoCanonical }],
   });
 
   const [searchQuery, setSearchQuery] = useState("");

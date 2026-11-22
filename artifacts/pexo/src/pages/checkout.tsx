@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import { useHead } from "@unhead/react";
+import { buildCanonicalUrl } from "@/lib/site-document";
 import { PexlyLogo } from "@/components/pexly-logo";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
@@ -378,6 +380,17 @@ function KoraPayTrigger({
 }
 
 export function Checkout() {
+  useHead({
+    title: "Checkout | Pexly",
+    meta: [
+      {
+        name: "description",
+        content: "Complete your Pexly order securely using cryptocurrency directly from your wallet.",
+      },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+    link: [{ rel: "canonical", key: "canonical", href: buildCanonicalUrl("/checkout") }],
+  });
   const { user, loading } = useAuth();
   const [, setLocation] = useLocation();
   const { clearCart, removePurchasedItems } = useGiftCardCart();

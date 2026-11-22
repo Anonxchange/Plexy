@@ -1,4 +1,5 @@
 import { useHead } from "@unhead/react";
+import { buildCanonicalUrl } from "@/lib/site-document";
 import { useRoute, Link } from "wouter";
 import { ChevronRight, Home as HomeIcon, Clock, ArrowLeft } from '@/lib/icons';
 import { FloatingChatButton } from "@/components/floating-chat-button";
@@ -8,10 +9,24 @@ const SupportCategoryPage = () => {
   const [, params] = useRoute("/support/:category");
   const categorySlug = params?.category ?? "";
   const category = supportCategories[categorySlug];
+  const canonical = buildCanonicalUrl(category ? `/support/${encodeURIComponent(categorySlug)}` : "/support");
+  const title = category ? `${category.title} | Pexly Help` : "Category not found | Pexly Help";
+  const description =
+    category?.description ||
+    "Browse Pexly Help Center categories and step-by-step guides for gift cards, top-ups, orders, and wallet payments.";
 
   useHead({
-    title: category ? `${category.title} | Pexly Help` : "Category not found | Pexly Help",
-    meta: [{ name: "description", content: category?.description ?? "" }],
+    title,
+    meta: [
+      { name: "description", content: description },
+      { property: "og:title", content: title },
+      { property: "og:description", content: description },
+      { property: "og:url", content: canonical },
+      { name: "twitter:title", content: title },
+      { name: "twitter:description", content: description },
+      ...(!category ? [{ name: "robots", content: "noindex, follow" }] : []),
+    ],
+    link: [{ rel: "canonical", key: "canonical", href: canonical }],
   });
 
   const articles = (category?.articleSlugs ?? [])
