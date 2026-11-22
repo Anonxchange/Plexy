@@ -45,8 +45,6 @@ export function useShippingRates() {
         throw new Error(data?.error || data?.message);
       }
 
-      console.log('CJ FREIGHT RESPONSE:', data);
-
       // 🔥 FIX: CJ response is not always data[]
       const raw = data?.data;
 
