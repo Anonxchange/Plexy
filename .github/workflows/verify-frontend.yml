@@ -23,6 +23,8 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
+      - name: Test bigint-buffer security replacement
+        run: node --test vendor/bigint-buffer/test.js
       - name: Typecheck
         run: pnpm run typecheck
       - name: Production build
