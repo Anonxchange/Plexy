@@ -2,7 +2,8 @@
 import type { ReloadlyProduct } from "@/hooks/use-reloadly";
 import type { AirtimeOperator } from "@/hooks/use-airtime-operators";
 
-export const PRODUCT_PATH = (id: number) => "/gift-cards/" + id; // change to your product route
+export const PRODUCT_PATH = (id: number) =>
+  Number.isSafeInteger(id) && id > 0 ? "/gift-cards/" + id : "/gift-cards/all";
 export const TOPUP_PATH = "/mobile-top-up"; // change to your top-up route
 
 export type CardTile = {
