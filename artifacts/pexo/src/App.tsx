@@ -40,7 +40,6 @@ const WalletToolsRouteProvider = lazy(() =>
   import("@/lib/evm-wallet-provider").then(module => ({ default: module.WalletToolsRouteProvider })),
 );
 const MobileTopup = lazy(() => import("@/pages/mobile-topup"));
-const UtilityBill = lazy(() => import("@/pages/utility-bill"));
 const Support = lazy(() => import("@/pages/support"));
 const SupportArticle = lazy(() => import("@/pages/support-article"));
 const SupportCategory = lazy(() => import("@/pages/support-category"));
@@ -247,10 +246,6 @@ function AppRoutes() {
       <Route path="/mobile-topup">{() => <LazyRoute component={MobileTopup} />}</Route>
       <Route path="/wallet/mobile-topup">{() => <Redirect to="/mobile-topup" />}</Route>
       <Route path="/mobile-top-up">{() => <Redirect to="/mobile-topup" />}</Route>
-      <Route path="/utility">{() => <LazyRoute component={UtilityBill} />}</Route>
-      <Route path="/wallet/utility-bill">{() => <LazyRoute component={UtilityBill} />}</Route>
-      <Route path="/wallet/utility">{() => <Redirect to="/utility" />}</Route>
-      <Route path="/utility-bill">{() => <Redirect to="/utility" />}</Route>
       <Route path="/checkout">{() => <LazyRoute component={Checkout} />}</Route>
       <Route path="/checkout/pay/crypto">{() => <LazyRoute component={CheckoutPayCrypto} />}</Route>
       <Route><Redirect to="/" /></Route>
