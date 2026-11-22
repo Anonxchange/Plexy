@@ -16,7 +16,6 @@ const navItems = [
   { label: "Gift Cards", href: "/gift-cards", description: "Browse cards for everyday favorites" },
   { label: "Shop", href: "/shop", description: "Discover physical products" },
   { label: "Mobile top up", href: "/wallet/mobile-topup", description: "Add credit to a mobile number" },
-  { label: "Utility", href: "/utility", description: "Pay household and service bills" },
   { label: "About", href: "/about", description: "Learn about Pexly" },
   { label: "Support", href: "/support", description: "Help articles and answers" },
   { label: "Contact", href: "/contact", description: "Get in touch with our team" },
