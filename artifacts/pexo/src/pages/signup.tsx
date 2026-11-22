@@ -158,7 +158,7 @@ export function SignUp() {
       {
         name: "description",
         content:
-          "Create a free Pexly account to buy gift cards, top up mobile phones, pay utility bills, and shop worldwide using your own crypto wallet.",
+          "Create a free Pexly account to buy gift cards, top up mobile phones, and shop worldwide using your own crypto wallet.",
       },
       { name: "robots", content: "noindex, nofollow" },
     ],
