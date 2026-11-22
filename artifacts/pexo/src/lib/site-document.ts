@@ -8,7 +8,7 @@ export function buildCanonicalUrl(path = "/"): string {
 export const siteMetadata = {
   title: "Pexly — Your wallet, your way to pay",
   description:
-    "Spend crypto directly from your own wallet. Buy gift cards, top up mobile phones, pay utility bills, and shop global products on Pexly.",
+    "Spend crypto directly from your own wallet. Buy gift cards, top up mobile phones, and shop global products on Pexly.",
   url: "https://www.pexly.app/",
   image: "https://www.pexly.app/hero-bg.webp",
   imageAlt: "Pexly — digital services with your own wallet",
@@ -45,7 +45,6 @@ export const siteStructuredData = {
         "Non-custodial wallets",
         "Crypto gift cards",
         "Mobile top-ups",
-        "Utility bill payments",
         "Global online shopping",
       ],
       slogan: "Your wallet, your way to pay",
