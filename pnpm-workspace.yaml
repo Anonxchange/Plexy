@@ -70,6 +70,7 @@ overrides:
   fast-uri: 3.1.9
   postcss-selector-parser: 6.1.5
   uuid: 11.1.1
+  bigint-buffer: file:./vendor/bigint-buffer
   viem: 2.58.4
   "proxy-addr@^2": "^2.0.8"
   "source-map-js@^1": "^1.2.2"
