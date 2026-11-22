@@ -1,4 +1,5 @@
 import { useHead } from "@unhead/react";
+import { buildCanonicalUrl } from "@/lib/site-document";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
@@ -151,7 +152,18 @@ const countries = [
 
 export function SignUp() {
   const reownWalletAuth = useReownWalletAuth();
-  useHead({ title: "Create Account | Pexly", meta: [{ name: "description", content: "Create a free Pexly account and get access to crypto swaps, staking, gift cards, and more." }] });
+  useHead({
+    title: "Create Account | Pexly",
+    meta: [
+      {
+        name: "description",
+        content:
+          "Create a free Pexly account to buy gift cards, top up mobile phones, pay utility bills, and shop worldwide using your own crypto wallet.",
+      },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+    link: [{ rel: "canonical", key: "canonical", href: buildCanonicalUrl("/signup") }],
+  });
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [country, setCountry] = useState("");
