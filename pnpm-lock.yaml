@@ -19,8 +19,8 @@ catalogs:
       specifier: ^4.21.0
       version: 4.23.15
     zod:
-      specifier: ^3.25.76
-      version: 3.25.76
+      specifier: ^4.6.6
+      version: 4.6.7
 
 overrides:
   proxy-addr@^2: ^2.0.8
@@ -219,19 +219,19 @@ importers:
         version: 1.4.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@reown/appkit':
         specifier: 2.0.0
-        version: 2.0.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
+        version: 2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)
       '@reown/appkit-adapter-solana':
         specifier: 2.0.0
-        version: 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
+        version: 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)
       '@reown/appkit-adapter-tron':
         specifier: 2.0.0
-        version: 2.0.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
+        version: 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)
       '@reown/appkit-adapter-wagmi':
         specifier: 2.0.0
-        version: 2.0.0(722b1c20134f4566d37336fb8e120f93)
+        version: 2.0.0(529167076d8d534dfe2950b4589f8eea)
       '@solana/web3.js':
         specifier: 1.98.4
-        version: 1.98.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+        version: 1.98.4(bufferutil@4.2.0)(typescript@5.9.3)
       '@supabase/ssr':
         specifier: ^0.12.7
         version: 0.12.7(@supabase/supabase-js@2.119.2)
@@ -246,7 +246,7 @@ importers:
         version: 5.108.2(@types/react@19.3.0)(react@19.3.1)
       '@tronweb3/tronwallet-adapter-tronlink':
         specifier: 1.1.13
-        version: 1.1.13(bufferutil@4.2.0)(debug@4.4.3)(utf-8-validate@6.0.6)
+        version: 1.1.13(bufferutil@4.2.0)(debug@4.4.3)
       '@unhead/react':
         specifier: ^3.4.3
         version: 3.4.3(@oxc-project/types@0.156.0)(esbuild@0.28.2)(lightningcss@1.33.0)(react@19.3.1)(rolldown@1.2.19)(vite@8.3.8(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
@@ -327,7 +327,7 @@ importers:
         version: 3.7.1
       tronweb:
         specifier: ^6.5.2
-        version: 6.5.2(bufferutil@4.2.0)(debug@4.4.3)(utf-8-validate@6.0.6)
+        version: 6.5.2(bufferutil@4.2.0)(debug@4.4.3)
       tw-animate-css:
         specifier: ^1.4.0
         version: 1.4.0
@@ -336,10 +336,10 @@ importers:
         version: 1.1.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       viem:
         specifier: ^2.58.4
-        version: 2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+        version: 2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
       wagmi:
         specifier: ^3.7.11
-        version: 3.7.11(@coinbase/wallet-sdk@4.3.6(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5))(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5))(@tanstack/query-core@5.108.2)(@tanstack/react-query@5.108.2(@types/react@19.3.0)(react@19.3.1))(@types/react@19.3.0)(react@19.3.1)(typescript@5.9.3)(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5))
+        version: 3.7.11(@coinbase/wallet-sdk@4.3.6(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5))(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5))(@tanstack/query-core@5.108.2)(@tanstack/react-query@5.108.2(@types/react@19.3.0)(react@19.3.1))(@types/react@19.3.0)(react@19.3.1)(typescript@5.9.3)(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5))
       wouter:
         specifier: ^3.13.0
         version: 3.13.0(react@19.3.1)
@@ -385,7 +385,7 @@ importers:
     dependencies:
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.6.7
 
   lib/db:
     dependencies:
@@ -394,13 +394,13 @@ importers:
         version: 0.45.4(@types/pg@8.23.1)(pg@8.23.1)
       drizzle-zod:
         specifier: ^0.8.3
-        version: 0.8.3(drizzle-orm@0.45.4(@types/pg@8.23.1)(pg@8.23.1))(zod@3.25.76)
+        version: 0.8.3(drizzle-orm@0.45.4(@types/pg@8.23.1)(pg@8.23.1))(zod@4.6.7)
       pg:
         specifier: ^8.23.1
         version: 8.23.1
       zod:
         specifier: 'catalog:'
-        version: 3.25.76
+        version: 4.6.7
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -4631,17 +4631,6 @@ packages:
   victory-vendor@36.9.2:
     resolution: {integrity: sha512-PnpQQMuxlwYdocC8fIJqVXvkeViHYzotI+NJrCuav0ZYFoq912ZHBk3mCeuj+5/VpodOjPe1z0Fk2ihgzlXqjQ==}
 
-  viem@2.57.20:
-    resolution: {integrity: sha512-LSvREzKT7xFXpmxW2YFJ/OtcZRkSGLp5zywSgadBf0qQCeqh2+FxHHWyrS2zEG7ZfBWQQvk8HI1i4HPzSMD14g==}
-    peerDependencies:
-      mppx: '>=0.17.0'
-      typescript: '>=5.0.4'
-    peerDependenciesMeta:
-      mppx:
-        optional: true
-      typescript:
-        optional: true
-
   viem@2.58.4:
     resolution: {integrity: sha512-zeYi2PliKbmJVbIvudHZrYJLh1XMXci6GBJznQLjhhGPGl9L7Hp/LmelpXhOM9VvlXwnvfW7/2PCgpjnc2j8MQ==}
     peerDependencies:
@@ -4802,6 +4791,9 @@ packages:
   zod@4.6.5:
     resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
 
+  zod@4.6.7:
+    resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
+
   zustand@5.0.0:
     resolution: {integrity: sha512-LE+VcmbartOPM+auOjCCLQOsQ05zUTp8RkgwRzefUk+2jISdMMFnxvyTjA4YNWr5ZGXYbVsEMZosttuxUBkojQ==}
     engines: {node: '>=12.20.0'}
@@ -4844,16 +4836,16 @@ snapshots:
 
   '@babel/runtime@7.29.10': {}
 
-  '@base-org/account@2.4.0(@types/react@19.3.0)(@x402/core@2.27.0)(@x402/evm@2.27.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@x402/extensions@2.27.0(bufferutil@4.2.0)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(typescript@5.9.3)(utf-8-validate@6.0.6))(@x402/svm@2.27.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)))(bufferutil@4.2.0)(debug@4.4.3)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)':
+  '@base-org/account@2.4.0(@types/react@19.3.0)(@x402/core@2.27.0)(@x402/evm@2.27.0(bufferutil@4.2.0)(typescript@5.9.3))(@x402/extensions@2.27.0(bufferutil@4.2.0)(ethers@6.17.0(bufferutil@4.2.0))(typescript@5.9.3))(@x402/svm@2.27.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)))(bufferutil@4.2.0)(debug@4.4.3)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)':
     dependencies:
-      '@coinbase/cdp-sdk': 1.62.0(@x402/core@2.27.0)(@x402/evm@2.27.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@x402/extensions@2.27.0(bufferutil@4.2.0)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(typescript@5.9.3)(utf-8-validate@6.0.6))(@x402/svm@2.27.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)))(bufferutil@4.2.0)(debug@4.4.3)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@coinbase/cdp-sdk': 1.62.0(@x402/core@2.27.0)(@x402/evm@2.27.0(bufferutil@4.2.0)(typescript@5.9.3))(@x402/extensions@2.27.0(bufferutil@4.2.0)(ethers@6.17.0(bufferutil@4.2.0))(typescript@5.9.3))(@x402/svm@2.27.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)))(bufferutil@4.2.0)(debug@4.4.3)(typescript@5.9.3)
       '@noble/hashes': 1.4.0
       clsx: 1.2.1
       eventemitter3: 5.0.1
       idb-keyval: 6.2.1
       ox: 0.6.9(typescript@5.9.3)(zod@4.6.5)
       preact: 10.24.2
-      viem: 2.57.20(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      viem: 2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
       zustand: 5.0.3(@types/react@19.3.0)(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1))
     transitivePeerDependencies:
       - '@types/react'
@@ -4874,41 +4866,11 @@ snapshots:
       - zod
     optional: true
 
-  '@base-org/account@2.4.0(@types/react@19.3.0)(@x402/core@2.27.0)(@x402/evm@2.27.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@x402/extensions@2.27.0(bufferutil@4.2.0)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(typescript@5.9.3)(utf-8-validate@6.0.6))(@x402/svm@2.27.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)))(bufferutil@4.2.0)(debug@4.4.3)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)':
+  '@coinbase/cdp-sdk@1.62.0(@x402/core@2.27.0)(@x402/evm@2.27.0(bufferutil@4.2.0)(typescript@5.9.3))(@x402/extensions@2.27.0(bufferutil@4.2.0)(ethers@6.17.0(bufferutil@4.2.0))(typescript@5.9.3))(@x402/svm@2.27.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)))(bufferutil@4.2.0)(debug@4.4.3)(typescript@5.9.3)':
     dependencies:
-      '@coinbase/cdp-sdk': 1.62.0(@x402/core@2.27.0)(@x402/evm@2.27.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@x402/extensions@2.27.0(bufferutil@4.2.0)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(typescript@5.9.3)(utf-8-validate@6.0.6))(@x402/svm@2.27.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)))(bufferutil@4.2.0)(debug@4.4.3)(typescript@5.9.3)(utf-8-validate@6.0.6)
-      '@noble/hashes': 1.4.0
-      clsx: 1.2.1
-      eventemitter3: 5.0.1
-      idb-keyval: 6.2.1
-      ox: 0.6.9(typescript@5.9.3)(zod@4.6.5)
-      preact: 10.24.2
-      viem: 2.57.20(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      zustand: 5.0.3(@types/react@19.3.0)(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1))
-    transitivePeerDependencies:
-      - '@types/react'
-      - '@x402/core'
-      - '@x402/evm'
-      - '@x402/extensions'
-      - '@x402/svm'
-      - bufferutil
-      - debug
-      - fastestsmallesttextencoderdecoder
-      - immer
-      - mppx
-      - react
-      - supports-color
-      - typescript
-      - use-sync-external-store
-      - utf-8-validate
-      - zod
-    optional: true
-
-  '@coinbase/cdp-sdk@1.62.0(@x402/core@2.27.0)(@x402/evm@2.27.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@x402/extensions@2.27.0(bufferutil@4.2.0)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(typescript@5.9.3)(utf-8-validate@6.0.6))(@x402/svm@2.27.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)))(bufferutil@4.2.0)(debug@4.4.3)(typescript@5.9.3)(utf-8-validate@6.0.6)':
-    dependencies:
-      '@solana-program/system': 0.16.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
-      '@solana-program/token': 0.16.1(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
-      '@solana/kit': 8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana-program/system': 0.16.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3))
+      '@solana-program/token': 0.16.1(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3))
+      '@solana/kit': 8.6.0(bufferutil@4.2.0)(typescript@5.9.3)
       abitype: 1.0.6(typescript@5.9.3)(zod@3.25.76)
       axios: 1.21.1(debug@4.4.3)
       axios-retry: 4.5.0(axios@1.21.1(debug@4.4.3))
@@ -4916,13 +4878,13 @@ snapshots:
       jose: 6.2.17
       md5: 2.3.0
       uncrypto: 0.1.3
-      viem: 2.57.20(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.25.76)
+      viem: 2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@3.25.76)
       zod: 3.25.76
     optionalDependencies:
       '@x402/core': 2.27.0
-      '@x402/evm': 2.27.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
-      '@x402/extensions': 2.27.0(bufferutil@4.2.0)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(typescript@5.9.3)(utf-8-validate@6.0.6)
-      '@x402/svm': 2.27.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
+      '@x402/evm': 2.27.0(bufferutil@4.2.0)(typescript@5.9.3)
+      '@x402/extensions': 2.27.0(bufferutil@4.2.0)(ethers@6.17.0(bufferutil@4.2.0))(typescript@5.9.3)
+      '@x402/svm': 2.27.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))
     transitivePeerDependencies:
       - bufferutil
       - debug
@@ -4933,36 +4895,7 @@ snapshots:
       - utf-8-validate
     optional: true
 
-  '@coinbase/cdp-sdk@1.62.0(@x402/core@2.27.0)(@x402/evm@2.27.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@x402/extensions@2.27.0(bufferutil@4.2.0)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(typescript@5.9.3)(utf-8-validate@6.0.6))(@x402/svm@2.27.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)))(bufferutil@4.2.0)(debug@4.4.3)(typescript@5.9.3)(utf-8-validate@6.0.6)':
-    dependencies:
-      '@solana-program/system': 0.16.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
-      '@solana-program/token': 0.16.1(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
-      '@solana/kit': 8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
-      abitype: 1.0.6(typescript@5.9.3)(zod@3.25.76)
-      axios: 1.21.1(debug@4.4.3)
-      axios-retry: 4.5.0(axios@1.21.1(debug@4.4.3))
-      bs58: 6.0.0
-      jose: 6.2.17
-      md5: 2.3.0
-      uncrypto: 0.1.3
-      viem: 2.57.20(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.25.76)
-      zod: 3.25.76
-    optionalDependencies:
-      '@x402/core': 2.27.0
-      '@x402/evm': 2.27.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
-      '@x402/extensions': 2.27.0(bufferutil@4.2.0)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(typescript@5.9.3)(utf-8-validate@6.0.6)
-      '@x402/svm': 2.27.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
-    transitivePeerDependencies:
-      - bufferutil
-      - debug
-      - fastestsmallesttextencoderdecoder
-      - mppx
-      - supports-color
-      - typescript
-      - utf-8-validate
-    optional: true
-
-  '@coinbase/wallet-sdk@4.3.6(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)':
+  '@coinbase/wallet-sdk@4.3.6(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)':
     dependencies:
       '@noble/hashes': 1.4.0
       clsx: 1.2.1
@@ -4970,7 +4903,7 @@ snapshots:
       idb-keyval: 6.2.1
       ox: 0.6.9(typescript@5.9.3)(zod@4.6.5)
       preact: 10.24.2
-      viem: 2.57.20(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      viem: 2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
       zustand: 5.0.3(@types/react@19.3.0)(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1))
     transitivePeerDependencies:
       - '@types/react'
@@ -5900,28 +5833,28 @@ snapshots:
 
   '@radix-ui/rect@1.1.3': {}
 
-  '@reown/appkit-adapter-solana@2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)':
+  '@reown/appkit-adapter-solana@2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)':
     dependencies:
-      '@reown/appkit': 2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-common': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-controllers': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      '@reown/appkit': 2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)
+      '@reown/appkit-common': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
+      '@reown/appkit-controllers': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(zod@4.6.5)
       '@reown/appkit-polyfills': 2.0.0
-      '@reown/appkit-utils': 2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-wallet': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
-      '@solana-program/compute-budget': 0.19.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
-      '@solana-program/token': 0.17.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
+      '@reown/appkit-utils': 2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)
+      '@reown/appkit-wallet': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)
+      '@solana-program/compute-budget': 0.19.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))
+      '@solana-program/token': 0.17.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))
       '@solana/compat': 8.3.0(typescript@5.9.3)
-      '@solana/kit': 8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
-      '@solana/spl-token': 0.4.14(@solana/web3.js@1.98.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
-      '@solana/wallet-adapter-base': 0.9.27(@solana/web3.js@1.98.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
+      '@solana/kit': 8.3.0(bufferutil@4.2.0)(typescript@5.9.3)
+      '@solana/spl-token': 0.4.14(@solana/web3.js@1.98.4(bufferutil@4.2.0)(typescript@5.9.3))(bufferutil@4.2.0)(typescript@5.9.3)
+      '@solana/wallet-adapter-base': 0.9.27(@solana/web3.js@1.98.4(bufferutil@4.2.0)(typescript@5.9.3))
       '@solana/wallet-standard-features': 1.3.0
       '@solana/wallet-standard-util': 1.1.2
-      '@solana/web3.js': 1.98.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/web3.js': 1.98.4(bufferutil@4.2.0)(typescript@5.9.3)
       '@wallet-standard/app': 1.1.0
       '@wallet-standard/base': 1.1.0
       '@wallet-standard/features': 1.1.0
       '@walletconnect/types': 2.23.7
-      '@walletconnect/universal-provider': 2.23.7(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      '@walletconnect/universal-provider': 2.23.7(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
       valtio: 2.1.7(@types/react@19.3.0)(react@19.3.1)
     optionalDependencies:
       borsh: 0.7.0
@@ -5962,16 +5895,16 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@reown/appkit-adapter-tron@2.0.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)':
+  '@reown/appkit-adapter-tron@2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)':
     dependencies:
-      '@reown/appkit': 2.0.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-common': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-controllers': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      '@reown/appkit': 2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)
+      '@reown/appkit-common': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
+      '@reown/appkit-controllers': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(zod@4.6.5)
       '@reown/appkit-polyfills': 2.0.0
-      '@reown/appkit-utils': 2.0.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@tronweb3/tronwallet-abstract-adapter': 1.1.10(bufferutil@4.2.0)(debug@4.4.3)(utf-8-validate@6.0.6)
-      '@tronweb3/tronwallet-adapter-tronlink': 1.1.13(bufferutil@4.2.0)(debug@4.4.3)(utf-8-validate@6.0.6)
-      '@walletconnect/universal-provider': 2.23.7(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      '@reown/appkit-utils': 2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)
+      '@tronweb3/tronwallet-abstract-adapter': 1.1.10(bufferutil@4.2.0)(debug@4.4.3)
+      '@tronweb3/tronwallet-adapter-tronlink': 1.1.13(bufferutil@4.2.0)(debug@4.4.3)
+      '@walletconnect/universal-provider': 2.23.7(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
     transitivePeerDependencies:
       - '@azure/app-configuration'
       - '@azure/cosmos'
@@ -6009,21 +5942,21 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@reown/appkit-adapter-wagmi@2.0.0(722b1c20134f4566d37336fb8e120f93)':
+  '@reown/appkit-adapter-wagmi@2.0.0(529167076d8d534dfe2950b4589f8eea)':
     dependencies:
-      '@reown/appkit': 2.0.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-common': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-controllers': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      '@reown/appkit': 2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)
+      '@reown/appkit-common': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
+      '@reown/appkit-controllers': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(zod@4.6.5)
       '@reown/appkit-polyfills': 2.0.0
-      '@reown/appkit-scaffold-ui': 2.0.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-utils': 2.0.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-wallet': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
-      '@wagmi/connectors': 8.2.4(@coinbase/wallet-sdk@4.3.6(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5))(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5))(@wagmi/core@3.6.9(@tanstack/query-core@5.108.2)(@types/react@19.3.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)))(typescript@5.9.3)(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5))
-      '@wagmi/core': 3.6.9(@tanstack/query-core@5.108.2)(@types/react@19.3.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5))
-      '@walletconnect/universal-provider': 2.23.7(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      '@reown/appkit-scaffold-ui': 2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)
+      '@reown/appkit-utils': 2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)
+      '@reown/appkit-wallet': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)
+      '@wagmi/connectors': 8.2.4(@coinbase/wallet-sdk@4.3.6(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5))(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5))(@wagmi/core@3.6.9(@tanstack/query-core@5.108.2)(@types/react@19.3.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)))(typescript@5.9.3)(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5))
+      '@wagmi/core': 3.6.9(@tanstack/query-core@5.108.2)(@types/react@19.3.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5))
+      '@walletconnect/universal-provider': 2.23.7(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
       valtio: 2.1.7(@types/react@19.3.0)(react@19.3.1)
-      viem: 2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      wagmi: 3.7.11(@coinbase/wallet-sdk@4.3.6(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5))(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5))(@tanstack/query-core@5.108.2)(@tanstack/react-query@5.108.2(@types/react@19.3.0)(react@19.3.1))(@types/react@19.3.0)(react@19.3.1)(typescript@5.9.3)(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5))
+      viem: 2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
+      wagmi: 3.7.11(@coinbase/wallet-sdk@4.3.6(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5))(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5))(@tanstack/query-core@5.108.2)(@tanstack/react-query@5.108.2(@types/react@19.3.0)(react@19.3.1))(@types/react@19.3.0)(react@19.3.1)(typescript@5.9.3)(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5))
     transitivePeerDependencies:
       - '@azure/app-configuration'
       - '@azure/cosmos'
@@ -6061,11 +5994,11 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@reown/appkit-common@2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.22.4)':
+  '@reown/appkit-common@2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(zod@3.22.4)':
     dependencies:
       big.js: 6.2.2
       dayjs: 1.11.13
-      viem: 2.57.20(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.22.4)
+      viem: 2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@3.22.4)
     transitivePeerDependencies:
       - bufferutil
       - mppx
@@ -6073,11 +6006,11 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@reown/appkit-common@2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)':
+  '@reown/appkit-common@2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)':
     dependencies:
       big.js: 6.2.2
       dayjs: 1.11.13
-      viem: 2.57.20(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      viem: 2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
     transitivePeerDependencies:
       - bufferutil
       - mppx
@@ -6085,13 +6018,13 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@reown/appkit-controllers@2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)':
+  '@reown/appkit-controllers@2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(zod@4.6.5)':
     dependencies:
-      '@reown/appkit-common': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-wallet': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
-      '@walletconnect/universal-provider': 2.23.7(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      '@reown/appkit-common': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
+      '@reown/appkit-wallet': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)
+      '@walletconnect/universal-provider': 2.23.7(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
       valtio: 2.1.7(@types/react@19.3.0)(react@19.3.1)
-      viem: 2.57.20(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      viem: 2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
     transitivePeerDependencies:
       - '@azure/app-configuration'
       - '@azure/cosmos'
@@ -6121,57 +6054,12 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@reown/appkit-pay@2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)':
+  '@reown/appkit-pay@2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)':
     dependencies:
-      '@reown/appkit-common': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-controllers': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-ui': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-utils': 2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
-      lit: 3.3.0
-      valtio: 2.1.7(@types/react@19.3.0)(react@19.3.1)
-    transitivePeerDependencies:
-      - '@azure/app-configuration'
-      - '@azure/cosmos'
-      - '@azure/data-tables'
-      - '@azure/identity'
-      - '@azure/keyvault-secrets'
-      - '@azure/storage-blob'
-      - '@capacitor/preferences'
-      - '@deno/kv'
-      - '@netlify/blobs'
-      - '@planetscale/database'
-      - '@react-native-async-storage/async-storage'
-      - '@solana/kit'
-      - '@solana/sysvars'
-      - '@types/react'
-      - '@upstash/redis'
-      - '@vercel/blob'
-      - '@vercel/functions'
-      - '@vercel/kv'
-      - aws4fetch
-      - bufferutil
-      - db0
-      - debug
-      - encoding
-      - ethers
-      - fastestsmallesttextencoderdecoder
-      - immer
-      - ioredis
-      - mppx
-      - react
-      - supports-color
-      - typescript
-      - uploadthing
-      - use-sync-external-store
-      - utf-8-validate
-      - zod
-
-  '@reown/appkit-pay@2.0.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)':
-    dependencies:
-      '@reown/appkit-common': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-controllers': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-ui': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-utils': 2.0.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
+      '@reown/appkit-common': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
+      '@reown/appkit-controllers': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(zod@4.6.5)
+      '@reown/appkit-ui': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(zod@4.6.5)
+      '@reown/appkit-utils': 2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)
       lit: 3.3.0
       valtio: 2.1.7(@types/react@19.3.0)(react@19.3.1)
     transitivePeerDependencies:
@@ -6215,14 +6103,14 @@ snapshots:
     dependencies:
       buffer: 6.0.3
 
-  '@reown/appkit-scaffold-ui@2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)':
+  '@reown/appkit-scaffold-ui@2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)':
     dependencies:
-      '@reown/appkit-common': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-controllers': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-pay': 2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-ui': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-utils': 2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-wallet': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@reown/appkit-common': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
+      '@reown/appkit-controllers': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(zod@4.6.5)
+      '@reown/appkit-pay': 2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)
+      '@reown/appkit-ui': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(zod@4.6.5)
+      '@reown/appkit-utils': 2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)
+      '@reown/appkit-wallet': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)
       lit: 3.3.0
     transitivePeerDependencies:
       - '@azure/app-configuration'
@@ -6261,58 +6149,12 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@reown/appkit-scaffold-ui@2.0.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)':
-    dependencies:
-      '@reown/appkit-common': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-controllers': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-pay': 2.0.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-ui': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-utils': 2.0.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-wallet': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
-      lit: 3.3.0
-    transitivePeerDependencies:
-      - '@azure/app-configuration'
-      - '@azure/cosmos'
-      - '@azure/data-tables'
-      - '@azure/identity'
-      - '@azure/keyvault-secrets'
-      - '@azure/storage-blob'
-      - '@capacitor/preferences'
-      - '@deno/kv'
-      - '@netlify/blobs'
-      - '@planetscale/database'
-      - '@react-native-async-storage/async-storage'
-      - '@solana/kit'
-      - '@solana/sysvars'
-      - '@types/react'
-      - '@upstash/redis'
-      - '@vercel/blob'
-      - '@vercel/functions'
-      - '@vercel/kv'
-      - aws4fetch
-      - bufferutil
-      - db0
-      - debug
-      - encoding
-      - ethers
-      - fastestsmallesttextencoderdecoder
-      - immer
-      - ioredis
-      - mppx
-      - react
-      - supports-color
-      - typescript
-      - uploadthing
-      - use-sync-external-store
-      - utf-8-validate
-      - zod
-
-  '@reown/appkit-ui@2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)':
+  '@reown/appkit-ui@2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(zod@4.6.5)':
     dependencies:
       '@phosphor-icons/webcomponents': 2.1.5
-      '@reown/appkit-common': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-controllers': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-wallet': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@reown/appkit-common': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
+      '@reown/appkit-controllers': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(zod@4.6.5)
+      '@reown/appkit-wallet': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)
       lit: 3.3.0
       qrcode: 1.5.3
     transitivePeerDependencies:
@@ -6344,26 +6186,26 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@reown/appkit-utils@2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)':
+  '@reown/appkit-utils@2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)':
     dependencies:
-      '@reown/appkit-common': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-controllers': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      '@reown/appkit-common': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
+      '@reown/appkit-controllers': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(zod@4.6.5)
       '@reown/appkit-polyfills': 2.0.0
-      '@reown/appkit-wallet': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@reown/appkit-wallet': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)
       '@wallet-standard/wallet': 1.1.0
       '@walletconnect/logger': 3.0.2
-      '@walletconnect/universal-provider': 2.23.7(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      '@walletconnect/universal-provider': 2.23.7(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
       valtio: 2.1.7(@types/react@19.3.0)(react@19.3.1)
-      viem: 2.57.20(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      viem: 2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
     optionalDependencies:
-      '@base-org/account': 2.4.0(@types/react@19.3.0)(@x402/core@2.27.0)(@x402/evm@2.27.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@x402/extensions@2.27.0(bufferutil@4.2.0)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(typescript@5.9.3)(utf-8-validate@6.0.6))(@x402/svm@2.27.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)))(bufferutil@4.2.0)(debug@4.4.3)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@coinbase/wallet-sdk': 4.3.6(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@safe-global/safe-apps-provider': 0.18.6(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@safe-global/safe-apps-sdk': 9.1.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      '@base-org/account': 2.4.0(@types/react@19.3.0)(@x402/core@2.27.0)(@x402/evm@2.27.0(bufferutil@4.2.0)(typescript@5.9.3))(@x402/extensions@2.27.0(bufferutil@4.2.0)(ethers@6.17.0(bufferutil@4.2.0))(typescript@5.9.3))(@x402/svm@2.27.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)))(bufferutil@4.2.0)(debug@4.4.3)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)
+      '@coinbase/wallet-sdk': 4.3.6(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)
+      '@safe-global/safe-apps-provider': 0.18.6(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
+      '@safe-global/safe-apps-sdk': 9.1.0(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
       '@x402/core': 2.27.0
-      '@x402/evm': 2.27.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
-      '@x402/extensions': 2.27.0(bufferutil@4.2.0)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(typescript@5.9.3)(utf-8-validate@6.0.6)
-      '@x402/svm': 2.27.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
+      '@x402/evm': 2.27.0(bufferutil@4.2.0)(typescript@5.9.3)
+      '@x402/extensions': 2.27.0(bufferutil@4.2.0)(ethers@6.17.0(bufferutil@4.2.0))(typescript@5.9.3)
+      '@x402/svm': 2.27.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))
     transitivePeerDependencies:
       - '@azure/app-configuration'
       - '@azure/cosmos'
@@ -6401,66 +6243,9 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@reown/appkit-utils@2.0.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)':
+  '@reown/appkit-wallet@2.0.0(bufferutil@4.2.0)(typescript@5.9.3)':
     dependencies:
-      '@reown/appkit-common': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-controllers': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-polyfills': 2.0.0
-      '@reown/appkit-wallet': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
-      '@wallet-standard/wallet': 1.1.0
-      '@walletconnect/logger': 3.0.2
-      '@walletconnect/universal-provider': 2.23.7(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      valtio: 2.1.7(@types/react@19.3.0)(react@19.3.1)
-      viem: 2.57.20(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-    optionalDependencies:
-      '@base-org/account': 2.4.0(@types/react@19.3.0)(@x402/core@2.27.0)(@x402/evm@2.27.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@x402/extensions@2.27.0(bufferutil@4.2.0)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(typescript@5.9.3)(utf-8-validate@6.0.6))(@x402/svm@2.27.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)))(bufferutil@4.2.0)(debug@4.4.3)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@coinbase/wallet-sdk': 4.3.6(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@safe-global/safe-apps-provider': 0.18.6(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@safe-global/safe-apps-sdk': 9.1.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@x402/core': 2.27.0
-      '@x402/evm': 2.27.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
-      '@x402/extensions': 2.27.0(bufferutil@4.2.0)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(typescript@5.9.3)(utf-8-validate@6.0.6)
-      '@x402/svm': 2.27.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
-    transitivePeerDependencies:
-      - '@azure/app-configuration'
-      - '@azure/cosmos'
-      - '@azure/data-tables'
-      - '@azure/identity'
-      - '@azure/keyvault-secrets'
-      - '@azure/storage-blob'
-      - '@capacitor/preferences'
-      - '@deno/kv'
-      - '@netlify/blobs'
-      - '@planetscale/database'
-      - '@react-native-async-storage/async-storage'
-      - '@solana/kit'
-      - '@solana/sysvars'
-      - '@types/react'
-      - '@upstash/redis'
-      - '@vercel/blob'
-      - '@vercel/functions'
-      - '@vercel/kv'
-      - aws4fetch
-      - bufferutil
-      - db0
-      - debug
-      - encoding
-      - ethers
-      - fastestsmallesttextencoderdecoder
-      - immer
-      - ioredis
-      - mppx
-      - react
-      - supports-color
-      - typescript
-      - uploadthing
-      - use-sync-external-store
-      - utf-8-validate
-      - zod
-
-  '@reown/appkit-wallet@2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)':
-    dependencies:
-      '@reown/appkit-common': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.22.4)
+      '@reown/appkit-common': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(zod@3.22.4)
       '@reown/appkit-polyfills': 2.0.0
       '@walletconnect/logger': 3.0.2
       zod: 3.22.4
@@ -6470,75 +6255,21 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  '@reown/appkit@2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)':
+  '@reown/appkit@2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)':
     dependencies:
-      '@reown/appkit-common': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-controllers': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-pay': 2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
+      '@reown/appkit-common': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
+      '@reown/appkit-controllers': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(zod@4.6.5)
+      '@reown/appkit-pay': 2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)
       '@reown/appkit-polyfills': 2.0.0
-      '@reown/appkit-scaffold-ui': 2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-ui': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-utils': 2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-wallet': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
-      '@walletconnect/universal-provider': 2.23.7(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      '@reown/appkit-scaffold-ui': 2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)
+      '@reown/appkit-ui': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(zod@4.6.5)
+      '@reown/appkit-utils': 2.0.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)
+      '@reown/appkit-wallet': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)
+      '@walletconnect/universal-provider': 2.23.7(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
       bs58: 6.0.0
       semver: 7.7.2
       valtio: 2.1.7(@types/react@19.3.0)(react@19.3.1)
-      viem: 2.57.20(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-    optionalDependencies:
-      '@lit/react': 1.0.8(@types/react@19.3.0)
-    transitivePeerDependencies:
-      - '@azure/app-configuration'
-      - '@azure/cosmos'
-      - '@azure/data-tables'
-      - '@azure/identity'
-      - '@azure/keyvault-secrets'
-      - '@azure/storage-blob'
-      - '@capacitor/preferences'
-      - '@deno/kv'
-      - '@netlify/blobs'
-      - '@planetscale/database'
-      - '@react-native-async-storage/async-storage'
-      - '@solana/kit'
-      - '@solana/sysvars'
-      - '@types/react'
-      - '@upstash/redis'
-      - '@vercel/blob'
-      - '@vercel/functions'
-      - '@vercel/kv'
-      - aws4fetch
-      - bufferutil
-      - db0
-      - debug
-      - encoding
-      - ethers
-      - fastestsmallesttextencoderdecoder
-      - immer
-      - ioredis
-      - mppx
-      - react
-      - supports-color
-      - typescript
-      - uploadthing
-      - use-sync-external-store
-      - utf-8-validate
-      - zod
-
-  '@reown/appkit@2.0.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)':
-    dependencies:
-      '@reown/appkit-common': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-controllers': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-pay': 2.0.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-polyfills': 2.0.0
-      '@reown/appkit-scaffold-ui': 2.0.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-ui': 2.0.0(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-utils': 2.0.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@types/react@19.3.0)(bufferutil@4.2.0)(debug@4.4.3)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@reown/appkit-wallet': 2.0.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
-      '@walletconnect/universal-provider': 2.23.7(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      bs58: 6.0.0
-      semver: 7.7.2
-      valtio: 2.1.7(@types/react@19.3.0)(react@19.3.1)
-      viem: 2.57.20(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      viem: 2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
     optionalDependencies:
       '@lit/react': 1.0.8(@types/react@19.3.0)
     transitivePeerDependencies:
@@ -6634,9 +6365,9 @@ snapshots:
 
   '@rolldown/pluginutils@1.1.1': {}
 
-  '@safe-global/safe-apps-provider@0.18.6(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)':
+  '@safe-global/safe-apps-provider@0.18.6(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)':
     dependencies:
-      '@safe-global/safe-apps-sdk': 9.1.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      '@safe-global/safe-apps-sdk': 9.1.0(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
       events: 3.3.0
     transitivePeerDependencies:
       - bufferutil
@@ -6646,10 +6377,10 @@ snapshots:
       - zod
     optional: true
 
-  '@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)':
+  '@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)':
     dependencies:
       '@safe-global/safe-gateway-typescript-sdk': 3.23.1
-      viem: 2.57.20(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      viem: 2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
     transitivePeerDependencies:
       - bufferutil
       - mppx
@@ -6765,73 +6496,58 @@ snapshots:
       apg-js: 4.4.0
     optional: true
 
-  '@signinwithethereum/siwe@4.2.1(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(viem@2.57.20(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5))':
+  '@signinwithethereum/siwe@4.2.1(ethers@6.17.0(bufferutil@4.2.0))(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5))':
     dependencies:
       '@signinwithethereum/siwe-parser': 4.2.1
     optionalDependencies:
-      ethers: 6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6)
-      viem: 2.57.20(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      ethers: 6.17.0(bufferutil@4.2.0)
+      viem: 2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
     optional: true
 
   '@sindresorhus/merge-streams@4.0.0': {}
 
-  '@solana-program/compute-budget@0.11.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))':
+  '@solana-program/compute-budget@0.11.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))':
     dependencies:
-      '@solana/kit': 8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/kit': 8.3.0(bufferutil@4.2.0)(typescript@5.9.3)
     optional: true
 
-  '@solana-program/compute-budget@0.11.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))':
+  '@solana-program/compute-budget@0.19.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))':
     dependencies:
-      '@solana/kit': 8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/kit': 8.3.0(bufferutil@4.2.0)(typescript@5.9.3)
+
+  '@solana-program/system@0.14.1(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3))':
+    dependencies:
+      '@solana/kit': 8.6.0(bufferutil@4.2.0)(typescript@5.9.3)
     optional: true
 
-  '@solana-program/compute-budget@0.19.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))':
+  '@solana-program/system@0.15.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))':
     dependencies:
-      '@solana/kit': 8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/kit': 8.3.0(bufferutil@4.2.0)(typescript@5.9.3)
 
-  '@solana-program/system@0.14.1(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))':
+  '@solana-program/system@0.16.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3))':
     dependencies:
-      '@solana/kit': 8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/kit': 8.6.0(bufferutil@4.2.0)(typescript@5.9.3)
     optional: true
 
-  '@solana-program/system@0.15.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))':
+  '@solana-program/token-2022@0.6.1(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))':
     dependencies:
-      '@solana/kit': 8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
-
-  '@solana-program/system@0.16.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))':
-    dependencies:
-      '@solana/kit': 8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/kit': 8.3.0(bufferutil@4.2.0)(typescript@5.9.3)
     optional: true
 
-  '@solana-program/token-2022@0.6.1(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))':
+  '@solana-program/token@0.16.1(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3))':
     dependencies:
-      '@solana/kit': 8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana-program/system': 0.14.1(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3))
+      '@solana/kit': 8.6.0(bufferutil@4.2.0)(typescript@5.9.3)
     optional: true
 
-  '@solana-program/token-2022@0.6.1(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))':
+  '@solana-program/token@0.17.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))':
     dependencies:
-      '@solana/kit': 8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
-    optional: true
+      '@solana-program/system': 0.15.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))
+      '@solana/kit': 8.3.0(bufferutil@4.2.0)(typescript@5.9.3)
 
-  '@solana-program/token@0.16.1(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))':
+  '@solana-program/token@0.9.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))':
     dependencies:
-      '@solana-program/system': 0.14.1(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
-      '@solana/kit': 8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
-    optional: true
-
-  '@solana-program/token@0.17.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))':
-    dependencies:
-      '@solana-program/system': 0.15.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
-      '@solana/kit': 8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
-
-  '@solana-program/token@0.9.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))':
-    dependencies:
-      '@solana/kit': 8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
-    optional: true
-
-  '@solana-program/token@0.9.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))':
-    dependencies:
-      '@solana/kit': 8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/kit': 8.3.0(bufferutil@4.2.0)(typescript@5.9.3)
     optional: true
 
   '@solana/accounts@8.3.0(typescript@5.9.3)':
@@ -6899,10 +6615,10 @@ snapshots:
       typescript: 5.9.3
     optional: true
 
-  '@solana/buffer-layout-utils@0.2.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)':
+  '@solana/buffer-layout-utils@0.2.0(bufferutil@4.2.0)(typescript@5.9.3)':
     dependencies:
       '@solana/buffer-layout': 4.0.1
-      '@solana/web3.js': 1.98.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/web3.js': 1.98.4(bufferutil@4.2.0)(typescript@5.9.3)
       bigint-buffer: 1.1.5
       bignumber.js: 9.3.1
     transitivePeerDependencies:
@@ -7193,7 +6909,7 @@ snapshots:
       - fastestsmallesttextencoderdecoder
     optional: true
 
-  '@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)':
+  '@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)':
     dependencies:
       '@solana/accounts': 8.3.0(typescript@5.9.3)
       '@solana/addresses': 8.3.0(typescript@5.9.3)
@@ -7213,12 +6929,12 @@ snapshots:
       '@solana/rpc-api': 8.3.0(typescript@5.9.3)
       '@solana/rpc-parsed-types': 8.3.0(typescript@5.9.3)
       '@solana/rpc-spec-types': 8.3.0(typescript@5.9.3)
-      '@solana/rpc-subscriptions': 8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/rpc-subscriptions': 8.3.0(bufferutil@4.2.0)(typescript@5.9.3)
       '@solana/rpc-types': 8.3.0(typescript@5.9.3)
       '@solana/signers': 8.3.0(typescript@5.9.3)
       '@solana/subscribable': 8.3.0(typescript@5.9.3)
       '@solana/sysvars': 8.3.0(typescript@5.9.3)
-      '@solana/transaction-confirmation': 8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/transaction-confirmation': 8.3.0(bufferutil@4.2.0)(typescript@5.9.3)
       '@solana/transaction-introspection': 8.3.0(typescript@5.9.3)
       '@solana/transaction-messages': 8.3.0(typescript@5.9.3)
       '@solana/transactions': 8.3.0(typescript@5.9.3)
@@ -7229,7 +6945,7 @@ snapshots:
       - fastestsmallesttextencoderdecoder
       - utf-8-validate
 
-  '@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)':
+  '@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)':
     dependencies:
       '@solana/accounts': 8.6.0(typescript@5.9.3)
       '@solana/addresses': 8.6.0(typescript@5.9.3)
@@ -7249,12 +6965,12 @@ snapshots:
       '@solana/rpc-api': 8.6.0(typescript@5.9.3)
       '@solana/rpc-parsed-types': 8.6.0(typescript@5.9.3)
       '@solana/rpc-spec-types': 8.6.0(typescript@5.9.3)
-      '@solana/rpc-subscriptions': 8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/rpc-subscriptions': 8.6.0(bufferutil@4.2.0)(typescript@5.9.3)
       '@solana/rpc-types': 8.6.0(typescript@5.9.3)
       '@solana/signers': 8.6.0(typescript@5.9.3)
       '@solana/subscribable': 8.6.0(typescript@5.9.3)
       '@solana/sysvars': 8.6.0(typescript@5.9.3)
-      '@solana/transaction-confirmation': 8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/transaction-confirmation': 8.6.0(bufferutil@4.2.0)(typescript@5.9.3)
       '@solana/transaction-introspection': 8.6.0(typescript@5.9.3)
       '@solana/transaction-messages': 8.6.0(typescript@5.9.3)
       '@solana/transactions': 8.6.0(typescript@5.9.3)
@@ -7550,7 +7266,7 @@ snapshots:
       - fastestsmallesttextencoderdecoder
     optional: true
 
-  '@solana/rpc-subscriptions-channel-websocket@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)':
+  '@solana/rpc-subscriptions-channel-websocket@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)':
     dependencies:
       '@solana/errors': 8.3.0(typescript@5.9.3)
       '@solana/functional': 8.3.0(typescript@5.9.3)
@@ -7563,7 +7279,7 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  '@solana/rpc-subscriptions-channel-websocket@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)':
+  '@solana/rpc-subscriptions-channel-websocket@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)':
     dependencies:
       '@solana/errors': 8.6.0(typescript@5.9.3)
       '@solana/functional': 8.6.0(typescript@5.9.3)
@@ -7596,7 +7312,7 @@ snapshots:
       typescript: 5.9.3
     optional: true
 
-  '@solana/rpc-subscriptions@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)':
+  '@solana/rpc-subscriptions@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)':
     dependencies:
       '@solana/errors': 8.3.0(typescript@5.9.3)
       '@solana/fast-stable-stringify': 8.3.0(typescript@5.9.3)
@@ -7604,7 +7320,7 @@ snapshots:
       '@solana/promises': 8.3.0(typescript@5.9.3)
       '@solana/rpc-spec-types': 8.3.0(typescript@5.9.3)
       '@solana/rpc-subscriptions-api': 8.3.0(typescript@5.9.3)
-      '@solana/rpc-subscriptions-channel-websocket': 8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/rpc-subscriptions-channel-websocket': 8.3.0(bufferutil@4.2.0)(typescript@5.9.3)
       '@solana/rpc-subscriptions-spec': 8.3.0(typescript@5.9.3)
       '@solana/rpc-transformers': 8.3.0(typescript@5.9.3)
       '@solana/rpc-types': 8.3.0(typescript@5.9.3)
@@ -7616,7 +7332,7 @@ snapshots:
       - fastestsmallesttextencoderdecoder
       - utf-8-validate
 
-  '@solana/rpc-subscriptions@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)':
+  '@solana/rpc-subscriptions@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)':
     dependencies:
       '@solana/errors': 8.6.0(typescript@5.9.3)
       '@solana/fast-stable-stringify': 8.6.0(typescript@5.9.3)
@@ -7624,7 +7340,7 @@ snapshots:
       '@solana/promises': 8.6.0(typescript@5.9.3)
       '@solana/rpc-spec-types': 8.6.0(typescript@5.9.3)
       '@solana/rpc-subscriptions-api': 8.6.0(typescript@5.9.3)
-      '@solana/rpc-subscriptions-channel-websocket': 8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/rpc-subscriptions-channel-websocket': 8.6.0(bufferutil@4.2.0)(typescript@5.9.3)
       '@solana/rpc-subscriptions-spec': 8.6.0(typescript@5.9.3)
       '@solana/rpc-transformers': 8.6.0(typescript@5.9.3)
       '@solana/rpc-types': 8.6.0(typescript@5.9.3)
@@ -7777,29 +7493,29 @@ snapshots:
       - fastestsmallesttextencoderdecoder
     optional: true
 
-  '@solana/spl-token-group@0.0.7(@solana/web3.js@1.98.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(typescript@5.9.3)':
+  '@solana/spl-token-group@0.0.7(@solana/web3.js@1.98.4(bufferutil@4.2.0)(typescript@5.9.3))(typescript@5.9.3)':
     dependencies:
       '@solana/codecs': 2.0.0-rc.1(typescript@5.9.3)
-      '@solana/web3.js': 1.98.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/web3.js': 1.98.4(bufferutil@4.2.0)(typescript@5.9.3)
     transitivePeerDependencies:
       - fastestsmallesttextencoderdecoder
       - typescript
 
-  '@solana/spl-token-metadata@0.1.6(@solana/web3.js@1.98.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(typescript@5.9.3)':
+  '@solana/spl-token-metadata@0.1.6(@solana/web3.js@1.98.4(bufferutil@4.2.0)(typescript@5.9.3))(typescript@5.9.3)':
     dependencies:
       '@solana/codecs': 2.0.0-rc.1(typescript@5.9.3)
-      '@solana/web3.js': 1.98.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/web3.js': 1.98.4(bufferutil@4.2.0)(typescript@5.9.3)
     transitivePeerDependencies:
       - fastestsmallesttextencoderdecoder
       - typescript
 
-  '@solana/spl-token@0.4.14(@solana/web3.js@1.98.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)':
+  '@solana/spl-token@0.4.14(@solana/web3.js@1.98.4(bufferutil@4.2.0)(typescript@5.9.3))(bufferutil@4.2.0)(typescript@5.9.3)':
     dependencies:
       '@solana/buffer-layout': 4.0.1
-      '@solana/buffer-layout-utils': 0.2.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
-      '@solana/spl-token-group': 0.0.7(@solana/web3.js@1.98.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(typescript@5.9.3)
-      '@solana/spl-token-metadata': 0.1.6(@solana/web3.js@1.98.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(typescript@5.9.3)
-      '@solana/web3.js': 1.98.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/buffer-layout-utils': 0.2.0(bufferutil@4.2.0)(typescript@5.9.3)
+      '@solana/spl-token-group': 0.0.7(@solana/web3.js@1.98.4(bufferutil@4.2.0)(typescript@5.9.3))(typescript@5.9.3)
+      '@solana/spl-token-metadata': 0.1.6(@solana/web3.js@1.98.4(bufferutil@4.2.0)(typescript@5.9.3))(typescript@5.9.3)
+      '@solana/web3.js': 1.98.4(bufferutil@4.2.0)(typescript@5.9.3)
       buffer: 6.0.3
     transitivePeerDependencies:
       - bufferutil
@@ -7850,7 +7566,7 @@ snapshots:
       - fastestsmallesttextencoderdecoder
     optional: true
 
-  '@solana/transaction-confirmation@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)':
+  '@solana/transaction-confirmation@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)':
     dependencies:
       '@solana/addresses': 8.3.0(typescript@5.9.3)
       '@solana/codecs-strings': 8.3.0(typescript@5.9.3)
@@ -7858,7 +7574,7 @@ snapshots:
       '@solana/keys': 8.3.0(typescript@5.9.3)
       '@solana/promises': 8.3.0(typescript@5.9.3)
       '@solana/rpc': 8.3.0(typescript@5.9.3)
-      '@solana/rpc-subscriptions': 8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/rpc-subscriptions': 8.3.0(bufferutil@4.2.0)(typescript@5.9.3)
       '@solana/rpc-types': 8.3.0(typescript@5.9.3)
       '@solana/transaction-messages': 8.3.0(typescript@5.9.3)
       '@solana/transactions': 8.3.0(typescript@5.9.3)
@@ -7869,7 +7585,7 @@ snapshots:
       - fastestsmallesttextencoderdecoder
       - utf-8-validate
 
-  '@solana/transaction-confirmation@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)':
+  '@solana/transaction-confirmation@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)':
     dependencies:
       '@solana/addresses': 8.6.0(typescript@5.9.3)
       '@solana/codecs-strings': 8.6.0(typescript@5.9.3)
@@ -7877,7 +7593,7 @@ snapshots:
       '@solana/keys': 8.6.0(typescript@5.9.3)
       '@solana/promises': 8.6.0(typescript@5.9.3)
       '@solana/rpc': 8.6.0(typescript@5.9.3)
-      '@solana/rpc-subscriptions': 8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/rpc-subscriptions': 8.6.0(bufferutil@4.2.0)(typescript@5.9.3)
       '@solana/rpc-types': 8.6.0(typescript@5.9.3)
       '@solana/transaction-messages': 8.6.0(typescript@5.9.3)
       '@solana/transactions': 8.6.0(typescript@5.9.3)
@@ -7992,10 +7708,10 @@ snapshots:
       - fastestsmallesttextencoderdecoder
     optional: true
 
-  '@solana/wallet-adapter-base@0.9.27(@solana/web3.js@1.98.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))':
+  '@solana/wallet-adapter-base@0.9.27(@solana/web3.js@1.98.4(bufferutil@4.2.0)(typescript@5.9.3))':
     dependencies:
       '@solana/wallet-standard-features': 1.3.0
-      '@solana/web3.js': 1.98.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/web3.js': 1.98.4(bufferutil@4.2.0)(typescript@5.9.3)
       '@wallet-standard/base': 1.1.1
       '@wallet-standard/features': 1.1.0
       eventemitter3: 5.0.4
@@ -8015,7 +7731,7 @@ snapshots:
       '@solana/wallet-standard-chains': 1.1.2
       '@solana/wallet-standard-features': 1.3.0
 
-  '@solana/web3.js@1.98.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)':
+  '@solana/web3.js@1.98.4(bufferutil@4.2.0)(typescript@5.9.3)':
     dependencies:
       '@babel/runtime': 7.29.10
       '@noble/curves': 1.9.7
@@ -8028,7 +7744,7 @@ snapshots:
       bs58: 4.0.1
       buffer: 6.0.3
       fast-stable-stringify: 1.0.0
-      jayson: 4.3.0(bufferutil@4.2.0)(utf-8-validate@6.0.6)
+      jayson: 4.3.0(bufferutil@4.2.0)
       node-fetch: 2.7.0
       rpc-websockets: 9.3.9
       superstruct: 2.0.2
@@ -8126,19 +7842,19 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.3.0
 
-  '@tronweb3/tronwallet-abstract-adapter@1.1.10(bufferutil@4.2.0)(debug@4.4.3)(utf-8-validate@6.0.6)':
+  '@tronweb3/tronwallet-abstract-adapter@1.1.10(bufferutil@4.2.0)(debug@4.4.3)':
     dependencies:
       eventemitter3: 4.0.7
-      tronweb: 6.5.2(bufferutil@4.2.0)(debug@4.4.3)(utf-8-validate@6.0.6)
+      tronweb: 6.5.2(bufferutil@4.2.0)(debug@4.4.3)
     transitivePeerDependencies:
       - bufferutil
       - debug
       - supports-color
       - utf-8-validate
 
-  '@tronweb3/tronwallet-adapter-tronlink@1.1.13(bufferutil@4.2.0)(debug@4.4.3)(utf-8-validate@6.0.6)':
+  '@tronweb3/tronwallet-adapter-tronlink@1.1.13(bufferutil@4.2.0)(debug@4.4.3)':
     dependencies:
-      '@tronweb3/tronwallet-abstract-adapter': 1.1.10(bufferutil@4.2.0)(debug@4.4.3)(utf-8-validate@6.0.6)
+      '@tronweb3/tronwallet-abstract-adapter': 1.1.10(bufferutil@4.2.0)(debug@4.4.3)
     transitivePeerDependencies:
       - bufferutil
       - debug
@@ -8272,21 +7988,21 @@ snapshots:
       '@rolldown/pluginutils': 1.1.1
       vite: 8.3.8(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
 
-  '@wagmi/connectors@8.2.4(@coinbase/wallet-sdk@4.3.6(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5))(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5))(@wagmi/core@3.6.9(@tanstack/query-core@5.108.2)(@types/react@19.3.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)))(typescript@5.9.3)(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5))':
+  '@wagmi/connectors@8.2.4(@coinbase/wallet-sdk@4.3.6(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5))(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5))(@wagmi/core@3.6.9(@tanstack/query-core@5.108.2)(@types/react@19.3.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)))(typescript@5.9.3)(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5))':
     dependencies:
-      '@wagmi/core': 3.6.9(@tanstack/query-core@5.108.2)(@types/react@19.3.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5))
-      viem: 2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      '@wagmi/core': 3.6.9(@tanstack/query-core@5.108.2)(@types/react@19.3.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5))
+      viem: 2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
     optionalDependencies:
-      '@coinbase/wallet-sdk': 4.3.6(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@safe-global/safe-apps-provider': 0.18.6(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
-      '@safe-global/safe-apps-sdk': 9.1.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      '@coinbase/wallet-sdk': 4.3.6(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5)
+      '@safe-global/safe-apps-provider': 0.18.6(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
+      '@safe-global/safe-apps-sdk': 9.1.0(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
       typescript: 5.9.3
 
-  '@wagmi/core@3.6.9(@tanstack/query-core@5.108.2)(@types/react@19.3.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.3.1))(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5))':
+  '@wagmi/core@3.6.9(@tanstack/query-core@5.108.2)(@types/react@19.3.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.3.1))(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5))':
     dependencies:
       eventemitter3: 5.0.1
       mipd: 0.0.7(typescript@5.9.3)
-      viem: 2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      viem: 2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
       zustand: 5.0.0(@types/react@19.3.0)(react@19.3.1)(use-sync-external-store@1.4.0(react@19.3.1))
     optionalDependencies:
       '@tanstack/query-core': 5.108.2
@@ -8297,11 +8013,11 @@ snapshots:
       - react
       - use-sync-external-store
 
-  '@wagmi/core@3.6.9(@tanstack/query-core@5.108.2)(@types/react@19.3.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5))':
+  '@wagmi/core@3.6.9(@tanstack/query-core@5.108.2)(@types/react@19.3.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5))':
     dependencies:
       eventemitter3: 5.0.1
       mipd: 0.0.7(typescript@5.9.3)
-      viem: 2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      viem: 2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
       zustand: 5.0.0(@types/react@19.3.0)(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1))
     optionalDependencies:
       '@tanstack/query-core': 5.108.2
@@ -8328,13 +8044,13 @@ snapshots:
     dependencies:
       '@wallet-standard/base': 1.1.1
 
-  '@walletconnect/core@2.23.7(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)':
+  '@walletconnect/core@2.23.7(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)':
     dependencies:
       '@walletconnect/heartbeat': 1.2.2
       '@walletconnect/jsonrpc-provider': 1.0.14
       '@walletconnect/jsonrpc-types': 1.0.4
       '@walletconnect/jsonrpc-utils': 1.0.8
-      '@walletconnect/jsonrpc-ws-connection': 1.0.16(bufferutil@4.2.0)(utf-8-validate@6.0.6)
+      '@walletconnect/jsonrpc-ws-connection': 1.0.16(bufferutil@4.2.0)
       '@walletconnect/keyvaluestorage': 1.1.1
       '@walletconnect/logger': 3.0.2
       '@walletconnect/relay-api': 1.0.11
@@ -8413,12 +8129,12 @@ snapshots:
       '@walletconnect/jsonrpc-types': 1.0.4
       tslib: 1.14.1
 
-  '@walletconnect/jsonrpc-ws-connection@1.0.16(bufferutil@4.2.0)(utf-8-validate@6.0.6)':
+  '@walletconnect/jsonrpc-ws-connection@1.0.16(bufferutil@4.2.0)':
     dependencies:
       '@walletconnect/jsonrpc-utils': 1.0.8
       '@walletconnect/safe-json': 1.0.2
       events: 3.3.0
-      ws: 7.5.14(bufferutil@4.2.0)(utf-8-validate@6.0.6)
+      ws: 7.5.14(bufferutil@4.2.0)
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -8469,9 +8185,9 @@ snapshots:
     dependencies:
       tslib: 1.14.1
 
-  '@walletconnect/sign-client@2.23.7(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)':
+  '@walletconnect/sign-client@2.23.7(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)':
     dependencies:
-      '@walletconnect/core': 2.23.7(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      '@walletconnect/core': 2.23.7(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
       '@walletconnect/events': 1.0.1
       '@walletconnect/heartbeat': 1.2.2
       '@walletconnect/jsonrpc-utils': 1.0.8
@@ -8538,7 +8254,7 @@ snapshots:
       - ioredis
       - uploadthing
 
-  '@walletconnect/universal-provider@2.23.7(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)':
+  '@walletconnect/universal-provider@2.23.7(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)':
     dependencies:
       '@walletconnect/events': 1.0.1
       '@walletconnect/jsonrpc-http-connection': 1.0.8
@@ -8547,7 +8263,7 @@ snapshots:
       '@walletconnect/jsonrpc-utils': 1.0.8
       '@walletconnect/keyvaluestorage': 1.1.1
       '@walletconnect/logger': 3.0.2
-      '@walletconnect/sign-client': 2.23.7(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      '@walletconnect/sign-client': 2.23.7(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
       '@walletconnect/types': 2.23.7
       '@walletconnect/utils': 2.23.7(typescript@5.9.3)(zod@4.6.5)
       es-toolkit: 1.44.0
@@ -8636,10 +8352,10 @@ snapshots:
       zod: 3.25.76
     optional: true
 
-  '@x402/evm@2.27.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)':
+  '@x402/evm@2.27.0(bufferutil@4.2.0)(typescript@5.9.3)':
     dependencies:
       '@x402/core': 2.27.0
-      viem: 2.57.20(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.25.76)
+      viem: 2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@3.25.76)
       zod: 3.25.76
     transitivePeerDependencies:
       - bufferutil
@@ -8648,16 +8364,16 @@ snapshots:
       - utf-8-validate
     optional: true
 
-  '@x402/extensions@2.27.0(bufferutil@4.2.0)(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(typescript@5.9.3)(utf-8-validate@6.0.6)':
+  '@x402/extensions@2.27.0(bufferutil@4.2.0)(ethers@6.17.0(bufferutil@4.2.0))(typescript@5.9.3)':
     dependencies:
       '@noble/curves': 1.9.7
       '@scure/base': 1.2.6
-      '@signinwithethereum/siwe': 4.2.1(ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))(viem@2.57.20(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5))
+      '@signinwithethereum/siwe': 4.2.1(ethers@6.17.0(bufferutil@4.2.0))(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5))
       '@x402/core': 2.27.0
       ajv: 8.20.0
       jose: 5.10.0
       tweetnacl: 1.0.3
-      viem: 2.57.20(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.25.76)
+      viem: 2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@3.25.76)
       zod: 3.25.76
     transitivePeerDependencies:
       - bufferutil
@@ -8667,25 +8383,13 @@ snapshots:
       - utf-8-validate
     optional: true
 
-  '@x402/svm@2.27.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))':
+  '@x402/svm@2.27.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))':
     dependencies:
       '@noble/hashes': 1.8.0
-      '@solana-program/compute-budget': 0.11.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
-      '@solana-program/token': 0.9.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
-      '@solana-program/token-2022': 0.6.1(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
-      '@solana/kit': 8.3.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
-      '@x402/core': 2.27.0
-    transitivePeerDependencies:
-      - '@solana/sysvars'
-    optional: true
-
-  '@x402/svm@2.27.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))':
-    dependencies:
-      '@noble/hashes': 1.8.0
-      '@solana-program/compute-budget': 0.11.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
-      '@solana-program/token': 0.9.0(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
-      '@solana-program/token-2022': 0.6.1(@solana/kit@8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
-      '@solana/kit': 8.6.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana-program/compute-budget': 0.11.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))
+      '@solana-program/token': 0.9.0(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))
+      '@solana-program/token-2022': 0.6.1(@solana/kit@8.3.0(bufferutil@4.2.0)(typescript@5.9.3))
+      '@solana/kit': 8.3.0(bufferutil@4.2.0)(typescript@5.9.3)
       '@x402/core': 2.27.0
     transitivePeerDependencies:
       - '@solana/sysvars'
@@ -9096,10 +8800,10 @@ snapshots:
       '@types/pg': 8.23.1
       pg: 8.23.1
 
-  drizzle-zod@0.8.3(drizzle-orm@0.45.4(@types/pg@8.23.1)(pg@8.23.1))(zod@3.25.76):
+  drizzle-zod@0.8.3(drizzle-orm@0.45.4(@types/pg@8.23.1)(pg@8.23.1))(zod@4.6.7):
     dependencies:
       drizzle-orm: 0.45.4(@types/pg@8.23.1)(pg@8.23.1)
-      zod: 3.25.76
+      zod: 4.6.7
 
   dunder-proto@1.0.1:
     dependencies:
@@ -9166,7 +8870,7 @@ snapshots:
       '@scure/bip32': 1.4.0
       '@scure/bip39': 1.3.0
 
-  ethers@6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6):
+  ethers@6.17.0(bufferutil@4.2.0):
     dependencies:
       '@adraffy/ens-normalize': 1.11.1
       '@noble/curves': 1.2.0
@@ -9174,7 +8878,7 @@ snapshots:
       '@types/node': 22.7.5
       aes-js: 4.0.0-beta.5
       tslib: 2.7.0
-      ws: 8.21.0(bufferutil@4.2.0)(utf-8-validate@6.0.6)
+      ws: 8.21.0(bufferutil@4.2.0)
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -9384,15 +9088,15 @@ snapshots:
 
   isexe@2.0.0: {}
 
-  isomorphic-ws@4.0.1(ws@7.5.14(bufferutil@4.2.0)(utf-8-validate@6.0.6)):
+  isomorphic-ws@4.0.1(ws@7.5.14(bufferutil@4.2.0)):
     dependencies:
-      ws: 7.5.14(bufferutil@4.2.0)(utf-8-validate@6.0.6)
+      ws: 7.5.14(bufferutil@4.2.0)
 
-  isows@1.0.7(ws@8.21.0(bufferutil@4.2.0)(utf-8-validate@6.0.6)):
+  isows@1.0.7(ws@8.21.0(bufferutil@4.2.0)):
     dependencies:
-      ws: 8.21.0(bufferutil@4.2.0)(utf-8-validate@6.0.6)
+      ws: 8.21.0(bufferutil@4.2.0)
 
-  jayson@4.3.0(bufferutil@4.2.0)(utf-8-validate@6.0.6):
+  jayson@4.3.0(bufferutil@4.2.0):
     dependencies:
       '@types/connect': 3.4.38
       '@types/node': 12.20.55
@@ -9401,11 +9105,11 @@ snapshots:
       delay: 5.0.0
       es6-promisify: 5.0.0
       eyes: 0.1.8
-      isomorphic-ws: 4.0.1(ws@7.5.14(bufferutil@4.2.0)(utf-8-validate@6.0.6))
+      isomorphic-ws: 4.0.1(ws@7.5.14(bufferutil@4.2.0))
       json-stringify-safe: 5.0.1
       stream-json: 1.9.1
       uuid: 8.3.2
-      ws: 7.5.14(bufferutil@4.2.0)(utf-8-validate@6.0.6)
+      ws: 7.5.14(bufferutil@4.2.0)
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -10063,12 +9767,12 @@ snapshots:
 
   tr46@0.0.3: {}
 
-  tronweb@6.5.2(bufferutil@4.2.0)(debug@4.4.3)(utf-8-validate@6.0.6):
+  tronweb@6.5.2(bufferutil@4.2.0)(debug@4.4.3):
     dependencies:
       axios: 1.20.0(debug@4.4.3)
       bignumber.js: 9.1.2
       ethereum-cryptography: 2.2.1
-      ethers: 6.17.0(bufferutil@4.2.0)(utf-8-validate@6.0.6)
+      ethers: 6.17.0(bufferutil@4.2.0)
       eventemitter3: 5.0.1
       google-protobuf: 3.21.4
       semver: 7.7.1
@@ -10249,16 +9953,16 @@ snapshots:
       d3-time: 3.1.0
       d3-timer: 3.0.1
 
-  viem@2.57.20(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.22.4):
+  viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@3.22.4):
     dependencies:
       '@noble/curves': 1.9.1
       '@noble/hashes': 1.8.0
       '@scure/bip32': 1.7.0
       '@scure/bip39': 1.6.0
       abitype: 1.2.3(typescript@5.9.3)(zod@3.22.4)
-      isows: 1.0.7(ws@8.21.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))
+      isows: 1.0.7(ws@8.21.0(bufferutil@4.2.0))
       ox: 0.14.67(typescript@5.9.3)(zod@3.22.4)
-      ws: 8.21.0(bufferutil@4.2.0)(utf-8-validate@6.0.6)
+      ws: 8.21.0(bufferutil@4.2.0)
     optionalDependencies:
       typescript: 5.9.3
     transitivePeerDependencies:
@@ -10266,16 +9970,16 @@ snapshots:
       - utf-8-validate
       - zod
 
-  viem@2.57.20(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.25.76):
+  viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@3.25.76):
     dependencies:
       '@noble/curves': 1.9.1
       '@noble/hashes': 1.8.0
       '@scure/bip32': 1.7.0
       '@scure/bip39': 1.6.0
       abitype: 1.2.3(typescript@5.9.3)(zod@3.25.76)
-      isows: 1.0.7(ws@8.21.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))
+      isows: 1.0.7(ws@8.21.0(bufferutil@4.2.0))
       ox: 0.14.67(typescript@5.9.3)(zod@3.25.76)
-      ws: 8.21.0(bufferutil@4.2.0)(utf-8-validate@6.0.6)
+      ws: 8.21.0(bufferutil@4.2.0)
     optionalDependencies:
       typescript: 5.9.3
     transitivePeerDependencies:
@@ -10284,33 +9988,16 @@ snapshots:
       - zod
     optional: true
 
-  viem@2.57.20(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5):
+  viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5):
     dependencies:
       '@noble/curves': 1.9.1
       '@noble/hashes': 1.8.0
       '@scure/bip32': 1.7.0
       '@scure/bip39': 1.6.0
       abitype: 1.2.3(typescript@5.9.3)(zod@4.6.5)
-      isows: 1.0.7(ws@8.21.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))
+      isows: 1.0.7(ws@8.21.0(bufferutil@4.2.0))
       ox: 0.14.67(typescript@5.9.3)(zod@4.6.5)
-      ws: 8.21.0(bufferutil@4.2.0)(utf-8-validate@6.0.6)
-    optionalDependencies:
-      typescript: 5.9.3
-    transitivePeerDependencies:
-      - bufferutil
-      - utf-8-validate
-      - zod
-
-  viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5):
-    dependencies:
-      '@noble/curves': 1.9.1
-      '@noble/hashes': 1.8.0
-      '@scure/bip32': 1.7.0
-      '@scure/bip39': 1.6.0
-      abitype: 1.2.3(typescript@5.9.3)(zod@4.6.5)
-      isows: 1.0.7(ws@8.21.0(bufferutil@4.2.0)(utf-8-validate@6.0.6))
-      ox: 0.14.67(typescript@5.9.3)(zod@4.6.5)
-      ws: 8.21.0(bufferutil@4.2.0)(utf-8-validate@6.0.6)
+      ws: 8.21.0(bufferutil@4.2.0)
     optionalDependencies:
       typescript: 5.9.3
     transitivePeerDependencies:
@@ -10333,14 +10020,14 @@ snapshots:
       tsx: 4.23.15
       yaml: 2.9.1
 
-  wagmi@3.7.11(@coinbase/wallet-sdk@4.3.6(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5))(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5))(@tanstack/query-core@5.108.2)(@tanstack/react-query@5.108.2(@types/react@19.3.0)(react@19.3.1))(@types/react@19.3.0)(react@19.3.1)(typescript@5.9.3)(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)):
+  wagmi@3.7.11(@coinbase/wallet-sdk@4.3.6(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5))(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5))(@tanstack/query-core@5.108.2)(@tanstack/react-query@5.108.2(@types/react@19.3.0)(react@19.3.1))(@types/react@19.3.0)(react@19.3.1)(typescript@5.9.3)(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)):
     dependencies:
       '@tanstack/react-query': 5.108.2(@types/react@19.3.0)(react@19.3.1)
-      '@wagmi/connectors': 8.2.4(@coinbase/wallet-sdk@4.3.6(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(utf-8-validate@6.0.6)(zod@4.6.5))(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5))(@wagmi/core@3.6.9(@tanstack/query-core@5.108.2)(@types/react@19.3.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)))(typescript@5.9.3)(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5))
-      '@wagmi/core': 3.6.9(@tanstack/query-core@5.108.2)(@types/react@19.3.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.3.1))(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5))
+      '@wagmi/connectors': 8.2.4(@coinbase/wallet-sdk@4.3.6(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(zod@4.6.5))(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5))(@wagmi/core@3.6.9(@tanstack/query-core@5.108.2)(@types/react@19.3.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.7.0(react@19.3.1))(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)))(typescript@5.9.3)(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5))
+      '@wagmi/core': 3.6.9(@tanstack/query-core@5.108.2)(@types/react@19.3.0)(react@19.3.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.3.1))(viem@2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5))
       react: 19.3.1
       use-sync-external-store: 1.4.0(react@19.3.1)
-      viem: 2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      viem: 2.58.4(bufferutil@4.2.0)(typescript@5.9.3)(zod@4.6.5)
     optionalDependencies:
       typescript: 5.9.3
     transitivePeerDependencies:
@@ -10382,15 +10069,13 @@ snapshots:
       string-width: 4.2.3
       strip-ansi: 6.0.1
 
-  ws@7.5.14(bufferutil@4.2.0)(utf-8-validate@6.0.6):
+  ws@7.5.14(bufferutil@4.2.0):
     optionalDependencies:
       bufferutil: 4.2.0
-      utf-8-validate: 6.0.6
 
-  ws@8.21.0(bufferutil@4.2.0)(utf-8-validate@6.0.6):
+  ws@8.21.0(bufferutil@4.2.0):
     optionalDependencies:
       bufferutil: 4.2.0
-      utf-8-validate: 6.0.6
 
   ws@8.23.0(bufferutil@4.2.0)(utf-8-validate@6.0.6):
     optionalDependencies:
@@ -10426,9 +10111,12 @@ snapshots:
 
   zod@3.22.4: {}
 
-  zod@3.25.76: {}
+  zod@3.25.76:
+    optional: true
 
   zod@4.6.5: {}
+
+  zod@4.6.7: {}
 
   zustand@5.0.0(@types/react@19.3.0)(react@19.3.1)(use-sync-external-store@1.4.0(react@19.3.1)):
     optionalDependencies:
