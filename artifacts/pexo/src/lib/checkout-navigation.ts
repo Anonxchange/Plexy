@@ -8,5 +8,5 @@ export function getLocalizedCheckoutPath(pathname = window.location.pathname): s
 }
 
 export function openLocalizedCheckout(): void {
-  window.open(getLocalizedCheckoutPath(), "_blank");
+  window.open(getLocalizedCheckoutPath(), "_blank", "noopener,noreferrer");
 }

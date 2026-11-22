@@ -330,7 +330,7 @@ export function GiftCardDetail() {
         cardValue: value,
       },
     }));
-    window.open(getLocalizedCheckoutPath(), "_blank");
+    window.open(getLocalizedCheckoutPath(), "_blank", "noopener,noreferrer");
   };
 
   const handleContinueOrder = () => {

@@ -147,8 +147,39 @@ export const CART_BUYER_IDENTITY_UPDATE_MUTATION = 'cartBuyerIdentityUpdate';
 // Fired whenever the market changes (manual selection or IP detection).
 // Any page/component can listen instead of forcing a full window.location.reload().
 export const MARKET_CHANGED_EVENT = 'pexly:market-changed';
-let localizationRequest: Promise<Array<{ code: string; region: string; currency: string }>> | undefined;
+const MARKET_CACHE_KEY = 'pexly_shopify_markets_v1';
+const MARKET_CACHE_TTL_MS = 300_000;
+type MarketEntry = { code: string; region: string; currency: string };
+let localizationRequest: Promise<MarketEntry[]> | undefined;
 let localizationExpiresAt = 0;
+
+function readCachedMarkets(): MarketEntry[] | undefined {
+  if (typeof window === 'undefined') return undefined;
+  try {
+    const raw = window.sessionStorage.getItem(MARKET_CACHE_KEY);
+    if (!raw) return undefined;
+    const parsed = JSON.parse(raw) as { expiresAt?: number; markets?: unknown };
+    if (typeof parsed?.expiresAt !== 'number' || Date.now() >= parsed.expiresAt) return undefined;
+    if (!Array.isArray(parsed.markets) || parsed.markets.length === 0) return undefined;
+    const valid = parsed.markets.filter(
+      (m: any): m is MarketEntry =>
+        m && typeof m.code === 'string' && /^[A-Z]{2}$/.test(m.code) &&
+        typeof m.region === 'string' && typeof m.currency === 'string'
+    );
+    return valid.length === parsed.markets.length ? valid : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function writeCachedMarkets(markets: MarketEntry[], expiresAt: number) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(MARKET_CACHE_KEY, JSON.stringify({ expiresAt, markets }));
+  } catch {
+    // Ignore storage quota or private mode failures
+  }
+}
 
 export function getMarketCountry(): string | undefined {
   return getCountryPreferences().delivery?.country;
@@ -160,8 +191,6 @@ export function setMarketCountry(countryCode: string) {
 
 export async function storefrontApiRequest(queryName: string, variables: Record<string, unknown> = {}) {
   try {
-    await initializeCountryPreferences();
-    const country = typeof variables.country === "string" ? variables.country : getMarketCountry();
     // Verify catalog context as well as cart context: an unsupported country can
     // silently fall back to the store's primary market even with @inContext.
     // Showing an error is safer than displaying prices for the wrong market.
@@ -170,16 +199,36 @@ export async function storefrontApiRequest(queryName: string, variables: Record<
       COLLECTION_BY_HANDLE_QUERY, COLLECTION_PRODUCT_TYPES_QUERY, CART_CREATE_MUTATION,
       CART_LINES_ADD_MUTATION, CART_BUYER_IDENTITY_UPDATE_MUTATION,
     ].includes(queryName);
+
+    const explicitCountry =
+      (variables.buyerIdentity as { countryCode?: string } | undefined)?.countryCode ||
+      (typeof variables.country === "string" ? variables.country : undefined);
+    let country = explicitCountry || getMarketCountry();
+
     if (needsMarket) {
-      const selectedCountry = (variables.buyerIdentity as { countryCode?: string } | undefined)?.countryCode || country;
+      // Run country geo-detection (only if no delivery country is saved yet)
+      // in parallel with fetching Shopify's allowed markets.
+      const marketsPromise = shopifyService.getAvailableCountries();
+      if (!country) {
+        await initializeCountryPreferences();
+        country = getMarketCountry();
+      }
+      const selectedCountry = explicitCountry || country;
       if (!selectedCountry) throw new Error("Choose your shop delivery country in the header.");
-      const markets = await shopifyService.getAvailableCountries();
+      const markets = await marketsPromise;
       if (!markets.some(market => market.code === selectedCountry)) {
         throw new Error(`Shop delivery to ${selectedCountry} is not available. Choose another country in the header.`);
       }
+    } else if (queryName !== "getLocalization" && !country) {
+      // Non-market queries (except getLocalization which takes no $country) still
+      // use cached delivery country when present, without blocking on IP detection.
+      country = getMarketCountry();
     }
+
     const supabase = await getSupabase();
-    const requestVariables = { country, ...variables };
+    const requestVariables = queryName === "getLocalization"
+      ? variables
+      : { ...(country ? { country } : {}), ...variables };
     const { data, error } = await supabase.functions.invoke('shopify-storefront', {
       body: { queryName, variables: requestVariables }
     });
@@ -220,8 +269,32 @@ export function formatPrice(amount: string | number, currencyCode: string) {
   }).format(Number(amount));
 }
 
+const ALLOWED_CHECKOUT_HOST_SUFFIXES = [
+  ".myshopify.com",
+  ".shop.app",
+  ".pexly.com",
+  ".pexly.app",
+];
+const ALLOWED_CHECKOUT_EXACT_HOSTS = new Set([
+  "checkout.shopify.com",
+  "shop.app",
+  "pexly.com",
+  "pexly.app",
+]);
+
 export function formatCheckoutUrl(checkoutUrl: string): string {
-  return checkoutUrl;
+  if (typeof checkoutUrl !== "string" || !checkoutUrl.trim()) return "";
+  try {
+    const parsed = new URL(checkoutUrl.trim());
+    if (parsed.protocol !== "https:" || parsed.username || parsed.password) return "";
+    const host = parsed.hostname.toLowerCase();
+    const allowed =
+      ALLOWED_CHECKOUT_EXACT_HOSTS.has(host) ||
+      ALLOWED_CHECKOUT_HOST_SUFFIXES.some((suffix) => host.endsWith(suffix));
+    return allowed ? parsed.href : "";
+  } catch {
+    return "";
+  }
 }
 
 function isCartNotFoundError(userErrors: Array<{ field: string[] | null; message: string }>): boolean {
@@ -229,21 +302,33 @@ function isCartNotFoundError(userErrors: Array<{ field: string[] | null; message
 }
 
 export const shopifyService = {
-  async getAvailableCountries(): Promise<Array<{ code: string; region: string; currency: string }>> {
+  async getAvailableCountries(): Promise<MarketEntry[]> {
     if (localizationRequest && Date.now() < localizationExpiresAt) return localizationRequest;
-    localizationExpiresAt = Date.now() + 300_000;
+    const cached = readCachedMarkets();
+    if (cached) {
+      localizationExpiresAt = Date.now() + MARKET_CACHE_TTL_MS;
+      localizationRequest = Promise.resolve(cached);
+      return localizationRequest;
+    }
+    localizationExpiresAt = Date.now() + MARKET_CACHE_TTL_MS;
     localizationRequest = (async () => {
       const data = await storefrontApiRequest("getLocalization");
       const countries = data?.data?.localization?.availableCountries;
       if (!Array.isArray(countries)) throw new Error("The store did not return its configured delivery markets.");
-      return countries.map((country: any) => ({
+      const parsed = countries.map((country: any) => ({
         code: country.isoCode,
         region: country.name,
         currency: country.currency?.isoCode,
-      })).filter((country: any) => /^[A-Z]{2}$/.test(country.code) && typeof country.currency === "string");
+      })).filter((country: any): country is MarketEntry =>
+        /^[A-Z]{2}$/.test(country.code) && typeof country.region === "string" && typeof country.currency === "string"
+      );
+      const expiresAt = Date.now() + MARKET_CACHE_TTL_MS;
+      localizationExpiresAt = expiresAt;
+      writeCachedMarkets(parsed, expiresAt);
+      return parsed;
     })();
     // Failed requests are retryable from the header.
-    void localizationRequest.catch(() => { localizationRequest = undefined; });
+    void localizationRequest.catch(() => { localizationRequest = undefined; localizationExpiresAt = 0; });
     return localizationRequest;
   },
 

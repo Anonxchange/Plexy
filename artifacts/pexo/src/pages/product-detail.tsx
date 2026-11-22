@@ -34,8 +34,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { getSupabase } from "@/lib/supabase";
-import { MARKET_CHANGED_EVENT, shopifyService } from "@/lib/shopify-service";
+import { MARKET_CHANGED_EVENT, shopifyService, formatCheckoutUrl } from "@/lib/shopify-service";
 import type { ImportedReview } from "@/lib/shopify-service";
+import { sanitizeProductHtml, sanitizeImageUrl, sanitizeEmbedUrl } from "@/lib/sanitize";
 import { devLog } from "@/lib/dev-logger";
 import { resolveCjVid } from "@/lib/cj-vid";
 import { useCart } from "@/hooks/use-shopify-cart";
@@ -293,7 +294,10 @@ function InfoSection({
 }
 
 function ProductInfoSections({ html }: { html?: string }) {
-  const { descriptionHtml, specs } = useMemo(() => splitSpecs(stripImgTags(html || "")), [html]);
+  const { descriptionHtml, specs } = useMemo(
+    () => splitSpecs(sanitizeProductHtml(stripImgTags(html || ""))),
+    [html]
+  );
   const hasDescription = useMemo(() => htmlToText(descriptionHtml).length > 0, [descriptionHtml]);
   const hasSpecs = specs.length > 0;
 
@@ -398,7 +402,10 @@ function parseMedia(p: any): MediaItem[] | undefined {
         devLog?.warn?.('[parseMedia] VIDEO media node has no sources — check that the product query requests `sources { url mimeType }`.', node);
       }
     } else if (contentType === 'EXTERNAL_VIDEO' && node.embeddedUrl) {
-      items.push({ type: 'external', embedUrl: node.embeddedUrl, previewUrl: node.previewImage?.url });
+      const safeEmbedUrl = sanitizeEmbedUrl(node.embeddedUrl);
+      if (safeEmbedUrl) {
+        items.push({ type: 'external', embedUrl: safeEmbedUrl, previewUrl: sanitizeImageUrl(node.previewImage?.url) || undefined });
+      }
     }
   }
   return items.length > 0 ? items : undefined;
@@ -568,7 +575,9 @@ export function ProductDetail() {
 
     const normSrc = (raw: string): string | null => {
       if (!raw || raw.startsWith('data:') || raw.length < 8) return null;
-      return raw.startsWith('http://') ? raw.replace('http://', 'https://') : raw;
+      const upgraded = raw.startsWith('http://') ? `https://${raw.slice('http://'.length)}` : raw;
+      const safe = sanitizeImageUrl(upgraded);
+      return safe || null;
     };
 
     if (product.descriptionHtml) {
@@ -1004,8 +1013,9 @@ export function ProductDetail() {
     setIsCheckingOut(true);
     try {
       const result = await shopifyService.createCart({ variantId: targetVariantId, quantity });
-      if (result?.checkoutUrl) {
-        window.location.href = result.checkoutUrl;
+      const safeCheckoutUrl = result?.checkoutUrl ? formatCheckoutUrl(result.checkoutUrl) : "";
+      if (safeCheckoutUrl) {
+        window.location.href = safeCheckoutUrl;
       } else {
         toast.error("Could not initiate checkout. Please try again.");
       }
@@ -1080,6 +1090,8 @@ export function ProductDetail() {
                       key={selectedImage}
                       src={selected.embedUrl}
                       className="w-full h-full"
+                      sandbox="allow-scripts allow-same-origin allow-presentation"
+                      referrerPolicy="strict-origin-when-cross-origin"
                       allow="autoplay; encrypted-media"
                       allowFullScreen
                     />

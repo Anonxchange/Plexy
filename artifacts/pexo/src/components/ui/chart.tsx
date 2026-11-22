@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
+import { sanitizeCssColor, sanitizeCssId } from '@/lib/sanitize';
 import * as RechartsPrimitive from 'recharts';
 
 // Format: { THEME_NAME: CSS_SELECTOR }
@@ -65,11 +66,12 @@ const ChartContainer = React.forwardRef<
 ChartContainer.displayName = 'Chart';
 
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
+  const safeId = sanitizeCssId(id);
   const colorConfig = Object.entries(config).filter(
     ([, config]) => config.theme || config.color,
   );
 
-  if (!colorConfig.length) {
+  if (!safeId || !colorConfig.length) {
     return null;
   }
 
@@ -79,14 +81,17 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
         __html: Object.entries(THEMES)
           .map(
             ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
+${prefix} [data-chart=${safeId}] {
 ${colorConfig
   .map(([key, itemConfig]) => {
-    const color =
+    const safeKey = sanitizeCssId(key);
+    const rawColor =
       itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
       itemConfig.color;
-    return color ? `  --color-${key}: ${color};` : null;
+    const safeColor = rawColor ? sanitizeCssColor(rawColor) : '';
+    return safeKey && safeColor ? `  --color-${safeKey}: ${safeColor};` : null;
   })
+  .filter(Boolean)
   .join('\n')}
 }
 `,

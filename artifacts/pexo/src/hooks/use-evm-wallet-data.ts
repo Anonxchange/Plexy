@@ -211,7 +211,10 @@ export function useEvmWalletData() {
       const result = nativeResults[index];
       const balanceStatus: EvmWalletAsset["balanceStatus"] = !enabled ? "disconnected"
         : nativeErrors[index] ? "error" : result ? "ready" : "loading";
-      const balance = balanceStatus === "ready" ? result?.formatted ?? "0" : "0";
+      const balance =
+        balanceStatus === "ready" && result
+          ? formatUnits(result.value, result.decimals)
+          : "0";
       const price = prices.data?.[definition.symbol]?.current_price;
       output.push({
         id: definition.id,

@@ -337,7 +337,7 @@ function App() {
     script: [
       {
         type: "application/ld+json",
-        innerHTML: JSON.stringify(siteStructuredData),
+        innerHTML: JSON.stringify(siteStructuredData).replaceAll("<", "\\u003c"),
       },
     ],
   });

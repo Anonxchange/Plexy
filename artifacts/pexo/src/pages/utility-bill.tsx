@@ -154,7 +154,7 @@ const UtilityDetailView = ({
     devLog.info("Redirecting to checkout for utility bill");
     const seg = window.location.pathname.split("/")[1];
     const langBase = seg && seg.length === 2 ? `/${seg}` : "/en";
-    window.open(`${langBase}/checkout`, "_blank");
+    window.open(`${langBase}/checkout`, "_blank", "noopener,noreferrer");
   };
 
   const safeLogo = sanitizeImageUrl((selectedProvider as any).logoUrls?.[0] || (selectedProvider as any).logo);

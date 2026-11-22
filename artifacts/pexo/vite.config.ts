@@ -11,6 +11,17 @@ const artifactRoot = path.resolve(import.meta.dirname);
 const reactDocumentEntry: Plugin = {
   name: "pexly-react-document-entry",
   configureServer(server) {
+    server.middlewares.use((_request, response, next) => {
+      response.removeHeader("X-Powered-By");
+      response.removeHeader("Server");
+      const originalSetHeader = response.setHeader.bind(response);
+      response.setHeader = ((name: string, value: number | string | readonly string[]) => {
+        const lower = name.toLowerCase();
+        if (lower === "x-powered-by" || lower === "server") return response;
+        return originalSetHeader(name, value);
+      }) as typeof response.setHeader;
+      next();
+    });
     server.middlewares.use((request, response, next) => {
       if (request.method !== "GET" || !request.headers.accept?.includes("text/html")) {
         next();
@@ -36,6 +47,19 @@ const reactDocumentEntry: Plugin = {
         .transformIndexHtml(pathname, document)
         .then((transformedDocument) => response.end(transformedDocument))
         .catch(next);
+    });
+  },
+  configurePreviewServer(server) {
+    server.middlewares.use((_request, response, next) => {
+      response.removeHeader("X-Powered-By");
+      response.removeHeader("Server");
+      const originalSetHeader = response.setHeader.bind(response);
+      response.setHeader = ((name: string, value: number | string | readonly string[]) => {
+        const lower = name.toLowerCase();
+        if (lower === "x-powered-by" || lower === "server") return response;
+        return originalSetHeader(name, value);
+      }) as typeof response.setHeader;
+      next();
     });
   },
   config() {
@@ -103,7 +127,11 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    host: "0.0.0.0",
+    port: Number(process.env.PORT) || 3000,
     allowedHosts: true,
+    hmr: process.env.DISABLE_HMR !== "true",
+    watch: process.env.DISABLE_HMR === "true" ? null : {},
     fs: { strict: true },
   },
 });

@@ -46,12 +46,33 @@ export function sanitizeBlogHtml(html: string): string {
   );
 }
 
+export function sanitizeProductHtml(html: string): string {
+  return withNoopenerHook(() =>
+    DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: [
+        "p", "br", "strong", "b", "em", "i", "u", "s", "sub", "sup",
+        "a", "ul", "ol", "li", "code", "pre", "blockquote",
+        "h1", "h2", "h3", "h4", "h5", "h6",
+        "table", "thead", "tbody", "tfoot", "tr", "th", "td",
+        "div", "span", "hr",
+      ],
+      ALLOWED_ATTR: ["href", "rel", "colspan", "rowspan", "scope"],
+      ALLOW_DATA_ATTR: false,
+      ALLOWED_URI_REGEXP: SAFE_URL_PATTERN,
+    })
+  );
+}
+
 export function sanitizeUrl(url: string): string {
-  const purified = DOMPurify.sanitize(url, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
-  if (purified.startsWith("/")) return purified;
+  const purified = DOMPurify.sanitize(url, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] }).trim();
+  if (!purified) return "";
+  if (purified.startsWith("/") && !purified.startsWith("//") && !purified.startsWith("/\\")) {
+    return purified;
+  }
   try {
     const parsed = new URL(purified);
-    return ["http:", "https:"].includes(parsed.protocol) ? purified : "";
+    if (parsed.username || parsed.password) return "";
+    return ["http:", "https:"].includes(parsed.protocol) ? parsed.href : "";
   } catch {
     return "";
   }
@@ -65,8 +86,11 @@ export function isSafeExternalUrl(url: string | null | undefined): boolean {
 
 export function sanitizeImageUrl(url: string | null | undefined): string {
   if (!url) return "";
+  const trimmed = url.trim();
+  if (!trimmed || trimmed.startsWith("//") || trimmed.startsWith("/\\")) return "";
   try {
-    const parsed = new URL(url, window.location.origin);
+    const parsed = new URL(trimmed, window.location.origin);
+    if (parsed.username || parsed.password) return "";
     if (!["http:", "https:"].includes(parsed.protocol)) return "";
     return DOMPurify.sanitize(parsed.href, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
   } catch {
@@ -74,12 +98,26 @@ export function sanitizeImageUrl(url: string | null | undefined): string {
   }
 }
 
-const COINBASE_PAY_ORIGINS = [
-  "https://pay.coinbase.com",
-  "https://buy.coinbase.com",
-  "https://onramp.coinbase.com",
-  "https://www.coinbase.com",
-];
+const TRUSTED_VIDEO_EMBED_HOSTS = new Set([
+  "www.youtube.com",
+  "youtube.com",
+  "www.youtube-nocookie.com",
+  "youtube-nocookie.com",
+  "player.vimeo.com",
+  "vimeo.com",
+]);
+
+export function sanitizeEmbedUrl(url: string | null | undefined): string {
+  if (!url) return "";
+  try {
+    const parsed = new URL(url.trim());
+    if (parsed.protocol !== "https:" || parsed.username || parsed.password) return "";
+    if (!TRUSTED_VIDEO_EMBED_HOSTS.has(parsed.hostname.toLowerCase())) return "";
+    return parsed.href;
+  } catch {
+    return "";
+  }
+}
 
 export function safeExternalRedirect(
   url: string | null | undefined,
@@ -88,15 +126,14 @@ export function safeExternalRedirect(
   if (!url) return "";
   try {
     const parsed = new URL(url);
-    if (parsed.protocol !== "https:") return "";
+    if (parsed.protocol !== "https:" || parsed.username || parsed.password) return "";
     const origin = `${parsed.protocol}//${parsed.host}`;
-    return allowedOrigins.includes(origin) ? url : "";
+    return allowedOrigins.includes(origin) ? parsed.href : "";
   } catch {
     return "";
   }
 }
 
-export { COINBASE_PAY_ORIGINS };
 
 export function sanitizeCssId(id: string): string {
   return id.replace(/[^a-zA-Z0-9\-_]/g, "");

@@ -45,6 +45,8 @@ function sendDocument(response) {
   response.writeHead(200, {
     "Content-Type": "text/html; charset=utf-8",
     "Cache-Control": "no-cache",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
   });
   response.end(entry.html);
 }
@@ -56,8 +58,15 @@ async function handleRequest(request, response) {
     return;
   }
 
-  const requestUrl = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
-  let pathname = decodeURIComponent(requestUrl.pathname);
+  const requestUrl = new URL(request.url ?? "/", "http://localhost");
+  let pathname;
+  try {
+    pathname = decodeURIComponent(requestUrl.pathname);
+  } catch {
+    response.writeHead(400);
+    response.end("Bad request");
+    return;
+  }
   if (normalizedBase !== "/" && !pathname.startsWith(normalizedBase)) {
     response.writeHead(404);
     response.end("Not found");
@@ -103,6 +112,8 @@ async function handleRequest(request, response) {
       ? "public, max-age=31536000, immutable"
       : "public, max-age=3600",
     "Content-Length": fileStats.size,
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
   });
   if (request.method === "HEAD") {
     response.end();
@@ -112,6 +123,8 @@ async function handleRequest(request, response) {
 }
 
 const server = createServer((request, response) => {
+  response.removeHeader("X-Powered-By");
+  response.removeHeader("Server");
   void handleRequest(request, response).catch((error) => {
     console.error("Pexly request failed:", error);
     if (!response.headersSent) response.writeHead(500);

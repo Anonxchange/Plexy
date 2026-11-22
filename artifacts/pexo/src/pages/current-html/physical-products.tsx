@@ -1,5 +1,5 @@
 import "./page-styles/physical-products.css";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { CurrentMarketingPage } from "@/components/marketing/current-marketing-page";
 import { Search, X, ChevronDown, SlidersHorizontal, ArrowUpDown } from "@/lib/icons";
 import {
@@ -128,46 +128,137 @@ function shuffle<T>(list: T[]): T[] {
   return a;
 }
 
-// The whole catalog is indexed with tiny records (id, created time, price), so it can be shuffled and sorted
-// in full. Only the products actually on screen then get fetched as full cards.
+// The catalog is indexed progressively with tiny records (id, created time, price).
+// Page 1 (up to 250 items) unblocks first render immediately while remaining pages stream in the background.
 const INDEX_CAP = 50000; // safety stop only
-const indexCache = new Map<string, Promise<ProductIndexItem[]>>();
-const cardCache = new Map<string, ShopifyProduct>();
-if (typeof window !== "undefined") {
-  window.addEventListener(MARKET_CHANGED_EVENT, () => { indexCache.clear(); cardCache.clear(); });
+
+interface IndexStream {
+  firstPage: Promise<ProductIndexItem[]>;
+  snapshot: () => { items: ProductIndexItem[]; done: boolean; error: Error | null };
+  subscribe: (listener: () => void) => () => void;
 }
 
-function fetchIndex(query?: string): Promise<ProductIndexItem[]> {
+const indexCache = new Map<string, IndexStream>();
+const cardCache = new Map<string, ShopifyProduct>();
+const cardInflight = new Map<string, Promise<void>>();
+if (typeof window !== "undefined") {
+  window.addEventListener(MARKET_CHANGED_EVENT, () => {
+    indexCache.clear();
+    cardCache.clear();
+    cardInflight.clear();
+  });
+}
+
+function getIndexStream(query?: string): IndexStream {
   const key = query ?? "";
   const hit = indexCache.get(key);
   if (hit) return hit;
-  const job = (async () => {
-    const out: ProductIndexItem[] = [];
-    const seen = new Set<string>();
+
+  const items: ProductIndexItem[] = [];
+  const seen = new Set<string>();
+  let done = false;
+  let streamError: Error | null = null;
+  const listeners = new Set<() => void>();
+  const notify = () => {
+    listeners.forEach((fn) => fn());
+  };
+
+  let resolveFirst!: (first: ProductIndexItem[]) => void;
+  let rejectFirst!: (err: unknown) => void;
+  const firstPage = new Promise<ProductIndexItem[]>((res, rej) => {
+    resolveFirst = res;
+    rejectFirst = rej;
+  });
+
+  const stream: IndexStream = {
+    firstPage,
+    snapshot: () => ({ items: [...items], done, error: streamError }),
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
+  indexCache.set(key, stream);
+
+  (async () => {
     let cursor: string | undefined;
-    while (out.length < INDEX_CAP) {
-      const res = await shopifyService.getProductIndex(250, cursor, query);
-      for (const it of res.items) {
-        if (!seen.has(it.id)) { seen.add(it.id); out.push(it); }
+    let isFirst = true;
+    try {
+      while (items.length < INDEX_CAP) {
+        const res = await shopifyService.getProductIndex(250, cursor, query);
+        // Abort cleanly if cache was cleared (e.g. market changed mid-stream).
+        if (indexCache.get(key) !== stream) return;
+        for (const it of res.items) {
+          if (!seen.has(it.id)) {
+            seen.add(it.id);
+            items.push(it);
+          }
+        }
+        const next = res.pageInfo?.endCursor;
+        const hasMore = Boolean(res.pageInfo?.hasNextPage && next);
+        if (!hasMore || items.length >= INDEX_CAP) {
+          done = true;
+        }
+        if (isFirst) {
+          isFirst = false;
+          resolveFirst([...items]);
+        }
+        notify();
+        if (done) break;
+        cursor = next!;
       }
-      const next = res.pageInfo?.endCursor;
-      if (!res.pageInfo?.hasNextPage || !next) break;
-      cursor = next;
+      if (!done) {
+        done = true;
+        notify();
+      }
+    } catch (err: any) {
+      const errorObj = err instanceof Error ? err : new Error(err?.message || "Could not load products");
+      if (indexCache.get(key) === stream) {
+        indexCache.delete(key);
+      }
+      streamError = errorObj;
+      done = true;
+      if (isFirst) {
+        isFirst = false;
+        rejectFirst(errorObj);
+      }
+      notify();
     }
-    return out;
   })();
-  indexCache.set(key, job);
-  job.catch(() => indexCache.delete(key));
-  return job;
+
+  return stream;
 }
 
-// Full card details for the given ids, fetched 100 at a time and remembered so nothing loads twice.
+// Full card details for the given ids, fetched 100 at a time in parallel and deduplicated in-flight.
 async function fetchCards(ids: string[]): Promise<void> {
   const missing = ids.filter((id) => !cardCache.has(id));
-  for (let i = 0; i < missing.length; i += 100) {
-    const got = await shopifyService.getProductCards(missing.slice(i, i + 100));
-    for (const p of got) cardCache.set(p.node.id, p);
+  if (missing.length === 0) return;
+
+  const waitPromises: Promise<void>[] = [];
+  const toFetch: string[] = [];
+  for (const id of missing) {
+    const inflight = cardInflight.get(id);
+    if (inflight) waitPromises.push(inflight);
+    else toFetch.push(id);
   }
+
+  for (let i = 0; i < toFetch.length; i += 100) {
+    const batch = toFetch.slice(i, i + 100);
+    const job = shopifyService
+      .getProductCards(batch)
+      .then((got) => {
+        for (const p of got) cardCache.set(p.node.id, p);
+      })
+      .finally(() => {
+        for (const id of batch) cardInflight.delete(id);
+      });
+    for (const id of batch) cardInflight.set(id, job);
+    waitPromises.push(job);
+  }
+
+  await Promise.all(waitPromises);
 }
 
 // Category and search text combine into one Shopify search string (space = AND).
@@ -312,10 +403,21 @@ const SORTS: { key: SortKey; label: string }[] = [
   { key: "high", label: "Price: high to low" },
 ];
 
-function ShopAllProducts({ category, search, excludeIds, hold }: { category: string; search: string; excludeIds: Set<string>; hold: boolean }) {
+function ShopAllProducts({
+  category,
+  search,
+  excludeIds,
+  waitForIds,
+}: {
+  category: string;
+  search: string;
+  excludeIds: Set<string>;
+  waitForIds: boolean;
+}) {
   const [index, setIndex] = useState<ProductIndexItem[]>([]);
   const [count, setCount] = useState(PAGE_SIZE);
   const [indexLoading, setIndexLoading] = useState(true);
+  const [indexDone, setIndexDone] = useState(false);
   const [cardsLoading, setCardsLoading] = useState(false);
   const [cardsTick, setCardsTick] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -325,7 +427,7 @@ function ShopAllProducts({ category, search, excludeIds, hold }: { category: str
   const [maxDraft, setMaxDraft] = useState("");
   const [minPrice, setMinPrice] = useState<number | null>(null);
   const [maxPrice, setMaxPrice] = useState<number | null>(null);
-  const requestId = useRef(0);
+  const [reloadNonce, setReloadNonce] = useState(0);
   const colCount = useColumnCount();
 
   // A new search always starts on best match.
@@ -336,7 +438,7 @@ function ShopAllProducts({ category, search, excludeIds, hold }: { category: str
     setPanelOpen(false);
   }, [search]);
 
-  // Order across the WHOLE catalog (shuffled on load unless the visitor sorts or searches).
+  // Order across the catalog loaded so far (shuffled incrementally so already-visible cards never jump).
   const ordered = useMemo(() => {
     const list = index.filter(
       (it) => !excludeIds.has(it.id)
@@ -350,26 +452,28 @@ function ShopAllProducts({ category, search, excludeIds, hold }: { category: str
   }, [index, sort, excludeIds, minPrice, maxPrice]);
 
   const visibleIds = useMemo(() => ordered.slice(0, count).map((it) => it.id), [ordered, count]);
-  const hasMore = ordered.length > count;
+  const hasMore = ordered.length > count || !indexDone;
 
-  // Fetch card details only for what is on screen.
+  // Fetch card details immediately once page 1 arrives (in parallel with JustInRail).
   useEffect(() => {
-    if (indexLoading || visibleIds.length === 0) return;
+    if (indexLoading || waitForIds || visibleIds.length === 0) return;
+    const missingIds = visibleIds.filter((id) => !cardCache.has(id));
+    if (missingIds.length === 0) return;
     let alive = true;
     setCardsLoading(true);
-    fetchCards(visibleIds)
+    fetchCards(missingIds)
       .then(() => { if (alive) setCardsTick((t) => t + 1); })
       .catch((e: any) => { if (alive) setError(e?.message || "Could not load products"); })
       .finally(() => { if (alive) setCardsLoading(false); });
     return () => { alive = false; };
-  }, [visibleIds, indexLoading]);
+  }, [visibleIds, indexLoading, waitForIds]);
 
   const shown = useMemo(
     () => visibleIds.map((id) => cardCache.get(id)).filter((p): p is ShopifyProduct => Boolean(p)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [visibleIds, cardsTick],
   );
-  const loading = indexLoading || hold || (cardsLoading && shown.length === 0);
+  const loading = indexLoading || waitForIds || (cardsLoading && shown.length === 0);
 
   const cols = useMemo(() => {
     const out = Array.from({ length: colCount }, () => ({ h: 0, items: [] as { p: ShopifyProduct; r: number }[] }));
@@ -383,32 +487,65 @@ function ShopAllProducts({ category, search, excludeIds, hold }: { category: str
     return out;
   }, [shown, colCount]);
 
-  const loadFirst = useCallback(async () => {
-    const id = ++requestId.current;
-    setIndexLoading(true);
-    setError(null);
-    try {
-      const all = await fetchIndex(buildQuery(category, search));
-      if (id !== requestId.current) return;
-      setIndex(search ? all : shuffle(all));
-      setCount(PAGE_SIZE);
-    } catch (e: any) {
-      if (id !== requestId.current) return;
-      setIndex([]);
-      setError(e?.message || "Could not load products");
-    } finally {
-      if (id === requestId.current) setIndexLoading(false);
-    }
-  }, [category, search]);
+  const query = useMemo(() => buildQuery(category, search), [category, search]);
 
-  useEffect(() => { loadFirst(); }, [loadFirst]);
+  useEffect(() => {
+    let alive = true;
+    const seenIds = new Set<string>();
+    setIndex([]);
+    setIndexLoading(true);
+    setIndexDone(false);
+    setError(null);
+    setCount(PAGE_SIZE);
+
+    const stream = getIndexStream(query);
+
+    const applySnapshot = () => {
+      if (!alive) return;
+      const snap = stream.snapshot();
+      if (snap.error) {
+        setIndex([]);
+        setError(snap.error.message || "Could not load products");
+        setIndexLoading(false);
+        setIndexDone(true);
+        return;
+      }
+      const added = snap.items.filter((it) => !seenIds.has(it.id));
+      for (const it of added) seenIds.add(it.id);
+      if (added.length > 0) {
+        const chunk = search ? added : shuffle(added);
+        setIndex((prev) => (prev.length === 0 ? chunk : [...prev, ...chunk]));
+      } else if (snap.done && seenIds.size === 0) {
+        setIndex([]);
+      }
+      if (snap.items.length > 0 || snap.done) {
+        setIndexLoading(false);
+      }
+      if (snap.done) {
+        setIndexDone(true);
+      }
+    };
+
+    const unsub = stream.subscribe(applySnapshot);
+    applySnapshot();
+
+    return () => {
+      alive = false;
+      unsub();
+    };
+  }, [query, search, reloadNonce]);
+
+  const loadFirst = useCallback(() => {
+    indexCache.delete(query ?? "");
+    setReloadNonce((n) => n + 1);
+  }, [query]);
 
   // Reload when the visitor switches market/country so prices stay correct.
   useEffect(() => {
-    const onMarket = () => { loadFirst(); };
+    const onMarket = () => { setReloadNonce((n) => n + 1); };
     window.addEventListener(MARKET_CHANGED_EVENT, onMarket);
     return () => window.removeEventListener(MARKET_CHANGED_EVENT, onMarket);
-  }, [loadFirst]);
+  }, []);
 
   const loadMore = () => setCount((c) => c + PAGE_SIZE);
 
@@ -577,6 +714,8 @@ function toRail(p: ShopifyProduct): RailProduct {
 
 function useJustIn() {
   const [items, setItems] = useState<RailProduct[]>([]);
+  const [reservedIds, setReservedIds] = useState<Set<string>>(NO_IDS);
+  const [idsReady, setIdsReady] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -585,10 +724,14 @@ function useJustIn() {
     const load = async () => {
       const current = ++request;
       setLoading(true);
+      setIdsReady(false);
       try {
-        const index = await fetchIndex(undefined);
-        // Random picks from the whole catalog; a few spares in case some have no photo.
-        const ids = shuffle(index.map((it) => it.id)).slice(0, JUST_IN_COUNT + 6);
+        const firstPage = await getIndexStream(undefined).firstPage;
+        if (!alive || current !== request) return;
+        // Pick from page 1 immediately so ShopAllProducts can fetch its 60 cards in parallel.
+        const ids = shuffle(firstPage.map((it) => it.id)).slice(0, JUST_IN_COUNT + 6);
+        setReservedIds(new Set(ids));
+        setIdsReady(true);
         await fetchCards(ids);
         if (!alive || current !== request) return;
         const picked = ids
@@ -599,7 +742,11 @@ function useJustIn() {
           .slice(0, JUST_IN_COUNT);
         setItems(picked);
       } catch {
-        if (alive && current === request) setItems([]);
+        if (alive && current === request) {
+          setItems([]);
+          setReservedIds(NO_IDS);
+          setIdsReady(true);
+        }
       } finally {
         if (alive && current === request) setLoading(false);
       }
@@ -612,7 +759,7 @@ function useJustIn() {
     };
   }, []);
 
-  return { items, loading };
+  return { items, reservedIds, idsReady, loading };
 }
 
 const JUST_IN_COUNT = 12;
@@ -655,8 +802,6 @@ export function PhysicalProductsExport() {
   const [search, setSearch] = useState("");
   const rail = useJustIn();
   const justIn = rail.items;
-  // Products shown in "Just in" never repeat in "More to love".
-  const justInIds = useMemo(() => new Set(justIn.map((p) => p.id)), [justIn]);
   return (
     <CurrentMarketingPage page="physical-products">
     <div className={"page-wrapper"}>
@@ -773,7 +918,12 @@ export function PhysicalProductsExport() {
         <CategoryStrip active={category} onPick={setCategory} />
         <SearchBar value={search} onSearch={setSearch} />
         {search ? null : <JustInRail list={justIn} loading={rail.loading} />}
-        <ShopAllProducts category={category} search={search} excludeIds={search ? NO_IDS : justInIds} hold={!search && rail.loading} />
+        <ShopAllProducts
+          category={category}
+          search={search}
+          excludeIds={search ? NO_IDS : rail.reservedIds}
+          waitForIds={!search && !rail.idsReady}
+        />
       </main>
       <footer className={"footer"}>
         <div className={"padding-global"}>

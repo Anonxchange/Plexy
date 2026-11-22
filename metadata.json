@@ -1,0 +1,6 @@
+{
+  "name": "Pexly",
+  "description": "Pexly is a non-custodial crypto marketplace for people who use their own wallets to pay for digital services.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
