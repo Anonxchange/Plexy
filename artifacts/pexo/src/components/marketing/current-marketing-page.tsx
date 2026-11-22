@@ -29,7 +29,7 @@ const ROUTE_SEO: Record<string, PageSeoConfig> = {
   "/": {
     title: "Pexly — Your wallet, your way to pay",
     description:
-      "Spend crypto directly from your own wallet. Buy gift cards, top up mobile phones, pay utility bills, and shop global products on Pexly.",
+      "Spend crypto directly from your own wallet. Buy gift cards, top up mobile phones, and shop global products on Pexly.",
     canonicalPath: "/",
     schema: homePageSchema,
   },
@@ -64,7 +64,7 @@ const ROUTE_SEO: Record<string, PageSeoConfig> = {
   "/about-us": {
     title: "About Us — Non-Custodial Crypto Commerce | Pexly",
     description:
-      "Learn how Pexly enables non-custodial crypto payments for gift cards, mobile top-ups, utility bills, and global products without holding user funds.",
+      "Learn how Pexly enables non-custodial crypto payments for gift cards, mobile top-ups, and global products without holding user funds.",
     canonicalPath: "/about-us",
     schema: aboutPageSchema,
   },
@@ -85,7 +85,7 @@ const ROUTE_SEO: Record<string, PageSeoConfig> = {
   "/blogs": {
     title: "Pexly Blog — Crypto Commerce, Wallets & Guides",
     description:
-      "Read product updates, self-custody guides, and insights on spending cryptocurrency for gift cards, utility bills, and everyday shopping.",
+      "Read product updates, self-custody guides, and insights on spending cryptocurrency for gift cards, mobile top-ups, and everyday shopping.",
     canonicalPath: "/blogs",
     schema: blogPageSchema,
   },
