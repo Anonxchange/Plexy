@@ -4,10 +4,10 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [codex/merge-pezir-cleanup-20261122]
+    branches: [main, codex/merge-pezir-cleanup-20261122]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   frontend:
@@ -23,13 +23,8 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
-      - name: Commit refreshed lockfile
-        run: |
-          git add pnpm-lock.yaml
-          if ! git diff --cached --quiet; then
-            git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "chore: refresh pnpm lockfile after workspace cleanup"
-            git push
-          fi
+      - name: Audit production dependencies
+        run: pnpm audit --prod
       - name: Typecheck
         run: pnpm run typecheck
       - name: Production build
