@@ -32,7 +32,7 @@ export const homePageSchema = {
       "@id": "https://www.pexly.app/#webpage",
       "url": "https://www.pexly.app/",
       "name": "Pexly — Your wallet, your way to pay",
-      "description": "Spend crypto directly from your own wallet. Buy gift cards, top up mobile phones, pay utility bills, and shop global products on Pexly.",
+      "description": "Spend crypto directly from your own wallet. Buy gift cards, top up mobile phones, and shop global products on Pexly.",
       "isPartOf": {
         "@id": "https://www.pexly.app/#website"
       },
@@ -156,7 +156,7 @@ export const aboutPageSchema = {
       "@id": "https://www.pexly.app/about-us#webpage",
       "url": "https://www.pexly.app/about-us",
       "name": "About Us — Non-Custodial Crypto Commerce | Pexly",
-      "description": "Learn how Pexly enables non-custodial crypto payments for gift cards, mobile top-ups, utility bills, and global products without holding user funds.",
+      "description": "Learn how Pexly enables non-custodial crypto payments for gift cards, mobile top-ups, and global products without holding user funds.",
       "isPartOf": {
         "@id": "https://www.pexly.app/#website"
       },
@@ -227,7 +227,7 @@ export const blogPageSchema = {
       "@id": "https://www.pexly.app/blogs#webpage",
       "url": "https://www.pexly.app/blogs",
       "name": "Pexly Blog — Crypto Commerce, Wallets & Guides",
-      "description": "Read product updates, self-custody guides, and insights on spending cryptocurrency for gift cards, utility bills, and everyday shopping.",
+      "description": "Read product updates, self-custody guides, and insights on spending cryptocurrency for gift cards, mobile top-ups, and everyday shopping.",
       "isPartOf": {
         "@id": "https://www.pexly.app/#website"
       },
@@ -254,7 +254,7 @@ export const supportPageSchema = {
       "@id": "https://www.pexly.app/support#webpage",
       "url": "https://www.pexly.app/support",
       "name": "Help Center — Guides & Customer Support | Pexly",
-      "description": "Browse Pexly Help Center guides for gift cards, mobile top-ups, utility bill payments, physical orders, and self-custody wallet connections.",
+      "description": "Browse Pexly Help Center guides for gift cards, mobile top-ups, physical orders, and self-custody wallet connections.",
       "isPartOf": {
         "@id": "https://www.pexly.app/#website"
       },
@@ -275,7 +275,7 @@ export const supportPageSchema = {
           "name": "What is Pexly?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Pexly is a non-custodial crypto marketplace where you can pay directly from your own wallet for digital gift cards, mobile top-ups, utility bills, and physical products."
+            "text": "Pexly is a non-custodial crypto marketplace where you can pay directly from your own wallet for digital gift cards, mobile top-ups, and physical products."
           }
         },
         {
@@ -291,7 +291,7 @@ export const supportPageSchema = {
           "name": "How do payments work on Pexly?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Choose a gift card, mobile top-up, utility biller, or physical product, pick your preferred cryptocurrency at checkout, and pay directly from your connected or external wallet."
+            "text": "Choose a gift card, mobile top-up, or physical product, pick your preferred cryptocurrency at checkout, and pay directly from your connected or external wallet."
           }
         }
       ]
