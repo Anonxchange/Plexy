@@ -4,7 +4,7 @@ import { useHead } from "@unhead/react";
 import { supabase } from "@/lib/supabase";
 import i18n from "@/lib/i18n";
 import { isValidLang } from "@/lib/detect-language";
-import { siteMetadata, siteStructuredData } from "@/lib/site-document";
+import { siteMetadata, siteStructuredData, buildCanonicalUrl } from "@/lib/site-document";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -260,6 +260,12 @@ function AppRoutes() {
 
 function AppContent() {
   const [location] = useLocation();
+  const routePath = (location.split("?")[0] || "/").replace(/\.html$/i, "") || "/";
+  const routeCanonical = buildCanonicalUrl(routePath);
+  useHead({
+    meta: [{ property: "og:url", content: routeCanonical }],
+    link: [{ rel: "canonical", key: "canonical", href: routeCanonical }],
+  });
   const isHomepage = location === "/";
   const isPhysicalProductsPage = location === "/shop";
   const isGiftCardsTemplatePage = location === "/gift-cards" || location === "/gift-cards/all" || location === "/mobile-topup";
@@ -307,10 +313,7 @@ function App() {
       { name: "description", content: siteMetadata.description },
       { name: "color-scheme", content: "light" },
       { property: "og:title", content: siteMetadata.title },
-      {
-        property: "og:description",
-        content: "A non-custodial crypto marketplace for digital services. Pay with your own wallet.",
-      },
+      { property: "og:description", content: siteMetadata.description },
       { property: "og:type", content: "website" },
       { property: "og:url", content: siteMetadata.url },
       { property: "og:image", content: siteMetadata.image },
@@ -320,14 +323,16 @@ function App() {
       { property: "og:site_name", content: siteMetadata.siteName },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: siteMetadata.title },
-      {
-        name: "twitter:description",
-        content: "A non-custodial crypto marketplace for digital services. Pay with your own wallet.",
-      },
+      { name: "twitter:description", content: siteMetadata.description },
       { name: "twitter:image", content: siteMetadata.image },
       { name: "twitter:image:alt", content: siteMetadata.imageAlt },
     ],
     link: [
+      {
+        rel: "canonical",
+        key: "canonical",
+        href: siteMetadata.url,
+      },
       {
         rel: "icon",
         type: "image/webp",
