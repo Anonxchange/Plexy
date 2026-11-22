@@ -144,7 +144,7 @@ function Tile({ t }: { t: CardTile }) {
         <span className={"gsa-fb"}>{t.name}</span>
         {t.img ? (
           <img
-            src={t.img}
+            src={sanitizeImageUrl(t.img)}
             alt={""}
             loading={"lazy"}
             onError={(e) => {
