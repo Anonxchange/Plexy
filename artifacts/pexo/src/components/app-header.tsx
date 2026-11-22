@@ -8,6 +8,15 @@ import { useCart } from "@/hooks/use-shopify-cart";
 import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
 import { useTopupCart } from "@/hooks/use-topup-cart";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useGiftCardCountries } from "@/hooks/use-reloadly";
 import {
   getMarketConfig,
@@ -96,6 +105,7 @@ export function AppHeader() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [scrolled, setScrolled] = useState(false);
+  const isMobile = useIsMobile();
   const [countryOpen, setCountryOpen] = useState(false);
   const [countrySearch, setCountrySearch] = useState("");
   const [cartOpen, setCartOpen] = useState(
@@ -131,12 +141,15 @@ export function AppHeader() {
         : "shop";
   const pickerScope = editingScope ?? activeCountryScope;
   const displayedGiftCardCountry = giftCardCountry;
+  const isAllGiftCardCountries = preferences.digital?.source === "manual" && !displayedGiftCardCountry;
   const activeCountryFlag =
     activeCountryScope === "shop"
       ? flagForCountry(shopCountry)
-      : giftCountriesQuery.data?.find(
-          country => country.isoName === displayedGiftCardCountry,
-        )?.flag ?? flagForCountry(displayedGiftCardCountry);
+      : isAllGiftCardCountries
+        ? "🌍"
+        : giftCountriesQuery.data?.find(
+            country => country.isoName === displayedGiftCardCountry,
+          )?.flag ?? flagForCountry(displayedGiftCardCountry);
   const normalizedSearch = countrySearch.trim().toLocaleLowerCase();
   const filteredShopCountries = (marketsQuery.data ?? []).filter(country =>
     `${country.region} ${country.code}`.toLocaleLowerCase().includes(normalizedSearch),
@@ -149,6 +162,8 @@ export function AppHeader() {
   const filteredGiftCountries = digitalCountryOptions.filter(country =>
     `${country.name} ${country.isoName}`.toLocaleLowerCase().includes(normalizedSearch),
   );
+  const showAllGiftCountriesOption =
+    !normalizedSearch || "all countries global worldwide".includes(normalizedSearch);
   const currentLanguage = i18n.language?.split("-")[0] || "en";
 
   useEffect(() => {
@@ -299,15 +314,19 @@ export function AppHeader() {
             <Link className="px-btn solid" href="/gift-cards" onClick={closeMenu}>Start Shopping</Link>
           </div>
         </nav>
-        <Popover
-          open={countryOpen}
-          onOpenChange={open => {
+        {(() => {
+          const handleCountryOpenChange = (open: boolean) => {
             setCountryOpen(open);
-            if (open) setEditingScope(activeCountryScope);
-            if (!open) setCountrySearch("");
-          }}
-        >
-          <PopoverTrigger asChild>
+            if (open) {
+              setEditingScope(activeCountryScope);
+              setMenuOpen(false);
+              setSearchOpen(false);
+            } else {
+              setCountrySearch("");
+            }
+          };
+
+          const countryTriggerButton = (
             <button
               className="px-country-trigger"
               type="button"
@@ -316,14 +335,10 @@ export function AppHeader() {
             >
               <span className="px-country-flag" aria-hidden="true">{activeCountryFlag}</span>
             </button>
-          </PopoverTrigger>
-          <PopoverContent className="px-country-popover" aria-label="Country and language settings" align="end" sideOffset={8}>
-            <div className="px-country-heading">
-              <strong>Region &amp; language</strong>
-              <span>
-                Choose separate service countries
-              </span>
-            </div>
+          );
+
+          const countryPickerBody = (
+            <>
               <div className="px-country-store-tabs" role="group" aria-label="Country settings">
                 <button
                   type="button"
@@ -345,92 +360,153 @@ export function AppHeader() {
                     setCountrySearch("");
                   }}
                 >
-                  Gift cards &amp; top-ups: {giftCardCountry || "Not set"}
+                  Gift cards &amp; top-ups: {isAllGiftCardCountries ? "All countries" : giftCardCountry || "Not set"}
                 </button>
               </div>
-            {preferences.detection === "failed" && <p className="px-country-empty" role="status">Couldn’t detect your country. Choose each setting below.</p>}
-            {preferences.detection === "loading" && <p className="px-country-empty" role="status">Detecting your approximate country… You can choose manually now.</p>}
-            {preferences.storageBlocked && <p className="px-country-empty" role="status">Browser storage is blocked. Your choices apply for this visit only.</p>}
-            {preferences.legacyConflict && <p className="px-country-empty" role="status">Your older country choices differed. The saved header choice was kept; please confirm it.</p>}
-            {pickerScope === "shop" && shopCountry && marketsQuery.data && !marketsQuery.data.some(c => c.code === shopCountry) && <p className="px-country-empty" role="alert">Shop delivery to {getMarketConfig(shopCountry)?.region || shopCountry} is not available. Choose a configured delivery country.</p>}
-            <div className="px-country-list-section">
-              <label className="sr-only" htmlFor="px-country-search">Search countries</label>
-              <input
-                id="px-country-search"
-                className="px-country-search"
-                type="search"
-                placeholder="Search countries"
-                value={countrySearch}
-                onChange={event => setCountrySearch(event.target.value)}
-              />
-              <div className="px-country-options" role="group" aria-label="Available countries">
-                {pickerScope === "shop" ? (
-                  marketsQuery.isLoading ? <p className="px-country-empty" role="status">Checking delivery markets…</p> :
-                  marketsQuery.isError ? <div className="px-country-empty" role="alert">Delivery markets could not be verified. Your saved choice has not changed. <button type="button" onClick={() => void marketsQuery.refetch()}>Try again</button></div> :
-                  filteredShopCountries.length > 0 ? filteredShopCountries.map(country => (
-                    <button
-                      key={country.code}
-                      className="px-country-option"
-                      type="button"
-                      disabled={countryBusy}
-                      aria-pressed={shopCountry === country.code}
-                      onClick={() => selectShopCountry(country.code)}
-                    >
-                      <span className="px-country-option-flag" aria-hidden="true">{flagForCountry(country.code)}</span>
-                      <span className="px-country-option-name">{country.region}</span>
-                      <span className="px-country-option-code">{country.code}</span>
-                      <span className="px-country-option-code">{country.currency}</span>
-                      {shopCountry === country.code && <Check aria-hidden="true" />}
-                    </button>
-                  )) : <p className="px-country-empty">No configured delivery markets match. This country is not available for shop delivery.</p>
-                ) : (
-                  <>
-                    {giftCardCountry && giftCountriesQuery.data && !giftCountriesQuery.data.some(c => c.isoName === giftCardCountry) && <p className="px-country-empty" role="status">Gift cards may be unavailable in {giftCardCountry}. Choose another country or check top-up availability.</p>}
-                    {giftCountriesQuery.isLoading && (
-                      <p className="px-country-empty" role="status">Loading countries…</p>
-                    )}
-                    {giftCountriesQuery.isError && (
-                      <div className="px-country-empty" role="alert">
-                        <span>Couldn’t verify gift-card availability. You can still choose a country; cards and operators will be checked when loaded.</span>
-                        <button type="button" onClick={() => void giftCountriesQuery.refetch()}>
-                          Try again
-                        </button>
-                      </div>
-                    )}
-                    {!giftCountriesQuery.isLoading && (
-                      filteredGiftCountries.length > 0 ? filteredGiftCountries.map(country => (
-                        <button
-                          key={country.isoName}
-                          className="px-country-option"
-                          type="button"
-                          aria-pressed={displayedGiftCardCountry === country.isoName}
-                          onClick={() => selectGiftCardCountry(country.isoName)}
-                        >
-                          <span className="px-country-option-flag" aria-hidden="true">{country.flag}</span>
-                          <span className="px-country-option-name">{country.name}</span>
-                          <span className="px-country-option-code">{country.isoName}</span>
-                          {displayedGiftCardCountry === country.isoName && <Check aria-hidden="true" />}
-                        </button>
-                      )) : <p className="px-country-empty">No countries match that search.</p>
-                    )}
-                  </>
-                )}
+              {preferences.detection === "failed" && <p className="px-country-empty" role="status">Couldn’t detect your country. Choose each setting below.</p>}
+              {preferences.detection === "loading" && <p className="px-country-empty" role="status">Detecting your approximate country… You can choose manually now.</p>}
+              {preferences.storageBlocked && <p className="px-country-empty" role="status">Browser storage is blocked. Your choices apply for this visit only.</p>}
+              {preferences.legacyConflict && <p className="px-country-empty" role="status">Your older country choices differed. The saved header choice was kept; please confirm it.</p>}
+              {pickerScope === "shop" && shopCountry && marketsQuery.data && !marketsQuery.data.some(c => c.code === shopCountry) && <p className="px-country-empty" role="alert">Shop delivery to {getMarketConfig(shopCountry)?.region || shopCountry} is not available. Choose a configured delivery country.</p>}
+              <div className="px-country-list-section">
+                <label className="sr-only" htmlFor="px-country-search">Search countries</label>
+                <input
+                  id="px-country-search"
+                  className="px-country-search"
+                  type="search"
+                  placeholder="Search countries"
+                  value={countrySearch}
+                  onChange={event => setCountrySearch(event.target.value)}
+                />
+                <div className="px-country-options" role="group" aria-label="Available countries">
+                  {pickerScope === "shop" ? (
+                    marketsQuery.isLoading ? <p className="px-country-empty" role="status">Checking delivery markets…</p> :
+                    marketsQuery.isError ? <div className="px-country-empty" role="alert">Delivery markets could not be verified. Your saved choice has not changed. <button type="button" onClick={() => void marketsQuery.refetch()}>Try again</button></div> :
+                    filteredShopCountries.length > 0 ? filteredShopCountries.map(country => (
+                      <button
+                        key={country.code}
+                        className="px-country-option"
+                        type="button"
+                        disabled={countryBusy}
+                        aria-pressed={shopCountry === country.code}
+                        onClick={() => selectShopCountry(country.code)}
+                      >
+                        <span className="px-country-option-flag" aria-hidden="true">{flagForCountry(country.code)}</span>
+                        <span className="px-country-option-name">{country.region}</span>
+                        <span className="px-country-option-code">{country.code}</span>
+                        <span className="px-country-option-code">{country.currency}</span>
+                        {shopCountry === country.code && <Check aria-hidden="true" />}
+                      </button>
+                    )) : <p className="px-country-empty">No configured delivery markets match. This country is not available for shop delivery.</p>
+                  ) : (
+                    <>
+                      {giftCardCountry && giftCountriesQuery.data && !giftCountriesQuery.data.some(c => c.isoName === giftCardCountry) && <p className="px-country-empty" role="status">Gift cards may be unavailable in {giftCardCountry}. Choose another country or check top-up availability.</p>}
+                      {giftCountriesQuery.isLoading && (
+                        <p className="px-country-empty" role="status">Loading countries…</p>
+                      )}
+                      {giftCountriesQuery.isError && (
+                        <div className="px-country-empty" role="alert">
+                          <span>Couldn’t verify gift-card availability. You can still choose a country; cards and operators will be checked when loaded.</span>
+                          <button type="button" onClick={() => void giftCountriesQuery.refetch()}>
+                            Try again
+                          </button>
+                        </div>
+                      )}
+                      {!giftCountriesQuery.isLoading && (
+                        (showAllGiftCountriesOption || filteredGiftCountries.length > 0) ? (
+                          <>
+                            {showAllGiftCountriesOption && (
+                              <button
+                                key="ALL"
+                                className="px-country-option"
+                                type="button"
+                                aria-pressed={isAllGiftCardCountries}
+                                onClick={() => selectGiftCardCountry(undefined)}
+                                data-testid="button-gift-card-all-countries"
+                              >
+                                <span className="px-country-option-flag" aria-hidden="true">🌍</span>
+                                <span className="px-country-option-name">All countries</span>
+                                <span className="px-country-option-code">ALL</span>
+                                {isAllGiftCardCountries && <Check aria-hidden="true" />}
+                              </button>
+                            )}
+                            {filteredGiftCountries.map(country => (
+                              <button
+                                key={country.isoName}
+                                className="px-country-option"
+                                type="button"
+                                aria-pressed={displayedGiftCardCountry === country.isoName}
+                                onClick={() => selectGiftCardCountry(country.isoName)}
+                              >
+                                <span className="px-country-option-flag" aria-hidden="true">{country.flag}</span>
+                                <span className="px-country-option-name">{country.name}</span>
+                                <span className="px-country-option-code">{country.isoName}</span>
+                                {displayedGiftCardCountry === country.isoName && <Check aria-hidden="true" />}
+                              </button>
+                            ))}
+                          </>
+                        ) : <p className="px-country-empty">No countries match that search.</p>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-            <div className="px-language-control">
-              <label htmlFor="px-header-language">Language</label>
-              <select
-                id="px-header-language"
-                value={currentLanguage}
-                onChange={event => switchLanguage(event.target.value)}
-              >
-                {languages.map(language => (
-                  <option key={language.code} value={language.code}>{language.label}</option>
-                ))}
-              </select>
-            </div>
-          </PopoverContent>
-        </Popover>
+              <div className="px-language-control">
+                <label htmlFor="px-header-language">Language</label>
+                <select
+                  id="px-header-language"
+                  value={currentLanguage}
+                  onChange={event => switchLanguage(event.target.value)}
+                >
+                  {languages.map(language => (
+                    <option key={language.code} value={language.code}>{language.label}</option>
+                  ))}
+                </select>
+              </div>
+            </>
+          );
+
+          if (isMobile) {
+            return (
+              <Sheet open={countryOpen} onOpenChange={handleCountryOpenChange}>
+                <SheetTrigger asChild>
+                  {countryTriggerButton}
+                </SheetTrigger>
+                <SheetContent
+                  side="bottom"
+                  overlayClassName="z-[10000] bg-black/50 backdrop-blur-[2px]"
+                  className="px-country-sheet z-[10000]"
+                >
+                  <div className="px-country-sheet-handle" aria-hidden="true" />
+                  <SheetHeader className="px-country-sheet-header">
+                    <SheetTitle className="px-country-sheet-title">Region &amp; language</SheetTitle>
+                    <SheetDescription className="px-country-sheet-subtitle">
+                      Choose separate service countries
+                    </SheetDescription>
+                  </SheetHeader>
+                  {countryPickerBody}
+                </SheetContent>
+              </Sheet>
+            );
+          }
+
+          return (
+            <Popover open={countryOpen} onOpenChange={handleCountryOpenChange}>
+              <PopoverTrigger asChild>
+                {countryTriggerButton}
+              </PopoverTrigger>
+              <PopoverContent className="px-country-popover" aria-label="Country and language settings" align="end" sideOffset={8}>
+                <div className="px-country-heading">
+                  <strong>Region &amp; language</strong>
+                  <span>
+                    Choose separate service countries
+                  </span>
+                </div>
+                {countryPickerBody}
+              </PopoverContent>
+            </Popover>
+          );
+        })()}
         <div className="px-tools" aria-label="Shopping tools">
           <button
             className="px-tool-search"
