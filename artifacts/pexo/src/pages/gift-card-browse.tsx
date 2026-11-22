@@ -1,4 +1,5 @@
 import { useHead } from "@unhead/react";
+import { buildCanonicalUrl } from "@/lib/site-document";
 import { useState, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import { ArrowLeft, Search, Gift, ChevronDown } from "@/lib/icons";
@@ -7,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useGiftCardProducts, useGiftCardCategories, useGiftCardCountries } from "@/hooks/use-reloadly";
 import { mapProducts, ProductCardGrid } from "@/components/gift-card-browse-cards";
-import { useDigitalCountry } from "@/lib/country-preferences";
+import { useCountryPreferences } from "@/lib/country-preferences";
 
 // ── Sidebar (shared with main page, but locally defined here to avoid circular imports) ──
 const STATIC_SIDEBAR = [
@@ -76,12 +77,26 @@ export function GiftCardBrowse() {
   const [sortOpen,     setSortOpen]       = useState(false);
   const [sortBy,       setSortBy]         = useState("Popular");
   const [page,         setPage]           = useState(1);
-  const countryCode = useDigitalCountry();
+  const { digital } = useCountryPreferences();
+  const countryCode = digital?.country;
+  const allCountries = digital?.source === "manual" && !countryCode;
+  const hasSelection = Boolean(countryCode || allCountries);
   const [accumulated,  setAccumulated]    = useState<import("@/hooks/use-reloadly").ReloadlyProduct[]>([]);
 
+  const canonical = buildCanonicalUrl("/gift-cards/browse");
+  const title = `${categoryName} — Crypto Gift Cards | Pexly`;
+  const description = `Browse ${categoryName.toLowerCase()} digital gift cards on Pexly. Pay directly from your crypto wallet with instant delivery after payment.`;
   useHead({
-    title: `${categoryName} | Pexly Gift Cards`,
-    meta: [{ name: "description", content: `Browse ${categoryName} gift cards and pay with crypto.` }],
+    title,
+    meta: [
+      { name: "description", content: description },
+      { property: "og:title", content: title },
+      { property: "og:description", content: description },
+      { property: "og:url", content: canonical },
+      { name: "twitter:title", content: title },
+      { name: "twitter:description", content: description },
+    ],
+    link: [{ rel: "canonical", key: "canonical", href: canonical }],
   });
 
   const { data: reloadlyCountries } = useGiftCardCountries();
@@ -98,7 +113,7 @@ export function GiftCardBrowse() {
     categoryId,
     productName: searchQuery || undefined,
     countryCode,
-    enabled: !!countryCode,
+    enabled: hasSelection,
   });
 
   useEffect(() => {
