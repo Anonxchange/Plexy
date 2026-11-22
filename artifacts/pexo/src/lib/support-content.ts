@@ -78,9 +78,9 @@ export const supportArticles: Record<string, SupportArticle> = {
               "The Predictions feature lets you take positions on whether an asset's price will be higher or lower at a future point in time. It's a straightforward way to participate in market movements without trading derivatives. Correct predictions earn you a share of the prize pool funded by the opposing side.",
           },
           {
-            title: "Gift Cards and Utility Bills",
+            title: "Gift Cards and Mobile Top-ups",
             description:
-              "Spend your crypto in the real world without converting it to fiat first. The Pexly Shop lets you purchase digital gift cards from over 1,000 brands including Amazon, Apple, Google Play, Netflix, Steam, and many more. You can also pay utility bills, top up mobile credit, and cover household expenses — all directly from your crypto balance.",
+              "Spend your crypto in the real world without converting it to fiat first. The Pexly Shop lets you purchase digital gift cards from popular global brands. You can also top up mobile credit directly with crypto from your wallet.",
           },
           {
             title: "Blockchain Explorer",
@@ -297,7 +297,7 @@ export const supportArticles: Record<string, SupportArticle> = {
       {
         heading: "What is the Pexly Shop?",
         content:
-          "The Pexly Shop is a crypto-native marketplace where you can discover and purchase products and services from verified sellers worldwide, paying entirely with cryptocurrency from your Pexly wallet. It covers two distinct areas: a digital goods marketplace (where independent sellers list their products and services), and the gift card and bills store (where Pexly itself sells gift cards from thousands of brands and lets you pay utility bills).\n\nBecause everything is paid with crypto on-chain, there are no credit card processing fees, no currency conversion fees, and no requirement to provide your card details to any third party. Payments settle instantly on the blockchain. Pexly takes a small platform fee on marketplace transactions, which is shown to you before you confirm any purchase.\n\nThe Shop is accessible to all Pexly users. To sell in the marketplace, you'll need to complete at least Level 2 identity verification.",
+          "The Pexly Shop is a crypto-native marketplace where you can discover and purchase physical products from sellers worldwide, paying with cryptocurrency from your Pexly wallet. Pexly also offers a digital gift card store and mobile top-ups.\n\nBecause everything is paid with crypto on-chain, there are no credit card processing fees, no currency conversion fees, and no requirement to provide your card details to any third party. Payments settle instantly on the blockchain. Pexly takes a small platform fee on marketplace transactions, which is shown to you before you confirm any purchase.\n\nThe Shop is accessible to all Pexly users. To sell in the marketplace, you'll need to complete at least Level 2 identity verification.",
         videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
       },
       {
@@ -361,9 +361,9 @@ export const supportArticles: Record<string, SupportArticle> = {
         tip: "For high-value purchases from new sellers, consider messaging the seller before buying to gauge their responsiveness. A seller who responds quickly and professionally is a good sign.",
       },
       {
-        heading: "Gift cards and bill payments",
+        heading: "Gift cards and mobile top-ups",
         content:
-          "The gift card store is operated directly by Pexly, not third-party sellers, which means there's no seller risk. Browse over 1,000 brands including Amazon, Apple, Google Play, Netflix, Spotify, Steam, PlayStation, Uber, Airbnb, and many more. After purchase, the gift card code is delivered digitally to your Pexly account immediately after the transaction confirms.\n\nFor bill payments and mobile top-ups, enter your account number or phone number, select the amount, and pay with crypto. Supported services include major utility providers, telecom companies, and internet service providers across dozens of countries. Bill payments typically process within a few minutes and are credited to your account within 24 hours.",
+          "The gift card store is operated directly by Pexly, not third-party sellers, which means there's no seller risk. Browse over 1,000 brands including Amazon, Apple, Google Play, Netflix, Spotify, Steam, PlayStation, Uber, Airbnb, and many more. After purchase, the gift card code is delivered digitally to your Pexly account immediately after the transaction confirms.\n\nFor mobile top-ups, enter your phone number, select the amount, and pay with crypto. Supported mobile networks vary by country.",
         tip: "Gift card purchases are instant and irreversible. Make sure you select the correct region for your gift card — an Amazon US gift card cannot be used on Amazon UK, for example.",
       },
       {
