@@ -1,0 +1,8 @@
+{
+  "name": "bigint-buffer",
+  "version": "1.1.6-pexly.1",
+  "description": "Pexly-maintained pure JavaScript replacement for bigint-buffer; native N-API binding intentionally removed to mitigate CVE-2025-3194.",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "license": "Apache-2.0"
+}
