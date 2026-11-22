@@ -20,7 +20,6 @@
     "types": ["node", "vite/client", "react", "react-dom"],
     "paths": {
       "@/*": ["./src/*"],
-      "@assets/*": ["./attached_assets/*"]
     }
   }
 }
