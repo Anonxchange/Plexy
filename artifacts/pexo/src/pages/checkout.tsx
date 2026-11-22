@@ -203,7 +203,7 @@ function SectionTitle({ step, title, sub }: { step: number; title: string; sub?:
 }
 
 type PendingOrder = {
-  type: "topup" | "utility" | "giftcard";
+  type: "topup" | "giftcard";
   title: string;
   description: string;
   amount: number;
@@ -258,24 +258,6 @@ function buildPaymentMetadata(
         metadata.phone ??
         metadata.recipientPhone ??
         metadata.recipient_phone,
-      countryCode: metadata.countryCode ?? metadata.country_code,
-      amount: metadata.amount ?? order.amount,
-      userId,
-    };
-  }
-
-  if (order.type === "utility") {
-    return {
-      ...metadata,
-      service: "utility_payment",
-      billerId: metadata.billerId ?? metadata.biller_id,
-      billerName: metadata.billerName ?? metadata.biller_name,
-      billerType: metadata.billerType ?? metadata.biller_type,
-      accountNumber:
-        metadata.accountNumber ??
-        metadata.account_number ??
-        metadata.subscriberAccountNumber ??
-        metadata.subscriber_account_number,
       countryCode: metadata.countryCode ?? metadata.country_code,
       amount: metadata.amount ?? order.amount,
       userId,
