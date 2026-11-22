@@ -1,0 +1,43 @@
+name: Refresh pnpm lockfile
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - pnpm-workspace.yaml
+      - pnpm-lock.yaml
+      - .github/workflows/refresh-pnpm-lockfile.yml
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Regenerate lockfile from workspace overrides
+        run: pnpm install --no-frozen-lockfile
+      - name: Commit updated lockfile
+        run: |
+          if git diff --quiet -- pnpm-lock.yaml; then
+            echo "Lockfile already matches pnpm-workspace.yaml"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pnpm-lock.yaml
+          git commit -m "chore: sync pnpm lockfile with workspace overrides"
+          git push origin HEAD:main
