@@ -1,0 +1,8 @@
+Pexly bigint-buffer compatibility package
+
+Derived from bigint-buffer 1.1.5 (https://github.com/no2chem/bigint-buffer),
+Copyright (c) Michael Wei, Apache License 2.0.
+
+Changes: retain the pure JavaScript conversion API; remove the native N-API
+binding and install-time native build path to mitigate CVE-2025-3194.
+Add strict input and output-width validation.
