@@ -1,8 +1,95 @@
 import { useEffect, useRef, type KeyboardEvent, type MouseEvent } from "react";
 import { useLocation } from "wouter";
+import { useHead } from "@unhead/react";
+import { buildCanonicalUrl } from "@/lib/site-document";
+import {
+  useSchema,
+  homePageSchema,
+  shopPageSchema,
+  giftCardsPageSchema,
+  giftCardsAllPageSchema,
+  mobileTopupPageSchema,
+  aboutPageSchema,
+  teamsPageSchema,
+  careerPageSchema,
+  blogPageSchema,
+} from "@/hooks/use-schema";
 import { setupHomepageNativeInteractions } from "./homepage-native-interactions";
 
 import "./homepage-native-interactions.css";
+
+interface PageSeoConfig {
+  title: string;
+  description: string;
+  canonicalPath: string;
+  schema: Record<string, any>;
+}
+
+const ROUTE_SEO: Record<string, PageSeoConfig> = {
+  "/": {
+    title: "Pexly — Your wallet, your way to pay",
+    description:
+      "Spend crypto directly from your own wallet. Buy gift cards, top up mobile phones, pay utility bills, and shop global products on Pexly.",
+    canonicalPath: "/",
+    schema: homePageSchema,
+  },
+  "/shop": {
+    title: "Crypto Shop — Buy Global Products with Crypto | Pexly",
+    description:
+      "Shop electronics, fashion, home goods, and everyday products worldwide. Pay directly with Bitcoin, Ethereum, USDT, USDC, and more on Pexly.",
+    canonicalPath: "/shop",
+    schema: shopPageSchema,
+  },
+  "/gift-cards": {
+    title: "Crypto Gift Cards — Instant Digital Delivery | Pexly",
+    description:
+      "Buy digital gift cards for shopping, gaming, dining, and streaming using cryptocurrency. Enjoy instant delivery right from your own wallet.",
+    canonicalPath: "/gift-cards",
+    schema: giftCardsPageSchema,
+  },
+  "/gift-cards/all": {
+    title: "All Gift Cards — Browse Global Brands | Pexly",
+    description:
+      "Explore hundreds of global gift card brands by country and category. Pay seamlessly with Bitcoin, USDT, USDC, and major cryptocurrencies.",
+    canonicalPath: "/gift-cards/all",
+    schema: giftCardsAllPageSchema,
+  },
+  "/mobile-topup": {
+    title: "Mobile Top-Up with Crypto — Global Airtime & Data | Pexly",
+    description:
+      "Recharge prepaid mobile phones and data plans worldwide with cryptocurrency. Instant airtime top-ups across global carriers on Pexly.",
+    canonicalPath: "/mobile-topup",
+    schema: mobileTopupPageSchema,
+  },
+  "/about-us": {
+    title: "About Us — Non-Custodial Crypto Commerce | Pexly",
+    description:
+      "Learn how Pexly enables non-custodial crypto payments for gift cards, mobile top-ups, utility bills, and global products without holding user funds.",
+    canonicalPath: "/about-us",
+    schema: aboutPageSchema,
+  },
+  "/teams": {
+    title: "Our Team — People Building Pexly | Pexly",
+    description:
+      "Meet the engineers, designers, and operators building Pexly's non-custodial marketplace for digital services and everyday crypto commerce.",
+    canonicalPath: "/teams",
+    schema: teamsPageSchema,
+  },
+  "/career": {
+    title: "Careers at Pexly — Join Our Remote Team | Pexly",
+    description:
+      "Explore open roles at Pexly and help build non-custodial crypto commerce tools for gift cards, global shopping, and digital payments.",
+    canonicalPath: "/career",
+    schema: careerPageSchema,
+  },
+  "/blogs": {
+    title: "Pexly Blog — Crypto Commerce, Wallets & Guides",
+    description:
+      "Read product updates, self-custody guides, and insights on spending cryptocurrency for gift cards, utility bills, and everyday shopping.",
+    canonicalPath: "/blogs",
+    schema: blogPageSchema,
+  },
+};
 
 type CurrentMarketingPageProps = {
   page: string;
@@ -194,8 +281,28 @@ function handlePageKeyDown(event: KeyboardEvent<HTMLDivElement>) {
 }
 
 export function CurrentMarketingPage({ page, children }: CurrentMarketingPageProps) {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const rootRef = useRef<HTMLDivElement>(null);
+  const normalizedPath = location.split("?")[0] || "/";
+  const seo =
+    ROUTE_SEO[normalizedPath] ??
+    ROUTE_SEO[page === "physical-products" ? "/shop" : page === "home" ? "/" : `/${page}`] ??
+    ROUTE_SEO["/"];
+  const canonical = buildCanonicalUrl(seo.canonicalPath);
+
+  useHead({
+    title: seo.title,
+    meta: [
+      { name: "description", content: seo.description },
+      { property: "og:title", content: seo.title },
+      { property: "og:description", content: seo.description },
+      { property: "og:url", content: canonical },
+      { name: "twitter:title", content: seo.title },
+      { name: "twitter:description", content: seo.description },
+    ],
+    link: [{ rel: "canonical", key: "canonical", href: canonical }],
+  });
+  useSchema(seo.schema, "page-schema");
 
   useEffect(() => {
     const root = rootRef.current;
