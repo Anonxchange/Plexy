@@ -14,7 +14,7 @@ const SupportArticlePage = () => {
   const title = article ? `${article.title} | Pexly Help` : "Article not found | Pexly Help";
   const description =
     article?.description ||
-    "Read step-by-step Pexly Help Center documentation for gift cards, mobile top-ups, utility bills, and wallet payments.";
+    "Read step-by-step Pexly Help Center documentation for gift cards, mobile top-ups, and wallet payments.";
 
   const [helpful, setHelpful] = useState<"yes" | "no" | null>(null);
 
