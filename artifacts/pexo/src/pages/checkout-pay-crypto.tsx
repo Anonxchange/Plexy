@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useHead } from "@unhead/react";
+import { buildCanonicalUrl } from "@/lib/site-document";
 import { useLocation } from "wouter";
 import { PexlyLogo } from "@/components/pexly-logo";
 import { ArrowLeft, Lock, ShieldCheck, Clock, Bitcoin } from '@/lib/icons';
@@ -18,6 +20,17 @@ interface CryptoCheckoutContext {
 const STORAGE_KEY = "pexly:crypto-checkout-ctx";
 
 export function CheckoutPayCrypto() {
+  useHead({
+    title: "Pay with Crypto | Pexly Checkout",
+    meta: [
+      {
+        name: "description",
+        content: "Send your cryptocurrency payment to complete your Pexly order.",
+      },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+    link: [{ rel: "canonical", key: "canonical", href: buildCanonicalUrl("/checkout/pay/crypto") }],
+  });
   const [, setLocation] = useLocation();
   const [ctx, setCtx] = useState<CryptoCheckoutContext | null>(null);
 
