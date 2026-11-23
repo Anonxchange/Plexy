@@ -12,7 +12,7 @@ import { AboutUsExport } from "@/pages/current-html/about-us";
 import { TeamsExport } from "@/pages/current-html/teams";
 import { CareerExport } from "@/pages/current-html/career";
 import { BlogsExport } from "@/pages/current-html/blogs";
-import { Support } from "@/pages/support";
+import Support from "@/pages/support";
 import Contact from "@/pages/contact";
 import { PrivacyPage, TermsPage, RefundPolicyPage } from "@/pages/legal-pages";
 import { GiftCardBrowse } from "@/pages/gift-card-browse";
