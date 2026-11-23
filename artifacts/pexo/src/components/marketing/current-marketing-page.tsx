@@ -89,6 +89,42 @@ export const ROUTE_SEO: Record<string, PageSeoConfig> = {
     canonicalPath: "/blogs",
     schema: blogPageSchema,
   },
+  "/gift-cards/browse": {
+    title: "Browse Gift Cards by Category & Country | Pexly",
+    description: "Browse available digital gift cards by category and country. Choose a card and pay directly from a wallet you control with supported cryptocurrencies.",
+    canonicalPath: "/gift-cards/browse",
+    schema: { "@context": "https://schema.org", "@type": "WebPage", name: "Browse Gift Cards | Pexly" },
+  },
+  "/support": {
+    title: "Help Center — Guides & Customer Support | Pexly",
+    description: "Browse Pexly Help Center guides for gift cards, mobile top-ups, physical orders, and self-custody wallet connections.",
+    canonicalPath: "/support",
+    schema: { "@context": "https://schema.org", "@type": "WebPage", name: "Pexly Help Center" },
+  },
+  "/contact": {
+    title: "Contact Us — Support & Inquiries | Pexly",
+    description: "Reach the Pexly support team for help with gift cards, mobile top-ups, physical orders, or your wallet.",
+    canonicalPath: "/contact",
+    schema: { "@context": "https://schema.org", "@type": "ContactPage", name: "Contact Pexly" },
+  },
+  "/privacy": {
+    title: "Privacy Policy | Pexly",
+    description: "Read how Pexly handles account, order, wallet, device, and support information, and learn about your privacy choices.",
+    canonicalPath: "/privacy",
+    schema: { "@context": "https://schema.org", "@type": "WebPage", name: "Pexly Privacy Policy" },
+  },
+  "/terms": {
+    title: "Terms of Service | Pexly",
+    description: "Read the terms that apply when accessing the Pexly website, marketplace, gift-card services, mobile top-ups, and related features.",
+    canonicalPath: "/terms",
+    schema: { "@context": "https://schema.org", "@type": "WebPage", name: "Pexly Terms of Service" },
+  },
+  "/refund-policy": {
+    title: "Refund and Cancellation Policy | Pexly",
+    description: "Understand Pexly refund, cancellation, and order-resolution terms for eligible digital and physical purchases.",
+    canonicalPath: "/refund-policy",
+    schema: { "@context": "https://schema.org", "@type": "WebPage", name: "Pexly Refund and Cancellation Policy" },
+  },
 };
 
 type CurrentMarketingPageProps = {
