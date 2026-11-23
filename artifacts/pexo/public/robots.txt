@@ -44,6 +44,10 @@ Disallow: /
 User-agent: Claude-Web
 Disallow: /
 
+# Allow search-focused crawlers; keep training crawlers blocked.
+User-agent: Claude-SearchBot
+Allow: /
+
 User-agent: ClaudeBot
 Disallow: /
 
