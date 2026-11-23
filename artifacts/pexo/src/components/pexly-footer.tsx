@@ -121,8 +121,9 @@ export function PexlyFooter() {
                   </p>
                 </div>
                 <div className="footer-bottom-link-wrap">
-                  <Link href="/" className="footer-link-item"><div className="p-xs light-gray">Terms &amp; policies</div></Link>
-                  <Link href="/" className="footer-link-item"><div className="p-xs light-gray">Privacy Policy</div></Link>
+                  <Link href="/terms" className="footer-link-item"><div className="p-xs light-gray">Terms &amp; policies</div></Link>
+                  <Link href="/privacy" className="footer-link-item"><div className="p-xs light-gray">Privacy Policy</div></Link>
+                  <button type="button" className="footer-link-item p-xs light-gray underline underline-offset-4" onClick={() => window.dispatchEvent(new Event("pexly:open-cookie-settings"))}>Cookie Preferences</button>
                 </div>
               </div>
             </div>
