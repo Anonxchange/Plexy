@@ -25,7 +25,7 @@ interface PageSeoConfig {
   schema: Record<string, any>;
 }
 
-const ROUTE_SEO: Record<string, PageSeoConfig> = {
+export const ROUTE_SEO: Record<string, PageSeoConfig> = {
   "/": {
     title: "Pexly | Buy Crypto Gift Cards, Top Up & Shop Online",
     description:
@@ -303,6 +303,11 @@ export function CurrentMarketingPage({ page, children }: CurrentMarketingPagePro
     link: [{ rel: "canonical", key: "canonical", href: canonical }],
   });
   useSchema(seo.schema, "page-schema");
+
+  useEffect(() => {
+    document.documentElement.classList.add("pexly-app-ready");
+    document.getElementById("seo-prerender")?.remove();
+  }, []);
 
   useEffect(() => {
     const root = rootRef.current;
