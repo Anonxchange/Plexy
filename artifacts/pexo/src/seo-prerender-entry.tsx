@@ -3,6 +3,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Router } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { AuthProvider } from "@/lib/auth-context";
 import { createHead, UnheadProvider } from "@unhead/react/server";
 import { PexlyHomepage } from "@/pages/current-html/home";
 import { GiftCardsExport } from "@/pages/current-html/gift-cards";
@@ -54,7 +55,9 @@ export function renderSeoPage(path: string) {
     <UnheadProvider value={head}>
       <Router ssrPath={path}>
         <QueryClientProvider client={queryClient}>
-          <Page />
+          <AuthProvider>
+            <Page />
+          </AuthProvider>
         </QueryClientProvider>
       </Router>
     </UnheadProvider>,
