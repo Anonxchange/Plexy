@@ -567,9 +567,9 @@
     "hero_cta": "Get Started"
   },
   "cookies": {
-    "message": "We use cookies to enhance your experience and analyze site traffic.",
+    "message": "Pexly uses essential browser storage to keep sign-in, wallet and shopping features working. See our Privacy Policy for details.",
     "privacy_link": "Privacy Policy",
-    "accept": "Accept",
+    "accept": "Got it",
     "close_aria": "Close cookie banner"
   },
   "how_it_works": {
