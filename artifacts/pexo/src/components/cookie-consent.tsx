@@ -35,7 +35,6 @@ function readPreferences(): CookiePreferences | null {
 }
 
 export function CookieConsent() {
-  const [preferences, setPreferences] = useState<CookiePreferences | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [analytics, setAnalytics] = useState(false);
@@ -43,7 +42,6 @@ export function CookieConsent() {
 
   useEffect(() => {
     const saved = readPreferences();
-    setPreferences(saved);
     setIsVisible(!saved);
 
     const openSettings = () => {
@@ -64,7 +62,6 @@ export function CookieConsent() {
       updatedAt: new Date().toISOString(),
     };
     safeStorage.setItem(STORAGE_KEY, JSON.stringify(value));
-    setPreferences(value);
     setIsVisible(false);
     setIsSettingsOpen(false);
   };
