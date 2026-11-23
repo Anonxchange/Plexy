@@ -41,8 +41,6 @@
     "lightning_desc": "超快速发送比特币",
     "mobile_topup": "手机充值",
     "mobile_topup_desc": "使用加密货币为手机充值",
-    "utility": "公用事业",
-    "utility_desc": "支付账单和其他服务",
     "send": "发送",
     "balance": "余额",
     "total_balance": "总余额",
@@ -621,9 +619,7 @@
     "cards_name": "信用卡/借记卡",
     "cards_desc": "Visa、Mastercard、Amex、Discover",
     "explorer_name": "区块浏览器",
-    "explorer_desc": "查看和验证交易的网页工具",
-    "utility_name": "公用事业",
-    "utility_desc": "在世界任何地方支付公用事业账单"
+    "explorer_desc": "查看和验证交易的网页工具"
   },
   "trust": {
     "section_label": "无缝安全",
