@@ -41,8 +41,6 @@
     "lightning_desc": "Gửi Bitcoin siêu nhanh",
     "mobile_topup": "Nạp tiền điện thoại",
     "mobile_topup_desc": "Nạp tiền điện thoại bằng tiền mã hoá",
-    "utility": "Tiện ích",
-    "utility_desc": "Thanh toán hóa đơn và các dịch vụ khác",
     "send": "Gửi",
     "balance": "Số dư",
     "total_balance": "Tổng số dư",
@@ -621,9 +619,7 @@
     "cards_name": "Thẻ tín dụng/ghi nợ",
     "cards_desc": "Visa, Mastercard, Amex, Discover",
     "explorer_name": "Explorer",
-    "explorer_desc": "Công cụ web để xem và xác minh giao dịch",
-    "utility_name": "Tiện ích",
-    "utility_desc": "Thanh toán hóa đơn tiện ích ở bất kỳ đâu trên thế giới"
+    "explorer_desc": "Công cụ web để xem và xác minh giao dịch"
   },
   "trust": {
     "section_label": "An ninh liền mạch",
