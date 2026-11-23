@@ -43,8 +43,9 @@ const footerColumns = [
       ["Blog", "/blogs"],
       ["Careers", "/career"],
       ["Teams", "/teams"],
-      ["Terms", "/"],
-      ["Privacy", "/"],
+      ["Terms of Service", "/terms"],
+      ["Privacy Policy", "/privacy"],
+      ["Refund Policy", "/refund-policy"],
     ],
   },
 ];
