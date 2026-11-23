@@ -288,7 +288,6 @@ function AppContent() {
 
       <Suspense fallback={null}><Toaster /></Suspense>
       <Suspense fallback={null}><SonnerToaster position="top-center" richColors /></Suspense>
-      <Suspense fallback={null}><CookieConsent /></Suspense>
     </div>
   );
 }
@@ -373,7 +372,7 @@ function App() {
                 <CartProvider>
                   <TooltipProvider>
                     {isHelp ? (
-                        <div className="app-shell flex min-h-[100dvh] w-full flex-col pt-[58px] max-[991px]:pt-[44px]">
+                      <div className="app-shell flex min-h-[100dvh] w-full flex-col pt-[58px] max-[991px]:pt-[44px]">
                         <div className="export-page app-header-scope"><AppHeader /></div>
                         <main className="flex flex-1 flex-col">
                           <Suspense fallback={<PageSkeleton />}><Support /></Suspense>
@@ -381,10 +380,9 @@ function App() {
                         <div className="export-page app-footer-scope"><PexlyFooter /></div>
                       </div>
                     ) : (
-                      <>
-                        <AppContent />
-                      </>
+                      <AppContent />
                     )}
+                    <CookieConsent />
                   </TooltipProvider>
                 </CartProvider>
               </GiftCardCartProvider>
