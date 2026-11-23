@@ -41,8 +41,6 @@
     "lightning_desc": "أرسل البيتكوين بسرعة فائقة",
     "mobile_topup": "شحن الهاتف",
     "mobile_topup_desc": "اشحن هاتفك باستخدام العملات المشفرة",
-    "utility": "الخدمات",
-    "utility_desc": "ادفع الفواتير والخدمات الأخرى",
     "send": "إرسال",
     "balance": "الرصيد",
     "total_balance": "إجمالي الرصيد",
@@ -643,9 +641,7 @@
     "cards_name": "بطاقات ائتمان/خصم",
     "cards_desc": "Visa وMastercard وAmex وDiscover",
     "explorer_name": "المستكشف",
-    "explorer_desc": "أداة ويب لعرض المعاملات والتحقق منها",
-    "utility_name": "الفواتير",
-    "utility_desc": "ادفع فواتير الخدمات في أي مكان حول العالم"
+    "explorer_desc": "أداة ويب لعرض المعاملات والتحقق منها"
   },
   "trust": {
     "section_label": "أمان سلس",
