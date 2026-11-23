@@ -1,4 +1,4 @@
-import "@/lib/i18n";
+import "@/lib/i18n"; 
 import { setNonce } from "get-nonce";
 import { createRoot } from "react-dom/client";
 import { createHead, UnheadProvider } from "@unhead/react/client";
