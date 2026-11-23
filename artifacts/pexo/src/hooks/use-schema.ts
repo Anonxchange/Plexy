@@ -126,28 +126,6 @@ export const mobileTopupPageSchema = {
   ]
 };
 
-export const utilityPageSchema = {
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "WebPage",
-      "@id": "https://www.pexly.app/utility#webpage",
-      "url": "https://www.pexly.app/utility",
-      "name": "Pay Utility Bills with Crypto — Electricity, Water & TV | Pexly",
-      "description": "Pay electricity, water, internet, and TV utility bills directly using cryptocurrency from your self-custody wallet on Pexly.",
-      "isPartOf": { "@id": "https://www.pexly.app/#website" },
-      "dateModified": "2026-11-22T00:00:00Z"
-    },
-    {
-      "@type": "BreadcrumbList",
-      "itemListElement": [
-        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.pexly.app/" },
-        { "@type": "ListItem", "position": 2, "name": "Utility Bills", "item": "https://www.pexly.app/utility" }
-      ]
-    }
-  ]
-};
-
 export const aboutPageSchema = {
   "@context": "https://schema.org",
   "@graph": [
