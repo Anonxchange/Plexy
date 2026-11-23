@@ -44,7 +44,7 @@ import {
 import { toast } from "sonner";
 import { useGiftCardCart } from "@/hooks/use-gift-card-cart";
 import { GiftCardCartSheet } from "@/components/gift-card-cart-sheet";
-import { getLocalizedCheckoutPath } from "@/lib/checkout-navigation";
+import { openCartCheckout } from "@/lib/cart-checkout";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import {
   getRecipientDenominationRange,
@@ -329,24 +329,27 @@ export function GiftCardDetail() {
 
   const handleBuyCard = () => {
     if (!card || !isValueValid) return;
-    localStorage.setItem("pexly_pending_order", JSON.stringify({
-      type: "giftcard",
-      title: `${card.productName} Gift Card`,
-      description: `${qty}x ${card.productName} Gift Card`,
-      amount: totalFinalPrice,
-      // What the customer is charged is in the SENDER (account) currency.
-      currency: (getSenderDenominationRange(card).currencyCode || card.recipientCurrencyCode || "usd").toLowerCase(),
-      image: sanitizeImageUrl(card.logoUrls?.[0]),
-      metadata: {
-        service: "gift-card",
-        productId: String(card.productId),
-        productName: card.productName,
-        quantity: qty,
-        unitPrice: unitFinalPrice,
-        cardValue: value,
-      },
-    }));
-    window.open(getLocalizedCheckoutPath(), "_blank", "noopener,noreferrer");
+    try {
+      openCartCheckout({
+        type: "giftcard",
+        title: `${card.productName} Gift Card`,
+        description: `${qty}x ${card.productName} Gift Card`,
+        amount: totalFinalPrice,
+        // Charge amount is expressed in Reloadly's sender/account currency.
+        currency: (getSenderDenominationRange(card).currencyCode || card.recipientCurrencyCode || "usd").toLowerCase(),
+        image: sanitizeImageUrl(card.logoUrls?.[0]),
+        metadata: {
+          service: "gift-card",
+          productId: String(card.productId),
+          productName: card.productName,
+          quantity: qty,
+          unitPrice: unitFinalPrice,
+          cardValue: value,
+        },
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not open checkout. Please try again.");
+    }
   };
 
   const handleContinueOrder = () => {
