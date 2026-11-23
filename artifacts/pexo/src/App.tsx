@@ -241,7 +241,6 @@ function AppRoutes() {
 
       <Route path="/dashboard">{() => <Redirect to="/wallet" />}</Route>
       <Route path="/wallet">{() => <ProtectedRoute component={Wallet} skeleton={<WalletPageSkeleton />} />}</Route>
-      <Route path="/wallet/virtual-numbers">{() => <Redirect to="/shop" />}</Route>
       {/* Mobile top-up is public: no sign-in needed, so it lives outside /wallet */}
       <Route path="/mobile-topup">{() => <LazyRoute component={MobileTopup} />}</Route>
       <Route path="/wallet/mobile-topup">{() => <Redirect to="/mobile-topup" />}</Route>
