@@ -347,10 +347,10 @@ function App() {
 
   // The URL is normalized in main.tsx before React and Wouter mount.
   // Keep the router base derived from that already-normalized URL.
-  const langBase = getInitialLangBase() ?? "/en";
+  const langBase = getInitialLangBase() ?? "";
 
   useEffect(() => {
-    i18n.changeLanguage(langBase === "/jp" ? "ja" : langBase.slice(1));
+    i18n.changeLanguage(langBase ? langBase.slice(1) : "en");
   }, [langBase]);
 
   const isHelp = window.location.hostname === "help.pexly.app";
