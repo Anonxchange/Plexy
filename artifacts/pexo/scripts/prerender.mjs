@@ -25,7 +25,7 @@ function replaceMeta(html, attribute, key, value) {
   const escaped = escapeHtml(value);
   const pattern = new RegExp(`<meta\\s+${attribute}=["']${key}["'][^>]*>`, "i");
   const tag = `<meta ${attribute}="${key}" content="${escaped}" />`;
-  return pattern.test(html) ? html.replace(pattern, tag) : html.replace("</head>", `    ${tag}\\n  </head>`);
+  return pattern.test(html) ? html.replace(pattern, tag) : html.replace("</head>", `    ${tag}\n  </head>`);
 }
 
 function applyMetadata(template, rendered) {
@@ -105,7 +105,7 @@ async function main() {
         const styles = collectCss(manifest, entryKeys);
         if (styles.length) {
           const links = styles.map(file => `<link rel="stylesheet" href="/${file.replace(/^\//, "")}" />`).join("\n    ");
-          html = html.replace("</head>", `    ${links}\\n  </head>`);
+          html = html.replace("</head>", `    ${links}\n  </head>`);
         }
         html = html.replace('<div id="root"></div>', `${markup}\n    <div id="root"></div>`);
         const destinations = route === "/" ? ["index.html", "en/index.html"] : [`${route.slice(1)}/index.html`, `en${route}/index.html`];
