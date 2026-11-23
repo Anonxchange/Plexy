@@ -307,7 +307,7 @@ const HelpCenter = () => {
   const canonical = buildCanonicalUrl("/support");
   const title = "Help Center — Guides & Customer Support | Pexly";
   const description =
-    "Browse Pexly Help Center guides for gift cards, mobile top-ups, utility bill payments, physical orders, and self-custody wallet connections.";
+    "Browse Pexly Help Center guides for gift cards, mobile top-ups, physical orders, and self-custody wallet connections.";
   useHead({
     title,
     meta: [
