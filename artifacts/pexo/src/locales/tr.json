@@ -41,8 +41,6 @@
     "lightning_desc": "Bitcoin'i süper hızlı gönder",
     "mobile_topup": "Mobil Yükleme",
     "mobile_topup_desc": "Telefonunu kripto ile yükle",
-    "utility": "Faturalar",
-    "utility_desc": "Faturaları ve diğer hizmetleri öde",
     "send": "Gönder",
     "balance": "Bakiye",
     "total_balance": "Toplam Bakiye",
@@ -621,9 +619,7 @@
     "cards_name": "Kredi/banka kartları",
     "cards_desc": "Visa, Mastercard, Amex, Discover",
     "explorer_name": "Explorer",
-    "explorer_desc": "İşlemleri görüntüleyip doğrulamanızı sağlayan bir web aracı",
-    "utility_name": "Faturalar",
-    "utility_desc": "Dünyanın her yerinde fatura ödeyin"
+    "explorer_desc": "İşlemleri görüntüleyip doğrulamanızı sağlayan bir web aracı"
   },
   "trust": {
     "section_label": "Sorunsuz güvenlik",
