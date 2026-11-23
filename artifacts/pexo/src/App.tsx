@@ -288,7 +288,7 @@ function AppContent() {
 
       <Suspense fallback={null}><Toaster /></Suspense>
       <Suspense fallback={null}><SonnerToaster position="top-center" richColors /></Suspense>
-      {!hideShell && !isAuthPage && <Suspense fallback={null}><CookieConsent /></Suspense>}
+      <Suspense fallback={null}><CookieConsent /></Suspense>
     </div>
   );
 }
