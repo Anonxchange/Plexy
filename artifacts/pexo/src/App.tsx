@@ -300,7 +300,6 @@ function AppContent() {
 
 function getInitialLangBase(): string | null {
   const seg = window.location.pathname.split("/").filter(Boolean)[0];
-  if (seg === "jp") return "/jp";
   return isValidLang(seg) ? `/${seg}` : null;
 }
 
