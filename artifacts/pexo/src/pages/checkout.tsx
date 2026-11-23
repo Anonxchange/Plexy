@@ -214,8 +214,7 @@ type PendingOrder = {
 
 // Keep the metadata sent to NOWPayments explicit and consistent with the IPN
 // webhook. Gift cards need an email and product details, but do not need a
-// phone number or user ID. Top-ups and utility payments require an
-// authenticated user's UUID.
+// phone number or user ID. Top-ups require an authenticated user's UUID.
 function buildPaymentMetadata(
   order: PendingOrder,
   deliveryEmail: string,
