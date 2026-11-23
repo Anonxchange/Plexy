@@ -41,8 +41,6 @@
     "lightning_desc": "超高速でBitcoinを送信",
     "mobile_topup": "モバイルチャージ",
     "mobile_topup_desc": "暗号資産でスマホをチャージ",
-    "utility": "公共料金",
-    "utility_desc": "請求書やその他のサービスを支払い",
     "send": "送る",
     "balance": "残高",
     "total_balance": "総残高",
@@ -621,9 +619,7 @@
     "cards_name": "クレジット/デビットカード",
     "cards_desc": "Visa、Mastercard、Amex、Discover",
     "explorer_name": "エクスプローラー",
-    "explorer_desc": "トランザクションを表示・検証する Web ツール",
-    "utility_name": "公共料金",
-    "utility_desc": "世界中の公共料金を支払えます"
+    "explorer_desc": "トランザクションを表示・検証する Web ツール"
   },
   "trust": {
     "section_label": "シームレスなセキュリティ",
