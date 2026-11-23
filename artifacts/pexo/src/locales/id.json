@@ -41,8 +41,6 @@
     "lightning_desc": "Kirim Bitcoin ultra cepat",
     "mobile_topup": "Isi Ulang Pulsa",
     "mobile_topup_desc": "Isi ulang ponsel dengan kripto",
-    "utility": "Utilitas",
-    "utility_desc": "Bayar tagihan dan layanan lainnya",
     "send": "Kirim",
     "balance": "Saldo",
     "total_balance": "Total Saldo",
@@ -621,9 +619,7 @@
     "cards_name": "Kartu kredit/debit",
     "cards_desc": "Visa, Mastercard, Amex, Discover",
     "explorer_name": "Explorer",
-    "explorer_desc": "Alat web untuk melihat dan memverifikasi transaksi",
-    "utility_name": "Tagihan",
-    "utility_desc": "Bayar tagihan utilitas di mana pun di dunia"
+    "explorer_desc": "Alat web untuk melihat dan memverifikasi transaksi"
   },
   "trust": {
     "section_label": "Keamanan tanpa hambatan",
