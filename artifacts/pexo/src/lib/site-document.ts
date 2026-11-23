@@ -6,12 +6,12 @@ export function buildCanonicalUrl(path = "/"): string {
 }
 
 export const siteMetadata = {
-  title: "Pexly — Your wallet, your way to pay",
+  title: "Pexly | Buy Crypto Gift Cards, Top Up & Shop Online",
   description:
-    "Spend crypto directly from your own wallet. Buy gift cards, top up mobile phones, and shop global products on Pexly.",
+    "Buy digital gift cards, recharge mobile phones and shop physical products with Bitcoin, USDT and other supported cryptocurrencies on Pexly.",
   url: "https://www.pexly.app/",
   image: "https://www.pexly.app/hero-bg.webp",
-  imageAlt: "Pexly — digital services with your own wallet",
+  imageAlt: "Pexly crypto marketplace for gift cards, mobile top-ups and online shopping",
   siteName: "Pexly",
 } as const;
 
@@ -36,11 +36,11 @@ export const siteStructuredData = {
         {
           "@type": "ContactPoint",
           contactType: "technical support",
+          email: "support@pexly.app",
           availableLanguage: ["English"],
           areaServed: "Worldwide",
         },
       ],
-      sameAs: [],
       knowsAbout: [
         "Non-custodial wallets",
         "Crypto gift cards",
