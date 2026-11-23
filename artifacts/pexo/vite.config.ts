@@ -122,6 +122,7 @@ export default defineConfig({
   worker: { format: "es" },
   root: artifactRoot,
   build: {
+    manifest: true,
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
   },
