@@ -31,8 +31,8 @@ export const homePageSchema = {
       "@type": "WebPage",
       "@id": "https://www.pexly.app/#webpage",
       "url": "https://www.pexly.app/",
-      "name": "Pexly — Your wallet, your way to pay",
-      "description": "Spend crypto directly from your own wallet. Buy gift cards, top up mobile phones, and shop global products on Pexly.",
+      "name": "Pexly | Buy Crypto Gift Cards, Top Up & Shop Online",
+      "description": "Buy digital gift cards, recharge mobile phones and shop physical products with Bitcoin, USDT and other supported cryptocurrencies on Pexly.",
       "isPartOf": {
         "@id": "https://www.pexly.app/#website"
       },
@@ -66,8 +66,8 @@ export const giftCardsPageSchema = {
       "@type": "CollectionPage",
       "@id": "https://www.pexly.app/gift-cards#webpage",
       "url": "https://www.pexly.app/gift-cards",
-      "name": "Crypto Gift Cards — Instant Digital Delivery | Pexly",
-      "description": "Buy digital gift cards for shopping, gaming, dining, and streaming using cryptocurrency. Instant digital delivery straight from your wallet.",
+      "name": "Buy Gift Cards with Bitcoin & USDT | Pexly",
+      "description": "Buy digital gift cards for popular shopping, gaming and streaming brands with Bitcoin, USDT and other supported cryptocurrencies on Pexly.",
       "isPartOf": { "@id": "https://www.pexly.app/#website" },
       "dateModified": "2026-11-22T00:00:00Z"
     },
@@ -111,8 +111,8 @@ export const mobileTopupPageSchema = {
       "@type": "WebPage",
       "@id": "https://www.pexly.app/mobile-topup#webpage",
       "url": "https://www.pexly.app/mobile-topup",
-      "name": "Mobile Top-Up with Crypto — Global Airtime & Data | Pexly",
-      "description": "Recharge prepaid mobile phones and data plans worldwide with cryptocurrency. Instant airtime top-ups across global carriers on Pexly.",
+      "name": "Buy Mobile Airtime & Data with Crypto | Pexly",
+      "description": "Recharge prepaid phones and buy mobile data in supported countries using Bitcoin, USDT and other cryptocurrencies on Pexly.",
       "isPartOf": { "@id": "https://www.pexly.app/#website" },
       "dateModified": "2026-11-22T00:00:00Z"
     },
@@ -291,8 +291,8 @@ export const shopPageSchema = {
       "@type": "CollectionPage",
       "@id": "https://www.pexly.app/shop#webpage",
       "url": "https://www.pexly.app/shop",
-      "name": "Crypto Shop — Buy Physical Products with Crypto | Pexly",
-      "description": "Shop electronics, fashion, home essentials, and global products online. Pay directly with Bitcoin, Ethereum, USDT, USDC, and more on Pexly.",
+      "name": "Shop Online with Crypto | Electronics, Fashion & More | Pexly",
+      "description": "Discover electronics, fashion, home essentials and everyday products in the Pexly online shop. Pay for eligible orders with supported cryptocurrencies.",
       "isPartOf": { "@id": "https://www.pexly.app/#website" },
       "dateModified": "2026-11-22T00:00:00Z"
     },
