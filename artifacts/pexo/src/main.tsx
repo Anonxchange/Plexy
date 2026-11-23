@@ -4,28 +4,6 @@ import { createRoot } from "react-dom/client";
 import { createHead, UnheadProvider } from "@unhead/react/client";
 import App from "./App";
 import "./styles.css";
-import { isValidLang } from "@/lib/detect-language";
-
-// Normalize unprefixed URLs before React/Wouter reads the location.
-// Doing this after mount can leave the router matching against a stale path.
-const firstPathSegment = window.location.pathname.split("/").filter(Boolean)[0];
-if (firstPathSegment === "jp") {
-  // Keep the old /jp URL working, but use /ja as the only Japanese prefix.
-  const pathname = window.location.pathname.replace(/^\/jp(?=\/|$)/, "/ja");
-  window.history.replaceState(
-    window.history.state,
-    "",
-    `${pathname}${window.location.search}${window.location.hash}`,
-  );
-} else if (!isValidLang(firstPathSegment ?? "")) {
-  const pathname = window.location.pathname;
-  window.history.replaceState(
-    window.history.state,
-    "",
-    `/en${pathname === "/" ? "" : pathname}${window.location.search}${window.location.hash}`,
-  );
-}
-
 try {
   const theme = window.localStorage.getItem("pexly-theme");
   document.documentElement.classList.add(theme === "dark" ? "dark" : "light");
