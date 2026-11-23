@@ -1,36 +1,14 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
-import ar from "@/locales/ar.json";
-import de from "@/locales/de.json";
 import en from "@/locales/en.json";
-import es from "@/locales/es.json";
-import fr from "@/locales/fr.json";
-import hi from "@/locales/hi.json";
-import id from "@/locales/id.json";
-import ja from "@/locales/ja.json";
-import pt from "@/locales/pt.json";
-import ru from "@/locales/ru.json";
-import tr from "@/locales/tr.json";
-import vi from "@/locales/vi.json";
-import zh from "@/locales/zh.json";
 
 type Tree = Record<string, any>;
 
+const localLocaleLoaders = import.meta.glob<{ default: Tree }>("../locales/*.json");
+
 const localResources = {
-  ar: { translation: ar as Tree },
-  de: { translation: de as Tree },
   en: { translation: en as Tree },
-  es: { translation: es as Tree },
-  fr: { translation: fr as Tree },
-  hi: { translation: hi as Tree },
-  id: { translation: id as Tree },
-  ja: { translation: ja as Tree },
-  pt: { translation: pt as Tree },
-  ru: { translation: ru as Tree },
-  tr: { translation: tr as Tree },
-  vi: { translation: vi as Tree },
-  zh: { translation: zh as Tree },
 };
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
@@ -113,13 +91,29 @@ const inflight = new Map<string, Promise<void>>();
 const loaded = new Set<string>(Object.keys(localResources));
 
 /**
- * Fetch translations for `lang` from the Supabase edge function in batches
- * (the function caps each request at 100 strings). Builds a translated
- * resource tree mirroring `en.json` and registers it with i18next.
+ * Fetch translations for `lang` from bundled locale chunks first, or from the
+ * Supabase edge function in batches (capped at 100 strings per request).
  */
 async function fetchAndApplyTranslations(lang: string): Promise<void> {
   if (loaded.has(lang)) return;
   if (inflight.has(lang)) return inflight.get(lang)!;
+
+  const localLoader = localLocaleLoaders[`../locales/${lang}.json`];
+  if (localLoader) {
+    const promise = localLoader()
+      .then((mod) => {
+        i18n.addResourceBundle(lang, "translation", mod.default, true, true);
+        loaded.add(lang);
+      })
+      .catch(() => {
+        // Fall back to English if chunk fetch fails
+      })
+      .finally(() => {
+        inflight.delete(lang);
+      });
+    inflight.set(lang, promise);
+    return promise;
+  }
 
   const cached = loadFromCache(lang);
   if (cached) {
@@ -190,6 +184,7 @@ i18n.use(initReactI18next).init({
   lng: initialLang,
   fallbackLng: "en",
   interpolation: { escapeValue: false },
+  react: { bindI18nStore: "added" },
 });
 
 // Preload the active language on boot if it's not English.
