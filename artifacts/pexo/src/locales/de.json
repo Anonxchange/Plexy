@@ -41,8 +41,6 @@
     "lightning_desc": "Bitcoin ultraschnell senden",
     "mobile_topup": "Handy aufladen",
     "mobile_topup_desc": "Handy mit Krypto aufladen",
-    "utility": "Versorger",
-    "utility_desc": "Rechnungen und andere Dienste bezahlen",
     "send": "Senden",
     "balance": "Guthaben",
     "total_balance": "Gesamtguthaben",
@@ -643,9 +641,7 @@
     "cards_name": "Kredit-/Debitkarten",
     "cards_desc": "Visa, Mastercard, Amex, Discover",
     "explorer_name": "Explorer",
-    "explorer_desc": "Web-Tool zum Anzeigen und Verifizieren von Transaktionen",
-    "utility_name": "Versorgung",
-    "utility_desc": "Bezahlen Sie weltweit Versorgungsrechnungen"
+    "explorer_desc": "Web-Tool zum Anzeigen und Verifizieren von Transaktionen"
   },
   "trust": {
     "section_label": "Reibungslose Sicherheit",
