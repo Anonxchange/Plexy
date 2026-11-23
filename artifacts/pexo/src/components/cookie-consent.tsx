@@ -2,28 +2,25 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { X } from '@/lib/icons';
 import { useTranslation } from "react-i18next";
+import { safeStorage } from "@/lib/safe-storage";
 
 export function CookieConsent() {
   const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const consent = localStorage.getItem("cookie-consent");
-      if (!consent) {
-        setTimeout(() => setIsVisible(true), 100);
-      }
-    }
+    if (safeStorage.getItem("cookie-consent")) return;
+    const timeout = window.setTimeout(() => setIsVisible(true), 100);
+    return () => window.clearTimeout(timeout);
   }, []);
 
   const handleAccept = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem("cookie-consent", "accepted");
-      setIsVisible(false);
-    }
+    safeStorage.setItem("cookie-consent", "acknowledged");
+    setIsVisible(false);
   };
 
   const handleClose = () => {
+    safeStorage.setItem("cookie-consent", "dismissed");
     setIsVisible(false);
   };
 
