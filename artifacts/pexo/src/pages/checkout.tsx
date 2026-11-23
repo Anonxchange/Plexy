@@ -257,7 +257,11 @@ function buildPaymentMetadata(
         metadata.phone ??
         metadata.recipientPhone ??
         metadata.recipient_phone,
-      countryCode: metadata.countryCode ?? metadata.country_code,
+      countryCode:
+        metadata.countryCode ??
+        metadata.country_code ??
+        metadata.recipientCountryCode ??
+        metadata.recipient_country_code,
       amount: metadata.amount ?? order.amount,
       userId,
     };
