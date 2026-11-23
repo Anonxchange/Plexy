@@ -67,6 +67,33 @@ const reactDocumentEntry: Plugin = {
       build: {
         rolldownOptions: {
           input: path.resolve(artifactRoot, "src/main.tsx"),
+          output: {
+            codeSplitting: {
+              groups: [
+                {
+                  name: "wallet-vendor",
+                  test: /node_modules[\\/](?:@reown|wagmi|viem|@solana|@tronweb3|tronweb|bitcoinjs-lib)(?:[\\/]|$)/,
+                  priority: 30,
+                  maxSize: 350_000,
+                  minSize: 40_000,
+                },
+                {
+                  name: "charts-vendor",
+                  test: /node_modules[\\/](?:recharts|d3-[^\\/]+)(?:[\\/]|$)/,
+                  priority: 20,
+                  maxSize: 250_000,
+                  minSize: 30_000,
+                },
+                {
+                  name: "vendor",
+                  test: /node_modules[\\/]/,
+                  priority: 1,
+                  maxSize: 350_000,
+                  minSize: 60_000,
+                },
+              ],
+            },
+          },
         },
       },
     };
