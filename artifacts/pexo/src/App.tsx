@@ -340,25 +340,13 @@ function App() {
     ],
   });
 
-  const [langBase, setLangBase] = useState<string>(() => getInitialLangBase() ?? "/en");
+  // The URL is normalized in main.tsx before React and Wouter mount.
+  // Keep the router base derived from that already-normalized URL.
+  const langBase = getInitialLangBase() ?? "/en";
 
   useEffect(() => {
-    const initial = getInitialLangBase();
-    if (initial) {
-      i18n.changeLanguage(initial === "/jp" ? "ja" : initial.slice(1));
-    } else {
-      const rest = window.location.pathname;
-      const search = window.location.search;
-      const hash = window.location.hash;
-      window.history.replaceState(
-        null,
-        "",
-        `/en${rest === "/" ? "" : rest}${search}${hash}`,
-      );
-      i18n.changeLanguage("en");
-      setLangBase("/en");
-    }
-  }, []);
+    i18n.changeLanguage(langBase === "/jp" ? "ja" : langBase.slice(1));
+  }, [langBase]);
 
   const isHelp = window.location.hostname === "help.pexly.app";
 
