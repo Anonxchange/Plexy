@@ -41,8 +41,6 @@
     "lightning_desc": "Envía Bitcoin ultra rápido",
     "mobile_topup": "Recarga Móvil",
     "mobile_topup_desc": "Recarga tu teléfono con cripto",
-    "utility": "Servicios",
-    "utility_desc": "Paga facturas y otros servicios",
     "send": "Enviar",
     "balance": "Saldo",
     "total_balance": "Saldo total",
@@ -621,9 +619,7 @@
     "cards_name": "Tarjetas de crédito/débito",
     "cards_desc": "Visa, Mastercard, Amex, Discover",
     "explorer_name": "Explorador",
-    "explorer_desc": "Una herramienta web para ver y verificar transacciones",
-    "utility_name": "Servicios",
-    "utility_desc": "Paga facturas de servicios en cualquier parte del mundo"
+    "explorer_desc": "Una herramienta web para ver y verificar transacciones"
   },
   "trust": {
     "section_label": "Seguridad sin fricción",
