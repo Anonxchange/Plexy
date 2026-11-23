@@ -70,8 +70,8 @@ const reactDocumentEntry: Plugin = {
         rolldownOptions: {
           input: path.resolve(artifactRoot, "src/main.tsx"),
           output: {
+            strictExecutionOrder: true,
             codeSplitting: {
-              strictExecutionOrder: true,
               groups: [
                 {
                   name: "wallet-vendor",
