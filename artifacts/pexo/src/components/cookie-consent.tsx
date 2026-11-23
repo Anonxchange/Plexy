@@ -84,7 +84,7 @@ export function CookieConsent() {
               <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">
                 Pexly uses essential browser storage for sign-in, wallet security and shopping features.
                 Optional analytics and marketing storage stays off unless you choose to enable it.
-                Read our <a href="/privacy" className="font-medium text-foreground underline underline-offset-4">Privacy Policy</a>.
+                For privacy questions, visit <a href="/support" className="font-medium text-foreground underline underline-offset-4">Pexly Support</a>.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
