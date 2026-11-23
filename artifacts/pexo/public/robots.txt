@@ -31,11 +31,12 @@ Disallow: /cdn-cgi/
 User-agent: GPTBot
 Disallow: /
 
+# Allow AI-powered search crawlers to discover public Pexly pages.
 User-agent: ChatGPT-User
-Disallow: /
+Allow: /
 
 User-agent: OAI-SearchBot
-Disallow: /
+Allow: /
 
 User-agent: anthropic-ai
 Disallow: /
@@ -53,7 +54,7 @@ User-agent: CCBot
 Disallow: /
 
 User-agent: PerplexityBot
-Disallow: /
+Allow: /
 
 User-agent: Amazonbot
 Disallow: /
