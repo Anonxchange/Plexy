@@ -15,6 +15,12 @@ const routes = [
   "/teams",
   "/career",
   "/blogs",
+  "/gift-cards/browse",
+  "/support",
+  "/contact",
+  "/privacy",
+  "/terms",
+  "/refund-policy",
 ];
 
 function escapeHtml(value) {
@@ -87,6 +93,12 @@ async function main() {
       "/teams": "src/pages/current-html/teams.tsx",
       "/career": "src/pages/current-html/career.tsx",
       "/blogs": "src/pages/current-html/blogs.tsx",
+      "/gift-cards/browse": "src/pages/gift-card-browse.tsx",
+      "/support": "src/pages/support.tsx",
+      "/contact": "src/pages/contact.tsx",
+      "/privacy": "src/pages/legal-pages.tsx",
+      "/terms": "src/pages/legal-pages.tsx",
+      "/refund-policy": "src/pages/legal-pages.tsx",
     };
 
     let generated = 0;
