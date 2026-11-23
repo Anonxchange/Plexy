@@ -1,0 +1,45 @@
+
+name: Import Pexly Project
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Download project archive
+        env:
+          ARCHIVE_URL: ${{ secrets.PEXLY_ARCHIVE_URL }}
+        run: |
+          curl -fL "$ARCHIVE_URL" -o /tmp/plexy.zip
+
+      - name: Extract project
+        run: |
+          mkdir -p /tmp/plexy-import
+          unzip -q /tmp/plexy.zip -d /tmp/plexy-import
+
+      - name: Replace project files
+        run: |
+          rsync -a --delete \
+            --exclude='.git/' \
+            --exclude='.github/workflows/import-plexy.yml' \
+            /tmp/plexy-import/ ./
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || \
+            git commit -m "Import updated Pexly project"
+          git push origin main
