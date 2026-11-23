@@ -27,37 +27,37 @@ interface PageSeoConfig {
 
 const ROUTE_SEO: Record<string, PageSeoConfig> = {
   "/": {
-    title: "Pexly — Your wallet, your way to pay",
+    title: "Pexly | Buy Crypto Gift Cards, Top Up & Shop Online",
     description:
-      "Spend crypto directly from your own wallet. Buy gift cards, top up mobile phones, and shop global products on Pexly.",
+      "Buy digital gift cards, recharge mobile phones and shop physical products with Bitcoin, USDT and other supported cryptocurrencies on Pexly.",
     canonicalPath: "/",
     schema: homePageSchema,
   },
   "/shop": {
-    title: "Crypto Shop — Buy Global Products with Crypto | Pexly",
+    title: "Shop Online with Crypto | Electronics, Fashion & More | Pexly",
     description:
-      "Shop electronics, fashion, home goods, and everyday products worldwide. Pay directly with Bitcoin, Ethereum, USDT, USDC, and more on Pexly.",
+      "Discover electronics, fashion, home essentials and everyday products in the Pexly online shop. Pay for eligible orders with supported cryptocurrencies.",
     canonicalPath: "/shop",
     schema: shopPageSchema,
   },
   "/gift-cards": {
-    title: "Crypto Gift Cards — Instant Digital Delivery | Pexly",
+    title: "Buy Gift Cards with Bitcoin & USDT | Digital Gift Cards | Pexly",
     description:
-      "Buy digital gift cards for shopping, gaming, dining, and streaming using cryptocurrency. Enjoy instant delivery right from your own wallet.",
+      "Buy digital gift cards for popular shopping, gaming and streaming brands with Bitcoin, USDT and other supported cryptocurrencies on Pexly.",
     canonicalPath: "/gift-cards",
     schema: giftCardsPageSchema,
   },
   "/gift-cards/all": {
-    title: "All Gift Cards — Browse Global Brands | Pexly",
+    title: "Browse Gift Cards by Brand & Country | Pexly",
     description:
-      "Explore hundreds of global gift card brands by country and category. Pay seamlessly with Bitcoin, USDT, USDC, and major cryptocurrencies.",
+      "Find digital gift cards by brand, country and category. Browse available cards for shopping, gaming and entertainment, then pay with supported crypto.",
     canonicalPath: "/gift-cards/all",
     schema: giftCardsAllPageSchema,
   },
   "/mobile-topup": {
-    title: "Mobile Top-Up with Crypto — Global Airtime & Data | Pexly",
+    title: "Buy Mobile Airtime & Data with Crypto | Global Top-Ups | Pexly",
     description:
-      "Recharge prepaid mobile phones and data plans worldwide with cryptocurrency. Instant airtime top-ups across global carriers on Pexly.",
+      "Recharge prepaid phones and buy mobile data in supported countries using Bitcoin, USDT and other cryptocurrencies. Choose a country and mobile network on Pexly.",
     canonicalPath: "/mobile-topup",
     schema: mobileTopupPageSchema,
   },
