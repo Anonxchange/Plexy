@@ -1,5 +1,4 @@
 import "@/lib/i18n";
-import { startAutoTranslate } from "@/lib/auto-translate";
 import { setNonce } from "get-nonce";
 import { createRoot } from "react-dom/client";
 import { createHead, UnheadProvider } from "@unhead/react/client";
@@ -37,9 +36,13 @@ if (rootElement) {
   if (typeof window !== "undefined") {
     const scheduleTranslation = () => {
       if ("requestIdleCallback" in window) {
-        window.requestIdleCallback(startAutoTranslate, { timeout: 2000 });
+        window.requestIdleCallback(() => {
+          void import("@/lib/auto-translate").then(({ startAutoTranslate }) => startAutoTranslate());
+        }, { timeout: 2000 });
       } else {
-        setTimeout(startAutoTranslate, 500);
+        setTimeout(() => {
+          void import("@/lib/auto-translate").then(({ startAutoTranslate }) => startAutoTranslate());
+        }, 500);
       }
     };
     if (document.readyState === "complete" || document.readyState === "interactive") {
