@@ -52,7 +52,7 @@ function collectCss(manifest, entryKeys) {
     const item = manifest[key];
     if (!item) return;
     for (const file of item.css ?? []) css.add(file);
-    for (const imported of [...(item.imports ?? []), ...(item.dynamicImports ?? [])]) visit(imported);
+    for (const imported of item.imports ?? []) visit(imported);
   }
   entryKeys.forEach(visit);
   return [...css];
