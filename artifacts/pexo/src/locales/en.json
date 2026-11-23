@@ -41,8 +41,6 @@
     "lightning_desc": "Send Bitcoin ultra fast",
     "mobile_topup": "Mobile Top-up",
     "mobile_topup_desc": "Recharge your phone using crypto",
-    "utility": "Utility",
-    "utility_desc": "Pay bills and other services",
     "send": "Send",
     "balance": "Balance",
     "total_balance": "Total Balance",
@@ -621,9 +619,7 @@
     "cards_name": "Credit/Debit Cards",
     "cards_desc": "Visa, Mastercard, Amex, Discover",
     "explorer_name": "Explorer",
-    "explorer_desc": "A web tool that lets you view and verify transactions",
-    "utility_name": "Utility",
-    "utility_desc": "Pay utility bills anywhere in the world"
+    "explorer_desc": "A web tool that lets you view and verify transactions"
   },
   "trust": {
     "section_label": "Seamless security",
