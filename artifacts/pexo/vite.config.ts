@@ -112,15 +112,19 @@ const reactDocumentEntry: Plugin = {
       this.error("Could not find the React application entry bundle.");
     }
 
-    const viteMetadata = (entry as typeof entry & {
-      viteMetadata?: { importedCss?: Set<string> };
-    }).viteMetadata;
+    // With Rolldown, entry.viteMetadata.importedCss is not guaranteed to
+    // be populated for every CSS asset emitted from the application entry.
+    // Collect emitted CSS assets directly so the production HTML always links
+    // the Tailwind bundle and the app's global styles.
+    const emittedCssFiles = Object.keys(bundle).filter((fileName) =>
+      fileName.endsWith(".css"),
+    );
 
     const documentHtml = createEntryDocument({
       basePath,
       development: false,
       entryFile: entry.fileName,
-      cssFiles: [...(viteMetadata?.importedCss ?? [])],
+      cssFiles: emittedCssFiles,
     });
 
     // 1. Emit index.html for Vercel static hosting
