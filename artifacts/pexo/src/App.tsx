@@ -60,7 +60,7 @@ import { GiftCardCartProvider } from "@/hooks/use-gift-card-cart";
 
 type LazyComponent = React.LazyExoticComponent<React.ComponentType<any>>;
 
-class AppErrorBoundary extends Component<
+export class AppErrorBoundary extends Component<
   { children: ReactNode },
   { hasError: boolean; message: string }
 > {
@@ -387,6 +387,7 @@ function App() {
   useEffect(() => {
     i18n.changeLanguage(langBase ? langBase.slice(1) : "en");
   }, [langBase]);
+
 
   const isHelp = window.location.hostname === "help.pexly.app";
 

@@ -4,7 +4,9 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, type Plugin } from "vite";
 import { createEntryDocument } from "./src/lib/site-document.ts";
 
-const basePath = process.env.BASE_PATH || "/";
+// Pexly is deployed at the domain root; do not let a Vercel environment variable
+// accidentally generate asset URLs for a different path.
+const basePath = "/";
 
 const artifactRoot = path.resolve(import.meta.dirname);
 
@@ -68,6 +70,7 @@ const reactDocumentEntry: Plugin = {
         rolldownOptions: {
           input: path.resolve(artifactRoot, "src/main.tsx"),
           output: {
+            strictExecutionOrder: true,
             codeSplitting: {
               groups: [
                 {
@@ -109,15 +112,19 @@ const reactDocumentEntry: Plugin = {
       this.error("Could not find the React application entry bundle.");
     }
 
-    const viteMetadata = (entry as typeof entry & {
-      viteMetadata?: { importedCss?: Set<string> };
-    }).viteMetadata;
+    // With Rolldown, entry.viteMetadata.importedCss is not guaranteed to
+    // be populated for every CSS asset emitted from the application entry.
+    // Collect emitted CSS assets directly so the production HTML always links
+    // the Tailwind bundle and the app's global styles.
+    const emittedCssFiles = Object.keys(bundle).filter((fileName) =>
+      fileName.endsWith(".css"),
+    );
 
     const documentHtml = createEntryDocument({
       basePath,
       development: false,
       entryFile: entry.fileName,
-      cssFiles: [...(viteMetadata?.importedCss ?? [])],
+      cssFiles: emittedCssFiles,
     });
 
     // 1. Emit index.html for Vercel static hosting

@@ -15,9 +15,14 @@ type ThemeContextType = {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children, defaultTheme = "light" }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem("pexly-theme") as Theme) || defaultTheme
-  );
+  const [theme, setTheme] = useState<Theme>(() => {
+    try {
+      const stored = localStorage.getItem("pexly-theme");
+      return stored === "dark" || stored === "light" ? stored : defaultTheme;
+    } catch {
+      return defaultTheme;
+    }
+  });
 
   useEffect(() => {
     const root = document.documentElement;
@@ -31,7 +36,11 @@ export function ThemeProvider({ children, defaultTheme = "light" }: ThemeProvide
       root.classList.add(theme);
     }
 
-    localStorage.setItem("pexly-theme", theme);
+    try {
+      localStorage.setItem("pexly-theme", theme);
+    } catch {
+      // Storage can be unavailable in private browsing or restricted contexts.
+    }
   }, [theme]);
 
   return (
