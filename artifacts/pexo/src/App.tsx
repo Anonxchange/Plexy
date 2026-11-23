@@ -388,13 +388,6 @@ function App() {
     i18n.changeLanguage(langBase ? langBase.slice(1) : "en");
   }, [langBase]);
 
-  // Remove static SEO markup after React mounts on every route, not only
-  // routes that render CurrentMarketingPage.
-  useEffect(() => {
-    document.documentElement.classList.add("pexly-app-ready");
-    document.getElementById("seo-prerender")?.remove();
-  }, []);
-
   const isHelp = window.location.hostname === "help.pexly.app";
 
   return (

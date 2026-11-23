@@ -1,104 +1,31 @@
-# Fix Guide: Vercel Missing Header & Prerender Fallback Issues
+# Vercel SPA Routing
 
-## Root Cause
+Pexly uses a client-rendered React application. The production build serves the clean Vite document for the homepage and application routes, then lets the client router render the requested page.
 
-When building for Vercel (`vite build` followed by `node scripts/prerender.mjs`), three things cause pages to load without the header or display stale prerendered homepage markup on non-marketing routes:
+## Build
 
-1. **`scripts/prerender.mjs` overwrites `dist/public/index.html`** with `<section id="seo-prerender">...</section>` containing the rendered homepage (`PexlyHomepage`) above `<div id="root"></div>`.
-2. **`vercel.json` rewrites every non-prerendered route** (`/(.*) -> /`) to `dist/public/index.html`, so routes like `/privacy`, `/terms`, `/refund-policy`, `/support`, `/contact`, `/signin`, `/signup`, and `/wallet` receive the prerendered homepage HTML instead of a clean SPA shell.
-3. **`#seo-prerender` is only removed in `CurrentMarketingPage`** (`artifacts/pexo/src/components/marketing/current-marketing-page.tsx`), not globally in `App.tsx`. Meanwhile, `.current-source-page .px-nav { display: none !important; }` in `artifacts/pexo/src/styles.css` hides the `<header>` inside the prerendered markup.
+The Pexly build runs Vite only:
 
----
-
-## Step-by-Step Code Fixes
-
-### 1. Remove `#seo-prerender` globally when React mounts
-
-**File:** `artifacts/pexo/src/App.tsx`
-
-Inside `App()` (around line 352), add a `useEffect` that removes `#seo-prerender` on every route—not just marketing routes:
-
-```tsx
-  useEffect(() => {
-    i18n.changeLanguage(langBase ? langBase.slice(1) : "en");
-  }, [langBase]);
-
-  useEffect(() => {
-    document.documentElement.classList.add("pexly-app-ready");
-    document.getElementById("seo-prerender")?.remove();
-  }, []);
+```sh
+vite build --config vite.config.ts
 ```
 
----
+There is no server-side SEO prerender step. The build does not generate route-specific HTML documents or insert a second copy of page content before the React root.
 
-### 2. Preserve a clean SPA fallback HTML for non-prerendered routes
+## Vercel routing
 
-**File:** `artifacts/pexo/scripts/prerender.mjs`
+The catch-all rewrite in `vercel.json` points to `/`, which serves the clean `dist/public/index.html` emitted by Vite. This allows client-side routes such as `/privacy`, `/terms`, `/support`, `/signin`, `/wallet`, and product routes to load the same app shell and be resolved by the React router.
 
-Right after reading the un-prerendered `dist/public/index.html` template (line 62), write a clean `_spa.html` copy before `prerender.mjs` overwrites `index.html`:
+The sitemap rewrites remain separate and stay above the catch-all rewrite.
 
-```js
-async function main() {
-  let template = await fs.readFile(path.join(outputDir, "index.html"), "utf8");
-  await fs.writeFile(path.join(outputDir, "_spa.html"), template, "utf8");
-  let manifest = {};
-```
+## SEO behavior
 
-**File:** `vercel.json`
+Page metadata managed by the application can still update in the browser after React loads. However, the initial HTML response is no longer pre-rendered per route. Crawlers and social preview bots that do not execute JavaScript may not see route-specific content, metadata, or structured data.
 
-Point the final catch-all SPA rewrite (lines 45–48) to `/_spa.html` instead of `/`:
+If server-rendered SEO is needed later, implement it as a separate architecture rather than reintroducing a build-time script that overwrites the SPA entry document.
 
-```json
-    {
-      "source": "/(.*)",
-      "destination": "/_spa.html"
-    }
-```
+## Verification after deployment
 
-**Result:**
-- `/` and the other 8 prerendered SEO routes still serve their static prerendered `index.html` files.
-- `/privacy`, `/terms`, `/refund-policy`, `/support`, `/contact`, `/signin`, `/signup`, `/wallet`, `/product/*`, etc. serve the clean `_spa.html` shell without flashing or leaving homepage markup in the DOM.
+Check these routes directly, including refreshes: `/`, `/gift-cards`, `/shop`, `/privacy`, `/terms`, `/support`, `/signin`, and `/wallet`.
 
----
-
-### 3. Keep the prerendered header visible before JS hydrates
-
-**File:** `artifacts/pexo/src/styles.css`
-
-Around line 679, scope the `.px-nav` hide rule to `#root` so it only hides the duplicate exported `<header>` rendered inside React's `#root` (where `<AppHeader />` is rendered separately), while keeping the static `<header>` inside `#seo-prerender` visible until JS removes `#seo-prerender`:
-
-**Before:**
-```css
-.current-source-page .px-nav {
-  display: none !important;
-}
-```
-
-**After:**
-```css
-#root .current-source-page .px-nav {
-  display: none !important;
-}
-```
-
----
-
-### 4. (Optional) Sync the updated Legal Pages styling
-
-If you also want the all-white legal page hero card and heavier theme font weights from this workspace on Vercel, copy `artifacts/pexo/src/pages/legal-pages.tsx` to your GitHub `main` branch.
-
-> **Important:** Keep your GitHub repo's `pnpm-workspace.yaml`, `pnpm-lock.yaml`, and root `package.json` `pnpm` scripts intact for Vercel—do not overwrite those with the npm workspace config used inside AI Studio.
-
----
-
-## Vercel Dashboard & Deployment Checklist
-
-1. **Environment Variables** (Vercel Project → **Settings → Environment Variables**, enabled for **Production** and **Preview**):
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-   - `VITE_REOWN_PROJECT_ID`
-   - `VITE_TURNSTILE_SITE_KEY`
-2. **Clear Build Cache on Redeploy**:
-   - In Vercel → **Deployments → Redeploy**, uncheck *"Use existing Build Cache"* (or enable *"Clear Build Cache"*) so `VITE_*` variables and updated assets are cleanly baked into the new bundle.
-3. **Verify Live Routes**:
-   - Open `/` and `/privacy` in the browser and check **DevTools → Console** to confirm zero uncaught runtime errors and that `<header id="pxnav">` (`AppHeader`) renders immediately.
+Each should return the React app shell and render its own route without showing homepage content on unrelated routes.
