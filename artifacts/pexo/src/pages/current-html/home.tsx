@@ -132,7 +132,7 @@ export function PexlyHomepage() {
                 </div>
                 <div data-w-id={"4c14da3e-38d8-bfee-2ab8-a136ac40cf4e"} className={"v3-hero-right-block"}>
                   <div className={"v3-hero-banner-block"}>
-                    <img src={"/marketing-media/media-1ee388ec36d8c9a7.avif"} loading={"eager"} fetchPriority={"high"} decoding={"async"} alt={""} className={"v3-hero-banner"} />
+                    <img src={"/marketing-media/media-1ee388ec36d8c9a7.avif"} loading={"eager"} fetchPriority={"high"} decoding={"async"} alt={"Pexly crypto marketplace for gift cards, mobile airtime top-ups and online shopping"} className={"v3-hero-banner"} />
                   </div>
                   <div className={"v3-tag-block"}>
                     <div className={"px-tag px-tag1"}>
