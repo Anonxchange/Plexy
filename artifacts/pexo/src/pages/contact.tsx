@@ -101,7 +101,7 @@ const ContactPage = () => {
   const seoCanonical = buildCanonicalUrl("/contact");
   const seoTitle = "Contact Us — Support & Inquiries | Pexly";
   const seoDescription =
-    "Reach the Pexly support team for help with gift cards, mobile top-ups, utility bill payments, physical orders, or your wallet.";
+    "Reach the Pexly support team for help with gift cards, mobile top-ups, physical orders, or your wallet.";
   useHead({
     title: seoTitle,
     meta: [
