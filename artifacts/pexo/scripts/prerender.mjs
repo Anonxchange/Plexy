@@ -59,7 +59,13 @@ function collectCss(manifest, entryKeys) {
 }
 
 async function main() {
-  let template = await fs.readFile(path.join(outputDir, "index.html"), "utf8");
+  const template = await fs.readFile(path.join(outputDir, "index.html"), "utf8");
+
+  // Keep the original, clean Vite document for application routes that do not
+  // have a dedicated prerendered HTML file. Never use the SEO homepage as the
+  // fallback document for routes such as /privacy, /signin, or /wallet.
+  await fs.writeFile(path.join(outputDir, "_spa.html"), template, "utf8");
+
   let manifest = {};
   try {
     manifest = JSON.parse(await fs.readFile(manifestPath, "utf8"));
