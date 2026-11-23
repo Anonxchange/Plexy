@@ -73,7 +73,7 @@ const resources = [
 
 function normalizeRoute(path: string) {
   const segments = path.split("?")[0].split("/").filter(Boolean);
-  if (segments[0] && (isValidLang(segments[0]) || segments[0] === "jp")) {
+  if (segments[0] && isValidLang(segments[0])) {
     segments.shift();
   }
   return `/${segments.join("/")}` || "/";
