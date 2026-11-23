@@ -305,6 +305,7 @@ function getInitialLangBase(): string | null {
 
 function App() {
   useEffect(() => {
+    document.getElementById("seo-prerender")?.remove();
     document.documentElement.classList.add("pexly-app-ready");
   }, []);
 
