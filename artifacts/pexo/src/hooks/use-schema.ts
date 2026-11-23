@@ -43,7 +43,7 @@ export const homePageSchema = {
         "@type": "ImageObject",
         "url": "https://www.pexly.app/hero-bg.webp"
       },
-      "dateModified": "2026-11-22T00:00:00Z"
+      "dateModified": "2026-11-23T00:00:00Z"
     },
     {
       "@type": "BreadcrumbList",
@@ -69,7 +69,7 @@ export const giftCardsPageSchema = {
       "name": "Buy Gift Cards with Bitcoin & USDT | Pexly",
       "description": "Buy digital gift cards for popular shopping, gaming and streaming brands with Bitcoin, USDT and other supported cryptocurrencies on Pexly.",
       "isPartOf": { "@id": "https://www.pexly.app/#website" },
-      "dateModified": "2026-11-22T00:00:00Z"
+      "dateModified": "2026-11-23T00:00:00Z"
     },
     {
       "@type": "BreadcrumbList",
@@ -91,7 +91,7 @@ export const giftCardsAllPageSchema = {
       "name": "All Gift Cards — Browse Global Brands | Pexly",
       "description": "Explore hundreds of global gift card brands by country and category. Pay seamlessly with Bitcoin, USDT, USDC, and major cryptocurrencies.",
       "isPartOf": { "@id": "https://www.pexly.app/#website" },
-      "dateModified": "2026-11-22T00:00:00Z"
+      "dateModified": "2026-11-23T00:00:00Z"
     },
     {
       "@type": "BreadcrumbList",
@@ -114,7 +114,7 @@ export const mobileTopupPageSchema = {
       "name": "Buy Mobile Airtime & Data with Crypto | Pexly",
       "description": "Recharge prepaid phones and buy mobile data in supported countries using Bitcoin, USDT and other cryptocurrencies on Pexly.",
       "isPartOf": { "@id": "https://www.pexly.app/#website" },
-      "dateModified": "2026-11-22T00:00:00Z"
+      "dateModified": "2026-11-23T00:00:00Z"
     },
     {
       "@type": "BreadcrumbList",
@@ -141,7 +141,7 @@ export const aboutPageSchema = {
       "mainEntity": {
         "@id": "https://www.pexly.app/#organization"
       },
-      "dateModified": "2026-11-22T00:00:00Z"
+      "dateModified": "2026-11-23T00:00:00Z"
     },
     {
       "@type": "BreadcrumbList",
@@ -163,7 +163,7 @@ export const teamsPageSchema = {
       "name": "Our Team — People Building Pexly | Pexly",
       "description": "Meet the engineers, designers, and operators building Pexly's non-custodial marketplace for digital services and everyday crypto commerce.",
       "isPartOf": { "@id": "https://www.pexly.app/#website" },
-      "dateModified": "2026-11-22T00:00:00Z"
+      "dateModified": "2026-11-23T00:00:00Z"
     },
     {
       "@type": "BreadcrumbList",
@@ -185,7 +185,7 @@ export const careerPageSchema = {
       "name": "Careers at Pexly — Join Our Remote Team | Pexly",
       "description": "Explore open roles at Pexly and help build non-custodial crypto commerce tools for gift cards, global shopping, and digital payments.",
       "isPartOf": { "@id": "https://www.pexly.app/#website" },
-      "dateModified": "2026-11-22T00:00:00Z"
+      "dateModified": "2026-11-23T00:00:00Z"
     },
     {
       "@type": "BreadcrumbList",
@@ -212,7 +212,7 @@ export const blogPageSchema = {
       "publisher": {
         "@id": "https://www.pexly.app/#organization"
       },
-      "dateModified": "2026-11-22T00:00:00Z"
+      "dateModified": "2026-11-23T00:00:00Z"
     },
     {
       "@type": "BreadcrumbList",
@@ -243,7 +243,7 @@ export const supportPageSchema = {
         "availableLanguage": ["English"],
         "hoursAvailable": "Mo-Su 00:00-24:00"
       },
-      "dateModified": "2026-11-22T00:00:00Z"
+      "dateModified": "2026-11-23T00:00:00Z"
     },
     {
       "@type": "FAQPage",
@@ -294,7 +294,7 @@ export const shopPageSchema = {
       "name": "Shop Online with Crypto | Electronics, Fashion & More | Pexly",
       "description": "Discover electronics, fashion, home essentials and everyday products in the Pexly online shop. Pay for eligible orders with supported cryptocurrencies.",
       "isPartOf": { "@id": "https://www.pexly.app/#website" },
-      "dateModified": "2026-11-22T00:00:00Z"
+      "dateModified": "2026-11-23T00:00:00Z"
     },
     {
       "@type": "BreadcrumbList",
