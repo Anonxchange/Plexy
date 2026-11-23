@@ -1107,9 +1107,9 @@ export function GiftCardsExport() {
                           {"Order History"}
                         </div>
                       </a>
-                      <a href={"#"} className={"footer-link-item w-inline-block"}>
+                      <a href={"/search"} className={"footer-link-item w-inline-block"}>
                         <div className={"p-regular light-gray"}>
-                          {"Price Alerts"}
+                          {"Search Catalog"}
                         </div>
                       </a>
                     </div>
@@ -1146,9 +1146,9 @@ export function GiftCardsExport() {
                           {"Pay with USDC"}
                         </div>
                       </a>
-                      <a href={"#"} className={"footer-link-item w-inline-block"}>
+                      <a href={"/support/article/shop-guide"} className={"footer-link-item w-inline-block"}>
                         <div className={"p-regular light-gray"}>
-                          {"Fees"}
+                          {"Shopping Guide"}
                         </div>
                       </a>
                     </div>
@@ -1165,7 +1165,7 @@ export function GiftCardsExport() {
                           {"Help Center"}
                         </div>
                       </a>
-                      <a href={"#"} className={"footer-link-item w-inline-block"}>
+                      <a href={"/dispute-resolution"} className={"footer-link-item w-inline-block"}>
                         <div className={"p-regular light-gray"}>
                           {"Dispute Resolution"}
                         </div>
@@ -1180,9 +1180,9 @@ export function GiftCardsExport() {
                           {"FAQ"}
                         </div>
                       </a>
-                      <a href={"#"} className={"footer-link-item w-inline-block"}>
+                      <a href={"/contact"} className={"footer-link-item w-inline-block"}>
                         <div className={"p-regular light-gray"}>
-                          {"Report a Seller"}
+                          {"Report an Issue"}
                         </div>
                       </a>
                       <a href={"#"} className={"footer-link-item w-inline-block"}>

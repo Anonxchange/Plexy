@@ -1426,9 +1426,9 @@ export function AboutUsExport() {
                           {"Physical Products"}
                         </div>
                       </a>
-                      <a href={"/"} className={"footer-link-item w-inline-block"}>
+                      <a href={"/gift-cards/all"} className={"footer-link-item w-inline-block"}>
                         <div className={"p-regular light-gray"}>
-                          {"Sell on Pexly"}
+                          {"All Gift Cards"}
                         </div>
                       </a>
                       <a href={"/wallet"} className={"footer-link-item w-inline-block"}>
@@ -1436,9 +1436,9 @@ export function AboutUsExport() {
                           {"Order History"}
                         </div>
                       </a>
-                      <a href={"/wallet"} className={"footer-link-item w-inline-block"}>
+                      <a href={"/search"} className={"footer-link-item w-inline-block"}>
                         <div className={"p-regular light-gray"}>
-                          {"Price Alerts"}
+                          {"Search Catalog"}
                         </div>
                       </a>
                     </div>
@@ -1475,14 +1475,14 @@ export function AboutUsExport() {
                           {"Pay with USDC"}
                         </div>
                       </a>
-                      <a href={"/support"} className={"footer-link-item w-inline-block"}>
+                      <a href={"/checkout"} className={"footer-link-item w-inline-block"}>
                         <div className={"p-regular light-gray"}>
-                          {"Escrow"}
+                          {"Checkout"}
                         </div>
                       </a>
-                      <a href={"/support"} className={"footer-link-item w-inline-block"}>
+                      <a href={"/support/article/shop-guide"} className={"footer-link-item w-inline-block"}>
                         <div className={"p-regular light-gray"}>
-                          {"Fees"}
+                          {"Shopping Guide"}
                         </div>
                       </a>
                     </div>
@@ -1499,7 +1499,7 @@ export function AboutUsExport() {
                           {"Help Center"}
                         </div>
                       </a>
-                      <a href={"/support"} className={"footer-link-item w-inline-block"}>
+                      <a href={"/dispute-resolution"} className={"footer-link-item w-inline-block"}>
                         <div className={"p-regular light-gray"}>
                           {"Dispute Resolution"}
                         </div>
@@ -1514,9 +1514,9 @@ export function AboutUsExport() {
                           {"FAQ"}
                         </div>
                       </a>
-                      <a href={"/support"} className={"footer-link-item w-inline-block"}>
+                      <a href={"/contact"} className={"footer-link-item w-inline-block"}>
                         <div className={"p-regular light-gray"}>
-                          {"Report a Seller"}
+                          {"Report an Issue"}
                         </div>
                       </a>
                       <a href={"/support"} className={"footer-link-item w-inline-block"}>

@@ -2,10 +2,20 @@
   "name": "workspace",
   "version": "0.0.0",
   "license": "MIT",
+  "workspaces": [
+    "artifacts/*",
+    "vendor/*"
+  ],
   "scripts": {
-    "dev": "pnpm --filter @workspace/pexo run dev",
-    "build": "pnpm --filter @workspace/pexo run typecheck && pnpm --filter @workspace/pexo run build",
-    "typecheck": "pnpm --filter @workspace/pexo run typecheck"
+    "dev": "npm run dev --workspace=artifacts/pexo",
+    "build": "npm run typecheck --workspace=artifacts/pexo && npm run build --workspace=artifacts/pexo",
+    "typecheck": "npm run typecheck --workspace=artifacts/pexo",
+    "lint": "npm run typecheck --workspace=artifacts/pexo",
+    "preview": "npm run serve --workspace=artifacts/pexo"
+  },
+  "overrides": {
+    "bigint-buffer": "file:./vendor/bigint-buffer",
+    "esbuild": "0.28.2"
   },
   "private": true,
   "devDependencies": {

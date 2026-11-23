@@ -1,5 +1,5 @@
 import { Switch, Route, useLocation, Redirect, Router as WouterRouter } from "wouter";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { useHead } from "@unhead/react";
 import { supabase } from "@/lib/supabase";
 import i18n from "@/lib/i18n";
@@ -35,6 +35,7 @@ const VerifyEmail = lazy(() => import("@/pages/verify-email").then(m => ({ defau
 const PrivacyPage = lazy(() => import("@/pages/legal-pages").then(m => ({ default: m.PrivacyPage })));
 const TermsPage = lazy(() => import("@/pages/legal-pages").then(m => ({ default: m.TermsPage })));
 const RefundPolicyPage = lazy(() => import("@/pages/legal-pages").then(m => ({ default: m.RefundPolicyPage })));
+const DisputeResolutionPage = lazy(() => import("@/pages/legal-pages").then(m => ({ default: m.DisputeResolutionPage })));
 
 const SignIn = lazy(() => import("@/pages/signin").then(m => ({ default: m.SignIn })));
 const SignUp = lazy(() => import("@/pages/signup").then(m => ({ default: m.SignUp })));
@@ -58,6 +59,36 @@ import { GiftCardCartProvider } from "@/hooks/use-gift-card-cart";
 // ─── Route guard helpers ──────────────────────────────────────────────────────
 
 type LazyComponent = React.LazyExoticComponent<React.ComponentType<any>>;
+
+class AppErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean; message: string }
+> {
+  state = { hasError: false, message: "" };
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, message: error?.message || "Something went wrong." };
+  }
+
+  render() {
+    if (!this.state.hasError) return this.props.children;
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center space-y-4">
+        <h2 className="text-2xl font-semibold text-foreground">Something went wrong loading this page</h2>
+        <p className="max-w-md text-sm text-muted-foreground">
+          A page module failed to load or updated in the background. Reload to get the latest version.
+        </p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="inline-flex h-10 items-center justify-center rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground"
+        >
+          Reload page
+        </button>
+      </div>
+    );
+  }
+}
 
 /** Renders a lazy component with a skeleton fallback — no auth check. */
 function LazyRoute({
@@ -240,6 +271,8 @@ function AppRoutes() {
       <Route path="/privacy">{() => <LazyRoute component={PrivacyPage} />}</Route>
       <Route path="/terms">{() => <LazyRoute component={TermsPage} />}</Route>
       <Route path="/refund-policy">{() => <LazyRoute component={RefundPolicyPage} />}</Route>
+      <Route path="/dispute-resolution">{() => <LazyRoute component={DisputeResolutionPage} />}</Route>
+      <Route path="/disputes">{() => <Redirect to="/dispute-resolution" />}</Route>
       <Route path="/verify-email">{() => <LazyRoute component={VerifyEmail} />}</Route>
 
       <Route path="/signin">{() => <AuthRoute component={SignIn} />}</Route>
@@ -283,7 +316,9 @@ function AppContent() {
       {/* The shared header is the single source of truth on every route. */}
       <div className="export-page app-header-scope"><AppHeader /></div>
       <main className="flex-1 flex flex-col">
-        <AppRoutes />
+        <AppErrorBoundary>
+          <AppRoutes />
+        </AppErrorBoundary>
       </main>
       {!isAuthPage && <div className="export-page app-footer-scope"><PexlyFooter /></div>}
       {showMarketplaceChat && (

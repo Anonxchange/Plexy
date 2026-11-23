@@ -112,8 +112,8 @@ export function SignIn() {
       setPasskeySupported(supported);
       if (!supported) return;
 
-      // If captcha is configured, skip the background conditional flow entirely.
-      if (TURNSTILE_ENABLED) return;
+      // If captcha is configured or Supabase is not configured, skip the background conditional flow entirely.
+      if (TURNSTILE_ENABLED || !isSupabaseConfigured()) return;
 
       try {
         const controller = new AbortController();

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getSupabase } from "@/lib/supabase";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 
 export interface AirtimeOperator {
   id?: number;
@@ -37,7 +37,7 @@ async function authHeaders(): Promise<Record<string, string>> {
 export function useAirtimeOperators(countryCode: string | undefined, enabled = true) {
   return useQuery<AirtimeOperator[]>({
     queryKey: ["airtime-operators", countryCode],
-    enabled: enabled && !!countryCode,
+    enabled: enabled && !!countryCode && isSupabaseConfigured(),
     staleTime: 1000 * 60 * 30,
     retry: false,
     queryFn: async () => {

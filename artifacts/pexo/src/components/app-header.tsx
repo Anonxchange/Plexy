@@ -32,12 +32,11 @@ import "./app-header.css";
 import { OPEN_COUNTRY_MENU_EVENT, useCountryPreferences, type CountryScope as PreferenceScope } from "@/lib/country-preferences";
 import { useQuery } from "@tanstack/react-query";
 import { shopifyService } from "@/lib/shopify-service";
+import { isSupabaseConfigured } from "@/lib/supabase";
+import { CartSheet } from "@/components/shop/CartSheet";
 
 const HeaderSearch = lazy(() =>
   import("@/components/header-search").then(module => ({ default: module.HeaderSearch })),
-);
-const CartSheet = lazy(() =>
-  import("@/components/shop/CartSheet").then(module => ({ default: module.CartSheet })),
 );
 
 type CountryScope = "shop" | "gift-card";
@@ -111,8 +110,9 @@ export function AppHeader() {
   const [cartOpen, setCartOpen] = useState(
     () => new URLSearchParams(window.location.search).get("openCart") === "1",
   );
+  const supabaseConfigured = isSupabaseConfigured();
   const giftCountriesQuery = useGiftCardCountries({
-    enabled: countryOpen,
+    enabled: countryOpen && supabaseConfigured,
   });
   const preferences = useCountryPreferences();
   const shopCountry = preferences.delivery?.country;
@@ -124,7 +124,7 @@ export function AppHeader() {
     queryFn: () => shopifyService.getAvailableCountries(),
     staleTime: 300_000,
     retry: false,
-    enabled: countryOpen,
+    enabled: countryOpen && supabaseConfigured,
   });
   const openCartFromUrl = new URLSearchParams(window.location.search).get("openCart") === "1";
   const cartItemCount =
@@ -380,6 +380,7 @@ export function AppHeader() {
                 />
                 <div className="px-country-options" role="group" aria-label="Available countries">
                   {pickerScope === "shop" ? (
+                    !supabaseConfigured ? <p className="px-country-empty" role="status">Live delivery markets are unavailable until the backend is connected.</p> :
                     marketsQuery.isLoading ? <p className="px-country-empty" role="status">Checking delivery markets…</p> :
                     marketsQuery.isError ? <div className="px-country-empty" role="alert">Delivery markets could not be verified. Your saved choice has not changed. <button type="button" onClick={() => void marketsQuery.refetch()}>Try again</button></div> :
                     filteredShopCountries.length > 0 ? filteredShopCountries.map(country => (
@@ -532,9 +533,7 @@ export function AppHeader() {
             <span className="px-tool-cart-count" aria-hidden="true">{cartItemCount}</span>
           </button>
           {cartOpen && (
-            <Suspense fallback={null}>
-              <CartSheet open={cartOpen} onOpenChange={setCartOpen} />
-            </Suspense>
+            <CartSheet open={cartOpen} onOpenChange={setCartOpen} />
           )}
           {wallet.isConnected && (
             <Link

@@ -4,7 +4,7 @@ import { buildCanonicalUrl } from "@/lib/site-document";
 
 type LegalSection = { title: string; paragraphs: string[]; bullets?: string[] };
 
-const legalDocuments: Record<"privacy" | "terms" | "refund", {
+const legalDocuments: Record<"privacy" | "terms" | "refund" | "dispute", {
   title: string;
   eyebrow: string;
   intro: string;
@@ -240,12 +240,74 @@ const legalDocuments: Record<"privacy" | "terms" | "refund", {
         "To request a cancellation, report a failed order or ask about a refund, email support@pexly.app. Include your order reference and enough information for us to locate the transaction. Never send your password, private key or wallet recovery phrase."
       ]}
     ]
+  },
+  dispute: {
+    title: "Dispute Resolution",
+    eyebrow: "How order, delivery and payment disputes are reviewed",
+    intro: "This Dispute Resolution guide explains how to report and resolve an issue with a gift card order, mobile top-up, physical product shipment or cryptocurrency payment on Pexly. Our goal is to investigate every claim fairly using verifiable order, supplier and blockchain records.",
+    updated: "23 November 2026",
+    sections: [
+      { title: "1. Scope of dispute resolution", paragraphs: [
+        "This process covers purchases and payment attempts initiated through pexly.app, including digital gift cards, mobile airtime and data top-ups, physical products and non-custodial cryptocurrency checkout sessions.",
+        "Because Pexly connects you with independent digital suppliers, mobile operators, fulfilment carriers and payment processors, resolving a dispute may require verifying status logs directly with those third-party providers."
+      ]},
+      { title: "2. Before opening a dispute", paragraphs: [
+        "Before submitting a formal dispute, please double-check the basic transaction details so we can isolate the issue quickly:"
+      ], bullets: [
+        "Confirm that your cryptocurrency transaction has reached sufficient network confirmations on the exact network and destination address shown at checkout.",
+        "For gift cards, verify the card's country, currency, brand and redemption instructions shown on the product page.",
+        "For mobile top-ups, check that the recipient phone number, country code and mobile operator were entered accurately and allow a few minutes if the status is still pending.",
+        "For physical products, review the carrier tracking link and delivery window in your order confirmation."
+      ]},
+      { title: "3. Step 1 — Submit a dispute to Pexly support", paragraphs: [
+        "Contact our team through the Contact Us page or by emailing support@pexly.app with the subject Dispute Resolution. Provide complete information in your initial message so your case can be assigned without back-and-forth delays:"
+      ], bullets: [
+        "Your order reference and the email address associated with the order.",
+        "The cryptocurrency asset, network, amount sent and transaction hash (txid), if payment was made on-chain.",
+        "A clear description of what went wrong (such as non-delivery, an invalid code, an underpayment or a damaged parcel).",
+        "Supporting evidence such as checkout screenshots, carrier notices or photographs of damaged packaging — never include private keys, passwords or wallet recovery phrases."
+      ]},
+      { title: "4. Step 2 — Investigation and supplier verification", paragraphs: [
+        "Once your dispute is logged, Pexly reviews internal checkout telemetry, payment processor callbacks and order fulfilment records. Where an issue involves an external issuer, mobile aggregator or shipping carrier, we open a verification request with that provider.",
+        "During an active investigation, please do not publish, share or attempt to repeatedly redeem a disputed gift card code, and do not place duplicate replacement orders unless you intend to pay for each order separately."
+      ]},
+      { title: "5. Gift card and digital code disputes", paragraphs: [
+        "If a digital code fails to redeem, shows an unexpected balance or appears redeemed prior to delivery, include screenshots showing the brand's error message alongside your order reference.",
+        "Where the supplier confirms a code was defective, duplicated or improperly issued before delivery, Pexly will arrange a replacement code or a refund in line with our Refund and Cancellation Policy. Codes that were validly issued and redeemed after delivery, or purchased for an incompatible country or account region, are generally not eligible for reversal unless required by law."
+      ]},
+      { title: "6. Mobile top-up disputes", paragraphs: [
+        "Mobile top-ups pass through independent telecom aggregators and local operators. A top-up showing a pending status may still be processing on the carrier's network.",
+        "If a carrier confirms that a top-up failed or was reversed, we will issue a retry or refund. Once an operator confirms successful delivery to the recipient number entered at checkout, the top-up cannot normally be clawed back."
+      ]},
+      { title: "7. Physical product and shipping disputes", paragraphs: [
+        "If a physical order arrives damaged, defective or incomplete, or fails to arrive within the estimated delivery window, notify support promptly and retain all original packaging and labels until review instructions are provided.",
+        "Where a return or replacement is approved, support will confirm the authorised return address, carrier steps and whether return shipping is covered under applicable consumer protections."
+      ]},
+      { title: "8. Cryptocurrency payment and settlement disputes", paragraphs: [
+        "Because blockchain transfers are non-custodial and irreversible once confirmed, disputes involving underpayments, late payments after quote expiry, overpayments or transfers sent on an unsupported network require manual reconciliation with our payment gateway.",
+        "Include the exact transaction hash and sending network when contacting support. Where a recoverable refund is approved, any applicable network transaction fees and exchange rate movements between purchase and refund time will be confirmed with you before funds are sent."
+      ]},
+      { title: "9. Timelines and escalation", paragraphs: [
+        "Most straightforward payment and order checks are reviewed within 1 to 3 business days. Cases requiring formal logs from a gift card issuer, telecom operator or international shipping carrier can take 5 to 10 business days or longer depending on partner response times.",
+        "If you believe a closed dispute overlooked key evidence, reply to the same support thread or email support@pexly.app requesting a senior review and reference your original ticket ID."
+      ]},
+      { title: "10. Statutory and consumer rights", paragraphs: [
+        "Using Pexly's internal dispute process does not waive or restrict any mandatory statutory rights, consumer guarantees or rights to seek resolution through a competent court, regulator or consumer protection body under the laws that apply where you live."
+      ]}
+    ]
   }
 };
 
-function LegalDocument({ kind }: { kind: "privacy" | "terms" | "refund" }) {
+function LegalDocument({ kind }: { kind: "privacy" | "terms" | "refund" | "dispute" }) {
   const document = legalDocuments[kind];
-  const path = kind === "privacy" ? "/privacy" : kind === "terms" ? "/terms" : "/refund-policy";
+  const path =
+    kind === "privacy"
+      ? "/privacy"
+      : kind === "terms"
+        ? "/terms"
+        : kind === "refund"
+          ? "/refund-policy"
+          : "/dispute-resolution";
   const description = document.intro.slice(0, 155);
   const canonical = buildCanonicalUrl(path);
 
@@ -261,34 +323,54 @@ function LegalDocument({ kind }: { kind: "privacy" | "terms" | "refund" }) {
   });
 
   return (
-    <div className="min-h-screen bg-background">
-      <section className="border-b border-border bg-muted/30">
-        <div className="mx-auto max-w-5xl px-5 py-14 md:px-8 md:py-20">
-          <div className="mb-5 text-xs font-semibold uppercase tracking-[0.18em] text-primary">{document.eyebrow}</div>
-          <h1 className="max-w-4xl text-4xl font-bold tracking-tight text-foreground md:text-5xl">{document.title}</h1>
-          <p className="mt-5 max-w-3xl text-base leading-8 text-muted-foreground">{document.intro}</p>
-          <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
-            <span>Last updated {document.updated}</span>
-            <span>Applies to pexly.app</span>
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto max-w-7xl px-5 pt-6 pb-2 md:px-8 md:pt-10">
+        <section className="rounded-3xl bg-[#f3f4ef] px-6 py-14 text-center dark:bg-card md:px-12 md:py-20">
+          <div className="mx-auto max-w-3xl">
+            <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-[#5d7932] dark:text-primary">
+              {document.eyebrow}
+            </p>
+            <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl md:text-5xl">
+              {document.title} – Pexly
+            </h1>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
 
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-5 py-12 md:px-8 lg:grid-cols-[minmax(0,1fr)_260px] lg:gap-16">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-5 py-10 md:px-8 md:py-12 lg:grid-cols-[minmax(0,1fr)_260px] lg:gap-16">
         <main className="min-w-0">
-          <div className="mb-8 rounded-xl border border-border bg-card p-5 text-sm leading-7 text-muted-foreground">
-            Please read this document together with the information shown at checkout and the terms that apply to any independent supplier or payment service you choose to use. If you have a question about a specific order, contact <a className="font-medium text-foreground underline underline-offset-4" href="mailto:support@pexly.app">support@pexly.app</a>.
+          <header className="mb-8 border-b border-border pb-7">
+            <h2 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">
+              {document.title}
+            </h2>
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-medium text-muted-foreground">
+              <span>Last updated: {document.updated}</span>
+              <span aria-hidden="true">·</span>
+              <span>Applies to pexly.app</span>
+            </div>
+            <p className="mt-5 text-[15px] font-medium leading-8 text-foreground/85 md:text-base">
+              {document.intro}
+            </p>
+          </header>
+
+          <div className="mb-8 rounded-2xl border border-border bg-[#f3f4ef]/70 p-5 text-sm font-medium leading-7 text-foreground/80 dark:bg-card">
+            Please read this document together with the information shown at checkout and the terms that apply to any independent supplier or payment service you choose to use. If you have a question about a specific order, contact <a className="font-bold text-foreground underline underline-offset-4" href="mailto:support@pexly.app">support@pexly.app</a>.
           </div>
+
           <div className="space-y-10">
             {document.sections.map((section, index) => (
               <section key={section.title} id={`section-${index + 1}`} className="scroll-mt-24">
-                <h2 className="mb-4 text-xl font-semibold tracking-tight text-foreground md:text-2xl">{section.title}</h2>
+                <h3 className="mb-3.5 text-xl font-bold tracking-tight text-foreground md:text-2xl">
+                  {section.title}
+                </h3>
                 <div className="space-y-4">
                   {section.paragraphs.map((paragraph, paragraphIndex) => (
-                    <p key={paragraphIndex} className="text-[15px] leading-8 text-muted-foreground">{paragraph}</p>
+                    <p key={paragraphIndex} className="text-[15px] font-medium leading-8 text-foreground/80">
+                      {paragraph}
+                    </p>
                   ))}
                   {section.bullets && (
-                    <ul className="list-disc space-y-2 pl-6 text-[15px] leading-8 text-muted-foreground">
+                    <ul className="list-disc space-y-2 pl-6 text-[15px] font-medium leading-8 text-foreground/80">
                       {section.bullets.map((bullet, bulletIndex) => <li key={bulletIndex}>{bullet}</li>)}
                     </ul>
                   )}
@@ -296,24 +378,31 @@ function LegalDocument({ kind }: { kind: "privacy" | "terms" | "refund" }) {
               </section>
             ))}
           </div>
+
           <div className="mt-14 border-t border-border pt-8">
-            <p className="text-sm leading-7 text-muted-foreground">For help with an account, payment or order, visit our <Link href="/support" className="font-medium text-foreground underline underline-offset-4">Help Center</Link> or <Link href="/contact" className="font-medium text-foreground underline underline-offset-4">contact Pexly support</Link>.</p>
+            <p className="text-sm font-medium leading-7 text-foreground/80">
+              For help with an account, payment or order, visit our <Link href="/support" className="font-bold text-foreground underline underline-offset-4">Help Center</Link> or <Link href="/contact" className="font-bold text-foreground underline underline-offset-4">contact Pexly support</Link>.
+            </p>
           </div>
         </main>
 
         <aside className="lg:sticky lg:top-24 lg:self-start">
-          <div className="rounded-xl border border-border bg-card p-5">
-            <h2 className="text-sm font-semibold text-foreground">Legal documents</h2>
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <h2 className="text-sm font-bold text-foreground">Legal documents</h2>
             <nav className="mt-4 flex flex-col gap-3 text-sm">
-              <Link href="/terms" className={kind === "terms" ? "font-semibold text-primary" : "text-muted-foreground hover:text-foreground"}>Terms of Service</Link>
-              <Link href="/privacy" className={kind === "privacy" ? "font-semibold text-primary" : "text-muted-foreground hover:text-foreground"}>Privacy Policy</Link>
-              <Link href="/refund-policy" className={kind === "refund" ? "font-semibold text-primary" : "text-muted-foreground hover:text-foreground"}>Refund and Cancellation Policy</Link>
+              <Link href="/terms" className={kind === "terms" ? "font-bold text-[#5d7932] dark:text-primary" : "font-medium text-muted-foreground hover:text-foreground"}>Terms of Service</Link>
+              <Link href="/privacy" className={kind === "privacy" ? "font-bold text-[#5d7932] dark:text-primary" : "font-medium text-muted-foreground hover:text-foreground"}>Privacy Policy</Link>
+              <Link href="/refund-policy" className={kind === "refund" ? "font-bold text-[#5d7932] dark:text-primary" : "font-medium text-muted-foreground hover:text-foreground"}>Refund and Cancellation Policy</Link>
+              <Link href="/dispute-resolution" className={kind === "dispute" ? "font-bold text-[#5d7932] dark:text-primary" : "font-medium text-muted-foreground hover:text-foreground"}>Dispute Resolution</Link>
             </nav>
           </div>
-          <div className="mt-4 rounded-xl border border-border bg-muted/30 p-5">
-            <h2 className="text-sm font-semibold text-foreground">Need assistance?</h2>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">Our support team can help with questions about an order or these documents.</p>
-            <a href="mailto:support@pexly.app" className="mt-4 inline-flex text-sm font-semibold text-foreground underline underline-offset-4">Email support</a>
+          <div className="mt-4 rounded-2xl border border-border bg-[#f3f4ef] p-5 dark:bg-card">
+            <h2 className="text-sm font-bold text-foreground">Need assistance?</h2>
+            <p className="mt-2 text-sm font-medium leading-6 text-foreground/75">Our support team can help with questions about an order or these documents.</p>
+            <div className="mt-4 flex flex-col gap-2">
+              <Link href="/contact" className="inline-flex text-sm font-bold text-foreground underline underline-offset-4">Contact support</Link>
+              <a href="mailto:support@pexly.app" className="inline-flex text-sm font-bold text-foreground underline underline-offset-4">Email support@pexly.app</a>
+            </div>
           </div>
         </aside>
       </div>
@@ -324,3 +413,4 @@ function LegalDocument({ kind }: { kind: "privacy" | "terms" | "refund" }) {
 export function PrivacyPage() { return <LegalDocument kind="privacy" />; }
 export function TermsPage() { return <LegalDocument kind="terms" />; }
 export function RefundPolicyPage() { return <LegalDocument kind="refund" />; }
+export function DisputeResolutionPage() { return <LegalDocument kind="dispute" />; }

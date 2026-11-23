@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { getSupabase, supabase } from "@/lib/supabase";
+import { getSupabase, isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { hasGiftCardDenominationRange } from "@/lib/gift-card-denominations";
 
 export interface ReloadlyProduct {
@@ -67,7 +67,7 @@ export function useGiftCardProducts(params: {
 
   return useQuery<ProductsResponse>({
     queryKey: ["gift-card-products", requestParams],
-    enabled,
+    enabled: enabled && isSupabaseConfigured(),
     ...(staleTime !== undefined ? { staleTime, refetchOnWindowFocus: false } : {}),
     queryFn: async () => {
       const url = new URL(`${FUNCTIONS_BASE}/reloadly-products`);
@@ -121,7 +121,7 @@ export async function fetchGiftCardProductFromReloadly(productId: string): Promi
 export function useGiftCardProduct(productId: string | undefined) {
   return useQuery<ReloadlyProduct>({
     queryKey: ["gift-card-product", productId],
-    enabled: !!productId,
+    enabled: !!productId && isSupabaseConfigured(),
     queryFn: async () => {
       const headers = await authHeaders();
 
@@ -210,7 +210,7 @@ function isoToFlag(iso: string): string {
 export function useGiftCardCountries(options: { enabled?: boolean } = {}) {
   return useQuery<ReloadlyCountry[]>({
     queryKey: ["gift-card-countries"],
-    enabled: options.enabled ?? true,
+    enabled: (options.enabled ?? true) && isSupabaseConfigured(),
     staleTime: 1000 * 60 * 30,
     queryFn: async () => {
       const headers = await authHeaders();
@@ -258,7 +258,7 @@ export function useGiftCardCountries(options: { enabled?: boolean } = {}) {
 export function useGiftCardCategories(options: { enabled?: boolean } = {}) {
   return useQuery<ReloadlyCategory[]>({
     queryKey: ["gift-card-categories"],
-    enabled: options.enabled ?? true,
+    enabled: (options.enabled ?? true) && isSupabaseConfigured(),
     staleTime: 1000 * 60 * 60,
     queryFn: async () => {
       const headers = await authHeaders();

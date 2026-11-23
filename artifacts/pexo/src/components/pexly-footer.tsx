@@ -6,11 +6,11 @@ const footerColumns = [
     title: "Marketplace",
     links: [
       ["Gift Cards", "/gift-cards"],
-      ["Mobile Top Up", "/wallet/mobile-topup"],
+      ["All Gift Cards", "/gift-cards/all"],
+      ["Mobile Top Up", "/mobile-topup"],
       ["Physical Products", "/shop"],
-      ["Sell on Pexly", "/"],
+      ["Search Catalog", "/search"],
       ["Order History", "/wallet"],
-      ["Price Alerts", "/wallet"],
     ],
   },
   {
@@ -21,19 +21,19 @@ const footerColumns = [
       ["Pay with ETH", "/wallet"],
       ["Pay with USDT", "/wallet"],
       ["Pay with USDC", "/wallet"],
-      ["Escrow", "/support"],
-      ["Fees", "/support"],
+      ["Checkout", "/checkout"],
+      ["Shopping Guide", "/support/article/shop-guide"],
     ],
   },
   {
     title: "Support",
     links: [
       ["Help Center", "/support"],
-      ["Dispute Resolution", "/support"],
+      ["Dispute Resolution", "/dispute-resolution"],
       ["Contact Us", "/contact"],
       ["FAQ", "/support"],
-      ["Report a Seller", "/support"],
-      ["Status", "/support"],
+      ["Report an Issue", "/contact"],
+      ["Security", "/support/security"],
     ],
   },
   {
@@ -122,7 +122,7 @@ export function PexlyFooter() {
                   </p>
                 </div>
                 <div className="footer-bottom-link-wrap">
-                  <Link href="/support" className="footer-link-item"><div className="p-xs light-gray">Privacy &amp; terms questions</div></Link>
+                  <Link href="/privacy" className="footer-link-item"><div className="p-xs light-gray">Privacy Policy</div></Link>
                   <button type="button" className="footer-link-item p-xs light-gray underline underline-offset-4" onClick={() => window.dispatchEvent(new Event("pexly:open-cookie-settings"))}>Cookie Preferences</button>
                 </div>
               </div>
