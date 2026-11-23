@@ -32,6 +32,9 @@ const TeamsExport = lazy(() => import("@/pages/current-html/teams").then(m => ({
 const CareerExport = lazy(() => import("@/pages/current-html/career").then(m => ({ default: m.CareerExport })));
 const BlogsExport = lazy(() => import("@/pages/current-html/blogs").then(m => ({ default: m.BlogsExport })));
 const VerifyEmail = lazy(() => import("@/pages/verify-email").then(m => ({ default: m.VerifyEmail })));
+const PrivacyPage = lazy(() => import("@/pages/legal-pages").then(m => ({ default: m.PrivacyPage })));
+const TermsPage = lazy(() => import("@/pages/legal-pages").then(m => ({ default: m.TermsPage })));
+const RefundPolicyPage = lazy(() => import("@/pages/legal-pages").then(m => ({ default: m.RefundPolicyPage })));
 
 const SignIn = lazy(() => import("@/pages/signin").then(m => ({ default: m.SignIn })));
 const SignUp = lazy(() => import("@/pages/signup").then(m => ({ default: m.SignUp })));
@@ -234,6 +237,9 @@ function AppRoutes() {
       <Route path="/support/article/:slug">{() => <LazyRoute component={SupportArticle} />}</Route>
       <Route path="/support/:category">{() => <LazyRoute component={SupportCategory} />}</Route>
       <Route path="/contact">{() => <LazyRoute component={Contact} />}</Route>
+      <Route path="/privacy">{() => <LazyRoute component={PrivacyPage} />}</Route>
+      <Route path="/terms">{() => <LazyRoute component={TermsPage} />}</Route>
+      <Route path="/refund-policy">{() => <LazyRoute component={RefundPolicyPage} />}</Route>
       <Route path="/verify-email">{() => <LazyRoute component={VerifyEmail} />}</Route>
 
       <Route path="/signin">{() => <AuthRoute component={SignIn} />}</Route>
