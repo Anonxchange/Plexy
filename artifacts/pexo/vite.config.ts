@@ -71,25 +71,9 @@ const reactDocumentEntry: Plugin = {
             codeSplitting: {
               groups: [
                 {
-                  name: "wallet-vendor",
-                  test: /node_modules[\\/](?:@reown|wagmi|viem|@solana|@tronweb3|tronweb|bitcoinjs-lib)(?:[\\/]|$)/,
-                  priority: 30,
-                  maxSize: 350_000,
-                  minSize: 40_000,
-                },
-                {
-                  name: "charts-vendor",
-                  test: /node_modules[\\/](?:recharts|d3-[^\\/]+)(?:[\\/]|$)/,
-                  priority: 20,
-                  maxSize: 250_000,
-                  minSize: 30_000,
-                },
-                {
-                  name: "vendor",
-                  test: /node_modules[\\/]/,
-                  priority: 1,
-                  maxSize: 350_000,
-                  minSize: 60_000,
+                  name: "react-vendor",
+                  test: /node_modules[\\/](?:\.bun[\\/][^\\/]+[\\/]node_modules[\\/])?(?:react|react-dom|scheduler)(?:[\\/]|$)/,
+                  priority: 40,
                 },
               ],
             },
@@ -138,6 +122,7 @@ const reactDocumentEntry: Plugin = {
 
 export default defineConfig({
   base: basePath,
+  envDir: path.resolve(import.meta.dirname, "../.."),
   plugins: [react(), tailwindcss(), reactDocumentEntry],
   resolve: {
     alias: {
@@ -148,6 +133,13 @@ export default defineConfig({
   define: { global: "globalThis" },
   worker: { format: "es" },
   root: artifactRoot,
+  server: {
+    host: "0.0.0.0",
+    port: 3000,
+    allowedHosts: true,
+    hmr: process.env.DISABLE_HMR !== "true",
+    watch: process.env.DISABLE_HMR === "true" ? null : {},
+  },
   build: {
     manifest: true,
     outDir: path.resolve(import.meta.dirname, "dist/public"),
