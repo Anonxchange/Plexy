@@ -304,10 +304,6 @@ export function CurrentMarketingPage({ page, children }: CurrentMarketingPagePro
   });
   useSchema(seo.schema, "page-schema");
 
-  useEffect(() => {
-    document.documentElement.classList.add("pexly-app-ready");
-    document.getElementById("seo-prerender")?.remove();
-  }, []);
 
   useEffect(() => {
     const root = rootRef.current;
