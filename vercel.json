@@ -44,7 +44,7 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/"
+      "destination": "/_spa.html"
     }
   ],
   "headers": [

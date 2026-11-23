@@ -15,6 +15,12 @@ const routes = [
   "/teams",
   "/career",
   "/blogs",
+  "/gift-cards/browse",
+  "/support",
+  "/contact",
+  "/privacy",
+  "/terms",
+  "/refund-policy",
 ];
 
 function escapeHtml(value) {
@@ -60,6 +66,8 @@ function collectCss(manifest, entryKeys) {
 
 async function main() {
   let template = await fs.readFile(path.join(outputDir, "index.html"), "utf8");
+  // Preserve the untouched Vite SPA shell before route-specific SEO HTML is written.
+  await fs.writeFile(path.join(outputDir, "_spa.html"), template, "utf8");
   let manifest = {};
   try {
     manifest = JSON.parse(await fs.readFile(manifestPath, "utf8"));
@@ -87,6 +95,12 @@ async function main() {
       "/teams": "src/pages/current-html/teams.tsx",
       "/career": "src/pages/current-html/career.tsx",
       "/blogs": "src/pages/current-html/blogs.tsx",
+      "/gift-cards/browse": "src/pages/gift-card-browse.tsx",
+      "/support": "src/pages/support.tsx",
+      "/contact": "src/pages/contact.tsx",
+      "/privacy": "src/pages/legal-pages.tsx",
+      "/terms": "src/pages/legal-pages.tsx",
+      "/refund-policy": "src/pages/legal-pages.tsx",
     };
 
     let generated = 0;
@@ -107,7 +121,14 @@ async function main() {
           const links = styles.map(file => `<link rel="stylesheet" href="/${file.replace(/^\//, "")}" />`).join("\n    ");
           html = html.replace("</head>", `    ${links}\n  </head>`);
         }
-        html = html.replace('<div id="root"></div>', `${markup}\n    <div id="root"></div>`);
+        const rootPlaceholder = '<div id="root"></div>';
+        if (!html.includes(rootPlaceholder)) {
+          throw new Error("The HTML template is missing the React root element.");
+        }
+        // Keep the static snapshot inside the React root. createRoot() replaces
+        // this SEO-only markup when the client application starts, avoiding
+        // duplicate page content outside the application mount point.
+        html = html.replace(rootPlaceholder, `<div id="root">${markup}</div>`);
         const destinations = route === "/" ? ["index.html", "en/index.html"] : [`${route.slice(1)}/index.html`, `en${route}/index.html`];
         for (const relative of destinations) {
           const destination = path.join(outputDir, relative);
@@ -121,8 +142,12 @@ async function main() {
         console.warn(`[prerender] Skipped ${route}:`, error?.stack ?? error);
       }
     }
-    if (!generated) throw new Error("No SEO pages could be prerendered.");
-    console.log(`[prerender] Generated ${generated} routes; skipped ${skipped}.`);
+    if (skipped > 0 || generated !== routes.length) {
+      throw new Error(
+        `Prerender incomplete: generated ${generated}/${routes.length} routes and skipped ${skipped}. Refusing to publish incomplete SEO output.`,
+      );
+    }
+    console.log(`[prerender] Successfully generated all ${generated} SEO routes.`);
   } finally {
     await server.close();
   }
