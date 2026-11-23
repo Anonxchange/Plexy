@@ -66,6 +66,8 @@ function collectCss(manifest, entryKeys) {
 
 async function main() {
   let template = await fs.readFile(path.join(outputDir, "index.html"), "utf8");
+  // Preserve the untouched Vite SPA shell before route-specific SEO HTML is written.
+  await fs.writeFile(path.join(outputDir, "_spa.html"), template, "utf8");
   let manifest = {};
   try {
     manifest = JSON.parse(await fs.readFile(manifestPath, "utf8"));
