@@ -51,8 +51,8 @@ export function renderSeoPage(path: string) {
   );
   const canonical = buildCanonicalUrl(seo.canonicalPath);
   const schema = JSON.stringify(seo.schema).replaceAll("<", "\\u003c");
-  const title = escapeHtml(seo.title || siteMetadata.title);
-  const description = escapeHtml(seo.description || siteMetadata.description);
+  const title = seo.title || siteMetadata.title;
+  const description = seo.description || siteMetadata.description;
   return `<section id="seo-prerender" aria-label="Pexly page content">
     <script type="application/ld+json">${schema}</script>
     ${body}
