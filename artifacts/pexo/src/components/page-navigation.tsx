@@ -6,7 +6,6 @@ const tabs = [
   { id: "gift-cards", label: "Gift Cards", path: "/gift-cards" },
   { id: "shop", label: "Shop", path: "/shop" },
   { id: "topup", label: "Mobile top up", path: "/wallet/mobile-topup" },
-  { id: "utility", label: "Utility", path: "/utility" },
   { id: "about", label: "About", path: "/about" },
   { id: "support", label: "Support", path: "/support" },
   { id: "contact", label: "Contact", path: "/contact" },
