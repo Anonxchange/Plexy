@@ -12,6 +12,10 @@ import { AboutUsExport } from "@/pages/current-html/about-us";
 import { TeamsExport } from "@/pages/current-html/teams";
 import { CareerExport } from "@/pages/current-html/career";
 import { BlogsExport } from "@/pages/current-html/blogs";
+import { Support } from "@/pages/support";
+import Contact from "@/pages/contact";
+import { PrivacyPage, TermsPage, RefundPolicyPage } from "@/pages/legal-pages";
+import { GiftCardBrowse } from "@/pages/gift-card-browse";
 import MobileTopup from "@/pages/mobile-topup";
 import { ROUTE_SEO } from "@/components/marketing/current-marketing-page";
 import { siteMetadata, buildCanonicalUrl } from "@/lib/site-document";
@@ -26,6 +30,12 @@ const pages: Record<string, React.ComponentType> = {
   "/teams": TeamsExport,
   "/career": CareerExport,
   "/blogs": BlogsExport,
+  "/gift-cards/browse": GiftCardBrowse,
+  "/support": Support,
+  "/contact": Contact,
+  "/privacy": PrivacyPage,
+  "/terms": TermsPage,
+  "/refund-policy": RefundPolicyPage,
 };
 
 function escapeHtml(value: string) {
