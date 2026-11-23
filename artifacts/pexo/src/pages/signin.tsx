@@ -50,7 +50,7 @@ export function SignIn() {
       {
         name: "description",
         content:
-          "Sign in to access your Pexly wallet, gift cards, mobile top-ups, utility bill payments, and order history.",
+          "Sign in to access your Pexly wallet, gift cards, mobile top-ups, and order history.",
       },
       { name: "robots", content: "noindex, nofollow" },
     ],
