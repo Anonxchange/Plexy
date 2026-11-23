@@ -304,6 +304,10 @@ function getInitialLangBase(): string | null {
 }
 
 function App() {
+  useEffect(() => {
+    document.documentElement.classList.add("pexly-app-ready");
+  }, []);
+
   useHead({
     title: siteMetadata.title,
     htmlAttrs: { lang: "en-US" },
