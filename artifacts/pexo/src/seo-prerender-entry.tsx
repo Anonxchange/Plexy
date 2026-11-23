@@ -1,6 +1,6 @@
 import "@/lib/i18n";
 import React from "react";
-import { renderToString } from "react-dom/server";
+import { renderToStaticMarkup } from "react-dom/server";
 import { Router } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createHead, UnheadProvider } from "@unhead/react/server";
@@ -40,7 +40,7 @@ export function renderSeoPage(path: string) {
     defaultOptions: { queries: { retry: false, gcTime: 0, staleTime: 0 } },
   });
   const head = createHead();
-  const body = renderToString(
+  const body = renderToStaticMarkup(
     <UnheadProvider value={head}>
       <Router ssrPath={path}>
         <QueryClientProvider client={queryClient}>
