@@ -51,12 +51,6 @@
     <priority>0.9</priority>
   </url>
 
-  <!-- Public Feature Pages (Wallet & Payments) -->
-  <url>
-    <loc>https://www.pexly.app/utility</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
 
   <url>
     <loc>https://www.pexly.app/stake</loc>
