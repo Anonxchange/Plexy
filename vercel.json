@@ -1,6 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
+  "framework": null,
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm --filter @workspace/pexo typecheck && pnpm --filter @workspace/pexo build",
   "outputDirectory": "artifacts/pexo/dist/public",
   "images": {
     "sizes": [256, 384, 600, 1000, 1200, 1920],

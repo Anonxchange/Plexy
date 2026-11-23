@@ -4,7 +4,9 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, type Plugin } from "vite";
 import { createEntryDocument } from "./src/lib/site-document.ts";
 
-const basePath = process.env.BASE_PATH || "/";
+// Pexly is deployed at the domain root; do not let a Vercel environment variable
+// accidentally generate asset URLs for a different path.
+const basePath = "/";
 
 const artifactRoot = path.resolve(import.meta.dirname);
 
@@ -69,6 +71,7 @@ const reactDocumentEntry: Plugin = {
           input: path.resolve(artifactRoot, "src/main.tsx"),
           output: {
             codeSplitting: {
+              strictExecutionOrder: true,
               groups: [
                 {
                   name: "wallet-vendor",

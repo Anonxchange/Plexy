@@ -2,7 +2,7 @@ import "@/lib/i18n";
 import { setNonce } from "get-nonce";
 import { createRoot } from "react-dom/client";
 import { createHead, UnheadProvider } from "@unhead/react/client";
-import App from "./App";
+import App, { AppErrorBoundary } from "./App";
 import "./styles.css";
 try {
   const theme = window.localStorage.getItem("pexly-theme");
@@ -27,7 +27,9 @@ const rootElement = document.getElementById("root");
 if (rootElement) {
   createRoot(rootElement).render(
     <UnheadProvider head={head}>
-      <App />
+      <AppErrorBoundary>
+        <App />
+      </AppErrorBoundary>
     </UnheadProvider>
   );
   // Run the DOM-level translator when the browser has idle time, not during
