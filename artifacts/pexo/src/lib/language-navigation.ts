@@ -4,7 +4,7 @@ export function switchLanguage(code: string) {
   if (!isValidLang(code)) return;
   const segments = window.location.pathname.split("/").filter(Boolean);
   const currentLanguage =
-    segments[0] && (isValidLang(segments[0]) || segments[0] === "jp")
+    segments[0] && isValidLang(segments[0])
       ? segments.shift()
       : null;
   const route = segments.length ? `/${segments.join("/")}` : "";
