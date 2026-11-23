@@ -117,11 +117,11 @@ export function PexlyHomepage() {
               <div className={"v3-herocontent-wrapper"}>
                 <div className={"v3-hero-content"}>
                   <h1 data-w-id={"efc00cef-13a7-739b-1069-88d52025811f"} className={"h1-large"}>
-                    {"Shop and pay with crypto"}
+                    {"Buy Gift Cards, Top Up & Shop with Crypto"}
                   </h1>
                   <div className={"v3-hero-text-block"}>
                     <p data-w-id={"9be5ebdd-eacb-1105-68a6-cae003ce4cfc"} className={"p-large cyan"}>
-                      {"One decentralized marketplace for gift cards, mobile top up and physical products, all paid straight from your own wallet."}
+                      {"Buy digital gift cards, recharge mobile phones and shop physical products using Bitcoin, USDT and other supported cryptocurrencies."}
                     </p>
                   </div>
                   <div data-w-id={"0f339b4c-3cc1-73c1-73d5-37ae38bef528"} className={"v3-hero-btn-wrap"}>
