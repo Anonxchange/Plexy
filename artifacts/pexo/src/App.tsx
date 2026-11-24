@@ -54,6 +54,8 @@ const GiftCardBrowse = lazy(() => import("@/pages/gift-card-browse").then(m => (
 const GiftCardDetail = lazy(() => import("@/pages/gift-card-detail").then(m => ({ default: m.GiftCardDetail })));
 const SearchPage = lazy(() => import("@/pages/search").then(m => ({ default: m.SearchPage })));
 const ProductDetail = lazy(() => import("@/pages/product-detail").then(m => ({ default: m.ProductDetail })));
+const ShopCategories = lazy(() => import("@/pages/shop-categories").then(m => ({ default: m.ShopCategoriesPage })));
+const ShopCollection = lazy(() => import("@/pages/shop-collection").then(m => ({ default: m.ShopCollectionPage })));
 import { GiftCardCartProvider } from "@/hooks/use-gift-card-cart";
 
 // ─── Route guard helpers ──────────────────────────────────────────────────────
@@ -249,6 +251,8 @@ function AppRoutes() {
       <Route path="/gift-cards/all">{() => <LazyRoute component={GiftCardsAllPage} />}</Route>
       <Route path="/gift-cards/:id">{() => <LazyRoute component={GiftCardDetail} />}</Route>
       <Route path="/gift-cards">{() => <LazyRoute component={GiftCardsExport} />}</Route>
+      <Route path="/shop/categories">{() => <LazyRoute component={ShopCategories} />}</Route>
+      <Route path="/shop/collection/:handle">{() => <LazyRoute component={ShopCollection} />}</Route>
       <Route path="/shop/product/:id">{() => <LazyRoute component={ProductDetail} />}</Route>
       <Route path="/shop">{() => <LazyRoute component={PhysicalProductsExport} />}</Route>
       <Route path="/search">{() => <LazyRoute component={SearchPage} />}</Route>
@@ -300,7 +304,10 @@ function AppContent() {
     link: [{ rel: "canonical", key: "canonical", href: routeCanonical }],
   });
   const isHomepage = location === "/";
-  const isPhysicalProductsPage = location === "/shop";
+  const isPhysicalProductsPage =
+    location === "/shop" ||
+    location.startsWith("/shop/categories") ||
+    location.startsWith("/shop/collection");
   const isGiftCardsTemplatePage = location === "/gift-cards" || location === "/gift-cards/all" || location === "/mobile-topup";
   const showMarketplaceChat = isPhysicalProductsPage || isGiftCardsTemplatePage;
   const isStandaloneCompanyPage = [
