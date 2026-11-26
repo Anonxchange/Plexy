@@ -220,10 +220,10 @@ const POPULAR_META: ShelfMeta = { title: "2,000+ products in 180+ countries", ta
 const AIRTIME_META: ShelfMeta = { title: "Mobile top up", tab: "Top Up", one: true, banner: { bg: "#0b6e4f", text: "Airtime in seconds" } };
 // Category banner photos (800x480 WebP, ~20-40 KB). Matched by category name.
 const CATEGORY_BANNERS: { re: RegExp; img: string; pos: string }[] = [
-  { re: /gam/i, img: "/marketing-media/banners/gaming.webp", pos: "50% 45%" },
-  { re: /entertain|stream|movie|video|tv|music/i, img: "/marketing-media/banners/entertainment.webp", pos: "50% 60%" },
-  { re: /travel|hotel|flight|transport|airline/i, img: "/marketing-media/banners/travel.webp", pos: "50% 60%" },
-  { re: /shop|retail|fashion|cloth|market/i, img: "/marketing-media/banners/shopping.webp", pos: "50% 30%" },
+  { re: /gam/i, img: "/marketing-media/explore/gaming.webp", pos: "50% 45%" },
+  { re: /entertain|stream|movie|video|tv|music/i, img: "/marketing-media/explore/entertainment.webp", pos: "50% 60%" },
+  { re: /travel|hotel|flight|transport|airline/i, img: "/marketing-media/explore/travel.webp", pos: "50% 60%" },
+  { re: /shop|retail|fashion|cloth|market/i, img: "/marketing-media/explore/shopping.webp", pos: "50% 30%" },
 ];
 function categoryBanner(name: string) {
   return CATEGORY_BANNERS.find((b) => b.re.test(name));
@@ -477,9 +477,9 @@ function heroSearchGo() {
 
 // Mobile banner strip: 3 game banners (tall crops, ~20 KB each)
 const HERO_BANNERS = [
-  { n: "GTA VI", img: "/marketing-media/hero/hero-gta-vi.webp" },
-  { n: "EA FC 27", img: "/marketing-media/hero/hero-ea-fc-27.webp" },
-  { n: "Call of Duty", img: "/marketing-media/hero/hero-call-of-duty.webp" },
+  { n: "GTA VI", img: "/marketing-media/explore/hero-gta-vi.webp" },
+  { n: "EA FC 27", img: "/marketing-media/explore/hero-ea-fc-27.webp" },
+  { n: "Call of Duty", img: "/marketing-media/explore/hero-call-of-duty.webp" },
 ];
 
 // Category icon by name (names come from Reloadly, so this matches on keywords).
