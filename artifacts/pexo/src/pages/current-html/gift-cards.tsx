@@ -74,10 +74,17 @@ const HERO_CSS = `
 .pxg .phm-cat:active .phm-ic{transform:scale(.94)}
 .pxg .phm-ic svg{width:28px;height:28px}
 .pxg .phm-b:focus-visible,.pxg .phm-cat:focus-visible{outline:3px solid #5b8cff;outline-offset:-3px}
+.pxg .phm-d{display:none}
 
 .pxg .ph-wide{display:none}
 @media(min-width:768px){
 .pxg .ph-mob{display:none}
+.pxg .phm-d{display:block;max-width:1100px;margin:0 auto;padding:24px 20px 8px}
+.pxg .phm-d .phm-cats{gap:12px;padding:8px 0}
+.pxg .phm-d .phm-cat:first-child{margin-left:auto}
+.pxg .phm-d .phm-cat:last-child{margin-right:auto}
+.pxg .phm-d .phm-ic{width:64px;height:64px;transition:transform .2s,background .2s}
+.pxg .phm-d .phm-cat:hover .phm-ic{transform:translateY(-3px);background:#e7efed}
 .pxg .ph-wide{display:block;padding:64px 20px 0;--ph-glow:rgba(190,242,100,.38)}
 .export-page .pxg .ph-wide h1{font-size:clamp(56px,8.2vw,104px);line-height:.97}
 .pxg .ph-wide .ph-sub{max-width:620px;font-size:clamp(17px,2vw,21px)}
@@ -583,6 +590,9 @@ function HeroCarousel() {
         </div>
       </div>
     </section>
+    <div className={"phm phm-d"}>
+      <HeroCategories />
+    </div>
     </>
   );
 }
