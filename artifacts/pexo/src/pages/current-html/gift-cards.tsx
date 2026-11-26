@@ -1,6 +1,6 @@
 "use client";
 import "./page-styles/gift-cards.css";
-import { useEffect, useMemo, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { CurrentMarketingPage } from "@/components/marketing/current-marketing-page";
 import { useGiftCardCategories, useGiftCardProducts, type ReloadlyCategory, type ReloadlyProduct } from "@/hooks/use-reloadly";
 import { useAirtimeOperators, type AirtimeOperator } from "@/hooks/use-airtime-operators";
@@ -53,7 +53,7 @@ const HERO_CSS = `
 .pxg .phm{background:#fff;color:var(--_color---typography--cyan,#0c1111);font-family:"Plus Jakarta Sans",system-ui,sans-serif}
 .pxg .phm-ban{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .pxg .phm-ban::-webkit-scrollbar{display:none}
-.pxg .phm-b{position:relative;display:block;flex:0 0 min(30.3%,200px);aspect-ratio:1/2;scroll-snap-align:start;overflow:hidden;background:#e9efee;color:#fff;text-decoration:none}
+.pxg .phm-b{position:relative;display:block;flex:0 0 min(33.333%,220px);aspect-ratio:1/2;scroll-snap-align:start;overflow:hidden;background:#e9efee;color:#fff;text-decoration:none}
 .pxg .phm-b img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;max-width:none;pointer-events:none}
 .pxg .phm-b.sbux img{transform:scale(1.08)}
 .pxg .phm-b:after{content:"";position:absolute;left:0;right:0;bottom:0;height:42%;background:linear-gradient(to top,rgba(0,0,0,.62),transparent)}
@@ -465,7 +465,8 @@ function heroSearchGo() {
   setTimeout(() => document.getElementById("gs-top")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
 }
 
-const HERO_BANNERS = HERO_CARDS;
+// Mobile banner strip shows only the first 3 cards
+const HERO_BANNERS = HERO_CARDS.slice(0, 3);
 
 // Category icon by name (names come from Reloadly, so this matches on keywords).
 // Same mapping as the See all page.
@@ -597,6 +598,127 @@ function HeroCarousel() {
   );
 }
 
+const EXPLORE_CSS = `
+.pxg .xp{--xp-bg:#0a1019;background:var(--xp-bg);color:#fff;padding-bottom:40px;font-family:"Plus Jakarta Sans",system-ui,sans-serif}
+.pxg .xp a{color:inherit;text-decoration:none}
+.pxg .xp .xp-hero{position:relative;height:620px;display:flex;align-items:flex-end;justify-content:center;text-align:center;padding:0 22px 26px;background-size:cover;background-position:50% 18%}
+.pxg .xp .xp-hero:after{content:"";position:absolute;left:0;right:0;bottom:0;height:62%;background:linear-gradient(to bottom,rgba(10,16,25,0),var(--xp-bg) 92%)}
+.pxg .xp .xp-hero h2{position:relative;z-index:1;margin:0;max-width:760px;color:#fff;font-size:40px;line-height:1;font-weight:800;letter-spacing:-.01em;text-transform:uppercase;text-shadow:0 2px 18px rgba(0,0,0,.55)}
+.pxg .xp .xp-in{max-width:1100px;margin:0 auto}
+.pxg .xp .xp-eb{margin:34px 22px 0;color:#a6adb8;font-size:17px;font-weight:600}
+.pxg .xp .xp-h{margin:8px 22px 0;color:#fff;font-size:30px;line-height:1.18;font-weight:300;letter-spacing:-.01em}
+.pxg .xp .xp-car{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding:26px 16px 8px;scroll-padding:0 16px;-webkit-overflow-scrolling:touch}
+.pxg .xp .xp-car::-webkit-scrollbar{display:none}
+.pxg .xp .xp-card{position:relative;display:block;flex:0 0 92%;aspect-ratio:.56;border-radius:12px;overflow:hidden;scroll-snap-align:center;background-size:cover;box-shadow:0 0 46px rgba(0,112,209,.28)}
+.pxg .xp .xp-card:focus-visible,.pxg .xp .xp-more:focus-visible{outline:3px solid #5b8cff;outline-offset:3px}
+.pxg .xp .xp-dots{display:flex;gap:7px;align-items:center;margin:16px 22px 0}
+.pxg .xp .xp-dots i{width:7px;height:7px;border-radius:99px;background:#5b6575;transition:width .25s,background .25s}
+.pxg .xp .xp-dots i.on{width:42px;background:#fff}
+.pxg .xp .xp-more{display:inline-flex;align-items:center;gap:8px;margin:26px 22px 0;color:#fff;font-size:20px;font-weight:600;text-decoration:underline!important;text-underline-offset:4px}
+.pxg .xp .xp-v{margin:44px 16px 0}
+.pxg .xp .xp-v .e{color:#a6adb8;font-size:17px;font-weight:600}
+.pxg .xp .xp-v h2{margin:8px 0 0;color:#fff;font-size:30px;line-height:1.18;font-weight:300;letter-spacing:-.01em}
+.pxg .xp .xp-v>p{margin:12px 0 0;color:#a6adb8;font-size:16px;line-height:1.5}
+.pxg .xp .xp-steps{display:block}
+.pxg .xp .xp-step{margin-top:26px}
+.pxg .xp .xp-ph{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;aspect-ratio:1.5;border-radius:12px;border:1.5px dashed #3a4a60;background:linear-gradient(160deg,#131d2b,#0c131d);padding:18px;text-align:center;overflow:hidden}
+.pxg .xp .xp-ph svg{width:30px;height:30px;fill:none;stroke:#7b8aa0;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.pxg .xp .xp-ph b{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#bef264}
+.pxg .xp .xp-ph span{font-size:13px;line-height:1.4;color:#a6adb8;max-width:280px}
+.pxg .xp .xp-img{display:block;width:100%;aspect-ratio:1.5;object-fit:cover;border-radius:12px}
+.pxg .xp .xp-step .tm{display:inline-block;margin-top:14px;padding:5px 12px;border-radius:99px;background:#bef264;color:#091e1c;font-weight:800;font-size:12px;font-variant-numeric:tabular-nums}
+.pxg .xp .xp-step h3{margin:10px 0 0;color:#fff;font-size:22px;font-weight:600;letter-spacing:-.01em}
+.pxg .xp .xp-step p{margin:6px 0 0;color:#a6adb8;font-size:15px;line-height:1.5}
+.pxg .xp .xp-v small{display:block;margin-top:24px;color:#7b8696;font-size:12.5px}
+@media(min-width:900px){
+.pxg .xp .xp-hero{height:680px}.pxg .xp .xp-hero h2{font-size:64px}
+.pxg .xp .xp-card{flex:0 0 340px}.pxg .xp .xp-car{padding:30px 22px 8px}
+.pxg .xp .xp-v{margin:64px 22px 0}
+.pxg .xp .xp-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+}
+`;
+
+const EXPLORE_CARDS = [
+  { n: "Shop Top Ups", link: "topup", img: "/marketing-media/explore/explore-god-of-war.webp", pos: "50% 20%" },
+  { n: "Shop Physical Products", link: "shop", img: "/marketing-media/explore/explore-witcher-3.webp", pos: "50% 30%" },
+  { n: "Start Selling", link: "shop", img: "/marketing-media/explore/explore-ea-fc-27.webp", pos: "50% 20%" },
+  { n: "Browse Gift Cards", link: "giftcards", img: "/marketing-media/explore/explore-gta-vi.webp", pos: "50% 20%" },
+];
+
+// Set `img` to a file path (e.g. "/marketing-media/explore/step-1.webp") to replace the placeholder.
+const AFTER_STEPS = [
+  { t: "0:00", h: "You send the coin", p: "From your own wallet to the address we show.", img: "/marketing-media/explore/step-1-entertainment.webp", alt: "Friends playing a video game together", hint: "Add: a hand holding a phone on a crypto wallet \u201cSend\u201d screen (USDT or BTC). Dark, moody tone. 1200 \u00d7 800." },
+  { t: "~0:30", h: "The network confirms", p: "Speed depends on the coin you picked.", img: "/marketing-media/explore/step-2-travel.webp", alt: "Woman relaxing on a tropical beach", hint: "Add: glowing blockchain network or a \u201cConfirming\u2026\u201d progress screen. Blue/teal glow to match the page. 1200 \u00d7 800." },
+  { t: "~2:00", h: "The code is in your inbox", p: "Check spam if you don\u2019t see it.", img: "/marketing-media/explore/step-3-shopping.webp", alt: "Woman holding colorful shopping bags", hint: "Add: a phone showing a new email with a gift card code, with a Steam or Netflix card beside it. 1200 \u00d7 800." },
+];
+
+function ExploreMarketplace() {
+  const [active, setActive] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+  const onScroll = () => {
+    const el = ref.current;
+    const first = el?.children[0] as HTMLElement | undefined;
+    if (!el || !first) return;
+    const k = first.offsetWidth + 14;
+    setActive(Math.max(0, Math.min(EXPLORE_CARDS.length - 1, Math.round(el.scrollLeft / k))));
+  };
+  return (
+    <>
+      <style>{EXPLORE_CSS}</style>
+      <section className={"xp"}>
+        <div className={"xp-hero"} style={{ backgroundImage: "url(" + EXPLORE_CARDS[0].img + ")" }}>
+          <h2>{"Explore the rest of the marketplace"}</h2>
+        </div>
+        <div className={"xp-in"}>
+          <div className={"xp-eb"}>{"What to explore"}</div>
+          <div className={"xp-h"}>{"Essential ways to use Pexly"}</div>
+          <div className={"xp-car"} ref={ref} onScroll={onScroll}>
+            {EXPLORE_CARDS.map((c) => (
+              <a key={c.n} className={"xp-card"} href={"#"} data-px-link={c.link} aria-label={c.n} style={{ backgroundImage: "url(" + c.img + ")", backgroundPosition: c.pos }}></a>
+            ))}
+          </div>
+          <div className={"xp-dots"} aria-hidden={"true"}>
+            {EXPLORE_CARDS.map((c, i) => (
+              <i key={c.n} className={i === active ? "on" : ""}></i>
+            ))}
+          </div>
+          <a className={"xp-more"} href={SEE_ALL_PATH}>
+            {"See more "}
+            <span aria-hidden={"true"}>{"\u203a"}</span>
+          </a>
+          <div className={"xp-v"} id={"g-after"}>
+            <div className={"e"}>{"How it works"}</div>
+            <h2>{"What happens after you pay"}</h2>
+            <p>{"No account, no card details. You pay from your wallet and the code comes to your inbox."}</p>
+            <div className={"xp-steps"}>
+              {AFTER_STEPS.map((s, i) => (
+                <div key={s.t} className={"xp-step"}>
+                  {s.img ? (
+                    <img className={"xp-img"} src={s.img} alt={s.alt} width={900} height={600} loading={"lazy"} decoding={"async"} />
+                  ) : (
+                    <div className={"xp-ph"}>
+                      <svg viewBox={"0 0 24 24"} aria-hidden={"true"}>
+                        <path d={"M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"}></path>
+                        <circle cx={"12"} cy={"13"} r={"3.5"}></circle>
+                      </svg>
+                      <b>{"Image " + (i + 1)}</b>
+                      <span>{s.hint}</span>
+                    </div>
+                  )}
+                  <span className={"tm"}>{s.t}</span>
+                  <h3>{s.h}</h3>
+                  <p>{s.p}</p>
+                </div>
+              ))}
+            </div>
+            <small>{"Typical timings. Busy networks can take longer."}</small>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
+
 export function GiftCardsExport() {
   return (
     <CurrentMarketingPage page="gift-cards">
@@ -719,108 +841,11 @@ export function GiftCardsExport() {
           <div className={"g-main"}>
             <div className={"g-w"}>
               <div id={"g-shelf"} hidden></div>
-              <div className={"g-after"} id={"g-after"}>
-                <div>
-                  <h2>
-                    {"What happens after you pay"}
-                  </h2>
-                  <p>
-                    {"No account, no card details. You pay from your wallet and the code comes to your inbox."}
-                  </p>
-                </div>
-                <div className={"g-rc"}>
-                  <h3>
-                    {"Typical timing"}
-                  </h3>
-                  <div className={"r"}>
-                    <div className={"tt"}>
-                      {"0:00"}
-                    </div>
-                    <div>
-                      <b>
-                        {"You send the coin"}
-                      </b>
-                      <span>
-                        {"From your own wallet to the address we show."}
-                      </span>
-                    </div>
-                  </div>
-                  <div className={"r"}>
-                    <div className={"tt"}>
-                      {"~0:30"}
-                    </div>
-                    <div>
-                      <b>
-                        {"The network confirms"}
-                      </b>
-                      <span>
-                        {"Speed depends on the coin you picked."}
-                      </span>
-                    </div>
-                  </div>
-                  <div className={"r"}>
-                    <div className={"tt"}>
-                      {"~2:00"}
-                    </div>
-                    <div>
-                      <b>
-                        {"The code is in your inbox"}
-                      </b>
-                      <span>
-                        {"Check spam if you don’t see it."}
-                      </span>
-                    </div>
-                  </div>
-                  <small>
-                    {"Typical timings. Busy networks can take longer."}
-                  </small>
-                </div>
-              </div>
               <div id={"g-more"} hidden></div>
             </div>
           </div>
           <GiftShelf part={"bottom"} />
-          <section className={"sp-sec"}>
-            <div className={"padding-global"}>
-              <div className={"container-large"}>
-                <h2 className={"sp-h center"}>
-                  {"Explore the rest of the marketplace"}
-                </h2>
-                <div className={"sp-looks"}>
-                  <figure className={"sp-look"}>
-                    <img src={"/marketing-media/media-f9de0167e3e0ed2c.avif"} alt={""} loading={"lazy"} />
-                    <a className={"sp-pill"} href={"#"} data-px-link={"topup"}>
-                      <svg viewBox={"0 0 24 24"} width={"20"} height={"20"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.8"}>
-                        <path d={"M3 12l9-9h8v8l-9 9z"}></path>
-                        <circle cx={"16"} cy={"8"} r={"1.2"}></circle>
-                      </svg>
-                      {"Shop Top Ups"}
-                    </a>
-                  </figure>
-                  <figure className={"sp-look"}>
-                    <img src={"/marketing-media/media-1ee388ec36d8c9a7.avif"} alt={""} loading={"lazy"} />
-                    <a className={"sp-pill"} href={"#"} data-px-link={"shop"}>
-                      <svg viewBox={"0 0 24 24"} width={"20"} height={"20"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.8"}>
-                        <path d={"M3 12l9-9h8v8l-9 9z"}></path>
-                        <circle cx={"16"} cy={"8"} r={"1.2"}></circle>
-                      </svg>
-                      {"Shop Physical Products"}
-                    </a>
-                  </figure>
-                  <figure className={"sp-look"}>
-                    <img src={"/marketing-media/media-d9e7636fc944d27d.avif"} alt={""} loading={"lazy"} />
-                    <a className={"sp-pill"} href={"#"} data-px-link={"shop"}>
-                      <svg viewBox={"0 0 24 24"} width={"20"} height={"20"} fill={"none"} stroke={"#091e1c"} strokeWidth={"1.8"}>
-                        <path d={"M3 12l9-9h8v8l-9 9z"}></path>
-                        <circle cx={"16"} cy={"8"} r={"1.2"}></circle>
-                      </svg>
-                      {"Start Selling"}
-                    </a>
-                  </figure>
-                </div>
-              </div>
-            </div>
-          </section>
+          <ExploreMarketplace />
           <section className={"sp-reviews"}>
             <div className={"padding-global"}>
               <div className={"container-large"}>
