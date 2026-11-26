@@ -626,7 +626,6 @@ const EXPLORE_CSS = `
 .pxg .xp .xp-card{position:relative;display:block;flex:0 0 92%;aspect-ratio:.56;border-radius:12px;overflow:hidden;scroll-snap-align:center;background-size:cover;box-shadow:0 0 46px rgba(0,112,209,.28)}
 .pxg .xp .xp-card:focus-visible,.pxg .xp .xp-more:focus-visible{outline:3px solid #5b8cff;outline-offset:3px}
 .pxg .xp .xp-vid video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
-@media(max-width:899px){.pxg .xp .xp-vid{order:-1}}
 .pxg .xp .xp-dots{display:flex;gap:7px;align-items:center;margin:16px 22px 0}
 .pxg .xp .xp-dots i{width:7px;height:7px;border-radius:99px;background:#5b6575;transition:width .25s,background .25s}
 .pxg .xp .xp-dots i.on{width:42px;background:#fff}
@@ -655,12 +654,12 @@ const EXPLORE_CSS = `
 `;
 
 type ExploreCard = { n: string; link: string; img: string; pos: string; video?: string };
-// Card 2 is a silent looping video (img = its poster). On mobile it is shown first.
+// Card 2 is a silent looping video (img = its poster). On mobile the row opens scrolled to it.
 const EXPLORE_CARDS: ExploreCard[] = [
   { n: "Shop Top Ups", link: "topup", img: "/marketing-media/explore/explore-god-of-war.webp", pos: "50% 20%" },
   { n: "Shop Physical Products", link: "shop", img: "/marketing-media/explore/explore-video-poster.webp", pos: "50% 50%", video: "/marketing-media/explore/explore-video.mp4" },
   { n: "Start Selling", link: "shop", img: "/marketing-media/explore/explore-ea-fc-27.webp", pos: "50% 20%" },
-  { n: "Browse Gift Cards", link: "giftcards", img: "/marketing-media/explore/explore-gta-vi.webp", pos: "50% 20%" },
+  { n: "Browse Gift Cards", link: "giftcards", img: "/marketing-media/explore/explore-witcher-3.webp", pos: "50% 30%" },
 ];
 
 // Video card: loads only when it is near the screen, plays only while mostly visible,
@@ -735,6 +734,14 @@ function ExploreMarketplace() {
     const k = first.offsetWidth + 14;
     setActive(Math.max(0, Math.min(EXPLORE_CARDS.length - 1, Math.round(el.scrollLeft / k))));
   };
+  // On mobile, open the row scrolled to card 2 (the video) so it is the one in view first.
+  useEffect(() => {
+    const el = ref.current;
+    const second = el?.children[1] as HTMLElement | undefined;
+    if (!el || !second || window.innerWidth >= 900) return;
+    el.scrollLeft = second.offsetLeft - (el.clientWidth - second.offsetWidth) / 2;
+    onScroll();
+  }, []);
   return (
     <>
       <style>{EXPLORE_CSS}</style>
