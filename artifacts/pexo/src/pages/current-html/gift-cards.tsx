@@ -1,10 +1,12 @@
+
 "use client";
 import "./page-styles/gift-cards.css";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { CurrentMarketingPage } from "@/components/marketing/current-marketing-page";
 import { useGiftCardCategories, useGiftCardProducts, type ReloadlyCategory, type ReloadlyProduct } from "@/hooks/use-reloadly";
 import { useAirtimeOperators, type AirtimeOperator } from "@/hooks/use-airtime-operators";
 import { useDigitalCountry } from "@/lib/country-preferences";
+import { Coffee, CreditCard, Flame, Gamepad2, Gift, Globe, Heart, Home, Laptop, Music, ShoppingBag, Tag, Ticket, UtensilsCrossed } from "@/lib/icons";
 
 const HERO_CARDS = [
   { n: "Steam", f: "$20", usd: 20, img: "/marketing-media/gift-cards/steam.jpeg" },
@@ -20,14 +22,6 @@ const WIDE_CARDS = [
   { n: "Apple $50", img: "/marketing-media/gift-cards/apple-card.jpg", r: 1.5, y: 2, z: 5 },
   { n: "Netflix $30", img: "/marketing-media/gift-cards/netflix.jpg", r: 4.5, y: 20, z: 3 },
   { n: "Xbox $100", img: "/marketing-media/gift-cards/xbox.jpeg", r: 8, y: 46, z: 1 },
-];
-// Sample rates for the preview only. Replace with your live price feed.
-const HERO_COINS = [
-  { s: "USDT", r: 1, d: 2 },
-  { s: "USDC", r: 1, d: 2 },
-  { s: "BTC", r: 98000, d: 6 },
-  { s: "ETH", r: 3400, d: 4 },
-  { s: "SOL", r: 165, d: 3 },
 ];
 
 const HERO_CSS = `
@@ -57,6 +51,29 @@ const HERO_CSS = `
 .pxg .ph-hero .ph-cta.solid{background:var(--ph-ink);color:#fff}
 .pxg .ph-hero .ph-cta.ghost{background:transparent;color:var(--ph-ink)}
 @media(max-width:560px){.pxg .ph-hero{padding:28px 16px 28px}.pxg .ph-hero .ph-btns{padding:0 4px}.pxg .ph-hero .ph-cta{flex:1;padding:0 10px;font-size:15px}}
+.pxg .phm{background:#fff;color:var(--_color---typography--cyan,#0c1111);font-family:"Plus Jakarta Sans",system-ui,sans-serif}
+.pxg .phm-ban{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+.pxg .phm-b{position:relative;display:block;aspect-ratio:1/1.9;overflow:hidden;background:#e9efee;color:#fff;text-decoration:none}
+.pxg .phm-b img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;max-width:none;pointer-events:none}
+.pxg .phm-b.sbux img{transform:scale(1.08)}
+.pxg .phm-b:after{content:"";position:absolute;left:0;right:0;bottom:0;height:42%;background:linear-gradient(to top,rgba(0,0,0,.62),transparent)}
+.pxg .phm-b span{position:absolute;z-index:1;left:8px;right:6px;bottom:10px;font-weight:800;font-size:13px;line-height:1.1;letter-spacing:-.01em}
+.pxg .phm-search{display:flex;align-items:center;gap:8px;height:52px;margin:14px 12px 0;padding:0 5px 0 18px;background:#f3f7f6;border:1.5px solid #dbe5e3;border-radius:999px}
+.pxg .phm-search:focus-within{border-color:#091e1c}
+.pxg .phm-search input{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;font-family:inherit;font-weight:500;font-size:16px;color:#091e1c;padding:0;margin:0;box-shadow:none;-webkit-appearance:none;appearance:none}
+.pxg .phm-search input::placeholder{color:#7b8a87;opacity:1}
+.pxg .phm-search input::-webkit-search-cancel-button{display:none}
+.pxg .phm-search button{flex:0 0 auto;display:grid;place-items:center;width:42px;height:42px;min-width:0;padding:0;margin:0;border:0;border-radius:50%;background:#bef264;cursor:pointer;transition:transform .15s;-webkit-appearance:none;appearance:none}
+.pxg .phm-search button:active{transform:scale(.94)}
+.pxg .phm-search button:focus-visible{outline:3px solid #5b8cff;outline-offset:2px}
+.pxg .phm-search svg{width:20px;height:20px;fill:none;stroke:#091e1c;stroke-width:2.4;stroke-linecap:round}
+.pxg .phm-cats{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:12px 10px 10px}
+.pxg .phm-cats::-webkit-scrollbar{display:none}
+.pxg .phm-cat{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:88px;max-width:104px;padding:4px 6px;color:inherit;text-decoration:none;text-align:center;font-weight:600;font-size:13px;line-height:1.2}
+.pxg .phm-ic{display:grid;place-items:center;width:58px;height:58px;border-radius:18px;background:#f3f7f6;border:1px solid #e3ebe9;color:#091e1c;transition:transform .15s}
+.pxg .phm-cat:active .phm-ic{transform:scale(.94)}
+.pxg .phm-ic svg{width:28px;height:28px}
+.pxg .phm-b:focus-visible,.pxg .phm-cat:focus-visible{outline:3px solid #5b8cff;outline-offset:-3px}
 
 .pxg .ph-wide{display:none}
 @media(min-width:768px){
@@ -479,109 +496,97 @@ function heroSearchGo() {
   setTimeout(() => document.getElementById("gs-top")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
 }
 
+const HERO_BANNERS = HERO_CARDS.slice(0, 4);
+
+// Category icon by name (names come from Reloadly, so this matches on keywords).
+// Same mapping as the See all page.
+type IconType = typeof Flame;
+function heroCategoryIcon(name: string): IconType {
+  const n = name.toLowerCase();
+  if (/popular/.test(n)) return Flame;
+  if (/travel|hotel|flight|transport|airline/.test(n)) return Globe;
+  if (/food|grocer|restaurant|dining|delivery/.test(n)) return UtensilsCrossed;
+  if (/gam/.test(n)) return Gamepad2;
+  if (/music/.test(n)) return Music;
+  if (/entertain|stream|movie|video|tv/.test(n)) return Ticket;
+  if (/payment|prepaid|card|finance/.test(n)) return CreditCard;
+  if (/electron|tech|computer/.test(n)) return Laptop;
+  if (/health|beauty|wellness|care/.test(n)) return Heart;
+  if (/home|garden|furniture|diy/.test(n)) return Home;
+  if (/coffee|cafe/.test(n)) return Coffee;
+  if (/shop|retail|fashion|cloth|market/.test(n)) return ShoppingBag;
+  if (/gift/.test(n)) return Gift;
+  return Tag;
+}
+
+function HeroCategories() {
+  const categories = useGiftCardCategories();
+  const cats = (categories.data ?? []).slice(0, MAX_CATEGORIES);
+  const items: { key: string; name: string; href: string; Icon: IconType }[] = [
+    { key: "popular", name: "Popular", href: SEE_ALL_PATH, Icon: Flame },
+    ...cats.map((c) => ({
+      key: "c" + c.id,
+      name: c.name,
+      href: SEE_ALL_PATH + "?category=" + c.id + "&name=" + encodeURIComponent(c.name),
+      Icon: heroCategoryIcon(c.name),
+    })),
+  ];
+  return (
+    <nav className={"phm-cats"} aria-label={"Gift card categories"}>
+      {items.map(({ key, name, href, Icon }) => (
+        <a key={key} className={"phm-cat"} href={href}>
+          <span className={"phm-ic"}>
+            <Icon size={28} />
+          </span>
+          {name}
+        </a>
+      ))}
+      <a className={"phm-cat"} href={TOPUP_PATH}>
+        <span className={"phm-ic"}>
+          <svg viewBox={"0 0 24 24"} fill={"none"} stroke={"currentColor"} strokeWidth={"1.8"} strokeLinecap={"round"} strokeLinejoin={"round"} aria-hidden={"true"}>
+            <rect x={"7"} y={"2.5"} width={"10"} height={"19"} rx={"2.5"}></rect>
+            <path d={"M11 18.5h2"}></path>
+          </svg>
+        </span>
+        {"Top Up"}
+      </a>
+    </nav>
+  );
+}
+
 function HeroCarousel() {
-  const [cur, setCur] = useState(0);
-  const [auto, setAuto] = useState(true);
-  const startX = useRef<number | null>(null);
-  const N = HERO_CARDS.length;
-
-  useEffect(() => {
-    if (!auto) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const t = setInterval(() => setCur((c) => (c + 1) % N), 3200);
-    return () => clearInterval(t);
-  }, [auto, N]);
-
-  const go = (i: number) => {
-    setAuto(false);
-    setCur(((i % N) + N) % N);
-  };
-  const c = HERO_CARDS[cur];
-  const k = HERO_COINS[0];
-
   return (
     <>
-    <section className={"ph-hero ph-mob"}>
-      <style>{HERO_CSS}</style>
-      <div className={"ph-wrap"}>
-        <h1>
-          {"Gift cards,"}
-          <br />
-          {"paid in crypto."}
-        </h1>
-        <p className={"ph-sub"}>
-          {"Steam, Netflix, Xbox, Apple and more. Pay with the coin you hold and your code arrives by email."}
-        </p>
-        <div className={"ph-search"}>
-          <input
-            id={"gs-q"}
-            type={"search"}
-            placeholder={"2000+ gift cards worldwide"}
-            aria-label={"Search gift cards"}
-            autoComplete={"off"}
-            enterKeyHint={"search"}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") heroSearchGo();
-            }}
-          />
-          <button id={"gs-go"} type={"button"} aria-label={"Search"} onClick={() => heroSearchGo()}>
-            <svg viewBox={"0 0 24 24"} aria-hidden={"true"}>
-              <circle cx={"11"} cy={"11"} r={"7"}></circle>
-              <path d={"M20 20l-4-4"}></path>
-            </svg>
-          </button>
-        </div>
-        <div
-          className={"ph-stage"}
-          tabIndex={0}
-          aria-roledescription={"carousel"}
-          aria-label={"Gift cards"}
-          onPointerDown={(e) => {
-            startX.current = e.clientX;
-          }}
-          onPointerUp={(e) => {
-            if (startX.current === null) return;
-            const dx = e.clientX - startX.current;
-            startX.current = null;
-            if (Math.abs(dx) > 40) go(cur + (dx < 0 ? 1 : -1));
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "ArrowRight") go(cur + 1);
-            if (e.key === "ArrowLeft") go(cur - 1);
-          }}
-        >
-          {HERO_CARDS.map((x, i) => {
-            let d = i - cur;
-            if (d > N / 2) d -= N;
-            if (d < -N / 2) d += N;
-            const a = Math.abs(d);
-            return (
-              <div
-                key={x.n}
-                className={"ph-card" + (x.n === "Starbucks" ? " sbux" : "")}
-                role={"group"}
-                aria-label={x.n + " " + x.f + " gift card"}
-                style={{ "--d": d, "--a": a, display: a > 2 ? "none" : undefined } as React.CSSProperties}
-                onClick={() => go(i)}
-              >
-                <img src={x.img} alt={""} draggable={false} />
-              </div>
-            );
-          })}
-        </div>
-        <div className={"ph-quote"} aria-live={"polite"}>
-          <em>{c.n + " " + c.f}</em>
-          <b>{(c.usd / k.r).toFixed(k.d) + " " + k.s}</b>
-        </div>
-        <div className={"ph-btns"}>
-          <a className={"ph-cta solid"} href={"#gs-top"}>
-            {"Browse cards"}
+    <style>{HERO_CSS}</style>
+    <section className={"ph-mob phm"}>
+      <div className={"phm-ban"}>
+        {HERO_BANNERS.map((x) => (
+          <a key={x.n} className={"phm-b" + (x.n === "Starbucks" ? " sbux" : "")} href={"#gs-top"} aria-label={x.n + " " + x.f + " gift card"}>
+            <img src={x.img} alt={""} draggable={false} />
+            <span>{x.n}</span>
           </a>
-          <a className={"ph-cta ghost"} href={"#g-after"}>
-            {"How it works"}
-          </a>
-        </div>
+        ))}
       </div>
+      <div className={"phm-search"}>
+        <input
+          id={"gs-q"}
+          type={"search"}
+          placeholder={"2000+ gift cards worldwide"}
+          aria-label={"Search gift cards"}
+          autoComplete={"off"}
+          enterKeyHint={"search"}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") heroSearchGo();
+          }}
+        />
+        <button id={"gs-go"} type={"button"} aria-label={"Search"} onClick={() => heroSearchGo()}>
+          <svg viewBox={"0 0 24 24"} aria-hidden={"true"}>
+            <circle cx={"11"} cy={"11"} r={"7"}></circle>
+            <path d={"M20 20l-4-4"}></path>
+          </svg>
+        </button>
+      </div>
+      <HeroCategories />
     </section>
     <section className={"ph-hero ph-wide"}>
       <div className={"ph-wrap"}>
