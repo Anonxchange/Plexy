@@ -1,7 +1,6 @@
-
 "use client";
 import "./page-styles/gift-cards.css";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { CurrentMarketingPage } from "@/components/marketing/current-marketing-page";
 import { useGiftCardCategories, useGiftCardProducts, type ReloadlyCategory, type ReloadlyProduct } from "@/hooks/use-reloadly";
 import { useAirtimeOperators, type AirtimeOperator } from "@/hooks/use-airtime-operators";
@@ -52,12 +51,13 @@ const HERO_CSS = `
 .pxg .ph-hero .ph-cta.ghost{background:transparent;color:var(--ph-ink)}
 @media(max-width:560px){.pxg .ph-hero{padding:28px 16px 28px}.pxg .ph-hero .ph-btns{padding:0 4px}.pxg .ph-hero .ph-cta{flex:1;padding:0 10px;font-size:15px}}
 .pxg .phm{background:#fff;color:var(--_color---typography--cyan,#0c1111);font-family:"Plus Jakarta Sans",system-ui,sans-serif}
-.pxg .phm-ban{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
-.pxg .phm-b{position:relative;display:block;aspect-ratio:1/1.9;overflow:hidden;background:#e9efee;color:#fff;text-decoration:none}
+.pxg .phm-ban{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.pxg .phm-ban::-webkit-scrollbar{display:none}
+.pxg .phm-b{position:relative;display:block;flex:0 0 min(30.3%,200px);aspect-ratio:1/2;scroll-snap-align:start;overflow:hidden;background:#e9efee;color:#fff;text-decoration:none}
 .pxg .phm-b img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;max-width:none;pointer-events:none}
 .pxg .phm-b.sbux img{transform:scale(1.08)}
 .pxg .phm-b:after{content:"";position:absolute;left:0;right:0;bottom:0;height:42%;background:linear-gradient(to top,rgba(0,0,0,.62),transparent)}
-.pxg .phm-b span{position:absolute;z-index:1;left:8px;right:6px;bottom:10px;font-weight:800;font-size:13px;line-height:1.1;letter-spacing:-.01em}
+.pxg .phm-b span{position:absolute;z-index:1;left:8px;right:6px;bottom:10px;font-weight:800;font-size:14px;line-height:1.1;letter-spacing:-.01em}
 .pxg .phm-search{display:flex;align-items:center;gap:8px;height:52px;margin:14px 12px 0;padding:0 5px 0 18px;background:#f3f7f6;border:1.5px solid #dbe5e3;border-radius:999px}
 .pxg .phm-search:focus-within{border-color:#091e1c}
 .pxg .phm-search input{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;font-family:inherit;font-weight:500;font-size:16px;color:#091e1c;padding:0;margin:0;box-shadow:none;-webkit-appearance:none;appearance:none}
@@ -224,20 +224,6 @@ function reportCount(id: string, n: number) {
   countsVersion++;
   countSubs.forEach((f) => f());
 }
-function useSectionCounts() {
-  useSyncExternalStore(
-    (cb) => {
-      countSubs.add(cb);
-      return () => {
-        countSubs.delete(cb);
-      };
-    },
-    () => countsVersion,
-    () => 0,
-  );
-  return sectionCounts;
-}
-
 const SHELF_CSS = `
 .pxg .gs{--gs-ink:var(--_color---typography--cyan,#0c1111);--gs-mute:var(--_color---typography--dark-gray,#464646);--gs-line:#e3ebe9;--gs-field:#f3f7f6;color:var(--gs-ink);font-family:"Plus Jakarta Sans",system-ui,sans-serif}
 .pxg .gs .gs-w{max-width:1320px;margin:0 auto;padding:0 16px}
@@ -380,8 +366,6 @@ function CategorySection({ cat, index, country, plain }: { cat: ReloadlyCategory
 function GiftShelf({ part }: { part: "top" | "bottom" }) {
   const country = useDigitalCountry();
   const q = useSearchQuery();
-  const [activeTab, setActiveTab] = useState("popular");
-  const counts = useSectionCounts();
   const categories = useGiftCardCategories();
 
   // Popular: one batch for the country, ordered by the PREFERRED brand list
@@ -415,17 +399,6 @@ function GiftShelf({ part }: { part: "top" | "bottom" }) {
     );
   }
 
-  const goTab = (id: string) => {
-    setActiveTab(id);
-    document.getElementById("gs-s-" + id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-  const tabs: { id: string; label: string }[] = [];
-  if (popular.length || list.isLoading) tabs.push({ id: "popular", label: POPULAR_META.tab });
-  if (airtime.length) tabs.push({ id: "airtime", label: AIRTIME_META.tab });
-  if (payCat && (counts["cat-" + payCat.id] ?? 0) > 0) tabs.push({ id: "cat-" + payCat.id, label: payCat.name });
-  topCats.forEach((c) => {
-    if ((counts["cat-" + c.id] ?? 0) > 0) tabs.push({ id: "cat-" + c.id, label: c.name });
-  });
   const resultTiles = uniqueByName((found.data?.content ?? []).filter((p) => p.status !== "INACTIVE")).map(giftTile);
 
   return (
@@ -435,17 +408,6 @@ function GiftShelf({ part }: { part: "top" | "bottom" }) {
         {!country && <p className="gs-msg" role="status">Choose a redemption country to see available gift cards and top-ups.</p>}
         {country && !list.isLoading && !list.isError && popular.length === 0 && <p className="gs-msg">No gift cards are available for this country. Use Change to choose another country.</p>}
       </div>
-      {q ? null : (
-        <div className={"gs-w"}>
-          <div className={"gs-tabs"} role={"tablist"}>
-            {tabs.map((t) => (
-              <button key={t.id} type={"button"} className={"gs-tab"} aria-pressed={activeTab === t.id} onClick={() => goTab(t.id)}>
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
       <div className={"gs-w"}>
         {q ? (
           <section className={"gs-sec"}>
@@ -496,7 +458,7 @@ function heroSearchGo() {
   setTimeout(() => document.getElementById("gs-top")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
 }
 
-const HERO_BANNERS = HERO_CARDS.slice(0, 4);
+const HERO_BANNERS = HERO_CARDS;
 
 // Category icon by name (names come from Reloadly, so this matches on keywords).
 // Same mapping as the See all page.
