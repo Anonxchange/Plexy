@@ -1617,3 +1617,44 @@
   justify-self: center;
   width: calc(50% - 4px);
 }
+
+.export-page .partner-logo-item.partner-logo-item--svg {
+  width: auto;
+  max-width: none;
+  display: flex;
+  align-items: center;
+}
+
+.export-page .partner-logo-svg {
+  display: block;
+  height: 2.375rem;
+  width: auto;
+  color: #8a948f;
+}
+
+.export-page .partner-logo-svg[data-partner-logo="walletconnect"] {
+  height: 1.4375rem;
+}
+
+.export-page .partner-logo-svg[data-partner-logo="nowpayments"] {
+  height: 1.1875rem;
+}
+
+@media screen and (max-width: 767px) {
+  .export-page .partner-logo-item.partner-logo-item--svg {
+    width: auto;
+    max-width: none;
+  }
+
+  .export-page .partner-logo-svg {
+    height: 1.875rem;
+  }
+
+  .export-page .partner-logo-svg[data-partner-logo="walletconnect"] {
+    height: 1.125rem;
+  }
+
+  .export-page .partner-logo-svg[data-partner-logo="nowpayments"] {
+    height: 0.9375rem;
+  }
+}
