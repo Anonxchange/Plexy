@@ -117,7 +117,7 @@ const TOPUP_PATH = "/mobile-top-up"; // change to your top-up route
 const SEE_ALL_PATH = "/gift-cards/all"; // route of the See all page (gift-cards-all.tsx)
 
 type ShelfTile = { id: number; name: string; img: string; range: string; href: string; country?: string; usd?: number | null };
-type ShelfBanner = { bg: string; text: string; img?: string };
+type ShelfBanner = { bg: string; text: string; img?: string; pos?: string };
 
 let searchQuery = "";
 const searchSubs = new Set<() => void>();
@@ -218,6 +218,16 @@ function uniqueByBrand(list: ReloadlyProduct[]) {
 type ShelfMeta = { title: string; tab: string; banner?: ShelfBanner; one?: boolean };
 const POPULAR_META: ShelfMeta = { title: "2,000+ products in 180+ countries", tab: "Popular" };
 const AIRTIME_META: ShelfMeta = { title: "Mobile top up", tab: "Top Up", one: true, banner: { bg: "#0b6e4f", text: "Airtime in seconds" } };
+// Category banner photos (800x480 WebP, ~20-40 KB). Matched by category name.
+const CATEGORY_BANNERS: { re: RegExp; img: string; pos: string }[] = [
+  { re: /gam/i, img: "/marketing-media/banners/gaming.webp", pos: "50% 45%" },
+  { re: /entertain|stream|movie|video|tv|music/i, img: "/marketing-media/banners/entertainment.webp", pos: "50% 60%" },
+  { re: /travel|hotel|flight|transport|airline/i, img: "/marketing-media/banners/travel.webp", pos: "50% 60%" },
+  { re: /shop|retail|fashion|cloth|market/i, img: "/marketing-media/banners/shopping.webp", pos: "50% 30%" },
+];
+function categoryBanner(name: string) {
+  return CATEGORY_BANNERS.find((b) => b.re.test(name));
+}
 const BANNER_COLORS = ["#1b2a6b", "#0e6f8a", "#8a2f4d", "#3b1f5c", "#2d5a4a", "#8a5a3c", "#3b4a8f", "#0b6e4f"];
 const MAX_CATEGORIES = 8;
 
@@ -328,7 +338,7 @@ function ShelfSectionView({ id, meta, tiles, loading, seeAllHref }: { id: string
           {head}
           <div
             className={"gs-ban"}
-            style={meta.banner.img ? { backgroundImage: "url(" + meta.banner.img + ")" } : { background: meta.banner.bg }}
+            style={meta.banner.img ? { backgroundImage: "url(" + meta.banner.img + ")", backgroundPosition: meta.banner.pos || "center" } : { background: meta.banner.bg }}
           >
             {meta.banner.img ? null : (
               <svg viewBox={"0 0 120 70"} preserveAspectRatio={"xMidYMid slice"} aria-hidden={"true"}>
@@ -365,7 +375,7 @@ function CategorySection({ cat, index, country, plain }: { cat: ReloadlyCategory
   const meta: ShelfMeta = {
     title: cat.name,
     tab: cat.name,
-    banner: plain ? undefined : { bg: BANNER_COLORS[index % BANNER_COLORS.length], text: cat.name },
+    banner: plain ? undefined : { bg: BANNER_COLORS[index % BANNER_COLORS.length], text: cat.name, img: categoryBanner(cat.name)?.img, pos: categoryBanner(cat.name)?.pos },
   };
   return <ShelfSectionView id={id} meta={meta} tiles={tiles} loading={res.isLoading} seeAllHref={SEE_ALL_PATH + "?category=" + cat.id + "&name=" + encodeURIComponent(cat.name)} />;
 }
@@ -465,8 +475,12 @@ function heroSearchGo() {
   setTimeout(() => document.getElementById("gs-top")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
 }
 
-// Mobile banner strip shows only the first 3 cards
-const HERO_BANNERS = HERO_CARDS.slice(0, 3);
+// Mobile banner strip: 3 game banners (tall crops, ~20 KB each)
+const HERO_BANNERS = [
+  { n: "GTA VI", img: "/marketing-media/hero/hero-gta-vi.webp" },
+  { n: "EA FC 27", img: "/marketing-media/hero/hero-ea-fc-27.webp" },
+  { n: "Call of Duty", img: "/marketing-media/hero/hero-call-of-duty.webp" },
+];
 
 // Category icon by name (names come from Reloadly, so this matches on keywords).
 // Same mapping as the See all page.
@@ -531,8 +545,8 @@ function HeroCarousel() {
     <section className={"ph-mob phm"}>
       <div className={"phm-ban"}>
         {HERO_BANNERS.map((x) => (
-          <a key={x.n} className={"phm-b" + (x.n === "Starbucks" ? " sbux" : "")} href={"#gs-top"} aria-label={x.n + " " + x.f + " gift card"}>
-            <img src={x.img} alt={""} draggable={false} />
+          <a key={x.n} className={"phm-b" + (x.n === "Starbucks" ? " sbux" : "")} href={"#gs-top"} aria-label={x.n + " gift cards"}>
+            <img src={x.img} alt={""} width={320} height={640} draggable={false} />
             <span>{x.n}</span>
           </a>
         ))}
