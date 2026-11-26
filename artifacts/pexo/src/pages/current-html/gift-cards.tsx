@@ -625,6 +625,8 @@ const EXPLORE_CSS = `
 .pxg .xp .xp-car::-webkit-scrollbar{display:none}
 .pxg .xp .xp-card{position:relative;display:block;flex:0 0 92%;aspect-ratio:.56;border-radius:12px;overflow:hidden;scroll-snap-align:center;background-size:cover;box-shadow:0 0 46px rgba(0,112,209,.28)}
 .pxg .xp .xp-card:focus-visible,.pxg .xp .xp-more:focus-visible{outline:3px solid #5b8cff;outline-offset:3px}
+.pxg .xp .xp-vid video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+@media(max-width:899px){.pxg .xp .xp-vid{order:-1}}
 .pxg .xp .xp-dots{display:flex;gap:7px;align-items:center;margin:16px 22px 0}
 .pxg .xp .xp-dots i{width:7px;height:7px;border-radius:99px;background:#5b6575;transition:width .25s,background .25s}
 .pxg .xp .xp-dots i.on{width:42px;background:#fff}
@@ -652,12 +654,69 @@ const EXPLORE_CSS = `
 }
 `;
 
-const EXPLORE_CARDS = [
+type ExploreCard = { n: string; link: string; img: string; pos: string; video?: string };
+// Card 2 is a silent looping video (img = its poster). On mobile it is shown first.
+const EXPLORE_CARDS: ExploreCard[] = [
   { n: "Shop Top Ups", link: "topup", img: "/marketing-media/explore/explore-god-of-war.webp", pos: "50% 20%" },
-  { n: "Shop Physical Products", link: "shop", img: "/marketing-media/explore/explore-witcher-3.webp", pos: "50% 30%" },
+  { n: "Shop Physical Products", link: "shop", img: "/marketing-media/explore/explore-video-poster.webp", pos: "50% 50%", video: "/marketing-media/explore/explore-video.mp4" },
   { n: "Start Selling", link: "shop", img: "/marketing-media/explore/explore-ea-fc-27.webp", pos: "50% 20%" },
   { n: "Browse Gift Cards", link: "giftcards", img: "/marketing-media/explore/explore-gta-vi.webp", pos: "50% 20%" },
 ];
+
+// Video card: loads only when it is near the screen, plays only while mostly visible,
+// pauses when scrolled away or the tab is hidden. Skipped for reduced-motion / data-saver
+// (the poster stays instead).
+function ExploreVideoCard({ c }: { c: ExploreCard }) {
+  const card = useRef<HTMLAnchorElement>(null);
+  const vid = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const el = card.current;
+    const v = vid.current;
+    if (!el || !v || !c.video) return;
+    v.muted = true;
+    const nav = navigator as Navigator & { connection?: { saveData?: boolean } };
+    const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches || !!nav.connection?.saveData;
+    if (calm || typeof IntersectionObserver === "undefined") return;
+    let loaded = false;
+    let visible = false;
+    const sync = () => {
+      if (visible && !document.hidden) void v.play().catch(() => {});
+      else v.pause();
+    };
+    const loadObs = new IntersectionObserver(
+      (es) => {
+        if (!loaded && es.some((e) => e.isIntersecting)) {
+          loaded = true;
+          v.src = c.video as string;
+          v.load();
+          loadObs.disconnect();
+        }
+      },
+      { rootMargin: "400px 0px" },
+    );
+    const playObs = new IntersectionObserver(
+      (es) => {
+        visible = es[es.length - 1].isIntersecting;
+        sync();
+      },
+      { threshold: 0.6 },
+    );
+    loadObs.observe(el);
+    playObs.observe(el);
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      loadObs.disconnect();
+      playObs.disconnect();
+      document.removeEventListener("visibilitychange", sync);
+      v.pause();
+    };
+  }, [c.video]);
+  return (
+    <a ref={card} className={"xp-card xp-vid"} href={"#"} data-px-link={c.link} aria-label={c.n} style={{ backgroundImage: "url(" + c.img + ")", backgroundPosition: c.pos }}>
+      <video ref={vid} poster={c.img} muted loop playsInline preload={"none"} disablePictureInPicture aria-hidden={"true"} tabIndex={-1}></video>
+    </a>
+  );
+}
 
 // Set `img` to a file path (e.g. "/marketing-media/explore/step-1.webp") to replace the placeholder.
 const AFTER_STEPS = [
@@ -687,9 +746,13 @@ function ExploreMarketplace() {
           <div className={"xp-eb"}>{"What to explore"}</div>
           <div className={"xp-h"}>{"Essential ways to use Pexly"}</div>
           <div className={"xp-car"} ref={ref} onScroll={onScroll}>
-            {EXPLORE_CARDS.map((c) => (
-              <a key={c.n} className={"xp-card"} href={"#"} data-px-link={c.link} aria-label={c.n} style={{ backgroundImage: "url(" + c.img + ")", backgroundPosition: c.pos }}></a>
-            ))}
+            {EXPLORE_CARDS.map((c) =>
+              c.video ? (
+                <ExploreVideoCard key={c.n} c={c} />
+              ) : (
+                <a key={c.n} className={"xp-card"} href={"#"} data-px-link={c.link} aria-label={c.n} style={{ backgroundImage: "url(" + c.img + ")", backgroundPosition: c.pos }}></a>
+              ),
+            )}
           </div>
           <div className={"xp-dots"} aria-hidden={"true"}>
             {EXPLORE_CARDS.map((c, i) => (
