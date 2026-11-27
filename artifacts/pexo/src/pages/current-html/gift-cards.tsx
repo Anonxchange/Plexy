@@ -217,12 +217,15 @@ function uniqueByBrand(list: ReloadlyProduct[]) {
 // Put your own banner photos in /public and set `img` to use them.
 type ShelfMeta = { title: string; tab: string; banner?: ShelfBanner; one?: boolean };
 const POPULAR_META: ShelfMeta = { title: "2,000+ products in 180+ countries", tab: "Popular" };
-const AIRTIME_META: ShelfMeta = { title: "Mobile top up", tab: "Top Up", one: true, banner: { bg: "#0b6e4f", text: "Airtime in seconds" } };
+const AIRTIME_META: ShelfMeta = { title: "Mobile top up", tab: "Top Up", one: true, banner: { bg: "#0b6e4f", text: "Airtime in seconds", img: "/marketing-media/explore/mobile-topup.webp", pos: "50% 45%" } };
 // Category banner photos (800x480 WebP, ~20-40 KB). Matched by category name.
 const CATEGORY_BANNERS: { re: RegExp; img: string; pos: string }[] = [
   { re: /gam/i, img: "/marketing-media/explore/gaming.webp", pos: "50% 45%" },
   { re: /entertain|stream|movie|video|tv|music/i, img: "/marketing-media/explore/entertainment.webp", pos: "50% 60%" },
   { re: /travel|hotel|flight|transport|airline/i, img: "/marketing-media/explore/travel.webp", pos: "50% 60%" },
+  { re: /crypto|bitcoin|blockchain/i, img: "/marketing-media/explore/crypto.webp", pos: "50% 35%" },
+  { re: /charit|donat|nonprofit|non-profit/i, img: "/marketing-media/explore/charity.webp", pos: "50% 30%" },
+  { re: /software|\bapps?\b|tech|saas|cloud|develop|antivirus|vpn/i, img: "/marketing-media/explore/software.webp", pos: "50% 40%" },
   { re: /shop|retail|fashion|cloth|market/i, img: "/marketing-media/explore/shopping.webp", pos: "50% 30%" },
 ];
 function categoryBanner(name: string) {
